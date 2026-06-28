@@ -1,0 +1,489 @@
+/* =========================================================
+   BDR PADRÃO VISUAL ÚNICO - MENU + TOPO + TAMANHO
+   Base visual escolhida: RELATÓRIOS
+
+   COMO AJUSTAR DEPOIS:
+   1) Para diminuir tudo, altere --bdr-ui-scale.
+      Exemplo: .86 = padrão atual | .84 = menor | .90 = maior
+   2) Para mudar largura do menu, altere --bdr-menu-width.
+   3) Para mudar tamanho dos botões do menu, altere --bdr-menu-btn-size.
+   4) Para mudar espaçamento da página, altere --bdr-page-padding.
+========================================================= */
+:root{
+  /* ===== TAMANHO GERAL DA TELA ===== */
+  --bdr-ui-scale:.86;
+
+  /* ===== CORES PADRÃO BDR / RELATÓRIOS ===== */
+  --bdr-red:#a4161a;
+  --bdr-red-dark:#8f1115;
+  --bdr-bg:#eef2f7;
+  --bdr-card:#ffffff;
+  --bdr-text:#111827;
+  --bdr-muted:#6b7280;
+  --bdr-border:#e5e7eb;
+
+  /* ===== MENU LATERAL ===== */
+  --bdr-menu-width:66px;
+  --bdr-menu-btn-size:42px;
+  --bdr-menu-icon-size:17px;
+  --bdr-menu-gap:8px;
+  --bdr-menu-top-space:14px;
+
+  /* ===== CONTEÚDO / CARDS ===== */
+  --bdr-page-padding:10px;
+  --bdr-card-radius:16px;
+  --bdr-card-gap:8px;
+  --bdr-shadow:0 3px 14px rgba(15,23,42,.08);
+}
+
+/* =========================================================
+   BASE DA PÁGINA
+========================================================= */
+html,body{
+  width:100%!important;
+  min-height:100%!important;
+  margin:0!important;
+  overflow-x:hidden!important;
+  background:var(--bdr-bg)!important;
+  color:var(--bdr-text)!important;
+}
+
+body{
+  font-family:Arial,sans-serif!important;
+  font-size:calc(14px * var(--bdr-ui-scale))!important;
+  zoom:1!important;
+}
+
+*,*::before,*::after{box-sizing:border-box!important;}
+
+button,
+button *,
+.bdr-menu-btn,
+.bdr-menu-btn *,
+.user-menu,
+.user-menu *,
+.user-menu-top,
+.user-menu-top *,
+.notif-btn,
+.notif-btn *,
+.profile-card,
+.profile-card *,
+.perm-row,
+.perm-row *{
+  user-select:none!important;
+  -webkit-user-select:none!important;
+  caret-color:transparent!important;
+  -webkit-tap-highlight-color:transparent!important;
+  outline:none!important;
+}
+
+button:focus,
+button:active,
+.bdr-menu-btn:focus,
+.bdr-menu-btn:active,
+.user-menu:focus,
+.user-menu:active,
+.user-menu-top:focus,
+.user-menu-top:active,
+.notif-btn:focus,
+.notif-btn:active{
+  outline:none!important;
+  box-shadow:none!important;
+}
+
+input,textarea,select{
+  caret-color:auto!important;
+  user-select:text!important;
+  -webkit-user-select:text!important;
+}
+
+/* =========================================================
+   MENU LATERAL PADRÃO
+========================================================= */
+.bdr-sidebar{
+  all:unset;
+  box-sizing:border-box!important;
+  position:fixed!important;
+  left:0!important;
+  top:0!important;
+  bottom:0!important;
+  width:var(--bdr-menu-width)!important;
+  min-width:var(--bdr-menu-width)!important;
+  height:100vh!important;
+  min-height:100vh!important;
+  max-height:100vh!important;
+  background:linear-gradient(180deg,#071421,#0b1726)!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  padding:var(--bdr-menu-top-space) 0 10px!important;
+  margin:0!important;
+  z-index:999999!important;
+  overflow:visible!important;
+  box-shadow:8px 0 28px rgba(0,0,0,.16)!important;
+  border-radius:0!important;
+}
+
+.bdr-brand{
+  width:100%!important;
+  display:flex!important;
+  justify-content:center!important;
+  align-items:center!important;
+  margin:0 0 14px!important;
+  padding:0!important;
+}
+
+.bdr-brand-icon{
+  width:40px!important;
+  height:40px!important;
+  border-radius:14px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  background:rgba(255,255,255,.08)!important;
+  color:#fff!important;
+}
+
+.bdr-menu{
+  all:unset;
+  box-sizing:border-box!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:var(--bdr-menu-gap)!important;
+  width:100%!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:visible!important;
+}
+
+.bdr-menu-btn{
+  all:unset;
+  box-sizing:border-box!important;
+  width:var(--bdr-menu-btn-size)!important;
+  height:var(--bdr-menu-btn-size)!important;
+  min-width:var(--bdr-menu-btn-size)!important;
+  min-height:var(--bdr-menu-btn-size)!important;
+  border-radius:13px!important;
+  background:transparent!important;
+  color:#e5e7eb!important;
+  cursor:pointer!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  position:relative!important;
+  transition:.18s ease!important;
+  overflow:visible!important;
+  padding:0!important;
+  margin:0!important;
+  border:none!important;
+}
+
+.bdr-menu-btn:hover{
+  background:rgba(255,255,255,.10)!important;
+  transform:translateX(3px)!important;
+}
+
+.bdr-menu-btn.active{
+  background:linear-gradient(135deg,var(--bdr-red),#d71920)!important;
+  color:#fff!important;
+  box-shadow:0 9px 20px rgba(164,22,26,.34)!important;
+}
+
+.bdr-menu-icon,
+.bdr-menu-icon i,
+.bdr-menu-btn i{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  color:inherit!important;
+  font-size:var(--bdr-menu-icon-size)!important;
+  line-height:1!important;
+  pointer-events:none!important;
+}
+
+/* Nome que aparece ao passar o mouse no menu */
+.bdr-menu-btn[data-tip]::after{
+  content:attr(data-tip)!important;
+  position:absolute!important;
+  left:calc(var(--bdr-menu-btn-size) + 14px)!important;
+  top:50%!important;
+  transform:translate(-5px,-50%)!important;
+  background:#111827!important;
+  color:#fff!important;
+  padding:7px 10px!important;
+  border-radius:9px!important;
+  font-size:12px!important;
+  font-weight:900!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+  transition:.16s ease!important;
+  box-shadow:0 8px 18px rgba(0,0,0,.28)!important;
+  z-index:1000000!important;
+}
+
+.bdr-menu-btn[data-tip]::before{
+  content:""!important;
+  position:absolute!important;
+  left:calc(var(--bdr-menu-btn-size) + 8px)!important;
+  top:50%!important;
+  transform:translateY(-50%)!important;
+  border:6px solid transparent!important;
+  border-right-color:#111827!important;
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+  transition:.16s ease!important;
+  z-index:1000000!important;
+}
+
+.bdr-menu-btn[data-tip]:hover::after,
+.bdr-menu-btn[data-tip]:hover::before{
+  opacity:1!important;
+  visibility:visible!important;
+}
+
+/* Esconde menus antigos se alguma página ainda tiver duplicado */
+body:has(.bdr-sidebar) .sidebar:not(.bdr-sidebar),
+body:has(.bdr-sidebar) .side-btn{
+  display:none!important;
+}
+
+/* =========================================================
+   ÁREA PRINCIPAL / CONTEÚDO
+========================================================= */
+.bdr-app,
+.app-layout,
+.layout{
+  min-height:100vh!important;
+}
+
+.bdr-main,
+.content,
+.main,
+.usuarios-premium-main{
+  box-sizing:border-box!important;
+}
+
+.bdr-main,
+.usuarios-premium-main,
+body:has(.bdr-sidebar) .content{
+  margin-left:var(--bdr-menu-width)!important;
+  width:calc(100% - var(--bdr-menu-width))!important;
+  max-width:calc(100% - var(--bdr-menu-width))!important;
+  min-height:100vh!important;
+  padding:var(--bdr-page-padding)!important;
+  overflow:visible!important;
+}
+
+/* =========================================================
+   TOPO PADRÃO IGUAL RELATÓRIOS
+========================================================= */
+.bdr-topbar,
+.relatorio-topbar,
+.hero{
+  background:radial-gradient(circle at right top, rgba(164,22,26,.12), transparent 35%),linear-gradient(135deg,#ffffff,#f8fafc)!important;
+  border-radius:var(--bdr-card-radius)!important;
+  padding:10px 12px!important;
+  margin-bottom:var(--bdr-card-gap)!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:10px!important;
+  box-shadow:var(--bdr-shadow)!important;
+  border-left:4px solid var(--bdr-red)!important;
+  color:var(--bdr-text)!important;
+  overflow:visible!important;
+}
+
+.bdr-topbar-title,
+.relatorio-title,
+.hero-title,
+.page-title h1{
+  font-size:18px!important;
+  font-weight:900!important;
+  color:var(--bdr-red)!important;
+  line-height:1.15!important;
+  margin:0!important;
+}
+
+.bdr-topbar-sub,
+.relatorio-sub,
+.hero-sub,
+.page-title p{
+  color:var(--bdr-muted)!important;
+  font-size:12px!important;
+  margin-top:3px!important;
+  font-weight:500!important;
+}
+
+.bdr-top-actions,
+.dash-user,
+.user-top,
+.top-actions{
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+  margin-left:auto!important;
+}
+
+/* =========================================================
+   CARDS / PAINÉIS PADRÃO RELATÓRIOS
+========================================================= */
+.card,
+.card-light,
+.panel,
+.users-panel,
+.master-strip,
+.filters,
+.usuario-selecionado-card,
+.alert-card,
+.summary-card,
+.access-box,
+.profile-card{
+  background:#fff!important;
+  border:1px solid var(--bdr-border)!important;
+  border-left:4px solid var(--bdr-red)!important;
+  border-radius:var(--bdr-card-radius)!important;
+  box-shadow:0 2px 9px rgba(0,0,0,.08)!important;
+}
+
+.card h3,
+.card-light h3,
+.panel-head,
+.master-strip h2{
+  color:var(--bdr-red)!important;
+}
+
+.panel-head,
+.red-head,
+.user-table-head,
+.alert-title{
+  min-height:36px!important;
+  height:auto!important;
+  padding:8px 11px!important;
+  font-size:13px!important;
+  font-weight:900!important;
+}
+
+.red-head,
+.user-table-head{
+  background:var(--bdr-red)!important;
+  color:#fff!important;
+}
+
+.panel-body,
+.card-body,
+.obras-body,
+.summary-body,
+.quick-body{
+  padding:8px!important;
+}
+
+/* =========================================================
+   BOTÕES / CAMPOS
+========================================================= */
+.btn,
+button:not(.bdr-menu-btn):not(.notif-btn){
+  border-radius:10px!important;
+  font-size:12px!important;
+  font-weight:900!important;
+}
+
+.btn-red,
+.btn-relatorio,
+.btn-print,
+.btn-excel,
+button.btn-red{
+  background:var(--bdr-red)!important;
+  color:#fff!important;
+}
+
+input,
+select,
+textarea{
+  border-radius:9px!important;
+  border:1px solid #d1d5db!important;
+  font-size:12px!important;
+}
+
+/* =========================================================
+   USUÁRIOS - evita cursor piscando fora de campo
+========================================================= */
+.user-menu,
+.user-menu-top{
+  caret-color:transparent!important;
+}
+
+.user-menu:hover,
+.user-menu-top:hover{
+  background:#fff1f2!important;
+}
+
+.avatar{
+  width:40px!important;
+  height:40px!important;
+  border-radius:50%!important;
+  background:linear-gradient(135deg,#fecaca,#fff)!important;
+  border:2px solid #fee2e2!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  color:var(--bdr-red)!important;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+@media(max-width:900px){
+  :root{
+    --bdr-menu-width:56px;
+    --bdr-menu-btn-size:40px;
+    --bdr-menu-gap:6px;
+    --bdr-page-padding:8px;
+  }
+
+  .bdr-brand{display:none!important;}
+
+  .bdr-menu-btn[data-tip]::before,
+  .bdr-menu-btn[data-tip]::after{display:none!important;}
+
+  .bdr-topbar,
+  .relatorio-topbar,
+  .hero{
+    flex-direction:column!important;
+    align-items:flex-start!important;
+  }
+
+  .bdr-top-actions,
+  .dash-user,
+  .user-top,
+  .top-actions{
+    width:100%!important;
+    margin-left:0!important;
+    justify-content:space-between!important;
+    flex-wrap:wrap!important;
+  }
+}
+/* =========================================================
+   ESPAÇO DO LOGO CAMUFLADO NO MENU
+   Fica da mesma cor do menu, sem imagem quebrada.
+========================================================= */
+
+.bdr-logo-menu{
+  background:#071421 !important;
+  border:none !important;
+  box-shadow:none !important;
+  color:transparent !important;
+}
+
+.bdr-logo-menu img,
+.bdr-logo-menu i,
+.bdr-logo-menu span{
+  display:none !important;
+}

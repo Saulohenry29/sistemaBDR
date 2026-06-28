@@ -189,11 +189,10 @@
    3) LAYOUT PRINCIPAL DO CATÁLOGO
 ========================================================= */
 .exp-layout{
-  display:grid;
-  grid-template-columns:1fr 310px; /* AJUSTE RÁPIDO: largura do carrinho lateral */
-  gap:14px;
-  align-items:start;
+  display:block;
 }
+
+/* Catálogo ocupa a largura toda. O carrinho agora abre em modal. */
 
 .exp-head{
   display:flex;
@@ -218,7 +217,7 @@
 /* Busca do catálogo */
 .searchbar{
   display:grid;
-  grid-template-columns:1fr 130px;
+  grid-template-columns:1fr 130px 54px;
   gap:8px;
   margin-bottom:10px;
 }
@@ -610,20 +609,27 @@
 .kpi-row{
   display:grid;
   grid-template-columns:repeat(6,1fr);
-  gap:8px;
+  gap:10px;
   margin-bottom:12px;
 }
 .kpi{
   background:#fff;
-  border:1px solid #fee2e2;
+  border:1px solid #e5e7eb;
   border-left:4px solid var(--bdr-red);
   border-radius:14px;
-  padding:10px;
+  padding:10px 12px;
+  min-height:76px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
   position:relative;
   z-index:1;
+  overflow:hidden;
+  box-shadow:0 2px 8px rgba(15,23,42,.06);
 }
-.kpi strong{font-size:19px;display:block;}
-.kpi span{font-size:11px;color:#6b7280;font-weight:900;}
+.kpi::after{content:none!important;}
+.kpi strong{font-size:22px;line-height:1;display:block;color:#0f172a;font-weight:900;}
+.kpi span{font-size:12px;color:#64748b;font-weight:900;margin-top:6px;}
 
 /* =========================================================
    11) RESPONSIVO
@@ -726,12 +732,48 @@
   font-size:11px;
 }
 
+
+/* =========================================================
+   PADRÃO IGUAL PATRIMÔNIO - AJUSTE FINAL
+========================================================= */
+.expedicao-premium-main{
+  padding:12px !important;
+}
+.bdr-logo-menu{
+  background:transparent!important;
+  border:none!important;
+  box-shadow:none!important;
+  color:transparent!important;
+}
+.bdr-logo-menu img,.bdr-logo-menu i,.bdr-logo-menu span{
+  display:none!important;
+}
+
+
+
+/* =========================================================
+   CARRINHO EM MODAL - LIMPO E SEM OCUPAR ESPAÇO
+========================================================= */
+.cart-panel{display:none!important;}
+.cart-modal-panel{display:block!important;position:relative!important;top:auto!important;box-shadow:none!important;border:none!important;padding:0!important;background:transparent!important;}
+.btn-cart-top{height:42px;border-radius:12px!important;background:#2563eb!important;color:#fff!important;border:0!important;font-weight:900!important;position:relative;display:flex;align-items:center;justify-content:center;}
+.btn-cart-top span{position:absolute;top:-7px;right:-7px;min-width:20px;height:20px;border-radius:999px;background:#dc2626;color:#fff;border:2px solid #fff;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;}
+#modalCarrinho .modal{width:min(520px,96vw)!important;}
+#modalCarrinho .modal-body textarea{width:100%;border:1px solid #d1d5db;border-radius:12px;padding:10px;resize:vertical;}
+#modalCarrinho .btn-submit{height:44px;border:0;color:#fff;font-weight:900;}
+@media(max-width:700px){.searchbar{grid-template-columns:1fr 56px}.searchbar button:not(.btn-cart-top){display:none}.btn-cart-top{height:42px}}
+
 </style>
+<link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260626-1">
 </head>
 <body>
 <script>verificarLogin();</script>
-<div class="bdr-app">
+<div class="app-layout">
   <aside class="bdr-sidebar">
+  <div class="bdr-brand">
+    <div class="bdr-brand-icon bdr-logo-menu"></div>
+  </div>
+
  <!-- MENU PRINCIPAL FIXO -->
  <nav class="bdr-menu">
 
@@ -801,7 +843,7 @@
 
 </nav>
   </aside>
-  <main class="bdr-main">
+  <main class="bdr-main expedicao-premium-main">
     <div class="bdr-topbar">
       <div><div class="bdr-topbar-title">📦 BDR ERP - Expedição</div><div class="bdr-topbar-sub">Catálogo interno, solicitações, reservas, retirada e transferência entre obras/setores.</div></div>
       <div class="bdr-top-actions">
@@ -834,7 +876,7 @@
         <div>
           <div class="card">
             <div class="exp-head"><div class="exp-title"><h2>Catálogo de itens</h2><p>Solicite materiais entre obras/setores da rede BDR.</p></div><button class="btn-dark" data-permissao="EXPEDICAO_VER" onclick="carregarTudo()"><i class="fa-solid fa-rotate"></i> Atualizar</button></div>
-            <div class="searchbar"><input id="buscaCatalogo" placeholder="Buscar produto, patrimônio, código, obra..." oninput="renderizarCatalogo()"><button onclick="renderizarCatalogo()"><i class="fa-solid fa-search"></i> Buscar</button></div>
+            <div class="searchbar"><input id="buscaCatalogo" placeholder="Buscar produto, patrimônio, código, obra..." oninput="renderizarCatalogo()"><button onclick="renderizarCatalogo()"><i class="fa-solid fa-search"></i> Buscar</button><button type="button" class="btn-cart-top" onclick="abrirModalCarrinho()" title="Abrir carrinho"><i class="fa-solid fa-cart-shopping"></i><span id="cartQtdTopo">0</span></button></div>
             <div class="chips">
               <button class="chip-exp active" data-filtro="TODOS" onclick="filtrarStatus('TODOS',this)">Todos <span class="num" id="chipTodos">0</span></button>
               <button class="chip-exp" data-filtro="ESTOQUE" onclick="filtrarStatus('ESTOQUE',this)">🟢 Estoque <span class="num" id="chipEstoque">0</span></button>
@@ -845,14 +887,7 @@
             <div id="catalogoGrid" class="catalogo-grid"></div>
           </div>
         </div>
-        <aside class="cart-panel">
-          <div class="cart-head"><span><i class="fa-solid fa-cart-shopping"></i> Meu carrinho</span><span id="cartQtd">0</span></div>
-          <div id="cartItens"></div>
-          <textarea id="obsSolicitacao" placeholder="Observação da solicitação..." style="margin-top:8px;min-height:60px"></textarea>
-          <button class="btn-submit" data-permissao="EXPEDICAO_VER" onclick="enviarSolicitacao()"><i class="fa-regular fa-paper-plane"></i> Enviar solicitação</button>
-          <div class="mini-summary"><div class="mini-box"><strong id="cartResumoItens">0</strong>Itens</div><div class="mini-box"><strong id="cartResumoObras">0</strong>Origens</div></div>
-          <div class="info-box">A solicitação será enviada aos responsáveis pela obra/setor de origem. Itens em uso entram como interesse, não como retirada direta.</div>
-        </aside>
+
       </div>
     </section>
 
@@ -865,6 +900,7 @@
   </main>
 </div>
 
+<div id="modalCarrinho" class="modal-bg"><div class="modal"><div class="modal-head"><span><i class="fa-solid fa-cart-shopping"></i> Meu carrinho</span><button class="fechar-modal" onclick="fecharModalCarrinho()">X</button></div><div class="modal-body"><div class="cart-modal-panel"><div class="cart-head"><span>Itens selecionados</span><span id="cartQtd">0</span></div><div id="cartItens"></div><textarea id="obsSolicitacao" placeholder="Observação da solicitação..." style="margin-top:8px;min-height:70px"></textarea><button class="btn-submit" data-permissao="EXPEDICAO_VER" onclick="enviarSolicitacao()"><i class="fa-regular fa-paper-plane"></i> Enviar solicitação</button><div class="mini-summary"><div class="mini-box"><strong id="cartResumoItens">0</strong>Itens</div><div class="mini-box"><strong id="cartResumoObras">0</strong>Origens</div></div><div class="info-box">A solicitação será enviada aos responsáveis pela obra/setor de origem. Itens em uso entram como interesse, não como retirada direta.</div></div></div></div></div>
 <div id="modalDetalhe" class="modal-bg"><div class="modal"><div class="modal-head"><span id="modalTitulo">Detalhes</span><button class="fechar-modal" onclick="fecharModalDetalhe()">X</button></div><div class="modal-body" id="modalConteudo"></div></div></div>
 <div id="modalRetirada" class="modal-bg"><div class="modal"><div class="modal-head"><span>🚚 Confirmar retirada</span><button class="fechar-modal" onclick="fecharModalRetirada()">X</button></div><div class="modal-body"><input id="retMotorista" placeholder="Motorista / responsável"><br><br><input id="retVeiculo" placeholder="Veículo"><br><br><input id="retPlaca" placeholder="Placa"><br><br><textarea id="retObs" placeholder="Observação da retirada"></textarea><br><br><button class="btn-ok" data-permissao="EXPEDICAO_ENTREGAR" onclick="confirmarRetiradaModal()">Confirmar retirada</button></div></div></div>
 
@@ -912,6 +948,24 @@
 <script src="./JS/offlineQueue.js"></script>
 
 
+
+<script>
+function abrirModalCarrinho(){document.getElementById("modalCarrinho")?.classList.add("ativo");}
+function fecharModalCarrinho(){document.getElementById("modalCarrinho")?.classList.remove("ativo");}
+(function(){
+  function espelharQtdCarrinho(){
+    const a=document.getElementById("cartQtd");
+    const b=document.getElementById("cartQtdTopo");
+    if(a&&b) b.innerText=a.innerText||"0";
+  }
+  document.addEventListener("DOMContentLoaded",()=>{
+    espelharQtdCarrinho();
+    const alvo=document.getElementById("cartQtd");
+    if(alvo){new MutationObserver(espelharQtdCarrinho).observe(alvo,{childList:true,characterData:true,subtree:true});}
+  });
+  document.addEventListener("keydown",e=>{if(e.key==="Escape") fecharModalCarrinho();});
+})();
+</script>
 <script>
 /* =========================================================
    BDR EXPEDIÇÃO - PERMISSÕES FASE 5

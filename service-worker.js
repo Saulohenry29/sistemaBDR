@@ -1,5 +1,5 @@
 /* BDR ERP - Service Worker V4 SAFE OFFLINE */
-const BDR_CACHE_VERSION = "bdr-erp-v4.0.0";
+const BDR_CACHE_VERSION = "bdr-erp-v4.0.1-menu-fix-20260626";
 
 const BDR_ASSETS = [
   "./",
@@ -24,6 +24,7 @@ const BDR_ASSETS = [
 
   "./CSS/layout-bdr.css",
   "./CSS/responsivo-bdr.css",
+  "./CSS/bdr-fix-menu-final.css",
 
   "./JS/pwa-install.js",
   "./JS/pwa-update.js",
@@ -102,13 +103,14 @@ self.addEventListener("fetch", event => {
     return;
   }
 
+  // Network-first para CSS/JS/imagens: evita o sistema ficar preso em arquivo velho.
   event.respondWith(
-    caches.match(req).then(cached => {
-      return cached || fetch(req).then(resp => {
-        const clone = resp.clone();
-        caches.open(BDR_CACHE_VERSION).then(cache => cache.put(req, clone));
-        return resp;
-      }).catch(() => cached);
+    fetch(req).then(resp => {
+      const clone = resp.clone();
+      caches.open(BDR_CACHE_VERSION).then(cache => cache.put(req, clone));
+      return resp;
+    }).catch(async () => {
+      return await caches.match(req);
     })
   );
 });

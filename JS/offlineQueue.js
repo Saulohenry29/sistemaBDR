@@ -1,5 +1,5 @@
 /* =========================================================
-   BDR ERP - OFFLINE QUEUE V4
+   BDR ERP - OFFLINE QUEUE V5
    Arquivo: JS/offlineQueue.js
 
    MARCAÇÕES:
@@ -12,11 +12,60 @@
 ========================================================= */
 
 const BDR_OFFLINE_DB = "bdr_offline_db";
-const BDR_OFFLINE_VERSION = 4;
+const BDR_OFFLINE_VERSION = 5;
 const BDR_OFFLINE_STORE = "fila";
 
 function dbOfflineSupabase(){
   return window.client || window.supabaseClient || window.clientSupabase || globalThis.client;
+}
+
+/* =========================================================
+   [00] LIMPEZA DE PAYLOAD ANTES DE SALVAR / SINCRONIZAR
+   ---------------------------------------------------------
+   Por que existe:
+   - Algumas telas antigas gravavam campos que NÃO existem no banco.
+   - Exemplo: usuarios_sistema.obras_liberadas
+   - Isso travava a fila offline mesmo com internet funcionando.
+
+   Onde mexer se precisar:
+   - Para remover outro campo antigo, coloque no mapa abaixo.
+========================================================= */
+const BDR_CAMPOS_BLOQUEADOS_POR_TABELA = {
+  usuarios_sistema: [
+    "obras_liberadas",
+    "obrasLiberadas"
+  ]
+};
+
+function bdrPayloadSeguroOffline(tabela, dados){
+  if(dados === null || dados === undefined) return dados;
+
+  const camposBloqueados = BDR_CAMPOS_BLOQUEADOS_POR_TABELA[String(tabela || "")] || [];
+
+  if(Array.isArray(dados)){
+    return dados.map(item => bdrPayloadSeguroOffline(tabela, item));
+  }
+
+  if(typeof dados !== "object"){
+    return dados;
+  }
+
+  const limpo = { ...dados };
+
+  camposBloqueados.forEach(campo => {
+    if(Object.prototype.hasOwnProperty.call(limpo, campo)){
+      delete limpo[campo];
+    }
+  });
+
+  return limpo;
+}
+
+function bdrPayloadVazio(dados){
+  if(dados === null || dados === undefined) return true;
+  if(Array.isArray(dados)) return dados.length === 0 || dados.every(d => bdrPayloadVazio(d));
+  if(typeof dados === "object") return Object.keys(dados).length === 0;
+  return false;
 }
 
 /* =========================================================
@@ -47,13 +96,21 @@ function abrirOfflineDB(){
 }
 
 function estaOnline(){
-  return navigator.onLine === true;
+  return navigator.onLine !== false;
 }
 
 /* =========================================================
    [02] SALVAR NA FILA
 ========================================================= */
 async function salvarOffline(tipo, tabela, dados, opcoes = {}){
+  dados = bdrPayloadSeguroOffline(tabela, dados);
+
+  // Se uma operação antiga ficou sem dados úteis depois da limpeza, não joga na fila.
+  if((tipo === "insert" || tipo === "update") && bdrPayloadVazio(dados)){
+    console.warn("⚠️ BDR OFFLINE: payload vazio ignorado", { tipo, tabela });
+    return { offline:false, data:null, error:null, ignorado:true };
+  }
+
   const bancoLocal = await abrirOfflineDB();
 
   return new Promise((resolve, reject) => {
@@ -89,6 +146,7 @@ async function salvarOffline(tipo, tabela, dados, opcoes = {}){
    [03] HELPERS GERAIS
 ========================================================= */
 async function bdrSalvarInsert(tabela, dados){
+  dados = bdrPayloadSeguroOffline(tabela, dados);
   if(!estaOnline()) return salvarOffline("insert", tabela, dados);
 
   try{
@@ -101,6 +159,8 @@ async function bdrSalvarInsert(tabela, dados){
 }
 
 async function bdrSalvarUpdate(tabela, dados, filtro){
+  dados = bdrPayloadSeguroOffline(tabela, dados);
+  if(bdrPayloadVazio(dados)) return { offline:false, data:null, error:null, ignorado:true };
   if(!estaOnline()) return salvarOffline("update", tabela, dados, { filtro });
 
   try{
@@ -169,17 +229,31 @@ async function sincronizarOffline(){
       if(item.tipo === "triagem_confirmar_item") ok = await sincronizarTriagemConfirmarItem(item);
 
       if(item.tipo === "insert"){
-        const { error } = await dbOfflineSupabase().from(item.tabela).insert(item.dados);
-        if(error) throw error;
-        ok = true;
+        const dadosSeguros = bdrPayloadSeguroOffline(item.tabela, item.dados);
+
+        if(bdrPayloadVazio(dadosSeguros)){
+          console.warn("⚠️ BDR OFFLINE: item antigo ignorado por payload vazio", item.id);
+          ok = true;
+        }else{
+          const { error } = await dbOfflineSupabase().from(item.tabela).insert(dadosSeguros);
+          if(error) throw error;
+          ok = true;
+        }
       }
 
       if(item.tipo === "update"){
-        let query = dbOfflineSupabase().from(item.tabela).update(item.dados);
-        Object.entries(item.filtro || {}).forEach(([campo, valor]) => query = query.eq(campo, valor));
-        const { error } = await query;
-        if(error) throw error;
-        ok = true;
+        const dadosSeguros = bdrPayloadSeguroOffline(item.tabela, item.dados);
+
+        if(bdrPayloadVazio(dadosSeguros)){
+          console.warn("⚠️ BDR OFFLINE: item antigo ignorado por payload vazio", item.id);
+          ok = true;
+        }else{
+          let query = dbOfflineSupabase().from(item.tabela).update(dadosSeguros);
+          Object.entries(item.filtro || {}).forEach(([campo, valor]) => query = query.eq(campo, valor));
+          const { error } = await query;
+          if(error) throw error;
+          ok = true;
+        }
       }
 
       if(item.tipo === "delete"){
@@ -546,19 +620,20 @@ function bdrMostrarAvisoOffline(msg){
     aviso.id = "bdrOfflineAviso";
     aviso.style.cssText = `
       position:fixed;
-      right:18px;
-      bottom:18px;
+      top:42px;
+      right:14px;
       z-index:999999;
       background:#111827;
       color:#fff;
-      padding:12px 14px;
-      border-radius:14px;
-      box-shadow:0 14px 35px rgba(0,0,0,.28);
+      padding:7px 10px;
+      border-radius:999px;
+      box-shadow:0 8px 18px rgba(0,0,0,.18);
       font-family:Arial,sans-serif;
-      font-size:13px;
-      font-weight:900;
-      max-width:360px;
+      font-size:11px;
+      font-weight:800;
+      max-width:320px;
       display:none;
+      opacity:.94;
     `;
     document.body.appendChild(aviso);
   }
@@ -580,6 +655,7 @@ window.contarFilaOffline = contarFilaOffline;
 window.bdrSalvarInsert = bdrSalvarInsert;
 window.bdrSalvarUpdate = bdrSalvarUpdate;
 window.bdrSalvarDelete = bdrSalvarDelete;
+window.bdrPayloadSeguroOffline = bdrPayloadSeguroOffline;
 
 /* =========================================================
    BDR STATUS GLOBAL DE INTERNET / FILA
@@ -592,21 +668,61 @@ async function bdrAtualizarStatusGlobal(){
     el = document.createElement("div");
     el.id = "bdrStatusGlobal";
     el.style.cssText = `
-      position:fixed;
-      left:50%;
-      bottom:16px;
-      transform:translateX(-50%);
-      z-index:999998;
-      padding:9px 13px;
-      border-radius:999px;
-      font-family:Arial,sans-serif;
-      font-size:12px;
-      font-weight:900;
-      box-shadow:0 12px 28px rgba(0,0,0,.22);
-      display:none;
-      align-items:center;
-      gap:7px;
-    `;
+  position:fixed;
+
+  /* POSIÇÃO VERTICAL
+     top = topo
+     menor = sobe
+     maior = desce
+  */
+  top:10px;
+
+  /* POSIÇÃO HORIZONTAL
+     right = lado direito
+     menor = mais colado na borda
+     maior = mais para o centro
+  */
+  right:14px;
+
+  /* SE QUISER CENTRALIZAR:
+     apague right e use:
+     left:50%;
+     transform:translateX(-50%);
+  */
+
+  /* SE QUISER EMBAIXO:
+     troque top por:
+     bottom:20px;
+  */
+
+  z-index:999998;
+
+  /* TAMANHO DA CAIXA */
+  padding:5px 9px;
+
+  /* ARREDONDAMENTO */
+  border-radius:999px;
+
+  font-family:Arial,sans-serif;
+
+  /* TAMANHO DO TEXTO */
+  font-size:10px;
+
+  /* PESO DO TEXTO */
+  font-weight:800;
+
+  /* SOMBRA */
+  box-shadow:0 6px 14px rgba(0,0,0,.15);
+
+  display:none;
+  align-items:center;
+
+  /* ESPAÇO ENTRE ÍCONE E TEXTO */
+  gap:5px;
+
+  /* TRANSPARÊNCIA */
+  opacity:.92;
+`;
     document.body.appendChild(el);
   }
 
@@ -641,4 +757,4 @@ window.addEventListener("offline", () => setTimeout(bdrAtualizarStatusGlobal, 40
 document.addEventListener("DOMContentLoaded", () => setTimeout(bdrAtualizarStatusGlobal, 900));
 window.bdrAtualizarStatusGlobal = bdrAtualizarStatusGlobal;
 
-console.log("✅ BDR offlineQueue.js V4 carregado.");
+console.log("✅ BDR offlineQueue.js V5 carregado - payload seguro.");

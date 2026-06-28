@@ -10,8 +10,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
+<link rel="stylesheet" href="./CSS/responsivo-bdr.css">
 <link rel="stylesheet" href="./CSS/bdr-owner-core.css">
-<title>BDR - Usuários </title>
+<link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260627-USUARIOS-LIMPO-1">
+<title>BDR - Usuários</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
@@ -20,1872 +22,169 @@
 <script src="./JS/bdrCore.js"></script>
 <script src="./JS/bdrMenuPermissoes.js"></script>
 
+
 <style>
 /* =========================================================
-   BDR ERP 9.0 - USUÁRIOS MASTER PREMIUM
-   Tela criada do zero baseada no layout da referência.
+   BDR USUÁRIOS - CSS LIMPO DA PÁGINA
+   ---------------------------------------------------------
+   AJUSTES RÁPIDOS:
+   --usuarios-zoom: diminui/aumenta apenas a tela de usuários
+   --usuarios-gap: espaço entre os cards
+   --usuarios-radius: arredondamento dos cards
+   --usuarios-red: cor principal da tela
 ========================================================= */
 :root{
-  --red:#d71920;
-  --red-dark:#b80000;
-  --dark:#071827;
-  --nav:#071421;
-  --bg:#f5f7fb;
-  --card:#ffffff;
-  --muted:#667085;
-  --line:#e5e7eb;
-  --green:#16a34a;
-  --blue:#2563eb;
-  --orange:#f97316;
-  --teal:#0d9488;
-  --gray:#6b7280;
-  --shadow:0 12px 30px rgba(15,23,42,.08);
+  --usuarios-zoom:.86;
+  --usuarios-red:#a4161a;
+  --usuarios-bg:#eef2f7;
+  --usuarios-card:#ffffff;
+  --usuarios-line:#e5e7eb;
+  --usuarios-muted:#6b7280;
+  --usuarios-gap:8px;
+  --usuarios-radius:16px;
+  --usuarios-shadow:0 2px 9px rgba(0,0,0,.08);
 }
-
 *{box-sizing:border-box}
-
-body{
-  margin:0;
-  font-family:Arial, Helvetica, sans-serif;
-  background:var(--bg);
-  color:#101828;
-  font-size:14px;
-}
-
-button,input,select{
-  font-family:inherit;
-}
-
-button{
-  cursor:pointer;
-}
-
-/* ======================== SIDEBAR ======================== */
-.app{
-  min-height:100vh;
-  display:grid;
-  grid-template-columns:68px 1fr;
-}
-
-.sidebar{
-  background:linear-gradient(180deg,#071421,#0b1726);
-  color:#fff;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  padding:14px 9px;
-  gap:12px;
-  position:sticky;
-  top:0;
-  height:100vh;
-  box-shadow:8px 0 28px rgba(0,0,0,.16);
-}
-
-.side-btn{
-  width:45px;
-  height:45px;
-  border:0;
-  border-radius:13px;
-  background:transparent;
-  color:#e5e7eb;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:20px;
-  transition:.18s;
-  position:relative;
-}
-
-.side-btn:hover{
-  background:rgba(255,255,255,.08);
-  transform:translateY(-1px);
-}
-
-.side-btn.active{
-  background:linear-gradient(135deg,var(--red),#ff2424);
-  color:#fff;
-  box-shadow:0 10px 22px rgba(215,25,32,.35);
-}
-
-.side-spacer{
-  flex:1;
-}
-
-/* ======================== MAIN ======================== */
-.main{
-  padding:18px 22px 24px;
-  overflow:hidden;
-}
-
-/* ======================== HEADER ======================== */
-.top{
-  display:grid;
-  grid-template-columns:auto 1fr auto;
-  gap:18px;
-  align-items:center;
-  margin-bottom:14px;
-}
-
-.logo-box{
-  display:flex;
-  align-items:center;
-  gap:14px;
-  min-width:152px;
-}
-
-.logo-bdr{
-  font-size:38px;
-  line-height:.85;
-  font-weight:1000;
-  color:var(--red);
-  letter-spacing:-2px;
-}
-
-.logo-bdr small{
-  display:block;
-  color:#6b7280;
-  letter-spacing:6px;
-  font-size:14px;
-  font-weight:900;
-  margin-left:8px;
-  margin-top:3px;
-}
-
-.page-title h1{
-  margin:0;
-  font-size:25px;
-  font-weight:1000;
-  letter-spacing:-.5px;
-}
-
-.page-title p{
-  margin:4px 0 0;
-  color:var(--muted);
-  font-size:13px;
-  font-weight:600;
-}
-
-.top-actions{
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-
-.btn{
-  border:0;
-  border-radius:12px;
-  height:42px;
-  padding:0 16px;
-  font-weight:900;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  transition:.18s;
-  white-space:nowrap;
-}
-
-.btn:hover{
-  transform:translateY(-1px);
-  filter:brightness(.98);
-}
-
-.btn-red{
-  background:linear-gradient(135deg,var(--red),#c90000);
-  color:white;
-  box-shadow:0 10px 20px rgba(215,25,32,.22);
-}
-
-.btn-soft{
-  background:#fff1f2;
-  color:var(--red);
-  border:1px solid #fee2e2;
-}
-
-.btn-dark{
-  background:#111827;
-  color:white;
-}
-
-.btn-gray{
-  background:#4b5563;
-  color:white;
-}
-
-.btn-green{
-  background:#dcfce7;
-  color:#15803d;
-  border:1px solid #86efac;
-}
-
-.user-top{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  position:relative;
-}
-
-.bell{
-  width:46px;
-  height:46px;
-  border-radius:50%;
-  border:1px solid #e5e7eb;
-  background:#fff;
-  position:relative;
-  font-size:18px;
-}
-
-.bell span{
-  position:absolute;
-  top:-5px;
-  right:-4px;
-  min-width:21px;
-  height:21px;
-  border-radius:999px;
-  background:var(--red);
-  color:#fff;
-  font-size:11px;
-  font-weight:900;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
-.avatar{
-  width:46px;
-  height:46px;
-  border-radius:50%;
-  background:linear-gradient(135deg,#fecaca,#fff);
-  border:2px solid #fee2e2;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  overflow:hidden;
-  color:var(--red);
-}
-
-.avatar img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-
-.user-name{
-  line-height:1.1;
-}
-
-.user-name b{
-  display:block;
-  font-size:13px;
-}
-
-.user-name span{
-  display:inline-block;
-  margin-top:3px;
-  background:#fee2e2;
-  color:var(--red);
-  border-radius:999px;
-  padding:3px 8px;
-  font-size:11px;
-  font-weight:900;
-}
-
-.user-menu-btn{
-  width:34px;
-  height:34px;
-  border:none;
-  background:transparent;
-  color:#111827;
-}
-
-/* ======================== FILTERS ======================== */
-.filters{
-  display:grid;
-  grid-template-columns:1.1fr 1fr 1fr .7fr .9fr;
-  gap:10px;
-  background:#fff;
-  border:1px solid #e8edf5;
-  border-radius:16px;
-  padding:10px;
-  box-shadow:var(--shadow);
-  margin-bottom:10px;
-}
-
-.field{
-  position:relative;
-}
-
-.field label{
-  display:block;
-  font-size:12px;
-  font-weight:900;
-  margin:0 0 3px;
-}
-
-.field select,
-.field input{
-  width:100%;
-  height:44px;
-  border:1px solid #e5e7eb;
-  background:#fff;
-  border-radius:12px;
-  padding:8px 12px;
-  outline:none;
-  color:#111827;
-}
-
-.search-field i{
-  position:absolute;
-  right:13px;
-  bottom:13px;
-  color:#111827;
-  font-size:17px;
-}
-
-.search-field input{
-  padding-right:40px;
-}
-
-/* ======================== MASTER STRIP ======================== */
-.master-strip{
-  display:grid;
-  grid-template-columns:auto 1fr auto;
-  align-items:center;
-  gap:13px;
-  border:1px solid #fecaca;
-  background:linear-gradient(135deg,#fff5f5,#fff);
-  border-radius:16px;
-  padding:12px 18px;
-  box-shadow:var(--shadow);
-  margin-bottom:10px;
-}
-
-.master-icon{
-  width:58px;
-  height:58px;
-  border-radius:18px;
-  background:#fff1f2;
-  color:var(--red);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:29px;
-}
-
-.master-strip h2{
-  margin:0;
-  font-size:20px;
-  font-weight:1000;
-}
-
-.master-strip p{
-  margin:3px 0 0;
-  color:#475467;
-  font-size:13px;
-}
-
-.master-actions{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-
-/* ======================== PERMISSION BOARD ======================== */
-.board{
-  display:grid;
-  grid-template-columns:1fr 1fr 1.2fr;
-  gap:12px;
-  margin-bottom:12px;
-}
-
-.panel{
-  background:#fff;
-  border:1px solid #e7ebf0;
-  border-radius:18px;
-  box-shadow:var(--shadow);
-  overflow:hidden;
-}
-
-.panel-head{
-  height:47px;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:0 16px;
-  font-weight:1000;
-  font-size:16px;
-}
-
-.panel-head i{
-  color:var(--red);
-  font-size:18px;
-}
-
-.panel-body{
-  padding:9px 12px 14px;
-}
-
-.perm-row{
-  min-height:54px;
-  display:grid;
-  grid-template-columns:44px 1fr 54px;
-  gap:10px;
-  align-items:center;
-  border:1px solid #edf0f5;
-  border-radius:14px;
-  padding:8px 10px;
-  margin-bottom:8px;
-  background:#fff;
-  transition:.16s;
-}
-
-.perm-row:hover{
-  border-color:#fecaca;
-  background:#fffafa;
-}
-
-.perm-ico{
-  width:38px;
-  height:38px;
-  border-radius:12px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:18px;
-  background:#fff1f2;
-  color:var(--red);
-}
-
-.perm-ico.blue{background:#eff6ff;color:#2563eb}
-.perm-ico.green{background:#ecfdf5;color:#16a34a}
-.perm-ico.orange{background:#fff7ed;color:#f97316}
-.perm-ico.gray{background:#f3f4f6;color:#475467}
-
-.perm-text b{
-  display:block;
-  font-size:13px;
-}
-
-.perm-text span{
-  display:block;
-  color:#667085;
-  font-size:11.5px;
-  margin-top:2px;
-}
-
-.switch{
-  position:relative;
-  width:45px;
-  height:24px;
-  display:inline-block;
-}
-
-.switch input{
-  display:none;
-}
-
-.slider{
-  position:absolute;
-  cursor:pointer;
-  inset:0;
-  background:#9ca3af;
-  border-radius:999px;
-  transition:.18s;
-  box-shadow:inset 0 1px 3px rgba(0,0,0,.2);
-}
-
-.slider::before{
-  content:"";
-  position:absolute;
-  width:20px;
-  height:20px;
-  left:2px;
-  top:2px;
-  border-radius:50%;
-  background:#fff;
-  transition:.18s;
-  box-shadow:0 2px 5px rgba(0,0,0,.22);
-}
-
-.switch input:checked + .slider{
-  background:#16a34a;
-}
-
-.switch input:checked + .slider::before{
-  transform:translateX(21px);
-}
-
-/* Critical panel with alert */
-.ops-grid{
-  display:grid;
-  grid-template-columns:1fr 170px;
-  gap:12px;
-}
-
-.alert-card{
-  border:1px solid #fecaca;
-  border-radius:16px;
-  background:linear-gradient(180deg,#fff,#fff5f5);
-  overflow:hidden;
-  align-self:stretch;
-}
-
-.alert-title{
-  background:linear-gradient(135deg,var(--red),#b90000);
-  color:#fff;
-  font-weight:1000;
-  padding:13px;
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-
-.alert-body{
-  padding:16px 13px;
-  text-align:center;
-}
-
-.alert-shield{
-  width:94px;
-  height:94px;
-  border-radius:50%;
-  margin:0 auto 10px;
-  background:#fff;
-  border:1px solid #fee2e2;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:var(--red);
-  font-size:54px;
-  box-shadow:0 12px 24px rgba(215,25,32,.12);
-}
-
-.alert-body b{
-  color:var(--red);
-}
-
-.alert-body p{
-  color:#475467;
-  font-size:11.5px;
-  line-height:1.45;
-}
-
-.stars{
-  color:var(--red);
-  letter-spacing:3px;
-  font-size:16px;
-}
-
-/* ======================== LOWER GRID ======================== */
-.lower{
-  display:grid;
-  grid-template-columns:1fr 1fr 1.2fr;
-  gap:12px;
-  margin-bottom:12px;
-}
-
-.red-head{
-  background:linear-gradient(135deg,var(--red-dark),var(--red));
-  color:#fff;
-  height:45px;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:0 16px;
-  font-weight:1000;
-  font-size:16px;
-}
-
-.obras-body{
-  padding:12px;
-}
-
-.search-mini{
-  position:relative;
-  margin-bottom:9px;
-}
-
-.search-mini input{
-  width:100%;
-  height:38px;
-  border:1px solid #e5e7eb;
-  border-radius:12px;
-  padding:0 12px 0 36px;
-}
-
-.search-mini i{
-  position:absolute;
-  left:13px;
-  top:11px;
-  color:#667085;
-}
-
-.obra-list{
-  max-height:158px;
-  overflow:auto;
-  padding-right:4px;
-}
-
-.obra-row{
-  display:grid;
-  grid-template-columns:24px 1fr auto;
-  align-items:center;
-  min-height:28px;
-  gap:6px;
-  font-size:13px;
-}
-
-.chk{
-  width:16px;
-  height:16px;
-  accent-color:var(--red);
-}
-
-.tag{
-  border-radius:999px;
-  padding:3px 8px;
-  font-size:10px;
-  font-weight:900;
-}
-
-.tag-obra{background:#ffedd5;color:#ea580c}
-.tag-fazenda{background:#fff7ed;color:#f97316}
-.tag-apoio{background:#dbeafe;color:#2563eb}
-.tag-cd{background:#dcfce7;color:#15803d}
-
-.panel-actions{
-  display:flex;
-  gap:8px;
-  margin-top:12px;
-}
-
-.panel-actions .btn{
-  height:35px;
-  font-size:12px;
-  padding:0 12px;
-}
-
-/* Summary */
-.summary-body{
-  padding:12px;
-}
-
-.summary-cards{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:8px;
-  margin-bottom:12px;
-}
-
-.summary-card{
-  border:1px solid #edf0f5;
-  border-radius:13px;
-  padding:9px;
-  text-align:center;
-}
-
-.summary-card i{
-  font-size:23px;
-}
-
-.summary-card b{
-  font-size:21px;
-}
-
-.summary-card span{
-  display:block;
-  font-size:11px;
-  color:#667085;
-}
-
-.bar{
-  height:5px;
-  border-radius:999px;
-  background:#e5e7eb;
-  margin-top:7px;
-  overflow:hidden;
-}
-
-.bar div{
-  height:100%;
-  border-radius:999px;
-}
-
-.access-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-}
-
-.access-box{
-  border:1px solid #edf0f5;
-  border-radius:14px;
-  padding:12px;
-  min-height:112px;
-}
-
-.access-line{
-  font-size:12px;
-  margin:7px 0;
-  display:flex;
-  align-items:center;
-  gap:6px;
-}
-
-.access-line.ok i{color:#16a34a}
-.access-line.no i{color:#dc2626}
-
-.current-profile{
-  background:#dbeafe;
-  color:#2563eb;
-  display:inline-block;
-  padding:7px 12px;
-  border-radius:999px;
-  font-weight:1000;
-  margin-top:9px;
-}
-
-/* Quick profiles */
-.quick-body{
-  padding:14px;
-}
-
-.quick-grid{
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:11px;
-}
-
-.profile-card{
-  border:1px solid #dbeafe;
-  border-radius:16px;
-  background:#fff;
-  padding:16px 10px 12px;
-  text-align:center;
-  min-height:175px;
-  position:relative;
-  transition:.18s;
-}
-
-.profile-card:hover{
-  transform:translateY(-2px);
-  box-shadow:0 12px 28px rgba(15,23,42,.10);
-}
-
-.profile-card.active{
-  border-color:#fecaca;
-  background:#fff5f5;
-}
-
-.profile-card.active::after{
-  content:"✓";
-  position:absolute;
-  right:-8px;
-  top:-8px;
-  width:31px;
-  height:31px;
-  background:var(--red);
-  color:#fff;
-  border-radius:50%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:1000;
-}
-
-.profile-card i{
-  font-size:42px;
-  margin-bottom:9px;
-}
-
-.profile-card.almox i{color:#2563eb}
-.profile-card.operador i{color:#0d9488}
-.profile-card.gestor i{color:#f97316}
-.profile-card.master i{color:var(--red)}
-
-.profile-card b{
-  display:block;
-  font-size:13px;
-  margin-bottom:8px;
-}
-
-.profile-card p{
-  margin:0;
-  color:#475467;
-  font-size:11.5px;
-  line-height:1.45;
-  min-height:38px;
-}
-
-.profile-card button{
-  width:100%;
-  height:38px;
-  margin-top:11px;
-  border:1px solid #e5e7eb;
-  border-radius:10px;
-  background:#fff;
-  font-weight:900;
-}
-
-.profile-card.active button{
-  background:#fee2e2;
-  color:var(--red);
-  border-color:#fecaca;
-}
-
-/* ======================== USER LIST ======================== */
-.users-panel{
-  background:#fff;
-  border:1px solid #e7ebf0;
-  border-radius:18px;
-  box-shadow:var(--shadow);
-  overflow:hidden;
-}
-
-.user-table-head{
-  background:linear-gradient(135deg,var(--red-dark),var(--red));
-  color:#fff;
-  height:45px;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:0 17px;
-  font-weight:1000;
-  font-size:17px;
-}
-
-.table{
-  width:100%;
-}
-
-.tr{
-  display:grid;
-  grid-template-columns:2fr 1fr 1.4fr 1.4fr .8fr 1.2fr 1.2fr;
-  gap:12px;
-  align-items:center;
-  padding:13px 18px;
-  border-bottom:1px solid #edf0f5;
-}
-
-.tr.header{
-  font-weight:1000;
-  color:#1f2937;
-  font-size:12px;
-  text-transform:uppercase;
-  background:#fff;
-}
-
-.user-cell{
-  display:flex;
-  align-items:center;
-  gap:11px;
-  min-width:0;
-}
-
-.user-avatar{
-  width:43px;
-  height:43px;
-  border-radius:50%;
-  background:#f3f4f6;
-  overflow:hidden;
-  flex:0 0 auto;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:1000;
-  color:#fff;
-}
-
-.user-avatar img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-
-.user-cell b{
-  display:block;
-  font-size:14px;
-}
-
-.user-cell span{
-  color:#667085;
-  font-size:12px;
-}
-
-.badge{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  border-radius:8px;
-  padding:7px 10px;
-  font-size:12px;
-  font-weight:1000;
-  width:max-content;
-}
-
-.badge-blue{background:#dbeafe;color:#2563eb}
-.badge-green{background:#dcfce7;color:#15803d}
-.badge-red{background:#fee2e2;color:#dc2626}
-.badge-orange{background:#ffedd5;color:#ea580c}
-.badge-gray{background:#f3f4f6;color:#475467}
-
-.actions{
-  display:flex;
-  gap:8px;
-  justify-content:flex-end;
-}
-
-.icon-btn{
-  width:37px;
-  height:37px;
-  border:0;
-  border-radius:10px;
-  color:#fff;
-  font-size:14px;
-}
-
-.icon-blue{background:#2563eb}
-.icon-yellow{background:#f59e0b}
-.icon-red{background:#e11d48}
-.icon-more{background:#fff;color:#111827;border:1px solid #cbd5e1}
-
-/* ======================== MODAL ======================== */
-.modal-bg{
-  position:fixed;
-  inset:0;
-  background:rgba(15,23,42,.72);
-  z-index:99999;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  padding:18px;
-}
-
-.modal-bg.ativo{
-  display:flex;
-}
-
-.modal{
-  width:min(680px,100%);
-  background:#fff;
-  border-radius:20px;
-  box-shadow:0 28px 80px rgba(0,0,0,.35);
-  overflow:hidden;
-}
-
-.modal-head{
-  background:linear-gradient(135deg,#fff1f2,#fff);
-  border-bottom:1px solid #fecaca;
-  padding:16px 18px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-
-.modal-head h3{
-  margin:0;
-  color:#111827;
-  font-size:20px;
-}
-
-.modal-body{
-  padding:18px;
-}
-
-.form-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-}
-
-.form-grid .wide{
-  grid-column:span 2;
-}
-
-.form-grid label{
-  display:block;
-  font-weight:900;
-  font-size:12px;
-  margin-bottom:5px;
-}
-
-.form-grid input,
-.form-grid select{
-  width:100%;
-  height:42px;
-  border:1px solid #d1d5db;
-  border-radius:12px;
-  padding:0 12px;
-}
-
-.modal-actions{
-  display:flex;
-  justify-content:flex-end;
-  gap:10px;
-  padding:0 18px 18px;
-}
-
-.close-btn{
-  width:34px;
-  height:34px;
-  border:0;
-  border-radius:10px;
-  background:#fee2e2;
-  color:var(--red);
-}
-
-/* ======================== RESPONSIVO ======================== */
-@media(max-width:1350px){
-  .board,.lower{
-    grid-template-columns:1fr;
-  }
-
-  .ops-grid{
-    grid-template-columns:1fr;
-  }
-
-  .quick-grid{
-    grid-template-columns:repeat(2,1fr);
-  }
-}
-
-@media(max-width:960px){
-  .app{
-    grid-template-columns:1fr;
-  }
-
-  .sidebar{
-    display:none;
-  }
-
-  .top,.filters,.master-strip{
-    grid-template-columns:1fr;
-  }
-
-  .top-actions{
-    flex-wrap:wrap;
-  }
-
-  .tr,.tr.header{
-    grid-template-columns:1fr;
-  }
-
-  .tr.header{
-    display:none;
-  }
-
-  .actions{
-    justify-content:flex-start;
-  }
-
-  .form-grid{
-    grid-template-columns:1fr;
-  }
-
-  .form-grid .wide{
-    grid-column:span 1;
-  }
-}
-
-/* =========================================================
-   PATCH V3 - COMPACTO + SEM CURSOR PISCANDO + ACTIVE MELHOR
-========================================================= */
-
-/* tira o cursor piscando em botões/cards/switches */
-button,
-button *,
-.side-btn,
-.profile-card,
-.profile-card *,
-.perm-row,
-.perm-row *,
-.switch,
-.slider,
-.master-actions,
-.master-actions *{
-  user-select:none!important;
-  caret-color:transparent!important;
-  outline:none!important;
-  -webkit-user-select:none!important;
-  -webkit-tap-highlight-color:transparent!important;
-}
-
-button:focus,
-button:active,
-.profile-card:focus,
-.profile-card:active,
-.side-btn:focus,
-.side-btn:active{
-  outline:none!important;
-  box-shadow:none!important;
-}
-
-/* compacta a tela para caber melhor */
-.main{
-  padding:12px 16px 18px!important;
-}
-
-.top{
-  margin-bottom:9px!important;
-  gap:12px!important;
-}
-
-.logo-bdr{
-  font-size:31px!important;
-}
-
-.logo-bdr small{
-  font-size:11px!important;
-  letter-spacing:4px!important;
-}
-
-.page-title h1{
-  font-size:21px!important;
-}
-
-.page-title p{
-  font-size:12px!important;
-}
-
-.btn{
-  height:36px!important;
-  padding:0 13px!important;
-  font-size:12px!important;
-  border-radius:10px!important;
-}
-
-.bell,
-.avatar{
-  width:39px!important;
-  height:39px!important;
-}
-
-.filters{
-  padding:8px!important;
-  gap:8px!important;
-  margin-bottom:8px!important;
-}
-
-.field select,
-.field input{
-  height:37px!important;
-  border-radius:10px!important;
-  font-size:12px!important;
-}
-
-.master-strip{
-  padding:9px 13px!important;
-  margin-bottom:8px!important;
-  border-radius:14px!important;
-}
-
-.master-icon{
-  width:46px!important;
-  height:46px!important;
-  font-size:23px!important;
-}
-
-.master-strip h2{
-  font-size:18px!important;
-}
-
-.master-strip p{
-  font-size:12px!important;
-}
-
-.board,
-.lower{
-  gap:9px!important;
-  margin-bottom:9px!important;
-}
-
-.panel{
-  border-radius:15px!important;
-}
-
-.panel-head{
-  height:39px!important;
-  font-size:15px!important;
-  padding:0 13px!important;
-}
-
-.panel-body{
-  padding:8px 10px 10px!important;
-}
-
-.perm-row{
-  min-height:47px!important;
-  grid-template-columns:38px 1fr 48px!important;
-  gap:8px!important;
-  padding:7px 9px!important;
-  border-radius:13px!important;
-  margin-bottom:7px!important;
-}
-
-.perm-ico{
-  width:33px!important;
-  height:33px!important;
-  border-radius:10px!important;
-  font-size:15px!important;
-}
-
-.perm-text b{
-  font-size:12px!important;
-}
-
-.perm-text span{
-  font-size:10.5px!important;
-}
-
-.switch{
-  width:41px!important;
-  height:22px!important;
-}
-
-.slider::before{
-  width:18px!important;
-  height:18px!important;
-}
-
-.switch input:checked + .slider::before{
-  transform:translateX(19px)!important;
-}
-
-.alert-title,
-.red-head,
-.user-table-head{
-  height:38px!important;
-  font-size:15px!important;
-}
-
-.alert-body{
-  padding:12px 10px!important;
-}
-
-.alert-shield{
-  width:70px!important;
-  height:70px!important;
-  font-size:39px!important;
-}
-
-.obras-body,
-.summary-body,
-.quick-body{
-  padding:10px!important;
-}
-
-.summary-card{
-  padding:7px!important;
-}
-
-.summary-card b{
-  font-size:18px!important;
-}
-
-.profile-card{
-  min-height:138px!important;
-  padding:12px 8px 10px!important;
-}
-
-.profile-card i{
-  font-size:34px!important;
-}
-
-.profile-card b{
-  font-size:12px!important;
-}
-
-.profile-card p{
-  font-size:10.5px!important;
-}
-
-.profile-card button{
-  height:32px!important;
-  border-radius:9px!important;
-  font-size:12px!important;
-}
-
-/* active mais visível nos perfis rápidos */
-.profile-card.active{
-  background:linear-gradient(180deg,#fff1f2,#ffffff)!important;
-  border:2px solid #d71920!important;
-  box-shadow:0 12px 26px rgba(215,25,32,.18)!important;
-  transform:translateY(-2px);
-}
-
-.profile-card.active button{
-  background:#d71920!important;
-  color:white!important;
-  border-color:#d71920!important;
-}
-
-.profile-card.active b{
-  color:#d71920!important;
-}
-
-.tr{
-  padding:10px 14px!important;
-}
-
-.tr.header{
-  padding:10px 14px!important;
-}
-
-.user-avatar{
-  width:37px!important;
-  height:37px!important;
-}
-
-.icon-btn{
-  width:32px!important;
-  height:32px!important;
-}
-
-/* padrão mais próximo do patrimônio no topo/menu */
-.sidebar{
-  width:68px!important;
-}
-
-.side-btn{
-  width:42px!important;
-  height:42px!important;
-  border-radius:13px!important;
-}
-
-@media(max-width:1350px){
-  .board,.lower{
-    grid-template-columns:1fr!important;
-  }
-}
-
-
-/* =========================================================
-   PATCH V4 - PADRÃO PATRIMÔNIO
-   Menu/topo iguais ao patrimônio + zoom menor.
-========================================================= */
-
-:root{
-  --screen-zoom:.90;
-}
-
-/* usa layout universal */
-body{
-  background:var(--bdr-bg, #f6f7fb)!important;
-  font-size:13px!important;
-}
-
-/* desliga estilos antigos da sidebar/top */
-.sidebar,
-.side-btn,
-.top,
-.logo-box,
-.logo-bdr,
-.page-title,
-.top-actions,
-.user-top,
-.user-name,
-.user-menu-btn,
-.bell{
-  all:unset;
-}
-
-/* topbar igual patrimônio */
+html,body{margin:0;min-height:100%;background:var(--usuarios-bg);font-family:Arial,sans-serif;color:#111827;overflow-x:hidden;}
+button,input,select,textarea{font-family:inherit;}
+button{cursor:pointer;}
+/* Layout geral da página */
+.app-layout{min-height:100vh;}
+.usuarios-premium-main{padding:calc(12px * var(--usuarios-zoom)) !important;}
+/* Topo */
 .bdr-topbar{
-  min-height:62px!important;
-  padding:12px 16px!important;
-  margin-bottom:12px!important;
-  border-radius:18px!important;
+  background:radial-gradient(circle at right top,rgba(164,22,26,.12),transparent 35%),linear-gradient(135deg,#fff,#f8fafc)!important;
+  border-left:4px solid var(--usuarios-red)!important;
+  border-radius:var(--usuarios-radius)!important;
+  box-shadow:var(--usuarios-shadow)!important;
+  padding:calc(12px * var(--usuarios-zoom)) calc(14px * var(--usuarios-zoom))!important;
+  margin-bottom:var(--usuarios-gap)!important;
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;
 }
-
-.bdr-topbar-title{
-  color:var(--bdr-red, #d71920)!important;
-  font-weight:900!important;
-  font-size:18px!important;
-  line-height:1.15!important;
-}
-
-.bdr-topbar-sub{
-  color:#6b7280!important;
-  font-size:12px!important;
-  margin-top:3px!important;
-  font-weight:500!important;
-}
-
-.bdr-top-actions{
-  display:flex!important;
-  align-items:center!important;
-  gap:12px!important;
-  margin-left:auto!important;
-}
-
-/* sininho padrão patrimônio */
-.notif-wrap{position:relative!important;}
-
-.notif-btn{
-  width:38px!important;
-  height:38px!important;
+.bdr-topbar-title{font-size:calc(19px * var(--usuarios-zoom))!important;font-weight:900!important;color:var(--usuarios-red)!important;}
+.bdr-topbar-sub{font-size:calc(12px * var(--usuarios-zoom))!important;color:var(--usuarios-muted)!important;margin-top:3px!important;}
+.bdr-top-actions{display:flex!important;align-items:center!important;gap:10px!important;flex-wrap:wrap!important;}
+/* Botões */
+.btn,button{border-radius:10px!important;font-size:calc(12px * var(--usuarios-zoom))!important;font-weight:900!important;}
+.btn{height:calc(38px * var(--usuarios-zoom))!important;padding:0 calc(12px * var(--usuarios-zoom))!important;border:0;display:inline-flex;align-items:center;justify-content:center;gap:7px;}
+.btn-red{background:var(--usuarios-red)!important;color:#fff!important;}
+.btn-soft{background:#fff1f2!important;color:var(--usuarios-red)!important;border:1px solid #fee2e2!important;}
+.btn-dark{background:#111827!important;color:#fff!important;}
+.btn-gray{background:#6b7280!important;color:#fff!important;}
+.btn-green{background:#16a34a!important;color:#fff!important;border:none!important;}
+.btn-icon-only{width:calc(38px * var(--usuarios-zoom))!important;min-width:calc(38px * var(--usuarios-zoom))!important;padding:0!important;}
+/* Filtros */
+.filters{display:grid!important;grid-template-columns:1.1fr 1fr 1fr .7fr .9fr!important;gap:var(--usuarios-gap)!important;background:#fff!important;border:1px solid var(--usuarios-line)!important;border-left:4px solid var(--usuarios-red)!important;border-radius:var(--usuarios-radius)!important;padding:calc(10px * var(--usuarios-zoom))!important;box-shadow:var(--usuarios-shadow)!important;margin-bottom:var(--usuarios-gap)!important;}
+.field label{display:block;font-size:calc(11px * var(--usuarios-zoom))!important;font-weight:900;margin:0 0 4px;color:#374151;}
+.field input,.field select,input,select,textarea{border-radius:9px!important;border:1px solid #d1d5db!important;font-size:calc(12px * var(--usuarios-zoom))!important;}
+.field input,.field select{width:100%;height:calc(40px * var(--usuarios-zoom))!important;padding:6px 9px!important;background:#fff;}
+.search-field{position:relative}.search-field i{position:absolute;right:12px;bottom:10px;color:#111827;}
+/* Faixa central */
+.master-strip,.usuario-selecionado-card,.panel,.users-panel,.alert-card,.access-box,.summary-card,.profile-card{background:#fff!important;border:1px solid var(--usuarios-line)!important;border-radius:var(--usuarios-radius)!important;box-shadow:var(--usuarios-shadow)!important;}
+.master-strip{display:grid!important;grid-template-columns:auto 1fr auto!important;align-items:center!important;gap:10px!important;border-left:4px solid var(--usuarios-red)!important;padding:calc(11px * var(--usuarios-zoom)) calc(14px * var(--usuarios-zoom))!important;margin-bottom:var(--usuarios-gap)!important;background:radial-gradient(circle at right top,rgba(164,22,26,.10),transparent 35%),linear-gradient(135deg,#fff,#fff7f7)!important;}
+.master-icon{width:calc(46px * var(--usuarios-zoom))!important;height:calc(46px * var(--usuarios-zoom))!important;border-radius:14px!important;background:#fff1f2!important;color:var(--usuarios-red)!important;display:flex!important;align-items:center!important;justify-content:center!important;font-size:calc(23px * var(--usuarios-zoom))!important;}
+.master-strip h2{margin:0!important;font-size:calc(18px * var(--usuarios-zoom))!important;color:var(--usuarios-red)!important;font-weight:900!important;}.master-strip p{margin:3px 0 0!important;color:var(--usuarios-muted)!important;font-size:calc(12px * var(--usuarios-zoom))!important;}.master-actions{display:flex!important;gap:8px!important;flex-wrap:wrap!important;}
+.usuario-selecionado-card{border-left:4px solid var(--usuarios-red)!important;padding:calc(10px * var(--usuarios-zoom)) calc(13px * var(--usuarios-zoom))!important;margin-bottom:var(--usuarios-gap)!important;}.usuario-selecionado-card span{display:block;font-size:calc(11px * var(--usuarios-zoom));font-weight:900;color:var(--usuarios-muted);text-transform:uppercase}.usuario-selecionado-card strong{display:block;font-size:calc(16px * var(--usuarios-zoom));margin-top:2px}.usuario-selecionado-card small{display:block;color:var(--usuarios-muted);font-size:calc(12px * var(--usuarios-zoom));margin-top:2px}
+/* Painéis */
+.board{display:grid!important;grid-template-columns:1fr 1fr 1.2fr!important;gap:var(--usuarios-gap)!important;margin-bottom:var(--usuarios-gap)!important;align-items:start!important;}.ops-grid{display:grid!important;grid-template-columns:1fr 170px!important;gap:var(--usuarios-gap)!important;}.lower{display:grid!important;grid-template-columns:1fr 1fr 1.2fr!important;gap:var(--usuarios-gap)!important;margin-bottom:var(--usuarios-gap)!important;align-items:start!important;}
+.panel{overflow:hidden!important}.panel-head,.red-head,.user-table-head,.alert-title{min-height:calc(38px * var(--usuarios-zoom))!important;background:#fff!important;color:var(--usuarios-red)!important;border-bottom:1px solid var(--usuarios-line)!important;padding:calc(9px * var(--usuarios-zoom)) calc(12px * var(--usuarios-zoom))!important;font-size:calc(14px * var(--usuarios-zoom))!important;font-weight:900!important;display:flex!important;align-items:center!important;gap:8px!important;}.red-head,.user-table-head{background:var(--usuarios-red)!important;color:#fff!important;}.panel-body,.obras-body,.summary-body,.quick-body{padding:calc(9px * var(--usuarios-zoom))!important;}
+/* Permissões */
+.perm-row{min-height:calc(43px * var(--usuarios-zoom))!important;display:grid!important;grid-template-columns:32px 1fr 44px!important;gap:7px!important;align-items:center!important;border:1px solid #edf0f5!important;border-radius:12px!important;padding:calc(6px * var(--usuarios-zoom))!important;margin-bottom:5px!important;background:#fff!important;transition:none!important;}.perm-row:hover{background:#fffafa!important;border-color:#fecaca!important}.perm-ico{width:calc(30px * var(--usuarios-zoom))!important;height:calc(30px * var(--usuarios-zoom))!important;border-radius:10px!important;background:#fff1f2!important;color:var(--usuarios-red)!important;display:flex!important;align-items:center!important;justify-content:center!important;font-size:calc(14px * var(--usuarios-zoom))!important;}.perm-text b{display:block;font-size:calc(12px * var(--usuarios-zoom))!important;line-height:1.1}.perm-text span{display:block;color:var(--usuarios-muted);font-size:calc(10px * var(--usuarios-zoom))!important;line-height:1.15;margin-top:2px}.switch{position:relative;width:calc(40px * var(--usuarios-zoom))!important;height:calc(22px * var(--usuarios-zoom))!important;display:inline-block}.switch input{display:none}.slider{position:absolute;inset:0;background:#9ca3af;border-radius:999px;transition:.15s}.slider:before{content:"";position:absolute;width:calc(18px * var(--usuarios-zoom))!important;height:calc(18px * var(--usuarios-zoom))!important;left:2px;top:2px;border-radius:50%;background:#fff;transition:.15s}.switch input:checked + .slider{background:#16a34a}.switch input:checked + .slider:before{transform:translateX(calc(18px * var(--usuarios-zoom)))!important;}
+/* Obras, resumo e perfis */
+.obra-list{max-height:155px;overflow:auto}.obra-row{display:grid;grid-template-columns:24px 1fr auto;align-items:center;gap:6px;min-height:27px;font-size:calc(12px * var(--usuarios-zoom));}.chk{width:16px;height:16px;accent-color:var(--usuarios-red)}.tag{border-radius:999px;padding:3px 8px;font-size:10px;font-weight:900}.tag-obra{background:#ffedd5;color:#ea580c}.tag-fazenda{background:#fff7ed;color:#f97316}.tag-apoio{background:#dbeafe;color:#2563eb}.tag-cd{background:#dcfce7;color:#15803d}.summary-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}.summary-card{text-align:center;padding:7px!important}.summary-card i{font-size:18px}.summary-card b{font-size:16px}.summary-card span,.access-line{font-size:calc(11px * var(--usuarios-zoom));color:var(--usuarios-muted)}.bar{height:5px;border-radius:999px;background:#e5e7eb;margin-top:7px;overflow:hidden}.bar div{height:100%;border-radius:999px}.access-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.access-box{min-height:80px;padding:8px!important}.current-profile{display:inline-block;background:#dbeafe;color:#2563eb;border-radius:999px;padding:5px 9px;font-weight:900;margin-top:6px;font-size:11px}.quick-grid{display:grid;grid-template-columns:repeat(4,1fr)!important;gap:8px!important}.profile-card{text-align:center;min-height:115px!important;padding:10px 7px!important;transition:none!important;position:relative}.profile-card:hover{transform:none!important}.profile-card i{font-size:24px!important;margin-bottom:5px!important;color:var(--usuarios-red)!important}.profile-card b{display:block;font-size:calc(12px * var(--usuarios-zoom))!important;margin-bottom:4px}.profile-card p{font-size:calc(10px * var(--usuarios-zoom))!important;line-height:1.25;margin:0;color:#475467}.profile-card button{height:27px!important;margin-top:6px!important;font-size:10px!important}.profile-card.active{border:2px solid var(--usuarios-red)!important;background:#fff5f5!important}.profile-card.active:after{content:"✓";position:absolute;right:-6px;top:-6px;width:22px;height:22px;border-radius:50%;background:var(--usuarios-red);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;}
+/* Lista de usuários */
+.users-panel{overflow:hidden!important}.table{width:100%}.tr{display:grid!important;grid-template-columns:2fr .85fr 1.15fr 1.2fr .7fr 1fr 1fr!important;gap:8px!important;align-items:center!important;padding:calc(9px * var(--usuarios-zoom)) calc(12px * var(--usuarios-zoom))!important;border-bottom:1px solid var(--usuarios-line)!important;font-size:calc(12px * var(--usuarios-zoom))!important;transition:none!important}.tr.header{background:#f8fafc!important;color:#374151!important;font-weight:900!important;text-transform:uppercase;font-size:calc(11px * var(--usuarios-zoom))!important}.tr:hover{background:#f9fafb!important}.tr.usuario-ativo{background:#fff1f2!important;border-left:4px solid var(--usuarios-red)!important}.user-cell{display:flex;align-items:center;gap:9px;min-width:0}.user-avatar{width:calc(36px * var(--usuarios-zoom))!important;height:calc(36px * var(--usuarios-zoom))!important;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;overflow:hidden;flex:0 0 auto}.user-avatar img{width:100%;height:100%;object-fit:cover}.user-cell b{display:block;font-size:calc(13px * var(--usuarios-zoom))!important}.user-cell span{font-size:calc(11px * var(--usuarios-zoom))!important;color:var(--usuarios-muted);}.badge{display:inline-flex;align-items:center;justify-content:center;border-radius:8px;padding:5px 8px;font-size:calc(10px * var(--usuarios-zoom))!important;font-weight:900;width:max-content}.badge-blue{background:#dbeafe;color:#2563eb}.badge-green{background:#dcfce7;color:#15803d}.badge-red{background:#fee2e2;color:#dc2626}.badge-orange{background:#ffedd5;color:#ea580c}.badge-gray{background:#f3f4f6;color:#475467}.actions{display:flex;gap:6px;justify-content:flex-end}.icon-btn{width:calc(31px * var(--usuarios-zoom))!important;height:calc(31px * var(--usuarios-zoom))!important;border:0;border-radius:9px;color:#fff;font-size:calc(12px * var(--usuarios-zoom))!important}.icon-blue{background:#2563eb}.icon-yellow{background:#f59e0b}.icon-red{background:#e11d48}.icon-more{background:#fff;color:#111827;border:1px solid #cbd5e1}
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.72);z-index:99999;display:none;align-items:center;justify-content:center;padding:18px}.modal-bg.ativo{display:flex}.modal{width:min(680px,100%);background:#fff;border-radius:18px;box-shadow:0 28px 80px rgba(0,0,0,.35);overflow:hidden}.modal-head{background:#fff;border-left:4px solid var(--usuarios-red);border-bottom:1px solid var(--usuarios-line);padding:14px 16px;display:flex;justify-content:space-between;align-items:center}.modal-head h3{margin:0;color:var(--usuarios-red);font-size:18px}.modal-body{padding:16px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-grid .wide{grid-column:span 2}.form-grid label{display:block;font-weight:900;font-size:12px;margin-bottom:5px}.form-grid input,.form-grid select{width:100%;height:40px;padding:0 10px}.modal-actions{display:flex;justify-content:flex-end;gap:10px;padding:0 16px 16px}.close-btn{width:34px;height:34px;border:0;border-radius:10px;background:#fee2e2;color:var(--usuarios-red)}
+/* Topo usuário/notificação */
+.notif-wrap{position:relative}.notif-btn{width:38px!important;height:38px!important;border:0;border-radius:50%;background:#fff;color:#111827;display:flex;align-items:center;justify-content:center;position:relative;padding:0}.notif-badge{position:absolute;top:0;right:0;min-width:17px;height:17px;padding:0 5px;border-radius:999px;background:#dc2626;color:#fff;font-size:10px;font-weight:900;display:none;align-items:center;justify-content:center}.notif-dropdown,.dropdown-user{position:absolute;right:0;top:48px;background:#fff;border:1px solid var(--usuarios-line);border-radius:14px;box-shadow:0 18px 35px rgba(15,23,42,.18);display:none;z-index:9999;overflow:hidden}.notif-dropdown.ativo,.dropdown-user.ativo{display:block}.notif-dropdown{width:330px}.notif-head{padding:12px 14px;font-weight:900;color:var(--usuarios-red);background:#fff5f5;border-bottom:1px solid #fecaca}.notif-list{max-height:280px;overflow:auto}.notif-item{padding:10px 14px;border-bottom:1px solid #f1f5f9;font-size:12px;color:#374151}.user-menu{position:relative;display:flex;align-items:center;gap:12px;cursor:pointer;padding:8px 12px;border-radius:12px;user-select:none}.user-menu:hover{background:#fff1f2}.user-mini{text-align:right;font-size:13px;pointer-events:none}.user-mini b{display:block}.user-mini small{display:block;color:var(--usuarios-red);font-weight:900}.avatar{width:42px!important;height:42px!important;border-radius:50%;background:linear-gradient(135deg,#fecaca,#fff);border:2px solid #fee2e2;display:flex;align-items:center;justify-content:center;color:var(--usuarios-red);font-size:18px;pointer-events:none}.dropdown-user{min-width:220px;padding:8px}.dropdown-user button{width:100%;border:0;background:#fff;color:#374151;padding:10px 11px;border-radius:9px;text-align:left;display:flex;align-items:center;gap:9px}.dropdown-user button:hover{background:#fff1f2;color:var(--usuarios-red)}.dropdown-user .logout-btn{color:#dc2626}
+/* Logo do menu camuflado: fica invisível, mantendo o espaço */
+.bdr-logo-menu{
+  background:transparent!important;
   border:none!important;
-  border-radius:50%!important;
-  background:#fff!important;
-  color:#111827!important;
-  display:flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  cursor:pointer!important;
-  position:relative!important;
   box-shadow:none!important;
-  outline:none!important;
-  -webkit-tap-highlight-color:transparent!important;
-  padding:0!important;
+  color:transparent!important;
 }
 
-.notif-btn:hover{
-  background:#fff1f2!important;
-  color:var(--bdr-red, #d71920)!important;
-  transform:translateY(-1px)!important;
+.bdr-logo-menu img,.bdr-logo-menu i,.bdr-logo-menu span{display:none!important;}
+/* Anti-pisca: remove seleção/caret/efeitos de foco em áreas clicáveis */
+button,button *,.bdr-menu-btn,.bdr-menu-btn *,.user-menu,.user-menu *,.perm-row,.perm-row *,.profile-card,.profile-card *{outline:none!important;user-select:none!important;caret-color:transparent!important;-webkit-user-select:none!important;-webkit-tap-highlight-color:transparent!important;}
+button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active{outline:none!important;box-shadow:none!important;}
+@media(max-width:1350px){.board,.lower{grid-template-columns:1fr!important}.ops-grid{grid-template-columns:1fr!important}.quick-grid{grid-template-columns:repeat(2,1fr)!important}.tr{grid-template-columns:1fr!important}.tr.header{display:none!important}.actions{justify-content:flex-start}}
+@media(max-width:900px){.usuarios-premium-main{padding:10px 10px calc(104px + env(safe-area-inset-bottom))!important}.bdr-topbar,.master-strip{display:flex!important;flex-direction:column!important;align-items:flex-start!important}.filters,.board,.lower,.quick-grid,.form-grid{grid-template-columns:1fr!important}.form-grid .wide{grid-column:span 1}.bdr-top-actions{width:100%;justify-content:space-between}.notif-dropdown{right:-80px;width:300px}}
+
+
+/* =========================================================
+   BDR USUÁRIOS - COMPACTO FINAL PARA PUSH
+   ---------------------------------------------------------
+   Ajuste rápido:
+   --usuarios-zoom: diminui/aumenta a tela inteira
+   --usuarios-gap: aproxima/afasta os cards
+========================================================= */
+:root{
+  --usuarios-zoom:.82;
+  --usuarios-gap:6px;
+  --usuarios-radius:14px;
+  --usuarios-card-min:190px;
 }
-
-.notif-badge{
-  position:absolute!important;
-  top:1px!important;
-  right:0!important;
-  min-width:17px!important;
-  height:17px!important;
-  padding:0 5px!important;
-  border-radius:999px!important;
-  background:#dc2626!important;
-  color:white!important;
-  font-size:10px!important;
-  font-weight:900!important;
-  display:none;
-  align-items:center!important;
-  justify-content:center!important;
-}
-
-.notif-dropdown{
-  position:absolute!important;
-  top:48px!important;
-  right:0!important;
-  width:340px!important;
-  background:#fff!important;
-  border:1px solid #e5e7eb!important;
-  border-radius:14px!important;
-  box-shadow:0 18px 35px rgba(15,23,42,.18)!important;
-  overflow:hidden!important;
-  display:none;
-  z-index:9999!important;
-}
-
-.notif-dropdown.ativo{display:block!important;}
-
-.notif-head{
-  padding:12px 14px!important;
-  font-weight:900!important;
-  color:var(--bdr-red, #d71920)!important;
-  background:#fff5f5!important;
-  border-bottom:1px solid #fecaca!important;
-}
-
-.notif-list{max-height:300px!important;overflow:auto!important;}
-
-.notif-item{
-  padding:10px 14px!important;
-  border-bottom:1px solid #f1f5f9!important;
-  font-size:12px!important;
-  color:#374151!important;
-  cursor:pointer!important;
-}
-
-.notif-item:hover{background:#f9fafb!important;}
-
-/* usuário topo igual patrimônio */
-.user-menu{
-  position:relative!important;
-  display:flex!important;
-  align-items:center!important;
-  gap:12px!important;
-  cursor:pointer!important;
-  padding:8px 12px!important;
-  border-radius:12px!important;
-  transition:.22s ease!important;
-  outline:none!important;
-  user-select:none!important;
-  caret-color:transparent!important;
-  -webkit-tap-highlight-color:transparent!important;
-}
-
-.user-menu,
-.user-menu *,
-#usuarioNome,
-#usuarioPerfil{
-  user-select:none!important;
-  caret-color:transparent!important;
-}
-
-.user-menu:hover{
-  background:rgba(255,255,255,.55)!important;
-  transform:translateX(4px) scale(1.02)!important;
-}
-
-.user-mini{
-  text-align:right!important;
-  font-size:13px!important;
-  pointer-events:none!important;
-}
-
-.user-mini b{
-  display:block!important;
-  color:#111827!important;
-  outline:none!important;
-  line-height:1.15!important;
-}
-
-.user-mini small{
-  display:block!important;
-  color:var(--bdr-red, #d71920)!important;
-  font-weight:900!important;
-  outline:none!important;
-  margin-top:2px!important;
-}
-
-.avatar{
-  width:42px!important;
-  height:42px!important;
-  border-radius:50%!important;
-  background:linear-gradient(135deg,#fecaca,#fff)!important;
-  border:2px solid #fee2e2!important;
-  display:flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  color:var(--bdr-red, #d71920)!important;
-  font-size:18px!important;
-  transition:.22s ease!important;
-  pointer-events:none!important;
-}
-
-.dropdown-user{
-  position:absolute!important;
-  top:55px!important;
-  right:0!important;
-  background:#fff!important;
-  border:1px solid #e5e7eb!important;
-  border-radius:12px!important;
-  box-shadow:0 18px 35px rgba(15,23,42,.18)!important;
-  padding:8px!important;
-  display:none;
-  min-width:220px!important;
-  z-index:9999!important;
-}
-
-.dropdown-user.ativo{display:block!important;}
-
-.dropdown-user button{
-  width:100%!important;
-  border:none!important;
-  background:#fff!important;
-  color:#374151!important;
-  padding:10px 11px!important;
-  border-radius:9px!important;
-  cursor:pointer!important;
-  font-weight:900!important;
-  text-align:left!important;
-  display:flex!important;
-  align-items:center!important;
-  gap:9px!important;
-}
-
-.dropdown-user button:hover{
-  background:#fff1f2!important;
-  color:var(--bdr-red, #d71920)!important;
-}
-
-.dropdown-user .logout-btn{color:#dc2626!important;}
-
-/* compactação da tela */
-.usuarios-premium-main{
-  padding-bottom:22px!important;
-}
-
-.filters{
-  margin-top:0!important;
-}
-
-.master-strip,
-.filters,
-.panel,
-.users-panel{
-  box-shadow:0 4px 14px rgba(15,23,42,.06)!important;
-}
-
-.board{
-  grid-template-columns:1fr 1fr 1.15fr!important;
-}
-
-.lower{
-  grid-template-columns:1fr 1fr 1.15fr!important;
-}
-
-/* cards menores */
-.perm-row{
-  min-height:42px!important;
-}
-
-.panel-body{
-  padding:7px 10px 9px!important;
-}
-
-.profile-card{
-  min-height:126px!important;
-}
-
-/* foco/cursor piscando */
-button,
-button *,
-.profile-card,
-.profile-card *,
-.perm-row,
-.perm-row *,
-.switch,
-.slider,
-.bdr-menu-btn,
-.bdr-menu-btn *,
-.user-menu,
-.user-menu *,
-.notif-btn,
-.notif-btn *{
-  outline:none!important;
-  user-select:none!important;
-  caret-color:transparent!important;
-  -webkit-user-select:none!important;
-  -webkit-tap-highlight-color:transparent!important;
-}
-
-button:focus,
-button:active,
-.profile-card:focus,
-.profile-card:active,
-.bdr-menu-btn:focus,
-.bdr-menu-btn:active,
-.user-menu:focus,
-.user-menu:active,
-.notif-btn:focus,
-.notif-btn:active{
-  outline:none!important;
-  box-shadow:none!important;
-}
-
-/* perfil ativo mais claro */
-.profile-card.active{
-  background:linear-gradient(180deg,#fff1f2,#ffffff)!important;
-  border:2px solid var(--bdr-red, #d71920)!important;
-  box-shadow:0 12px 26px rgba(215,25,32,.18)!important;
-}
-
-.profile-card.active button{
-  background:var(--bdr-red, #d71920)!important;
-  color:#fff!important;
-  border-color:var(--bdr-red, #d71920)!important;
-}
+.usuarios-premium-main{padding:9px!important;}
+.bdr-topbar{padding:9px 12px!important;margin-bottom:6px!important;min-height:68px!important;}
+.bdr-topbar-title{font-size:17px!important;}
+.bdr-topbar-sub{font-size:11px!important;}
+.filters{padding:7px!important;margin-bottom:6px!important;gap:6px!important;}
+.field label{font-size:10px!important;margin-bottom:3px!important;}
+.field input,.field select{height:32px!important;font-size:11px!important;padding:4px 8px!important;}
+.btn{height:31px!important;padding:0 10px!important;font-size:11px!important;border-radius:9px!important;}
+.btn-icon-only{width:31px!important;min-width:31px!important;}
+.master-strip{padding:8px 10px!important;margin-bottom:6px!important;gap:8px!important;}
+.master-icon{width:36px!important;height:36px!important;font-size:18px!important;border-radius:11px!important;}
+.master-strip h2{font-size:15px!important;line-height:1.1!important;}
+.master-strip p{font-size:10px!important;line-height:1.2!important;}
+.master-actions{gap:5px!important;}
+.usuario-selecionado-card{padding:7px 10px!important;margin-bottom:6px!important;}
+.usuario-selecionado-card span{font-size:10px!important;}
+.usuario-selecionado-card strong{font-size:14px!important;}
+.usuario-selecionado-card small{font-size:10px!important;}
+.board,.lower{gap:6px!important;margin-bottom:6px!important;}
+.ops-grid{gap:6px!important;grid-template-columns:1fr 150px!important;}
+.panel-head,.red-head,.user-table-head,.alert-title{min-height:31px!important;padding:7px 9px!important;font-size:12px!important;}
+.panel-body,.obras-body,.summary-body,.quick-body{padding:7px!important;}
+.perm-row{min-height:34px!important;grid-template-columns:26px 1fr 38px!important;gap:5px!important;padding:4px 6px!important;margin-bottom:3px!important;border-radius:10px!important;}
+.perm-ico{width:24px!important;height:24px!important;font-size:11px!important;border-radius:8px!important;}
+.perm-text b{font-size:10.5px!important;}
+.perm-text span{font-size:9px!important;line-height:1.1!important;}
+.switch{width:34px!important;height:19px!important;}
+.slider:before{width:15px!important;height:15px!important;}
+.switch input:checked + .slider:before{transform:translateX(15px)!important;}
+.obra-list{max-height:126px!important;}
+.obra-row{min-height:23px!important;font-size:10.5px!important;}
+.summary-cards{gap:5px!important;margin-bottom:6px!important;}
+.summary-card{padding:6px!important;}
+.summary-card i{font-size:15px!important;}
+.summary-card b{font-size:14px!important;}
+.access-grid{gap:6px!important;}
+.access-box{min-height:62px!important;padding:7px!important;}
+.quick-grid{gap:6px!important;}
+.profile-card{min-height:86px!important;padding:7px 5px!important;}
+.profile-card i{font-size:18px!important;margin-bottom:3px!important;}
+.profile-card b{font-size:10.5px!important;margin-bottom:2px!important;}
+.profile-card p{font-size:8.5px!important;line-height:1.15!important;}
+.profile-card button{height:23px!important;margin-top:4px!important;font-size:9px!important;}
+.tr{padding:7px 10px!important;font-size:11px!important;gap:6px!important;}
+.tr.header{font-size:10px!important;}
+.user-avatar{width:30px!important;height:30px!important;}
+.user-cell b{font-size:11.5px!important;}
+.user-cell span{font-size:10px!important;}
+.badge{font-size:9px!important;padding:4px 6px!important;}
+.icon-btn{width:27px!important;height:27px!important;font-size:10px!important;}
+.users-panel{margin-top:0!important;}
+.alert-body{padding:8px!important;font-size:10px!important;}
+.alert-shield{width:34px!important;height:34px!important;font-size:16px!important;}
 
 @media(max-width:1350px){
-  .board,
-  .lower{
-    grid-template-columns:1fr!important;
-  }
+  .ops-grid{grid-template-columns:1fr!important;}
 }
-
-@media(max-width:900px){
-  .bdr-top-actions{
-    width:100%!important;
-    justify-content:space-between!important;
-    flex-wrap:wrap!important;
-  }
-
-  .notif-dropdown{
-    right:-80px!important;
-    width:300px!important;
-  }
-}
-
-
-/* =========================================================
-   PATCH V6 - BOTÕES NO PAINEL MASTER
-========================================================= */
-.btn-icon-only{
-  width:38px!important;
-  min-width:38px!important;
-  padding:0!important;
-}
-
-.master-strip{
-  grid-template-columns:auto 1fr auto!important;
-}
-
-.master-actions{
-  align-items:center!important;
-}
-
-.master-actions .btn{
-  height:36px!important;
-}
-
-@media(max-width:1100px){
-  .master-strip{
-    grid-template-columns:1fr!important;
-  }
-
-  .master-actions{
-    justify-content:flex-start!important;
-  }
-}
-
-
-.profile-card.consulta i{color:#7c3aed}
-.bdr-menu-btn[data-bloqueado="SIM"]{display:none!important}
-.bdr-salvar-fixo-removido{
-  position:fixed;
-  right:22px;
-  bottom:22px;
-  z-index:9999;
-  box-shadow:0 14px 28px rgba(215,25,32,.28)!important;
-}
-
-
-/* =========================================================
-   BDR PATCH - LAYOUT PERMISSÕES POR USUÁRIO
-========================================================= */
-.usuario-selecionado-card{
-  display:grid;
-  grid-template-columns:1fr auto;
-  gap:12px;
-  align-items:center;
-  background:linear-gradient(135deg,#fff,#fff1f2);
-  border:1px solid #fecaca;
-  border-left:5px solid var(--red,#d71920);
-  border-radius:16px;
-  padding:12px 16px;
-  box-shadow:0 8px 20px rgba(15,23,42,.06);
-  margin-bottom:10px;
-}
-.usuario-selecionado-card span{
-  display:block;
-  font-size:11px;
-  color:#6b7280;
-  font-weight:900;
-  text-transform:uppercase;
-}
-.usuario-selecionado-card strong{
-  display:block;
-  font-size:17px;
-  color:#111827;
-  margin-top:2px;
-}
-.usuario-selecionado-card small{
-  display:block;
-  color:#6b7280;
-  margin-top:2px;
-  font-size:12px;
-}
-.tr.usuario-ativo{
-  background:#fff1f2!important;
-  border-left:5px solid var(--red,#d71920);
-}
-.tr.usuario-ativo .user-cell b{
-  color:var(--red,#d71920)!important;
-}
-.board{
-  grid-template-columns:1fr 1fr 1fr!important;
-}
-.panel-head{
-  background:#fff!important;
-  border-bottom:1px solid #f1f5f9!important;
-}
-.master-actions{
-  flex-wrap:wrap!important;
-}
-@media(max-width:1100px){
-  .usuario-selecionado-card{
-    grid-template-columns:1fr;
-  }
-  .board{
-    grid-template-columns:1fr!important;
-  }
-}
-
-
-
-/* =========================================================
-   PATCH FINAL - LAYOUT COMPACTO SEM BURACOS + PERFIS RÁPIDOS
-========================================================= */
-.usuarios-premium-main{padding:10px 12px 16px!important;}
-.usuario-selecionado-card{margin-bottom:8px!important;padding:9px 12px!important;}
-.board{display:grid!important;grid-template-columns:minmax(360px,1.08fr) minmax(520px,1.92fr)!important;gap:8px!important;align-items:start!important;margin-bottom:8px!important;}
-.board > .panel:first-child{grid-column:1!important;grid-row:1 / span 2!important;}
-.board > .panel:nth-child(2){grid-column:2!important;grid-row:1!important;}
-.board > .ops-grid{grid-column:2!important;grid-row:2!important;display:grid!important;grid-template-columns:1.45fr .75fr!important;gap:8px!important;align-items:start!important;}
-.board .panel,.lower .panel,.users-panel{border-radius:12px!important;box-shadow:0 3px 10px rgba(15,23,42,.05)!important;}
-.panel-head,.red-head{height:32px!important;font-size:13px!important;padding:0 10px!important;}
-.panel-body{padding:6px 8px 7px!important;}
-.perm-row{min-height:37px!important;grid-template-columns:30px 1fr 41px!important;gap:6px!important;padding:5px 7px!important;margin-bottom:5px!important;border-radius:10px!important;}
-.perm-ico{width:27px!important;height:27px!important;border-radius:8px!important;font-size:12px!important;}
-.perm-text b{font-size:11.5px!important;line-height:1.1!important;}
-.perm-text span{font-size:9.5px!important;line-height:1.15!important;}
-.switch{width:36px!important;height:19px!important;}
-.slider::before{width:15px!important;height:15px!important;}
-.switch input:checked + .slider::before{transform:translateX(17px)!important;}
-.alert-card{min-height:0!important;border-radius:12px!important;}
-.alert-title{height:32px!important;padding:0 10px!important;font-size:13px!important;}
-.alert-body{padding:10px 8px!important;}
-.alert-shield{width:48px!important;height:48px!important;font-size:27px!important;margin-bottom:6px!important;}
-.alert-body p{font-size:10px!important;margin:6px 0!important;}
-.stars{font-size:12px!important;}
-.lower{display:grid!important;grid-template-columns:1fr 1fr 1.25fr!important;gap:8px!important;margin-bottom:8px!important;align-items:start!important;}
-.obras-body,.summary-body,.quick-body{padding:8px!important;}
-.obra-list{max-height:150px!important;}
-.summary-cards{grid-template-columns:repeat(3,1fr)!important;gap:6px!important;margin-bottom:8px!important;}
-.summary-card{padding:6px!important;border-radius:10px!important;}
-.summary-card b{font-size:15px!important;}
-.access-grid{grid-template-columns:1fr 1fr!important;gap:8px!important;}
-.access-box{min-height:88px!important;padding:8px!important;border-radius:10px!important;}
-.quick-grid.compact-profiles,#quickPerfis{display:grid!important;grid-template-columns:repeat(3,minmax(110px,1fr))!important;gap:8px!important;}
-.profile-card{min-height:90px!important;padding:9px 7px!important;border-radius:12px!important;}
-.profile-card i{font-size:24px!important;margin-bottom:5px!important;}
-.profile-card b{font-size:11px!important;margin-bottom:4px!important;}
-.profile-card p{min-height:0!important;font-size:9.5px!important;line-height:1.2!important;}
-.profile-card button{height:24px!important;margin-top:6px!important;font-size:10px!important;border-radius:8px!important;}
-.perfil-vazio{grid-column:1/-1;border:1px dashed #fecaca;background:#fffafa;border-radius:12px;padding:15px;text-align:center;font-weight:900;color:#64748b;}
-.tr{padding:8px 12px!important;}
-.user-table-head{height:34px!important;font-size:14px!important;}
-@media(max-width:1250px){.board,.lower{grid-template-columns:1fr!important}.board > .panel:first-child,.board > .panel:nth-child(2),.board > .ops-grid{grid-column:1!important;grid-row:auto!important}.board > .ops-grid{grid-template-columns:1fr!important}#quickPerfis{grid-template-columns:repeat(2,1fr)!important}}
-
 </style>
-
-
-<style>
-/* =========================================================
-   BDR PATCH COMPACTO FINAL - USUÁRIOS + PERFIS EDITÁVEIS
-========================================================= */
-.usuarios-premium-main{padding:6px 8px 10px!important;}
-.bdr-topbar{min-height:50px!important;padding:8px 12px!important;margin-bottom:7px!important;}
-.bdr-topbar-title{font-size:16px!important;}.bdr-topbar-sub{font-size:10.5px!important;}
-.filters{grid-template-columns:1.15fr .75fr .9fr .65fr .75fr!important;padding:6px!important;gap:6px!important;margin-bottom:6px!important;border-radius:11px!important;}
-.field label{font-size:10px!important;margin-bottom:1px!important;}.field input,.field select{height:30px!important;font-size:11px!important;border-radius:8px!important;padding:4px 8px!important;}
-.master-strip{padding:6px 9px!important;margin-bottom:6px!important;border-radius:11px!important;gap:8px!important;}
-.master-icon{width:34px!important;height:34px!important;font-size:17px!important;border-radius:10px!important;}.master-strip h2{font-size:14px!important;}.master-strip p{font-size:10.5px!important;}.master-actions .btn{height:28px!important;font-size:10.5px!important;padding:0 8px!important;border-radius:8px!important;}
-.usuario-selecionado-card{padding:6px 9px!important;margin-bottom:5px!important;border-radius:10px!important;}.usuario-selecionado-card strong{font-size:14px!important;}.usuario-selecionado-card small,.usuario-selecionado-card span{font-size:10px!important;}
-.board{display:grid!important;grid-template-columns:repeat(4,minmax(185px,1fr))!important;gap:5px!important;margin-bottom:5px!important;align-items:start!important;}.board>.panel,.board>.ops-grid{grid-column:auto!important;grid-row:auto!important;}.board>.ops-grid{display:contents!important;}.board .alert-card{display:none!important;}
-.panel,.users-panel{border-radius:10px!important;box-shadow:0 2px 7px rgba(15,23,42,.05)!important;}.panel-head,.red-head,.user-table-head{height:27px!important;font-size:11.5px!important;padding:0 8px!important;gap:5px!important;}.panel-head i,.red-head i{font-size:12px!important;}
-.panel-body{padding:4px 5px!important;}.perm-row{min-height:28px!important;grid-template-columns:22px 1fr 33px!important;gap:4px!important;padding:3px 5px!important;margin-bottom:3px!important;border-radius:7px!important;}.perm-ico{width:20px!important;height:20px!important;border-radius:6px!important;font-size:9px!important;}.perm-text b{font-size:10px!important;line-height:1!important;}.perm-text span{font-size:8.5px!important;line-height:1.05!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.switch{width:30px!important;height:16px!important;}.slider:before{width:12px!important;height:12px!important;}.switch input:checked + .slider:before{transform:translateX(14px)!important;}
-.lower{grid-template-columns:1fr .8fr 1.15fr!important;gap:5px!important;margin-bottom:6px!important;}.obras-body,.summary-body,.quick-body{padding:5px!important;}.obra-list{max-height:105px!important;}.obra-row{min-height:22px!important;font-size:10px!important;}.panel-actions{gap:4px!important;margin-top:6px!important;}.panel-actions .btn{height:25px!important;font-size:10px!important;padding:0 7px!important;}
-.summary-cards{gap:4px!important;margin-bottom:5px!important;}.summary-card{padding:4px!important;border-radius:8px!important;}.summary-card i{font-size:14px!important;}.summary-card b{font-size:13px!important;}.summary-card span,.access-line{font-size:9px!important;}.access-grid{gap:5px!important;}.access-box{min-height:55px!important;padding:5px!important;border-radius:8px!important;}.current-profile{font-size:9px!important;padding:4px 7px!important;margin-top:4px!important;}
-#quickPerfis{grid-template-columns:repeat(5,minmax(78px,1fr))!important;gap:5px!important;}.profile-card{min-height:78px!important;padding:7px 5px 5px!important;border-radius:9px!important;}.profile-card i{font-size:18px!important;margin-bottom:3px!important;}.profile-card b{font-size:9.5px!important;margin-bottom:2px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.profile-card p{font-size:8px!important;line-height:1.05!important;max-height:18px!important;overflow:hidden!important;}.profile-card button{height:20px!important;font-size:8.5px!important;margin-top:3px!important;border-radius:6px!important;padding:0 4px!important;}.profile-card.active:after{width:19px!important;height:19px!important;font-size:11px!important;right:-5px!important;top:-5px!important;}
-.perfil-toolbar{grid-column:1/-1;display:flex;gap:5px;align-items:center;margin-bottom:2px}.perfil-mini-btn{height:24px;border:1px solid #e5e7eb;background:#fff;border-radius:7px;font-size:9.5px;font-weight:900;padding:0 7px;color:#374151}.perfil-mini-btn.red{background:#d71920;color:#fff;border-color:#d71920}.perfil-card-edit{position:absolute!important;top:4px!important;right:4px!important;width:20px!important;height:20px!important;border-radius:50%!important;background:#111827!important;color:#fff!important;border:0!important;margin:0!important;padding:0!important;z-index:3}.perfil-card-actions{display:grid;grid-template-columns:1fr 1fr;gap:3px}.perfil-card-actions .btn-ghost{background:#f3f4f6!important;color:#374151!important;border-color:#e5e7eb!important;}
-.tr{grid-template-columns:minmax(170px,1.35fr) .65fr .85fr 1fr .55fr .75fr .7fr!important;gap:6px!important;padding:6px 9px!important;font-size:10.5px!important;}.tr.header{padding:6px 9px!important;font-size:10px!important;}.user-avatar{width:27px!important;height:27px!important;font-size:10px!important;}.user-cell{gap:6px!important;}.user-cell b{font-size:11px!important;}.user-cell span{font-size:9.5px!important;max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.badge{font-size:9px!important;padding:4px 6px!important;border-radius:6px!important;}.icon-btn{width:25px!important;height:25px!important;border-radius:7px!important;font-size:10px!important;}.actions{gap:4px!important;}
-.modal-perfil-rapido{width:min(620px,96vw)!important}.modal-perfil-rapido textarea{width:100%;border:1px solid #d1d5db;border-radius:12px;padding:8px;font-family:Arial;font-size:12px}.perfil-modal-actions{display:flex;gap:7px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}.perfil-modal-actions .btn{height:32px!important;font-size:11px!important;}
-@media(max-width:1450px){.board{grid-template-columns:repeat(3,minmax(190px,1fr))!important}#quickPerfis{grid-template-columns:repeat(4,1fr)!important}.lower{grid-template-columns:1fr!important}.tr{grid-template-columns:1.4fr .7fr .8fr .9fr .55fr .75fr .75fr!important}}
-@media(max-width:1050px){.board{grid-template-columns:1fr!important}.filters{grid-template-columns:1fr!important}.tr,.tr.header{grid-template-columns:1fr!important}#quickPerfis{grid-template-columns:repeat(2,1fr)!important}}
-</style>
-
 </head>
 
 <body>
@@ -1897,46 +196,44 @@ if(typeof verificarLogin === "function"){ verificarLogin(); }
   <aside class="bdr-sidebar">
 
   <div class="bdr-brand">
-    <div class="bdr-brand-icon">
-      <i class="fa-solid fa-cube"></i>
-    </div>
+    <div class="bdr-brand-icon bdr-logo-menu"></div>
   </div>
 
   <nav class="bdr-menu">
 
-    <button class="bdr-menu-btn" data-permissao="DASHBOARD" data-tip="Dashboard" onclick="ir('dashboard.html')">
+    <button class="bdr-menu-btn" data-permissao="DASHBOARD_VER" data-tip="Dashboard" onclick="ir('dashboard.html')">
       <span class="bdr-menu-icon"><i class="fa-solid fa-chart-simple"></i></span>
     </button>
 
-    <button class="bdr-menu-btn" data-permissao="ENTRADA" data-tip="Entrada" onclick="ir('entrada.html')">
+    <button class="bdr-menu-btn" data-permissao="ENTRADA_VER" data-tip="Entrada" onclick="ir('entrada.html')">
       <span class="bdr-menu-icon"><i class="fa-solid fa-arrow-down-wide-short"></i></span>
     </button>
 
-    <button class="bdr-menu-btn" data-permissao="TRIAGEM" data-tip="Triagem" onclick="ir('triagem.html')">
+    <button class="bdr-menu-btn" data-permissao="TRIAGEM_VER" data-tip="Triagem" onclick="ir('triagem.html')">
       <span class="bdr-menu-icon"><i class="fa-solid fa-vials"></i></span>
     </button>
 
-    <button class="bdr-menu-btn" data-permissao="ESTOQUE" data-tip="Estoque" onclick="ir('estoque.html')">
+    <button class="bdr-menu-btn" data-permissao="ESTOQUE_VER" data-tip="Estoque" onclick="ir('estoque.html')">
       <span class="bdr-menu-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
     </button>
 
-    <button class="bdr-menu-btn" data-permissao="PATRIMONIO" data-tip="Patrimônio" onclick="ir('patrimonio.html')">
+    <button class="bdr-menu-btn" data-permissao="PATRIMONIO_VER" data-tip="Patrimônio" onclick="ir('patrimonio.html')">
       <span class="bdr-menu-icon"><i class="fa-solid fa-tags"></i></span>
     </button>
 
-    <button class="bdr-menu-btn" data-permissao="EXPEDICAO" data-tip="Expedição" onclick="ir('expedicao.html')">
+    <button class="bdr-menu-btn" data-permissao="EXPEDICAO_VER" data-tip="Expedição" onclick="ir('expedicao.html')">
       <span class="bdr-menu-icon"><i class="fa-solid fa-truck-fast"></i></span>
     </button>
 
-    <button class="bdr-menu-btn" data-permissao="RELATORIOS" data-tip="Relatórios" onclick="ir('relatorios.html')">
+    <button class="bdr-menu-btn" data-permissao="RELATORIOS_VER" data-tip="Relatórios" onclick="ir('relatorios.html')">
       <span class="bdr-menu-icon"><i class="fa-regular fa-file-lines"></i></span>
     </button>
 
-    <button class="bdr-menu-btn" data-permissao="EMPRESAS" data-tip="Empresas" onclick="ir('empresa.html')">
+    <button class="bdr-menu-btn" data-permissao="EMPRESAS_VER" data-tip="Empresas" onclick="ir('empresa.html')">
       <span class="bdr-menu-icon"><i class="fa-solid fa-building"></i></span>
     </button>
 
-    <button class="bdr-menu-btn active" data-permissao="USUARIOS" data-tip="Usuários" onclick="ir('usuarios.html')">
+    <button class="bdr-menu-btn active" data-permissao="USUARIOS_VER" data-tip="Usuários" onclick="return bdrIrSeguro('usuarios.html')">
       <span class="bdr-menu-icon"><i class="fa-solid fa-users"></i></span>
     </button>
 
@@ -1954,8 +251,9 @@ if(typeof verificarLogin === "function"){ verificarLogin(); }
         </div>
       </div>
 
-      <div class="bdr-top-actions"><div class="notif-wrap">
-          <button class="notif-btn" type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="toggleNotificacoes(event); this.blur();" title="Notificações">
+      <div class="bdr-top-actions">
+          <div class="notif-wrap">
+          <button class="notif-btn" type="button" tabindex="-1" onclick="toggleNotificacoes(event);" title="Notificações">
             <i class="fa-regular fa-bell"></i>
             <span id="notifBadge" class="notif-badge">0</span>
           </button>
@@ -1977,7 +275,7 @@ if(typeof verificarLogin === "function"){ verificarLogin(); }
           <div class="avatar"><i class="fa-solid fa-user"></i></div>
 
           <div id="dropdownUser" class="dropdown-user">
-            <button data-permissao="USUARIOS" type="button" onclick="ir('usuarios.html'); event.stopPropagation();">
+            <button data-permissao="USUARIOS_VER" type="button" onclick="event.stopPropagation(); return bdrIrSeguro('usuarios.html');">
               <i class="fa-solid fa-user-gear"></i> Meu perfil / usuários
             </button>
             <button type="button" class="logout-btn" onclick="logoutSeguro(); event.stopPropagation();">
@@ -2036,7 +334,7 @@ if(typeof verificarLogin === "function"){ verificarLogin(); }
     </section>
 
     <section class="master-strip">
-      <div class="master-icon"><i class="fa-solid fa-shield-halved"></i></div>
+      <div class="master-icon" onclick="bdrOwnerClickUsuarios()" style="cursor:pointer;"><i class="fa-solid fa-shield-halved"></i></div>
       <div>
         <h2>Central de Permissões por Usuário</h2>
         <p>Clique em um usuário na lista, marque as permissões e salve. Não precisa editar dados pessoais.</p>
@@ -2044,6 +342,10 @@ if(typeof verificarLogin === "function"){ verificarLogin(); }
       <div class="master-actions">
         <button class="btn btn-soft btn-icon-only" title="Atualizar dados" onclick="carregarTudo()">
           <i class="fa-solid fa-rotate"></i>
+        </button>
+
+        <button class="btn btn-red" type="button" data-permissao="USUARIOS_CRIAR" onclick="abrirModalUsuario(null)">
+          <i class="fa-solid fa-user-plus"></i> Novo usuário
         </button>
 
         <button class="btn btn-soft" onclick="limparSelecaoPermissao()">
@@ -2062,8 +364,8 @@ if(typeof verificarLogin === "function"){ verificarLogin(); }
           <i class="fa-solid fa-gear"></i> Só própria obra
         </button>
 
-        <button class="btn btn-red" onclick="salvarAlteracoesUsuarioSelecionado()">
-          <i class="fa-solid fa-floppy-disk"></i> Salvar alterações
+        <button class="btn btn-red" onclick="salvarPermissoesUsuarioSelecionado()">
+          <i class="fa-solid fa-floppy-disk"></i> Salvar permissões
         </button>
 
         <button class="btn btn-red" onclick="bloquearExterno()">
@@ -2078,9 +380,6 @@ if(typeof verificarLogin === "function"){ verificarLogin(); }
         <strong id="usuarioSelecionadoNome">Nenhum usuário selecionado</strong>
         <small id="usuarioSelecionadoDetalhe">Clique em um usuário na lista para aplicar permissões.</small>
       </div>
-      <button class="btn btn-red" onclick="salvarPermissoesUsuarioSelecionado()">
-        <i class="fa-solid fa-floppy-disk"></i> Salvar permissões deste usuário
-      </button>
     </section>
 
     <section class="board">
@@ -2236,785 +535,144 @@ if(typeof verificarLogin === "function"){ verificarLogin(); }
 </div>
 
 
-<script>
-/* =========================================================
-   BDR PATCH - MENUS POR PERMISSÃO + SALVAR ALTERAÇÕES
-   Permissões de menu:
-   DASHBOARD, PATRIMONIO, ESTOQUE, RELATORIOS, ENTRADA, TRIAGEM,
-   EXPEDICAO, EMPRESAS, USUARIOS
-========================================================= */
-
-function bdrUsuarioAtualPermissao(){
-  try{
-    return JSON.parse(localStorage.getItem("usuario_logado") || localStorage.getItem("usuarioLogado") || "null");
-  }catch(e){
-    return null;
-  }
-}
-
-function bdrListaPermissoesUsuario(usuario){
-  return String(usuario?.permissoes || "")
-    .split(",")
-    .map(p => p.trim().toUpperCase())
-    .filter(Boolean);
-}
-
-function aplicarMenuPorPermissao(){
-  const usuario = bdrUsuarioAtualPermissao();
-  if(!usuario) return;
-
-  const perfil = String(usuario.perfil || "").toUpperCase();
-  const permissoes = bdrListaPermissoesUsuario(usuario);
-
-  // MASTER/ADMIN sem permissões = vê tudo
-  if((perfil === "MASTER" || perfil === "ADMIN") && permissoes.length === 0){
-    document.querySelectorAll("[data-permissao]").forEach(btn => {
-      btn.style.display = "";
-      btn.hidden = false;
-      btn.dataset.bloqueado = "NAO";
-    });
-    return;
-  }
-
-  // Usuário comum ou MASTER limitado = só vê o que estiver no campo permissoes
-  document.querySelectorAll("[data-permissao]").forEach(btn => {
-    const p = String(btn.dataset.permissao || "").toUpperCase();
-    const liberado = permissoes.includes(p);
-
-    btn.style.display = liberado ? "" : "none";
-    btn.hidden = !liberado;
-    btn.dataset.bloqueado = liberado ? "NAO" : "SIM";
-  });
-}
-
-function bdrGetPermissoesMarcadas(){
-  return Array.from(document.querySelectorAll(".perm:checked"))
-    .map(el => String(el.value || "").trim().toUpperCase())
-    .filter(Boolean);
-}
-
-function bdrSetPermissoesMarcadas(permissoes){
-  const set = new Set((permissoes || []).map(p => String(p).trim().toUpperCase()));
-
-  document.querySelectorAll(".perm").forEach(el => {
-    el.checked = set.has(String(el.value || "").trim().toUpperCase());
-  });
-
-  if(typeof atualizarResumo === "function"){
-    atualizarResumo();
-  }
-}
-
-function aplicarPerfilConsultaPatrimonio(){
-  const permissoes = [
-    "DASHBOARD",
-    "PATRIMONIO",
-    "VER_VALORES",
-    "VER_ESTOQUE_PROPRIA_OBRA",
-    "VER_ESTOQUE_CD"
-  ];
-
-  bdrSetPermissoesMarcadas(permissoes);
-  document.querySelectorAll(".profile-card").forEach(c => c.classList.remove("active"));
-  document.querySelector(".profile-card.consulta")?.classList.add("active");
-}
-
-const bdrAplicarPerfilRapidoOriginal = window.aplicarPerfilRapido;
-window.aplicarPerfilRapido = function(perfil){
-  if(String(perfil).toUpperCase() === "CONSULTA_PATRIMONIO"){
-    aplicarPerfilConsultaPatrimonio();
-    return;
-  }
-
-  if(typeof bdrAplicarPerfilRapidoOriginal === "function"){
-    bdrAplicarPerfilRapidoOriginal(perfil);
-  }
-
-  if(String(perfil).toUpperCase() === "MASTER"){
-    document.querySelectorAll(".perm").forEach(el => el.checked = true);
-  }
-};
-
-async function salvarAlteracoesUsuarioSelecionado(){
-  const id = document.getElementById("usuarioId")?.value || window.usuarioSelecionadoId || window.usuarioAtualEditandoId || null;
-
-  if(!id){
-    alert("Selecione/edite um usuário primeiro. Clique no lápis do usuário, ajuste as permissões e depois salve.");
-    return;
-  }
-
-  const permissoes = bdrGetPermissoesMarcadas().join(",");
-
-  if(!window.client && !window.supabaseClient){
-    alert("Supabase não carregado.");
-    return;
-  }
-
-  const supa = window.client || window.supabaseClient;
-
-  const payload = {
-    permissoes: permissoes,
-    updated_at: new Date().toISOString()
-  };
-
-  const { error } = await supa
-    .from("usuarios_sistema")
-    .update(payload)
-    .eq("id", id);
-
-  if(error){
-    console.error(error);
-    alert("Erro ao salvar alterações: " + error.message);
-    return;
-  }
-
-  alert("✅ Alterações salvas com sucesso.");
-
-  if(typeof carregarTudo === "function"){
-    await carregarTudo();
-  }
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  aplicarMenuPorPermissao();
-
-  setTimeout(() => {
-    aplicarMenuPorPermissao();
-
-    if(!document.getElementById("btnSalvarAlteracoesFixo")){
-      const btn = document.createElement("button");
-      btn.id = "btnSalvarAlteracoesFixo";
-      btn.className = "btn btn-red bdr-salvar-fixo-removido";
-      btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar alterações';
-      btn.onclick = salvarAlteracoesUsuarioSelecionado;
-      document.body.appendChild(btn);
-    }
-  }, 600);
-});
-</script>
 
 <script src="./JS/usuarios-master-premium.js"></script>
-
-<script>
-/* =========================================================
-   BDR PATCH - PERMISSÕES POR USUÁRIO
-   Não altera nome, senha ou dados pessoais.
-   Fluxo:
-   1. Clique em um usuário na lista
-   2. Permissões dele aparecem marcadas
-   3. Altere menus/permissões/obras
-   4. Salve permissões
-========================================================= */
-
-window.usuarioPermissaoSelecionado = null;
-
-function bdrSupaPerm(){
-  return window.client || window.supabaseClient || null;
-}
-
-function bdrPermListaUsuarios(){
-  const nomes = ["usuarios","listaUsuariosSistema","usuariosSistema","todosUsuarios","dadosUsuarios"];
-  for(const n of nomes){
-    try{
-      if(Array.isArray(window[n])) return window[n];
-      if(eval("typeof " + n + " !== 'undefined'") && Array.isArray(eval(n))) return eval(n);
-    }catch(e){}
-  }
-  return [];
-}
-
-function bdrPermArray(txt){
-  return String(txt || "")
-    .split(",")
-    .map(p => p.trim().toUpperCase())
-    .filter(Boolean);
-}
-
-function bdrPermMarcadas(){
-  return Array.from(document.querySelectorAll(".perm:checked"))
-    .map(el => String(el.value || "").trim().toUpperCase())
-    .filter(Boolean);
-}
-
-function bdrMarcarPermissoesUsuario(permissoes){
-  const set = new Set(bdrPermArray(permissoes));
-
-  document.querySelectorAll(".perm").forEach(el => {
-    el.checked = set.has(String(el.value || "").trim().toUpperCase());
-  });
-
-  if(typeof atualizarResumo === "function"){
-    atualizarResumo();
-  }
-}
-
-async function bdrBuscarUsuarioPermissao(id){
-  let usuario = bdrPermListaUsuarios().find(u => String(u.id) === String(id));
-  if(usuario) return usuario;
-
-  const supa = bdrSupaPerm();
-  if(!supa) throw new Error("Supabase não carregado.");
-
-  const {data,error} = await supa
-    .from("usuarios_sistema")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if(error) throw error;
-  return data;
-}
-
-function bdrAtualizarCardUsuarioSelecionado(u){
-  const nome = document.getElementById("usuarioSelecionadoNome");
-  const detalhe = document.getElementById("usuarioSelecionadoDetalhe");
-
-  if(!u){
-    if(nome) nome.innerText = "Nenhum usuário selecionado";
-    if(detalhe) detalhe.innerText = "Clique em um usuário na lista para aplicar permissões.";
-    return;
-  }
-
-  if(nome) nome.innerText = `${u.nome || u.usuario || "Usuário"} — ${u.perfil || "-"}`;
-  if(detalhe) detalhe.innerText = `ID ${u.id} • ${u.email || "-"} • Permissões carregadas para edição.`;
-}
-
-function bdrDestacarUsuarioNaLista(id){
-  document.querySelectorAll("#listaUsuarios .tr").forEach(row => row.classList.remove("usuario-ativo"));
-
-  const btn = document.querySelector(`[data-editar-usuario="${id}"]`);
-  const row = btn?.closest(".tr");
-  if(row) row.classList.add("usuario-ativo");
-}
-
-/* Clique no usuário para carregar SOMENTE permissões */
-async function selecionarUsuarioPermissoes(id){
-  try{
-    const u = await bdrBuscarUsuarioPermissao(id);
-
-    if(!u){
-      alert("Usuário não encontrado.");
-      return;
-    }
-
-    window.usuarioPermissaoSelecionado = u;
-    window.usuarioSelecionadoId = u.id;
-    window.usuarioAtualEditandoId = u.id;
-
-    const hidden = document.getElementById("usuarioId");
-    if(hidden) hidden.value = u.id;
-
-    bdrMarcarPermissoesUsuario(u.permissoes || "");
-    bdrAtualizarCardUsuarioSelecionado(u);
-    bdrDestacarUsuarioNaLista(u.id);
-
-  }catch(e){
-    console.error(e);
-    alert("Erro ao carregar permissões: " + (e.message || e));
-  }
-}
-
-window.selecionarUsuarioPermissoes = selecionarUsuarioPermissoes;
-window.editarUsuario = selecionarUsuarioPermissoes;
-window.abrirEdicaoUsuario = selecionarUsuarioPermissoes;
-window.editarDadosUsuario = selecionarUsuarioPermissoes;
-window.selecionarUsuario = selecionarUsuarioPermissoes;
-
-async function salvarPermissoesUsuarioSelecionado(){
-  const u = window.usuarioPermissaoSelecionado;
-  const id = u?.id || document.getElementById("usuarioId")?.value || window.usuarioSelecionadoId;
-
-  if(!id){
-    alert("Selecione um usuário primeiro.");
-    return;
-  }
-
-  const supa = bdrSupaPerm();
-  if(!supa){
-    alert("Supabase não carregado.");
-    return;
-  }
-
-  const permissoes = bdrPermMarcadas().join(",");
-
-  const {error} = await supa
-    .from("usuarios_sistema")
-    .update({
-      permissoes: permissoes,
-      updated_at: new Date().toISOString()
-    })
-    .eq("id", id);
-
-  if(error){
-    console.error(error);
-    alert("Erro ao salvar permissões: " + error.message);
-    return;
-  }
-
-  alert("✅ Permissões salvas para este usuário.");
-
-  if(window.usuarioPermissaoSelecionado){
-    window.usuarioPermissaoSelecionado.permissoes = permissoes;
-  }
-
-  if(typeof carregarTudo === "function"){
-    await carregarTudo();
-    setTimeout(() => {
-      bdrDestacarUsuarioNaLista(id);
-      bdrAtualizarCardUsuarioSelecionado(window.usuarioPermissaoSelecionado);
-    }, 300);
-  }
-}
-
-window.salvarPermissoesUsuarioSelecionado = salvarPermissoesUsuarioSelecionado;
-window.salvarAlteracoesUsuarioSelecionado = salvarPermissoesUsuarioSelecionado;
-
-function limparSelecaoPermissao(){
-  window.usuarioPermissaoSelecionado = null;
-  window.usuarioSelecionadoId = null;
-  window.usuarioAtualEditandoId = null;
-
-  const hidden = document.getElementById("usuarioId");
-  if(hidden) hidden.value = "";
-
-  document.querySelectorAll(".perm").forEach(el => el.checked = false);
-  document.querySelectorAll("#listaUsuarios .tr").forEach(row => row.classList.remove("usuario-ativo"));
-
-  bdrAtualizarCardUsuarioSelecionado(null);
-
-  if(typeof atualizarResumo === "function"){
-    atualizarResumo();
-  }
-}
-
-window.limparSelecaoPermissao = limparSelecaoPermissao;
-
-function bdrPrepararBotoesListaUsuarios(){
-  document.querySelectorAll("#listaUsuarios button").forEach(btn => {
-    const onclick = String(btn.getAttribute("onclick") || "");
-    const match = onclick.match(/(?:editarUsuario|abrirEdicaoUsuario|selecionarUsuario|editarDadosUsuario)\(['"]?([^'")]+)['"]?\)/i);
-    if(match){
-      const id = match[1];
-      btn.setAttribute("data-editar-usuario", id);
-      btn.setAttribute("onclick", `selecionarUsuarioPermissoes('${id}')`);
-      btn.setAttribute("title", "Selecionar usuário para permissões");
-    }
-  });
-}
-
-/* Observa a lista e ajusta botões depois que usuarios.js renderizar */
-const bdrObsUsuarios = new MutationObserver(() => bdrPrepararBotoesListaUsuarios());
-
-document.addEventListener("DOMContentLoaded", () => {
-  const alvo = document.getElementById("listaUsuarios");
-  if(alvo){
-    bdrObsUsuarios.observe(alvo, {childList:true, subtree:true});
-  }
-
-  setTimeout(bdrPrepararBotoesListaUsuarios, 500);
-  setTimeout(bdrPrepararBotoesListaUsuarios, 1200);
-});
-
-document.addEventListener("change", e => {
-  if(e.target?.classList?.contains("perm")){
-    if(typeof atualizarResumo === "function"){
-      atualizarResumo();
-    }
-  }
-});
-</script>
-
-
-
-
-<!-- =========================================================
-     BDR OFFLINE QUEUE
-     Referência:
-     - Este arquivo cria a fila offline.
-     - Ele deve ficar depois de supabaseClient/auth/bdrCore.
-     - Depois vamos ligar cada salvar/update/delete usando bdrSalvarInsert/bdrSalvarUpdate.
-========================================================= -->
 <script src="./JS/offlineQueue.js"></script>
-<script>
-/* BDR PATCH SEGURO - menu secreto apenas para Owner id=1 */
-function usuarioLogadoOwnerBDR(){
-  try{
-    const raw = localStorage.getItem("usuario_logado") || localStorage.getItem("usuarioLogado");
-    const u = raw ? JSON.parse(raw) : null;
-    return Number(u?.id) === 1;
-  }catch(e){
-    return false;
-  }
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  if(usuarioLogadoOwnerBDR()) return;
-
-  document.querySelectorAll("[data-owner], .owner-only, .bdr-owner-only, #btnOwner, #ownerMenu, #bdrOwnerBtn").forEach(el => {
-    el.style.display = "none";
-    el.removeAttribute("onclick");
-  });
-});
-</script>
-
 <script src="./JS/bdr-owner-core.js"></script>
 
 <script>
-setTimeout(() => {
-  const originalDepoisUsuarios = window.aplicarPerfilRapido;
-
-  window.aplicarPerfilRapido = function(perfil){
-    if(String(perfil).toUpperCase() === "CONSULTA_PATRIMONIO"){
-      aplicarPerfilConsultaPatrimonio();
-      return;
-    }
-
-    if(typeof originalDepoisUsuarios === "function"){
-      originalDepoisUsuarios(perfil);
-    }
-
-    if(String(perfil).toUpperCase() === "MASTER"){
-      document.querySelectorAll(".perm").forEach(el => el.checked = true);
-    }
-  };
-
-  aplicarMenuPorPermissao();
-}, 1000);
-</script>
-
-
-<script>
 /* =========================================================
-   BDR FIX FINAL - USUÁRIOS / PERMISSÕES
-   - Não seleciona Claudenilson automaticamente
-   - Só salva se você clicar em um usuário
-   - Todos os botões de salvar usam a mesma função
-   - Clicar em MENU PATRIMÔNIO, DASHBOARD etc. marca/desmarca e salva no BD
+   BDR USUÁRIOS - JS LIMPO FINAL
+   ---------------------------------------------------------
+   Objetivo:
+   1) NÃO salvar permissões automaticamente.
+   2) NÃO piscar/recarregar ao clicar em usuário.
+   3) Manter salvamento somente no botão "Salvar alterações".
 ========================================================= */
 (function(){
+  if(window.__BDR_USUARIOS_LIMPO_FINAL__) return;
+  window.__BDR_USUARIOS_LIMPO_FINAL__ = true;
 
-  let usuarioPermSelecionadoId = null;
-  let usuarioPermSelecionadoObj = null;
-  let usuarioFoiSelecionadoManual = false;
-
-  function supa(){
-    return window.client || window.supabaseClient || null;
-  }
-
-  function norm(v){
-    return String(v || "")
-      .toUpperCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim();
-  }
-
-  function arrPerm(v){
-    return String(v || "")
-      .split(",")
-      .map(norm)
-      .filter(Boolean);
-  }
-
-  function permsMarcadas(){
-    return Array.from(document.querySelectorAll(".perm:checked"))
-      .map(el => norm(el.value))
-      .filter(Boolean);
-  }
-
-  function setPerms(perms){
-    const set = new Set(arrPerm(perms));
-    document.querySelectorAll(".perm").forEach(el => {
-      el.checked = set.has(norm(el.value));
-    });
-
-    if(typeof atualizarResumo === "function"){
-      try{ atualizarResumo(); }catch(e){}
+  function nomeArquivo(url){
+    try{
+      const u = new URL(url, window.location.href);
+      return (u.pathname.split('/').pop() || 'index.html').toLowerCase();
+    }catch(e){
+      return String(url || '').split('?')[0].split('#')[0].split('/').pop().toLowerCase();
     }
   }
 
-  function atualizarCard(u){
-    const nome = document.getElementById("usuarioSelecionadoNome");
-    const detalhe = document.getElementById("usuarioSelecionadoDetalhe");
+  window.bdrIrSeguro = function(pagina){
+    if(nomeArquivo(window.location.href) === nomeArquivo(pagina)) return false;
+    window.location.href = pagina;
+    return false;
+  };
 
-    if(!u){
-      if(nome) nome.innerText = "Nenhum usuário selecionado";
-      if(detalhe) detalhe.innerText = "Clique em um usuário na lista para aplicar permissões.";
-      return;
+  window.toggleMenuUsuario = function(event){
+    if(event) event.stopPropagation();
+    document.getElementById('dropdownUser')?.classList.toggle('ativo');
+    document.getElementById('notifDropdown')?.classList.remove('ativo');
+  };
+
+  window.toggleNotificacoes = function(event){
+    if(event) event.stopPropagation();
+    document.getElementById('notifDropdown')?.classList.toggle('ativo');
+    document.getElementById('dropdownUser')?.classList.remove('ativo');
+  };
+
+  window.logoutSeguro = function(){
+    if(typeof logout === 'function') return logout();
+    localStorage.removeItem('usuario_logado');
+    localStorage.removeItem('usuarioLogado');
+    window.location.href = 'login.html';
+  };
+
+  document.addEventListener('click', function(){
+    document.getElementById('dropdownUser')?.classList.remove('ativo');
+    document.getElementById('notifDropdown')?.classList.remove('ativo');
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+      document.getElementById('dropdownUser')?.classList.remove('ativo');
+      document.getElementById('notifDropdown')?.classList.remove('ativo');
     }
+  });
 
-    if(nome) nome.innerText = `${u.nome || u.usuario || "Usuário"} — ${u.perfil || "-"}`;
-    if(detalhe) detalhe.innerText = `ID ${u.id} • ${u.email || "-"} • Marque os menus/permissões e clique em salvar.`;
-  }
-
-  function limparVisualSelecao(){
-    document.querySelectorAll("#listaUsuarios .tr, #listaUsuarios [data-user-row]").forEach(row => {
-      row.classList.remove("usuario-ativo");
+  function destacarUsuario(id){
+    document.querySelectorAll('#listaUsuarios .tr').forEach(row => row.classList.remove('usuario-ativo'));
+    const alvo = Array.from(document.querySelectorAll('#listaUsuarios .tr')).find(row => {
+      return String(row.getAttribute('onclick') || '').includes('selecionarUsuario(' + id + ')') ||
+             String(row.innerHTML || '').includes('selecionarUsuario(' + id + ')');
     });
+    if(alvo) alvo.classList.add('usuario-ativo');
   }
 
-  function destacar(id){
-    limparVisualSelecao();
-
-    const btn = document.querySelector(`#listaUsuarios [data-selecionar-permissao="${id}"], #listaUsuarios [data-editar-usuario="${id}"]`);
-    const row = btn?.closest(".tr") || btn?.closest("[data-user-row]") || btn?.parentElement;
-    if(row) row.classList.add("usuario-ativo");
-  }
-
-  async function buscarUsuario(id){
-    const listaPossivel = [
-      window.usuarios,
-      window.listaUsuariosSistema,
-      window.usuariosSistema,
-      window.todosUsuarios,
-      window.dadosUsuarios
-    ].find(Array.isArray);
-
-    let u = Array.isArray(listaPossivel)
-      ? listaPossivel.find(x => String(x.id) === String(id))
+  setTimeout(function(){
+    /* Guarda função original de salvar. Ela só será usada quando o botão mandar salvar. */
+    const salvarOriginal = typeof salvarPermissoesSelecionado === 'function'
+      ? salvarPermissoesSelecionado
       : null;
 
-    if(u) return u;
-
-    const db = supa();
-    if(!db) throw new Error("Supabase não carregado.");
-
-    const { data, error } = await db
-      .from("usuarios_sistema")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if(error) throw error;
-    return data;
-  }
-
-  async function selecionarUsuarioPermissoesFinal(id){
-    try{
-      const u = await buscarUsuario(id);
-
-      usuarioFoiSelecionadoManual = true;
-      usuarioPermSelecionadoId = u.id;
-      usuarioPermSelecionadoObj = u;
-
-      window.usuarioPermissaoSelecionado = u;
-      window.usuarioSelecionadoId = u.id;
-      window.usuarioAtualEditandoId = u.id;
-
-      const hidden = document.getElementById("usuarioId");
-      if(hidden) hidden.value = u.id;
-
-      setPerms(u.permissoes || "");
-      atualizarCard(u);
-      destacar(u.id);
-
-    }catch(e){
-      console.error("Erro ao selecionar usuário:", e);
-      alert("Erro ao carregar permissões do usuário: " + (e.message || e));
-    }
-  }
-
-  async function salvarPermissoesFinal(){
-    const id =
-      usuarioPermSelecionadoId ||
-      window.usuarioPermissaoSelecionado?.id ||
-      window.usuarioSelecionadoId ||
-      document.getElementById("usuarioId")?.value;
-
-    if(!id){
-      alert("Selecione um usuário na lista primeiro.");
-      return;
+    if(salvarOriginal){
+      window.salvarPermissoesSelecionado = salvarPermissoesSelecionado = async function(mostrarMsg){
+        /* Quando o JS original chamar com false no change, NÃO salva no banco. */
+        if(mostrarMsg === false){
+          if(typeof atualizarResumo === 'function') atualizarResumo();
+          return;
+        }
+        return salvarOriginal(true);
+      };
     }
 
-    const db = supa();
-    if(!db){
-      alert("Supabase não carregado.");
-      return;
-    }
-
-    const permissoes = permsMarcadas().join(",");
-
-    const { error } = await db
-      .from("usuarios_sistema")
-      .update({ permissoes })
-      .eq("id", id);
-
-    if(error){
-      console.error("Erro Supabase:", error);
-      alert("Erro ao salvar permissões: " + error.message);
-      return;
-    }
-
-    if(usuarioPermSelecionadoObj){
-      usuarioPermSelecionadoObj.permissoes = permissoes;
-    }
-    if(window.usuarioPermissaoSelecionado){
-      window.usuarioPermissaoSelecionado.permissoes = permissoes;
-    }
-
-    alert("✅ Permissões salvas com sucesso!");
-
-    // Não chama carregarTudo aqui para evitar selecionar usuário errado sozinho.
-    destacar(id);
-    atualizarCard(usuarioPermSelecionadoObj || window.usuarioPermissaoSelecionado);
-  }
-
-  function limparSelecaoFinal(){
-    usuarioFoiSelecionadoManual = false;
-    usuarioPermSelecionadoId = null;
-    usuarioPermSelecionadoObj = null;
-
-    window.usuarioPermissaoSelecionado = null;
-    window.usuarioSelecionadoId = null;
-    window.usuarioAtualEditandoId = null;
-
-    const hidden = document.getElementById("usuarioId");
-    if(hidden) hidden.value = "";
-
-    setPerms("");
-    limparVisualSelecao();
-    atualizarCard(null);
-  }
-
-  function prepararLista(){
-    const lista = document.getElementById("listaUsuarios");
-    if(!lista) return;
-
-    // Botões dentro da lista
-    lista.querySelectorAll("button").forEach(btn => {
-      const onclick = String(btn.getAttribute("onclick") || "");
-      const m = onclick.match(/(?:editarUsuario|abrirEdicaoUsuario|selecionarUsuario|editarDadosUsuario|selecionarUsuarioPermissoes)\(['"]?([^'")]+)['"]?\)/i);
-
-      if(m && m[1]){
-        const id = m[1];
-        btn.setAttribute("data-selecionar-permissao", id);
-        btn.onclick = function(ev){
-          ev.preventDefault();
-          ev.stopPropagation();
-          selecionarUsuarioPermissoesFinal(id);
-        };
+    window.salvarPermissoesUsuarioSelecionado = async function(){
+      if(typeof salvarPermissoesSelecionado === 'function'){
+        return salvarPermissoesSelecionado(true);
       }
-    });
-
-    // Linha inteira clicável quando achar ID pelo botão
-    lista.querySelectorAll(".tr").forEach(row => {
-      const btn = row.querySelector("[data-selecionar-permissao]");
-      if(btn){
-        const id = btn.getAttribute("data-selecionar-permissao");
-        row.style.cursor = "pointer";
-        row.onclick = function(ev){
-          if(ev.target.closest("button")) return;
-          selecionarUsuarioPermissoesFinal(id);
-        };
-      }
-    });
-
-    // Se algum script selecionou sozinho e você não clicou, limpa.
-    if(!usuarioFoiSelecionadoManual){
-      const hidden = document.getElementById("usuarioId");
-      if(hidden && hidden.value){
-        hidden.value = "";
-      }
-      window.usuarioPermissaoSelecionado = null;
-      window.usuarioSelecionadoId = null;
-      window.usuarioAtualEditandoId = null;
-      limparVisualSelecao();
-      atualizarCard(null);
-      setPerms("");
-    }
-  }
-
-  function ajustarBotoesSalvar(){
-    // Todos os salvar viram a mesma função confiável
-    window.salvarPermissoesUsuarioSelecionado = salvarPermissoesFinal;
-    window.salvarAlteracoesUsuarioSelecionado = salvarPermissoesFinal;
-    window.salvarPermissoesFinal = salvarPermissoesFinal;
-
-    // Remove botão fixo antigo se existir
-    const fixo = document.getElementById("btnSalvarAlteracoesFixo");
-    if(fixo) fixo.remove();
-
-    // Evita três botões confundindo: mantém só o botão da faixa principal
-    const cardBtn = document.querySelector("#usuarioSelecionadoCard button");
-    if(cardBtn){
-      cardBtn.style.display = "none";
-      cardBtn.onclick = salvarPermissoesFinal;
-    }
-
-    document.querySelectorAll("button").forEach(btn => {
-      const txt = norm(btn.innerText || btn.textContent || "");
-      const onclick = String(btn.getAttribute("onclick") || "");
-
-      if(
-        txt.includes("SALVAR ALTERACOES") ||
-        txt.includes("SALVAR PERMISSOES") ||
-        onclick.includes("salvarAlteracoesUsuarioSelecionado") ||
-        onclick.includes("salvarPermissoesUsuarioSelecionado")
-      ){
-        btn.onclick = function(ev){
-          ev.preventDefault();
-          ev.stopPropagation();
-          salvarPermissoesFinal();
-        };
-      }
-    });
-  }
-
-  function aplicarPerfilConsulta(){
-    const p = [
-      "DASHBOARD",
-      "PATRIMONIO",
-      "RELATORIOS",
-      "VER_VALORES",
-      "VER_ESTOQUE_PROPRIA_OBRA",
-      "VER_ESTOQUE_CD"
-    ];
-    setPerms(p.join(","));
-  }
-
-  function iniciarFix(){
-    ajustarBotoesSalvar();
-    prepararLista();
-
-    window.selecionarUsuarioPermissoes = selecionarUsuarioPermissoesFinal;
-    window.editarUsuario = selecionarUsuarioPermissoesFinal;
-    window.abrirEdicaoUsuario = selecionarUsuarioPermissoesFinal;
-    window.editarDadosUsuario = selecionarUsuarioPermissoesFinal;
-    window.selecionarUsuario = selecionarUsuarioPermissoesFinal;
-    window.limparSelecaoPermissao = limparSelecaoFinal;
-
-    const originalPerfil = window.aplicarPerfilRapido;
-    window.aplicarPerfilRapido = function(perfil){
-      const p = norm(perfil);
-      if(p === "CONSULTA_PATRIMONIO" || p === "CONSULTA"){
-        aplicarPerfilConsulta();
-        return;
-      }
-      if(typeof originalPerfil === "function"){
-        originalPerfil(perfil);
-      }
-      if(p === "MASTER"){
-        document.querySelectorAll(".perm").forEach(el => el.checked = true);
-      }
+      alert('Função de salvar permissões não carregou.');
     };
-  }
 
-  document.addEventListener("DOMContentLoaded", iniciarFix);
+    /* Substitui selecionar usuário para não renderizar a lista inteira a cada clique. */
+    if(typeof selecionarUsuario === 'function'){
+      window.selecionarUsuario = selecionarUsuario = function(id){
+        try{
+          const alvo = usuarios.find(u => Number(u.id) === Number(id));
+          if(!alvo) return;
+          if(typeof bloquearAcaoNoOwner === 'function' && bloquearAcaoNoOwner(alvo, 'alterar')) return;
 
-  setTimeout(iniciarFix, 300);
-  setTimeout(iniciarFix, 900);
-  setTimeout(iniciarFix, 1600);
+          usuarioSelecionado = alvo;
 
-  const obs = new MutationObserver(() => {
-    prepararLista();
-    ajustarBotoesSalvar();
-  });
+          if(typeof marcarPermissoes === 'function') marcarPermissoes(usuarioSelecionado.permissoes || '');
+          if(typeof aplicarPerfilVisual === 'function') aplicarPerfilVisual(usuarioSelecionado.perfil_rapido || usuarioSelecionado.perfil || '');
+          if(typeof atualizarUsuarioSelecionadoCard === 'function') atualizarUsuarioSelecionadoCard();
+          if(typeof renderizarObrasLiberadas === 'function') renderizarObrasLiberadas();
+          if(typeof renderizarPerfisRapidos === 'function') renderizarPerfisRapidos();
+          if(typeof atualizarResumo === 'function') atualizarResumo();
 
-  document.addEventListener("DOMContentLoaded", () => {
-    const lista = document.getElementById("listaUsuarios");
-    if(lista) obs.observe(lista, { childList:true, subtree:true });
-  });
+          destacarUsuario(id);
+        }catch(e){
+          console.error('Erro ao selecionar usuário:', e);
+        }
+      };
+    }
 
+    document.querySelectorAll('#btnSalvarAlteracoesFixo, .bdr-salvar-fixo-removido').forEach(el => el.remove());
+  }, 500);
+
+  /* Owner secreto: 5 cliques no logo BDR. */
+  let ownerClicks = 0;
+  window.bdrOwnerClickUsuarios = function(){
+    let u = null;
+    try{ u = JSON.parse(localStorage.getItem('usuario_logado') || localStorage.getItem('usuarioLogado') || 'null'); }catch(e){}
+    if(Number(u?.id) !== 1) return;
+    ownerClicks++;
+    clearTimeout(window.__bdrOwnerClickUsuariosTimer);
+    window.__bdrOwnerClickUsuariosTimer = setTimeout(() => ownerClicks = 0, 2500);
+    if(ownerClicks >= 5){
+      ownerClicks = 0;
+      if(typeof window.bdrOwnerAbrir === 'function') window.bdrOwnerAbrir();
+    }
+  };
 })();
 </script>
 

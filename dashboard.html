@@ -1124,6 +1124,138 @@ grid-template-columns:auto repeat(4,95px) 160px 160px 95px 1fr;
   color:#7c3aed;
 }
 
+
+
+/* =========================================================
+   BDR DASHBOARD INTERATIVO - PADRÃO FINAL
+   AJUSTES RÁPIDOS:
+   --dash-card-h: altura padrão dos cards/gráficos
+   --dash-gap: espaço entre blocos
+   --dash-ia-bg: cor leve do card de IA
+========================================================= */
+:root{
+  --dash-card-h:300px;
+  --dash-gap:12px;
+  --dash-ia-bg:#fff7f7;
+}
+
+.btn-clear-dashboard{
+  height:34px;
+  border:1px solid #e5e7eb;
+  border-radius:8px;
+  background:#fff;
+  color:#374151;
+  padding:0 12px;
+  font-size:12px;
+  font-weight:900;
+  cursor:pointer;
+}
+.btn-clear-dashboard:hover{
+  background:#fff1f2;
+  color:var(--bdr-red);
+  border-color:#fecaca;
+}
+
+.dashboard-grid{
+  grid-template-columns:1fr 1fr .9fr !important;
+  gap:var(--dash-gap) !important;
+  align-items:stretch !important;
+}
+.left-stack,
+.mid-stack,
+.right-stack{
+  display:grid !important;
+  grid-auto-rows:minmax(var(--dash-card-h), auto) !important;
+  gap:var(--dash-gap) !important;
+}
+.left-stack > .card-light,
+.mid-stack > .card-light,
+.right-stack > .card-light,
+.bottom-grid{
+  min-height:var(--dash-card-h) !important;
+}
+.bottom-grid{
+  display:grid !important;
+  grid-template-columns:1fr 1fr !important;
+  gap:var(--dash-gap) !important;
+}
+.bottom-grid .card-light{
+  min-height:var(--dash-card-h) !important;
+}
+.chart-card canvas,
+.chart-card.big canvas{
+  height:calc(var(--dash-card-h) - 76px) !important;
+}
+
+.card-light{
+  border-left:4px solid var(--bdr-red);
+  border-radius:14px !important;
+}
+.card-light h3{
+  min-height:44px;
+  display:flex;
+  align-items:center;
+  border-bottom:1px solid #f1f5f9;
+}
+
+/* IA agora no padrão do sistema, sem bloco vermelho forte */
+.right-stack .card-light.red-head{
+  background:#fff !important;
+  border:1px solid var(--bdr-border) !important;
+  border-left:4px solid var(--bdr-red) !important;
+  box-shadow:0 2px 8px rgba(15,23,42,.04) !important;
+}
+.right-stack .card-light.red-head h3{
+  background:linear-gradient(135deg,#fff,#fff7f7) !important;
+  color:var(--bdr-red) !important;
+  border-bottom:1px solid #fecaca !important;
+}
+.ai-list{
+  gap:9px !important;
+}
+.ai-line{
+  background:#f8fafc !important;
+  border:1px solid #e5e7eb !important;
+  border-left:4px solid #2563eb !important;
+  border-radius:10px !important;
+  padding:9px 10px !important;
+  min-height:42px !important;
+}
+.ai-line:hover{
+  background:#fff1f2 !important;
+  border-left-color:var(--bdr-red) !important;
+}
+.alert-row{
+  min-height:48px;
+}
+
+/* Visual quando um card/gráfico está filtrando */
+.kpi-card.active,
+.bdr-chart-active{
+  outline:3px solid rgba(215,25,32,.18) !important;
+  box-shadow:0 10px 24px rgba(215,25,32,.12) !important;
+}
+
+.bdr-brand-icon.bdr-logo-menu{
+  background:transparent !important;
+  border:none !important;
+  box-shadow:none !important;
+  color:transparent !important;
+}
+.bdr-brand-icon.bdr-logo-menu img,
+.bdr-brand-icon.bdr-logo-menu i,
+.bdr-brand-icon.bdr-logo-menu span{
+  display:none !important;
+}
+
+@media(max-width:1350px){
+  .dashboard-grid{grid-template-columns:1fr !important;}
+  .left-stack,.mid-stack,.right-stack{grid-auto-rows:auto !important;}
+}
+@media(max-width:800px){
+  :root{--dash-card-h:260px;}
+  .bottom-grid{grid-template-columns:1fr !important;}
+}
 </style>
 
 <style>
@@ -1156,6 +1288,7 @@ grid-template-columns:auto repeat(4,95px) 160px 160px 95px 1fr;
 .user-dropdown .logout-btn{color:#dc2626;}
 </style>
 
+<link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260626-3">
 </head>
 
 <body>
@@ -1173,9 +1306,7 @@ grid-template-columns:auto repeat(4,95px) 160px 160px 95px 1fr;
   <aside class="bdr-sidebar">
 
     <div class="bdr-brand">
-      <div class="bdr-brand-icon">
-        <i class="fa-solid fa-cube"></i>
-      </div>
+      <div class="bdr-brand-icon bdr-logo-menu"></div>
     </div>
 
  <!-- MENU PRINCIPAL FIXO -->
@@ -1325,6 +1456,8 @@ grid-template-columns:auto repeat(4,95px) 160px 160px 95px 1fr;
         <div class="modo-pill" id="modoDashboardTexto">Modo: Atual</div>
 
         <button class="btn-red" onclick="carregarDados()">Atualizar</button>
+
+        <button type="button" class="btn-clear-dashboard" onclick="limparFiltrosDashboard()">Limpar filtros</button>
 
         <div class="update-info">
           Período: <b id="periodoSelecionadoTexto">Atual</b><br>
@@ -2201,6 +2334,50 @@ function aplicarFiltroKPI(tipo){
   if(tipo === "BAIXADO"){
     setTimeout(() => mostrarItensAlerta("BAIXADO"), 120);
   }
+
+  if(tipo === "EM_USO"){
+    setTimeout(() => mostrarItensAlerta("EM_USO"), 120);
+  }
+
+  if(tipo === "TODOS" || tipo === "VALOR"){
+    setTimeout(() => mostrarItensAlerta("TODOS"), 120);
+  }
+}
+
+
+function aplicarFiltroObraDashboard(obraId){
+  if(!obraId) return;
+  obrasSelecionadasDashboard = [String(obraId)];
+  renderizarModalObras();
+  renderizarModalTipos();
+  aplicarFiltros();
+  mostrarItensObraRanking(String(obraId), "QTD");
+}
+
+function aplicarFiltroTipoDashboard(tipo){
+  tipo = String(tipo || "SEM TIPO");
+  tiposSelecionadosDashboard = [tipo];
+  renderizarModalTipos();
+  aplicarFiltros();
+  renderizarListaItensDashboard(filtrados, `🧩 Tipo: ${tipo}`);
+}
+
+function limparFiltrosDashboard(){
+  filtroKPIAtual = "TODOS";
+  periodoAtual = "ATUAL";
+  modoDashboard = "ATUAL";
+  obrasSelecionadasDashboard = [];
+  tiposSelecionadosDashboard = [];
+
+  document.querySelectorAll(".kpi-card").forEach(k => k.classList.remove("active"));
+  document.querySelector('.kpi-card[data-kpi="TODOS"]')?.classList.add("active");
+  document.querySelectorAll(".pill-btn").forEach(btn => btn.classList.remove("active"));
+
+  const card = document.getElementById("cardItensAlerta");
+  if(card) card.style.display = "none";
+
+  carregarFiltros();
+  aplicarFiltros();
 }
 
 function aplicarFiltros(){
@@ -2276,16 +2453,35 @@ function destruir(id){
   }
 }
 
-function bar(id, labels, data, horizontal=false, color="#d71920"){
+function bar(id, labels, data, horizontal=false, color="#d71920", meta={}){
   destruir(id);
-  charts[id] = new Chart(document.getElementById(id),{
+  const canvas = document.getElementById(id);
+  if(!canvas) return;
+
+  charts[id] = new Chart(canvas,{
     type:"bar",
-    data:{labels,datasets:[{data,backgroundColor:color,borderRadius:3}]},
+    data:{
+      labels,
+      datasets:[{
+        data,
+        backgroundColor:color,
+        borderRadius:6,
+        hoverBackgroundColor:"#a4161a"
+      }]
+    },
     options:{
       indexAxis:horizontal ? "y" : "x",
       responsive:true,
       maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:(ctx)=> meta.tipo === "valor" ? moeda(ctx.raw) : (ctx.raw + " item(ns)")}}
+      },
+      onClick:(evt, elements)=>{
+        if(!elements || !elements.length) return;
+        const index = elements[0].index;
+        if(typeof meta.onClick === "function") meta.onClick(index, labels[index], data[index]);
+      },
       scales:{
         x:{beginAtZero:true,grid:{color:"#eef2f7"},ticks:{font:{size:10}}},
         y:{beginAtZero:true,grid:{color:"#eef2f7"},ticks:{font:{size:10}}}
@@ -2294,23 +2490,32 @@ function bar(id, labels, data, horizontal=false, color="#d71920"){
   });
 }
 
-function doughnut(id, labels, data){
+function doughnut(id, labels, data, meta={}){
   destruir(id);
-  charts[id] = new Chart(document.getElementById(id),{
+  const canvas = document.getElementById(id);
+  if(!canvas) return;
+
+  charts[id] = new Chart(canvas,{
     type:"doughnut",
     data:{
       labels,
       datasets:[{
         data,
-        backgroundColor:["#2563eb","#16a34a","#f97316","#d71920","#7c3aed"]
+        backgroundColor:["#2563eb","#16a34a","#f97316","#d71920","#7c3aed","#f59e0b","#0d9488"]
       }]
     },
     options:{
       responsive:true,
       maintainAspectRatio:false,
-      cutout:"55%",
+      cutout:"58%",
+      onClick:(evt, elements)=>{
+        if(!elements || !elements.length) return;
+        const index = elements[0].index;
+        if(typeof meta.onClick === "function") meta.onClick(index, labels[index], data[index]);
+      },
       plugins:{
-        legend:{position:"right",labels:{boxWidth:12,font:{size:11}}}
+        legend:{position:"right",labels:{boxWidth:12,font:{size:11}}},
+        tooltip:{callbacks:{label:(ctx)=> `${ctx.label}: ${ctx.raw} item(ns)`}}
       }
     }
   });
@@ -2328,11 +2533,18 @@ function gerarGraficos(){
     qtdObra.map(o => o.nome),
     qtdObra.map(o => o.qtd),
     true,
-    "#d71920"
+    "#d71920",
+    {
+      tipo:"quantidade",
+      onClick:(index)=> aplicarFiltroObraDashboard(qtdObra[index]?.obra_id)
+    }
   );
 
   const porStatus = contarPor(filtrados, p => p.status || "-");
-  doughnut("graficoStatus", Object.keys(porStatus), Object.values(porStatus));
+  const statusLabels = Object.keys(porStatus);
+  doughnut("graficoStatus", statusLabels, Object.values(porStatus), {
+    onClick:(index)=> aplicarFiltroKPI(statusLabels[index] || "TODOS")
+  });
 
   const valorObra = [...ranking]
     .filter(o => o.valor > 0)
@@ -2344,11 +2556,18 @@ function gerarGraficos(){
     valorObra.map(o => o.nome),
     valorObra.map(o => Number(o.valor.toFixed(2))),
     false,
-    "#7c3aed"
+    "#7c3aed",
+    {
+      tipo:"valor",
+      onClick:(index)=> aplicarFiltroObraDashboard(valorObra[index]?.obra_id)
+    }
   );
 
-  const tipos = contarPor(filtrados, p => p.tipo_item || "Sem tipo");
-  doughnut("graficoTipos", Object.keys(tipos), Object.values(tipos));
+  const tipos = contarPor(filtrados, p => p.tipo_item || "SEM TIPO");
+  const tipoLabels = Object.keys(tipos);
+  doughnut("graficoTipos", tipoLabels, Object.values(tipos), {
+    onClick:(index)=> aplicarFiltroTipoDashboard(tipoLabels[index] || "SEM TIPO")
+  });
 }
 
 function gerarIA(){
@@ -2448,6 +2667,11 @@ function mostrarItensAlerta(tipo){
   if(tipo === "MANUTENCAO"){
     lista = patrimonioPorFiltrosTela().filter(p => p.status === "MANUTENCAO");
     titulo = "🛠 Patrimônios em manutenção";
+  }
+
+  if(tipo === "EM_USO"){
+    lista = patrimonioPorFiltrosTela().filter(p => p.status === "EM_USO");
+    titulo = "✅ Patrimônios em uso";
   }
 
   if(tipo === "BAIXADO"){
