@@ -724,7 +724,7 @@ function setPermissoes(lista){
 document.addEventListener("change", e => {
   if(e.target.classList.contains("perm")){
     atualizarResumo();
-    salvarPermissoesSelecionado(false);
+    // Não salva automático ao marcar/desmarcar. Salva apenas no botão.
   }
 });
 
@@ -1517,3 +1517,187 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 window.renderizarQuadroPermissoesNovoBDR = renderizarQuadroPermissoesNovoBDR;
 
+
+/* =========================================================
+   BDR USUÁRIOS FINAL V2 - SALVAR / PERMISSÕES / CACHE
+   - Corrige USUARIOS x USUARIOS_VER
+   - Salva somente pelo botão
+   - Fallback se offlineQueue não carregar
+   - Atualiza usuário logado no localStorage após salvar
+========================================================= */
+(function(){
+  if(window.__BDR_USUARIOS_FINAL_V2__) return;
+  window.__BDR_USUARIOS_FINAL_V2__ = true;
+
+  const ALIASES = {
+    DASHBOARD:'DASHBOARD_VER', DASHBOARD_VER:'DASHBOARD',
+    ENTRADA:'ENTRADA_VER', ENTRADA_VER:'ENTRADA',
+    TRIAGEM:'TRIAGEM_VER', TRIAGEM_VER:'TRIAGEM',
+    ESTOQUE:'ESTOQUE_VER', ESTOQUE_VER:'ESTOQUE',
+    PATRIMONIO:'PATRIMONIO_VER', PATRIMONIO_VER:'PATRIMONIO',
+    EXPEDICAO:'EXPEDICAO_VER', EXPEDICAO_VER:'EXPEDICAO',
+    RELATORIOS:'RELATORIOS_VER', RELATORIOS_VER:'RELATORIOS',
+    EMPRESAS:'EMPRESAS_VER', EMPRESAS_VER:'EMPRESAS',
+    USUARIOS:'USUARIOS_VER', USUARIOS_VER:'USUARIOS',
+    CONFIGURACOES:'CONFIGURACOES_VER', CONFIGURACOES_VER:'CONFIGURACOES'
+  };
+
+  window.bdrUsuariosExpandirPermissoes = function(lista){
+    const set = new Set((lista || []).map(p => String(p || '').trim()).filter(Boolean));
+    [...set].forEach(p => { if(ALIASES[p]) set.add(ALIASES[p]); });
+    return [...set];
+  };
+
+  window.permissoesMarcadas = function(){
+    const base = [...document.querySelectorAll('.perm:checked')].map(x => String(x.value || '').trim()).filter(Boolean);
+    return window.bdrUsuariosExpandirPermissoes(base);
+  };
+
+  window.marcarPermissoes = function(permissoesTexto){
+    const lista = String(permissoesTexto || '').split(',').map(x => x.trim()).filter(Boolean);
+    const set = new Set(window.bdrUsuariosExpandirPermissoes(lista));
+    document.querySelectorAll('.perm').forEach(c => c.checked = set.has(c.value));
+    if(typeof atualizarResumo === 'function') atualizarResumo();
+  };
+
+  window.setPermissoes = function(lista){
+    const set = new Set(window.bdrUsuariosExpandirPermissoes(lista || []));
+    document.querySelectorAll('.perm').forEach(c => c.checked = set.has(c.value));
+    if(typeof atualizarResumo === 'function') atualizarResumo();
+  };
+
+  async function updateDireto(tabela, payload, filtro){
+    if(typeof bdrSalvarUpdate === 'function'){
+      return await bdrSalvarUpdate(tabela, payload, filtro);
+    }
+    const banco = db && db();
+    if(!banco) return {error:{message:'Supabase não carregado.'}};
+    let q = banco.from(tabela).update(payload);
+    Object.entries(filtro || {}).forEach(([k,v]) => q = q.eq(k,v));
+    return await q.select();
+  }
+
+  async function insertDireto(tabela, payload){
+    if(typeof bdrSalvarInsert === 'function'){
+      return await bdrSalvarInsert(tabela, payload);
+    }
+    const banco = db && db();
+    if(!banco) return {error:{message:'Supabase não carregado.'}};
+    return await banco.from(tabela).insert(payload).select();
+  }
+
+  window.bdrUsuariosUpdateDireto = updateDireto;
+  window.bdrUsuariosInsertDireto = insertDireto;
+
+  window.salvarPermissoesSelecionado = async function(mostrarMsg = true){
+    if(!usuarioSelecionado){
+      alert('Selecione um usuário primeiro.');
+      return;
+    }
+    if(typeof bloquearAcaoNoOwner === 'function' && bloquearAcaoNoOwner(usuarioSelecionado, 'alterar')) return;
+
+    const payload = {
+      permissoes: window.permissoesMarcadas().join(','),
+      perfil: usuarioSelecionado.perfil || 'OPERADOR',
+      perfil_rapido: usuarioSelecionado.perfil_rapido || null,
+      updated_at: new Date().toISOString()
+    };
+
+    const resp = await updateDireto(TABELA_USUARIOS, payload, {id: usuarioSelecionado.id});
+    if(resp.error){
+      alert('Erro ao salvar permissões: ' + resp.error.message);
+      return;
+    }
+
+    const alvo = usuarios.find(u => Number(u.id) === Number(usuarioSelecionado.id));
+    if(alvo){ Object.assign(alvo, payload); }
+    Object.assign(usuarioSelecionado, payload);
+
+    // Se alterou o próprio usuário logado, atualiza o cache local para não bloquear tela depois.
+    try{
+      const local = usuarioLocal && usuarioLocal();
+      if(local && Number(local.id) === Number(usuarioSelecionado.id)){
+        const novoLocal = {...local, ...payload};
+        localStorage.setItem('usuario_logado', JSON.stringify(novoLocal));
+        localStorage.setItem('usuarioLogado', JSON.stringify(novoLocal));
+      }
+    }catch(e){ console.warn('Não atualizou localStorage do usuário logado.', e); }
+
+    if(typeof renderizarUsuarios === 'function') renderizarUsuarios();
+    if(typeof atualizarUsuarioSelecionadoCard === 'function') atualizarUsuarioSelecionadoCard();
+    if(typeof atualizarResumo === 'function') atualizarResumo();
+
+    if(mostrarMsg !== false){ alert('Permissões salvas com sucesso.'); }
+  };
+
+  window.salvarPermissoesUsuarioSelecionado = function(){
+    return window.salvarPermissoesSelecionado(true);
+  };
+  window.salvarAlteracoesUsuarioSelecionado = window.salvarPermissoesUsuarioSelecionado;
+
+  // Reforça o salvar usuário com fallback caso offlineQueue não esteja carregado.
+  const salvarUsuarioOriginal = window.salvarUsuario;
+  window.salvarUsuario = async function(){
+    try{
+      if(typeof salvarUsuarioOriginal === 'function') return await salvarUsuarioOriginal();
+    }catch(e){
+      console.warn('Salvar usuário original falhou. Tentando fallback.', e);
+    }
+
+    const id = document.getElementById('usuarioId')?.value;
+    const nome = document.getElementById('formNome')?.value.trim();
+    const usuario = document.getElementById('formUsuario')?.value.trim();
+    const senha = document.getElementById('formSenha')?.value.trim();
+    const perfil = document.getElementById('formPerfil')?.value;
+
+    if(!nome || !usuario || !perfil){ alert('Preencha nome, usuário e perfil.'); return; }
+
+    const payload = {
+      nome, usuario, perfil,
+      email: document.getElementById('formEmail')?.value.trim() || null,
+      empresa_id: document.getElementById('formEmpresa')?.value ? Number(document.getElementById('formEmpresa').value) : null,
+      obra_id: document.getElementById('formObra')?.value ? Number(document.getElementById('formObra').value) : null,
+      foto_url: document.getElementById('formFoto')?.value.trim() || null,
+      ativo: document.getElementById('formAtivo')?.value === 'true',
+      updated_at: new Date().toISOString()
+    };
+
+    if(senha){
+      payload.senha = senha;
+      payload.senha_temporaria = true;
+      payload.senha_provisoria = true;
+      payload.trocar_senha = true;
+    }
+
+    let resp;
+    if(id){
+      resp = await updateDireto(TABELA_USUARIOS, payload, {id});
+    }else{
+      if(!senha){ alert('Informe uma senha para novo usuário.'); return; }
+      payload.perfil_rapido = perfil;
+      payload.permissoes = window.bdrUsuariosExpandirPermissoes(PERFIS[normalizar(perfil)] || []).join(',');
+      resp = await insertDireto(TABELA_USUARIOS, [payload]);
+    }
+
+    if(resp.error){ alert('Erro ao salvar usuário: ' + resp.error.message); return; }
+    if(typeof fecharModalUsuario === 'function') fecharModalUsuario();
+    if(typeof carregarTudo === 'function') await carregarTudo();
+    alert('Usuário salvo com sucesso!');
+  };
+
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape'){
+      document.getElementById('modalUsuario')?.classList.remove('ativo');
+      document.getElementById('modalPerfilRapido')?.classList.remove('ativo');
+      document.getElementById('dropdownUser')?.classList.remove('ativo');
+      document.getElementById('notifDropdown')?.classList.remove('ativo');
+    }
+  });
+
+  document.addEventListener('click', e => {
+    if(e.target?.id === 'modalUsuario' && typeof fecharModalUsuario === 'function') fecharModalUsuario();
+    if(e.target?.id === 'modalPerfilRapido' && typeof fecharModalPerfilRapido === 'function') fecharModalPerfilRapido();
+  });
+
+  console.log('✅ BDR USUÁRIOS FINAL V2 carregado');
+})();

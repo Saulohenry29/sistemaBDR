@@ -21,6 +21,7 @@
 <script src="./JS/auth.js"></script>
 <script src="./JS/bdrCore.js"></script>
 <script src="./JS/bdrMenuPermissoes.js"></script>
+<script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260629-final-sem-piscar"></script>
 
 
 <style>
@@ -185,6 +186,7 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active{outline:none
   .ops-grid{grid-template-columns:1fr!important;}
 }
 </style>
+<link rel="stylesheet" href="./CSS/bdr-menu-mobile-dock-fix-final.css?v=20260629-final-v2">
 </head>
 
 <body>
@@ -391,15 +393,15 @@ if(typeof verificarLogin === "function"){ verificarLogin(); }
           <div class="perm-row"><div class="perm-ico"><i class="fa-solid fa-people-arrows"></i></div><div class="perm-text"><b>Ver estoque de outras obras</b><span>Itens disponíveis fora da própria obra.</span></div><label class="switch"><input type="checkbox" class="perm" value="VER_ESTOQUE_OUTRAS_OBRAS"><span class="slider"></span></label></div>
           <div class="perm-row"><div class="perm-ico orange"><i class="fa-solid fa-wrench"></i></div><div class="perm-text"><b>Ver itens EM USO de outras obras</b><span>Equipamentos e ferramentas em uso.</span></div><label class="switch"><input type="checkbox" class="perm" value="VER_EM_USO_OUTRAS_OBRAS"><span class="slider"></span></label></div>
           <div class="perm-row"><div class="perm-ico blue"><i class="fa-solid fa-dollar-sign"></i></div><div class="perm-text"><b>Ver valores e informações financeiras</b><span>Valores patrimoniais e custo dos itens.</span></div><label class="switch"><input type="checkbox" class="perm" value="VER_VALORES"><span class="slider"></span></label></div>
-                    <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico blue"><i class="fa-solid fa-gauge-high"></i></div><div class="perm-text"><b>Menu Dashboard</b><span>Mostrar botão e liberar tela de dashboard.</span></div><label class="switch"><input type="checkbox" class="perm" value="DASHBOARD"><span class="slider"></span></label></div>
-          <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico green"><i class="fa-solid fa-arrow-down-wide-short"></i></div><div class="perm-text"><b>Menu Entrada</b><span>Mostrar botão e liberar tela de entrada.</span></div><label class="switch"><input type="checkbox" class="perm" value="ENTRADA"><span class="slider"></span></label></div>
-          <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico orange"><i class="fa-solid fa-vials"></i></div><div class="perm-text"><b>Menu Triagem</b><span>Mostrar botão e liberar tela de triagem.</span></div><label class="switch"><input type="checkbox" class="perm" value="TRIAGEM"><span class="slider"></span></label></div>
-          <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico green"><i class="fa-solid fa-boxes-stacked"></i></div><div class="perm-text"><b>Menu Estoque</b><span>Mostrar botão e liberar tela de estoque.</span></div><label class="switch"><input type="checkbox" class="perm" value="ESTOQUE"><span class="slider"></span></label></div>
-          <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico"><i class="fa-solid fa-tags"></i></div><div class="perm-text"><b>Menu Patrimônio</b><span>Mostrar botão e liberar tela de patrimônio.</span></div><label class="switch"><input type="checkbox" class="perm" value="PATRIMONIO"><span class="slider"></span></label></div>
-          <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico blue"><i class="fa-solid fa-truck-fast"></i></div><div class="perm-text"><b>Menu Expedição</b><span>Mostrar botão e liberar tela de expedição.</span></div><label class="switch"><input type="checkbox" class="perm" value="EXPEDICAO"><span class="slider"></span></label></div>
-          <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico orange"><i class="fa-regular fa-file-lines"></i></div><div class="perm-text"><b>Menu Relatórios</b><span>Mostrar botão e liberar tela de relatórios.</span></div><label class="switch"><input type="checkbox" class="perm" value="RELATORIOS"><span class="slider"></span></label></div>
-          <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico gray"><i class="fa-solid fa-building"></i></div><div class="perm-text"><b>Menu Empresas</b><span>Mostrar botão e liberar tela de empresas/obras.</span></div><label class="switch"><input type="checkbox" class="perm" value="EMPRESAS"><span class="slider"></span></label></div>
-          <div class="perm-row" style="background:#fff1f2;border-color:#fecaca;"><div class="perm-ico"><i class="fa-solid fa-users"></i></div><div class="perm-text"><b>Menu Usuários</b><span>Mostrar botão e liberar tela de usuários.</span></div><label class="switch"><input type="checkbox" class="perm" value="USUARIOS"><span class="slider"></span></label></div>
+                    <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico blue"><i class="fa-solid fa-gauge-high"></i></div><div class="perm-text"><b>Menu Dashboard</b><span>Mostrar botão e liberar tela de dashboard.</span></div><label class="switch"><input type="checkbox" class="perm" value="DASHBOARD_VER"><span class="slider"></span></label></div>
+          <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico green"><i class="fa-solid fa-arrow-down-wide-short"></i></div><div class="perm-text"><b>Menu Entrada</b><span>Mostrar botão e liberar tela de entrada.</span></div><label class="switch"><input type="checkbox" class="perm" value="ENTRADA_VER"><span class="slider"></span></label></div>
+          <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico orange"><i class="fa-solid fa-vials"></i></div><div class="perm-text"><b>Menu Triagem</b><span>Mostrar botão e liberar tela de triagem.</span></div><label class="switch"><input type="checkbox" class="perm" value="TRIAGEM_VER"><span class="slider"></span></label></div>
+          <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico green"><i class="fa-solid fa-boxes-stacked"></i></div><div class="perm-text"><b>Menu Estoque</b><span>Mostrar botão e liberar tela de estoque.</span></div><label class="switch"><input type="checkbox" class="perm" value="ESTOQUE_VER"><span class="slider"></span></label></div>
+          <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico"><i class="fa-solid fa-tags"></i></div><div class="perm-text"><b>Menu Patrimônio</b><span>Mostrar botão e liberar tela de patrimônio.</span></div><label class="switch"><input type="checkbox" class="perm" value="PATRIMONIO_VER"><span class="slider"></span></label></div>
+          <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico blue"><i class="fa-solid fa-truck-fast"></i></div><div class="perm-text"><b>Menu Expedição</b><span>Mostrar botão e liberar tela de expedição.</span></div><label class="switch"><input type="checkbox" class="perm" value="EXPEDICAO_VER"><span class="slider"></span></label></div>
+          <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico orange"><i class="fa-regular fa-file-lines"></i></div><div class="perm-text"><b>Menu Relatórios</b><span>Mostrar botão e liberar tela de relatórios.</span></div><label class="switch"><input type="checkbox" class="perm" value="RELATORIOS_VER"><span class="slider"></span></label></div>
+          <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico gray"><i class="fa-solid fa-building"></i></div><div class="perm-text"><b>Menu Empresas</b><span>Mostrar botão e liberar tela de empresas/obras.</span></div><label class="switch"><input type="checkbox" class="perm" value="EMPRESAS_VER"><span class="slider"></span></label></div>
+          <div class="perm-row" style="background:#fff1f2;border-color:#fecaca;"><div class="perm-ico"><i class="fa-solid fa-users"></i></div><div class="perm-text"><b>Menu Usuários</b><span>Mostrar botão e liberar tela de usuários.</span></div><label class="switch"><input type="checkbox" class="perm" value="USUARIOS_VER"><span class="slider"></span></label></div>
         </div>
       </div>
 
@@ -422,8 +424,8 @@ if(typeof verificarLogin === "function"){ verificarLogin(); }
             <div class="perm-row"><div class="perm-ico green"><i class="fa-solid fa-cart-flatbed"></i></div><div class="perm-text"><b>Separar pedido</b><span>Bipar prateleira/patrimônio e finalizar separação.</span></div><label class="switch"><input type="checkbox" class="perm" value="SEPARAR_PEDIDO"><span class="slider"></span></label></div>
             <div class="perm-row"><div class="perm-ico green"><i class="fa-solid fa-truck-ramp-box"></i></div><div class="perm-text"><b>Entregar / enviar material</b><span>Liberar transferência e registrar saída.</span></div><label class="switch"><input type="checkbox" class="perm" value="ENTREGAR_MATERIAL"><span class="slider"></span></label></div>
             <div class="perm-row"><div class="perm-ico gray"><i class="fa-regular fa-square-check"></i></div><div class="perm-text"><b>Aprovar pedidos da origem</b><span>Aprovar solicitações quando o item é da sua obra.</span></div><label class="switch"><input type="checkbox" class="perm" value="APROVAR_PEDIDO_ORIGEM"><span class="slider"></span></label></div>
-            <div class="perm-row" style="background:#fff1f2;border-color:#fecaca;"><div class="perm-ico"><i class="fa-solid fa-lock"></i></div><div class="perm-text"><b style="color:#d71920">Gerenciar usuários</b><span>Criar, editar, bloquear e liberar usuários.</span></div><label class="switch"><input type="checkbox" class="perm" value="USUARIOS"><span class="slider"></span></label></div>
-            <div class="perm-row" style="background:#fff1f2;border-color:#fecaca;"><div class="perm-ico"><i class="fa-solid fa-lock"></i></div><div class="perm-text"><b>Configurações do sistema</b><span>Acesso às configurações avançadas.</span></div><label class="switch"><input type="checkbox" class="perm" value="CONFIGURACOES"><span class="slider"></span></label></div>
+            <div class="perm-row" style="background:#fff1f2;border-color:#fecaca;"><div class="perm-ico"><i class="fa-solid fa-lock"></i></div><div class="perm-text"><b style="color:#d71920">Gerenciar usuários</b><span>Criar, editar, bloquear e liberar usuários.</span></div><label class="switch"><input type="checkbox" class="perm" value="USUARIOS_PERMISSOES"><span class="slider"></span></label></div>
+            <div class="perm-row" style="background:#fff1f2;border-color:#fecaca;"><div class="perm-ico"><i class="fa-solid fa-lock"></i></div><div class="perm-text"><b>Configurações do sistema</b><span>Acesso às configurações avançadas.</span></div><label class="switch"><input type="checkbox" class="perm" value="CONFIGURACOES_VER"><span class="slider"></span></label></div>
           </div>
         </div>
 
@@ -536,145 +538,9 @@ if(typeof verificarLogin === "function"){ verificarLogin(); }
 
 
 
-<script src="./JS/usuarios-master-premium.js"></script>
+<script src="./JS/usuarios-master-premium.js?v=20260629-final-v2"></script>
 <script src="./JS/offlineQueue.js"></script>
 <script src="./JS/bdr-owner-core.js"></script>
-
-<script>
-/* =========================================================
-   BDR USUÁRIOS - JS LIMPO FINAL
-   ---------------------------------------------------------
-   Objetivo:
-   1) NÃO salvar permissões automaticamente.
-   2) NÃO piscar/recarregar ao clicar em usuário.
-   3) Manter salvamento somente no botão "Salvar alterações".
-========================================================= */
-(function(){
-  if(window.__BDR_USUARIOS_LIMPO_FINAL__) return;
-  window.__BDR_USUARIOS_LIMPO_FINAL__ = true;
-
-  function nomeArquivo(url){
-    try{
-      const u = new URL(url, window.location.href);
-      return (u.pathname.split('/').pop() || 'index.html').toLowerCase();
-    }catch(e){
-      return String(url || '').split('?')[0].split('#')[0].split('/').pop().toLowerCase();
-    }
-  }
-
-  window.bdrIrSeguro = function(pagina){
-    if(nomeArquivo(window.location.href) === nomeArquivo(pagina)) return false;
-    window.location.href = pagina;
-    return false;
-  };
-
-  window.toggleMenuUsuario = function(event){
-    if(event) event.stopPropagation();
-    document.getElementById('dropdownUser')?.classList.toggle('ativo');
-    document.getElementById('notifDropdown')?.classList.remove('ativo');
-  };
-
-  window.toggleNotificacoes = function(event){
-    if(event) event.stopPropagation();
-    document.getElementById('notifDropdown')?.classList.toggle('ativo');
-    document.getElementById('dropdownUser')?.classList.remove('ativo');
-  };
-
-  window.logoutSeguro = function(){
-    if(typeof logout === 'function') return logout();
-    localStorage.removeItem('usuario_logado');
-    localStorage.removeItem('usuarioLogado');
-    window.location.href = 'login.html';
-  };
-
-  document.addEventListener('click', function(){
-    document.getElementById('dropdownUser')?.classList.remove('ativo');
-    document.getElementById('notifDropdown')?.classList.remove('ativo');
-  });
-
-  document.addEventListener('keydown', function(e){
-    if(e.key === 'Escape'){
-      document.getElementById('dropdownUser')?.classList.remove('ativo');
-      document.getElementById('notifDropdown')?.classList.remove('ativo');
-    }
-  });
-
-  function destacarUsuario(id){
-    document.querySelectorAll('#listaUsuarios .tr').forEach(row => row.classList.remove('usuario-ativo'));
-    const alvo = Array.from(document.querySelectorAll('#listaUsuarios .tr')).find(row => {
-      return String(row.getAttribute('onclick') || '').includes('selecionarUsuario(' + id + ')') ||
-             String(row.innerHTML || '').includes('selecionarUsuario(' + id + ')');
-    });
-    if(alvo) alvo.classList.add('usuario-ativo');
-  }
-
-  setTimeout(function(){
-    /* Guarda função original de salvar. Ela só será usada quando o botão mandar salvar. */
-    const salvarOriginal = typeof salvarPermissoesSelecionado === 'function'
-      ? salvarPermissoesSelecionado
-      : null;
-
-    if(salvarOriginal){
-      window.salvarPermissoesSelecionado = salvarPermissoesSelecionado = async function(mostrarMsg){
-        /* Quando o JS original chamar com false no change, NÃO salva no banco. */
-        if(mostrarMsg === false){
-          if(typeof atualizarResumo === 'function') atualizarResumo();
-          return;
-        }
-        return salvarOriginal(true);
-      };
-    }
-
-    window.salvarPermissoesUsuarioSelecionado = async function(){
-      if(typeof salvarPermissoesSelecionado === 'function'){
-        return salvarPermissoesSelecionado(true);
-      }
-      alert('Função de salvar permissões não carregou.');
-    };
-
-    /* Substitui selecionar usuário para não renderizar a lista inteira a cada clique. */
-    if(typeof selecionarUsuario === 'function'){
-      window.selecionarUsuario = selecionarUsuario = function(id){
-        try{
-          const alvo = usuarios.find(u => Number(u.id) === Number(id));
-          if(!alvo) return;
-          if(typeof bloquearAcaoNoOwner === 'function' && bloquearAcaoNoOwner(alvo, 'alterar')) return;
-
-          usuarioSelecionado = alvo;
-
-          if(typeof marcarPermissoes === 'function') marcarPermissoes(usuarioSelecionado.permissoes || '');
-          if(typeof aplicarPerfilVisual === 'function') aplicarPerfilVisual(usuarioSelecionado.perfil_rapido || usuarioSelecionado.perfil || '');
-          if(typeof atualizarUsuarioSelecionadoCard === 'function') atualizarUsuarioSelecionadoCard();
-          if(typeof renderizarObrasLiberadas === 'function') renderizarObrasLiberadas();
-          if(typeof renderizarPerfisRapidos === 'function') renderizarPerfisRapidos();
-          if(typeof atualizarResumo === 'function') atualizarResumo();
-
-          destacarUsuario(id);
-        }catch(e){
-          console.error('Erro ao selecionar usuário:', e);
-        }
-      };
-    }
-
-    document.querySelectorAll('#btnSalvarAlteracoesFixo, .bdr-salvar-fixo-removido').forEach(el => el.remove());
-  }, 500);
-
-  /* Owner secreto: 5 cliques no logo BDR. */
-  let ownerClicks = 0;
-  window.bdrOwnerClickUsuarios = function(){
-    let u = null;
-    try{ u = JSON.parse(localStorage.getItem('usuario_logado') || localStorage.getItem('usuarioLogado') || 'null'); }catch(e){}
-    if(Number(u?.id) !== 1) return;
-    ownerClicks++;
-    clearTimeout(window.__bdrOwnerClickUsuariosTimer);
-    window.__bdrOwnerClickUsuariosTimer = setTimeout(() => ownerClicks = 0, 2500);
-    if(ownerClicks >= 5){
-      ownerClicks = 0;
-      if(typeof window.bdrOwnerAbrir === 'function') window.bdrOwnerAbrir();
-    }
-  };
-})();
-</script>
 
 </body>
 </html>

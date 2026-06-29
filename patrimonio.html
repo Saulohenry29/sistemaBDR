@@ -120,6 +120,104 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
 .bdr-btn-warn{background:#f97316!important;color:#fff!important}
 @media(max-width:800px){.manut-modal-grid{grid-template-columns:1fr}}
 
+
+/* =========================================================
+   BDR PATRIMÔNIO - MODAL FINAL DE ETIQUETA
+   - Mantém o modelo antigo: etiqueta-impressao.html
+   - Modal compacto
+   - X fecha
+   - ESC fecha
+   - Botão único de impressão
+========================================================= */
+.bdr-etiqueta-modal-bg{
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.72);
+  z-index:100000;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+}
+.bdr-etiqueta-modal-bg.ativo{display:flex}
+
+.bdr-etiqueta-modal{
+  width:min(470px,94vw);
+  background:#fff;
+  border-radius:18px;
+  box-shadow:0 24px 70px rgba(15,23,42,.34);
+  border-left:4px solid var(--bdr-red,#d71920);
+  overflow:hidden;
+}
+
+.bdr-etiqueta-modal-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:12px 14px;
+  border-bottom:1px solid #e5e7eb;
+  background:#fff;
+}
+.bdr-etiqueta-modal-head h2{
+  margin:0;
+  color:var(--bdr-red,#d71920);
+  font-size:17px;
+  font-weight:900;
+}
+.bdr-etiqueta-close{
+  border:0;
+  background:#fee2e2;
+  color:#991b1b;
+  border-radius:12px;
+  width:34px;
+  height:34px;
+  font-weight:900;
+  cursor:pointer;
+  line-height:1;
+}
+.bdr-etiqueta-close:hover{background:#fecaca}
+
+.bdr-etiqueta-preview-area{
+  background:#eef3f8;
+  padding:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.bdr-etiqueta-frame{
+  width:360px;
+  max-width:100%;
+  height:235px;
+  border:1px solid #cbd5e1;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 8px 24px rgba(15,23,42,.10);
+}
+.bdr-etiqueta-footer{
+  display:flex;
+  justify-content:center;
+  padding:12px 14px 14px;
+  background:#fff;
+  border-top:1px solid #e5e7eb;
+}
+.bdr-etiqueta-print-btn{
+  border:0;
+  border-radius:12px;
+  padding:10px 18px;
+  background:var(--bdr-red,#d71920);
+  color:#fff;
+  font-weight:900;
+  cursor:pointer;
+  font-size:13px;
+  box-shadow:0 8px 18px rgba(215,25,32,.22);
+}
+.bdr-etiqueta-print-btn:hover{filter:brightness(.95);transform:translateY(-1px)}
+
+@media(max-width:520px){
+  .bdr-etiqueta-modal{width:94vw}
+  .bdr-etiqueta-frame{height:220px}
+}
 </style>
 
 <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260626-1">
@@ -513,11 +611,37 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
   </div>
 </div>
 
+
+<!-- BDR PATRIMÔNIO - MODAL FINAL DE ETIQUETA
+     Usa o arquivo antigo etiqueta-impressao.html dentro de um iframe.
+     Mantém exatamente o padrão visual da etiqueta antiga. -->
+<div class="bdr-etiqueta-modal-bg" id="modalEtiquetaBg">
+  <div class="bdr-etiqueta-modal">
+    <div class="bdr-etiqueta-modal-head">
+      <h2>🏷 Etiqueta</h2>
+      <button class="bdr-etiqueta-close" type="button" onclick="fecharModalEtiqueta()" title="Fechar">X</button>
+    </div>
+
+    <div class="bdr-etiqueta-preview-area">
+      <iframe id="bdrEtiquetaFrame" class="bdr-etiqueta-frame" title="Prévia da etiqueta BDR"></iframe>
+    </div>
+
+    <div class="bdr-etiqueta-footer">
+      <button class="bdr-etiqueta-print-btn" type="button" onclick="imprimirEtiquetaModalBDR()">
+        🖨 Imprimir
+      </button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="./JS/supabaseClient.js"></script>
 <script src="./JS/bdrCore.js"></script>
 <script src="./JS/bdrMenuPermissoes.js"></script>
+<script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260629-padrao-unico"></script>
+
 <script src="./JS/offlineQueue.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <!-- bdrLocalCache removido nesta tela offline-first -->
 
 <!-- OFFLINE-FIRST PROFISSIONAL BDR -->
@@ -797,8 +921,14 @@ function bloquearPatrimonioSemPermissaoBDR(){
 }
 
 function aplicarMenuPorPermissaoBDR(){
-  document.querySelectorAll("[data-permissao]").forEach(el => {
+  if(typeof window.bdrAplicarMenuEstavelSemPiscar === "function"){
+    window.bdrAplicarMenuEstavelSemPiscar();
+    return;
+  }
+
+  document.querySelectorAll(".bdr-menu .bdr-menu-btn").forEach(el => {
     const permissao = el.getAttribute("data-permissao");
+    el.hidden = !usuarioTemPermissao(permissao);
     el.style.display = usuarioTemPermissao(permissao) ? "" : "none";
   });
 }
@@ -2465,27 +2595,97 @@ Ele sairá das consultas normais, mas o histórico fica preservado.`);
 }
 
 function imprimirEtiqueta(){
-
   if(!usuarioTemPermissao("PATRIMONIO_IMPRIMIR")){
     alert("Você não tem permissão para imprimir etiqueta.");
     return;
   }
-
 
   if(!patrimonioSelecionado){
     alert("Selecione um patrimônio.");
     return;
   }
 
-  const codigoSeguro = encodeURIComponent(
-    patrimonioSelecionado.codigo_qr || ""
-  );
-
-  window.open(
-    "./etiqueta-impressao.html?id=" + codigoSeguro,
-    "_blank"
-  );
+  abrirModalEtiquetaBDR();
 }
+
+/* =========================================================
+   BDR ETIQUETA - MODAL FINAL COM MODELO ANTIGO
+   ---------------------------------------------------------
+   Fluxo final:
+   1) Clica em Etiqueta
+   2) Clica em Imprimir
+   3) Chrome abre a janela da impressora
+
+   Observação:
+   - O navegador sempre exige confirmar a impressão.
+   - Aqui imprimimos somente o iframe da etiqueta antiga.
+========================================================= */
+function bdrCodigoEtiquetaAtual(){
+  const p = patrimonioSelecionado || {};
+  return p.codigo_qr || p.codigo_antigo || "";
+}
+
+function bdrUrlEtiquetaAtual(){
+  const codigo = bdrCodigoEtiquetaAtual();
+  if(!codigo) return "";
+  return "etiqueta-impressao.html?id=" + encodeURIComponent(codigo);
+}
+
+function abrirModalEtiquetaBDR(){
+  const codigo = bdrCodigoEtiquetaAtual();
+
+  if(!codigo){
+    alert("Esse patrimônio não possui código para imprimir etiqueta.");
+    return;
+  }
+
+  const frame = document.getElementById("bdrEtiquetaFrame");
+  if(frame){
+    frame.src = bdrUrlEtiquetaAtual() + "&preview=" + Date.now();
+  }
+
+  document.getElementById("modalEtiquetaBg")?.classList.add("ativo");
+}
+
+function fecharModalEtiqueta(){
+  document.getElementById("modalEtiquetaBg")?.classList.remove("ativo");
+}
+
+function imprimirEtiquetaModalBDR(){
+  const frame = document.getElementById("bdrEtiquetaFrame");
+
+  if(!frame || !frame.contentWindow){
+    alert("Prévia da etiqueta ainda não carregou.");
+    return;
+  }
+
+  try{
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+
+    // Fecha o modal depois de chamar a impressão.
+    // A janela do Chrome continua aberta para confirmar/cancelar.
+    setTimeout(() => {
+      fecharModalEtiqueta();
+    }, 700);
+
+  }catch(e){
+    console.error(e);
+    alert("Não foi possível imprimir a etiqueta. Tente novamente.");
+  }
+}
+
+// ESC fecha somente o modal da etiqueta, sem mexer nos outros modais.
+document.addEventListener("keydown", function(event){
+  if(event.key === "Escape"){
+    const modal = document.getElementById("modalEtiquetaBg");
+    if(modal && modal.classList.contains("ativo")){
+      fecharModalEtiqueta();
+    }
+  }
+});
+
+
 function montarCamposEdicaoPorTipo(){
   const tipo = valor("edit_tipo_item") || String(patrimonioSelecionado?.tipo_item || "");
   const box = document.getElementById("editCamposExtras");

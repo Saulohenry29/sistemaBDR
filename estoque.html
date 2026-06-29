@@ -528,8 +528,334 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active{outline:none
   }
 }
 
+
+/* BDR V5 - CORES DAS AÇÕES RÁPIDAS DO ESTOQUE */
+.acao-estoque-card:nth-child(1){border-left-color:#7c3aed;background:linear-gradient(135deg,#fff,#f5f3ff)}
+.acao-estoque-card:nth-child(2){border-left-color:#2563eb;background:linear-gradient(135deg,#fff,#eff6ff)}
+.acao-estoque-card:nth-child(3){border-left-color:#16a34a;background:linear-gradient(135deg,#fff,#f0fdf4)}
+.acao-estoque-card:nth-child(4){border-left-color:#f97316;background:linear-gradient(135deg,#fff,#fff7ed)}
+.acao-estoque-card:nth-child(1) strong{color:#5b21b6}.acao-estoque-card:nth-child(2) strong{color:#1d4ed8}.acao-estoque-card:nth-child(3) strong{color:#15803d}.acao-estoque-card:nth-child(4) strong{color:#c2410c}
+
+
+
+/* =========================================================
+   BDR ESTOQUE V7 - AÇÕES RÁPIDAS EM CARDS/BOTÕES REAIS
+   Ajuste pensado para celular/tablet e operador de almoxarifado.
+========================================================= */
+.acoes-estoque-grid{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr))!important;
+  gap:14px!important;
+}
+.acao-estoque-card{
+  position:relative!important;
+  min-height:132px!important;
+  border:0!important;
+  border-radius:18px!important;
+  padding:18px 16px 14px!important;
+  color:#fff!important;
+  overflow:hidden!important;
+  box-shadow:0 12px 28px rgba(15,23,42,.16)!important;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:space-between!important;
+  transform:none!important;
+}
+.acao-estoque-card::after{
+  content:"";
+  position:absolute;
+  right:-22px;
+  top:-28px;
+  width:92px;
+  height:92px;
+  border-radius:999px;
+  background:rgba(255,255,255,.16);
+}
+.acao-estoque-card:hover{
+  transform:translateY(-3px)!important;
+  filter:saturate(1.08)!important;
+}
+.acao-estoque-card strong{
+  display:flex!important;
+  align-items:center!important;
+  gap:9px!important;
+  color:#fff!important;
+  font-size:17px!important;
+  line-height:1.1!important;
+  position:relative!important;
+  z-index:1!important;
+}
+.acao-estoque-card span{
+  color:rgba(255,255,255,.92)!important;
+  font-size:12px!important;
+  line-height:1.35!important;
+  font-weight:700!important;
+  max-width:92%!important;
+  position:relative!important;
+  z-index:1!important;
+}
+.acao-estoque-card .bdr-card-abrir{
+  margin-top:12px;
+  height:34px;
+  border:0;
+  border-radius:11px;
+  background:rgba(255,255,255,.16);
+  color:#fff;
+  font-weight:900;
+  cursor:pointer;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:8px;
+  position:relative;
+  z-index:2;
+}
+.acao-card-3d{background:linear-gradient(135deg,#6d28d9,#8b5cf6)!important;}
+.acao-card-qr{background:linear-gradient(135deg,#075bd8,#1d7cff)!important;}
+.acao-card-bip{background:linear-gradient(135deg,#078a35,#16a34a)!important;border:3px solid rgba(255,255,255,.28)!important;box-shadow:0 16px 34px rgba(22,163,74,.28)!important;}
+.acao-card-exp{background:linear-gradient(135deg,#ea580c,#f97316)!important;}
+
+/* =========================================================
+   MODAL GUARDAR POR BIPAGEM - TABLET/CELULAR
+========================================================= */
+.bdr-bip-bg{
+  position:fixed;
+  inset:0;
+  z-index:100000;
+  background:rgba(15,23,42,.55);
+  display:none;
+  align-items:center;
+  justify-content:flex-end;
+}
+.bdr-bip-bg.ativo{display:flex;}
+.bdr-bip-modal{
+  width:min(560px,96vw);
+  height:100vh;
+  background:#fff;
+  box-shadow:-18px 0 46px rgba(15,23,42,.28);
+  display:grid;
+  grid-template-rows:auto 1fr auto;
+  animation:bdrBipEntrar .18s ease;
+}
+@keyframes bdrBipEntrar{from{transform:translateX(35px);opacity:.3}to{transform:translateX(0);opacity:1}}
+.bdr-bip-head{
+  padding:16px 16px 13px;
+  border-bottom:1px solid #e5e7eb;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.bdr-bip-title{display:flex;gap:12px;align-items:flex-start;}
+.bdr-bip-icon{
+  width:44px;height:44px;border-radius:14px;background:#dcfce7;color:#16a34a;
+  display:flex;align-items:center;justify-content:center;font-size:22px;flex:0 0 auto;
+}
+.bdr-bip-title h2{margin:0;color:#078a35;font-size:22px;font-weight:900;line-height:1.05;}
+.bdr-bip-title p{margin:4px 0 0;color:#64748b;font-size:12px;font-weight:800;}
+.bdr-bip-close{
+  width:42px;height:42px;border:0;border-radius:13px;background:#f8fafc;color:#111827;
+  font-size:20px;font-weight:900;cursor:pointer;border:1px solid #e5e7eb;
+}
+.bdr-bip-close:hover{background:#fee2e2;color:#991b1b;}
+.bdr-bip-body{overflow:auto;background:#f8fafc;padding:14px;display:grid;gap:12px;}
+.bdr-bip-step{
+  background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:13px;box-shadow:0 4px 14px rgba(15,23,42,.06);
+}
+.bdr-bip-step-top{display:flex;gap:10px;align-items:flex-start;margin-bottom:9px;}
+.bdr-bip-num{width:30px;height:30px;border-radius:50%;background:#16a34a;color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+.bdr-bip-step h3{margin:0;color:#111827;font-size:14px;font-weight:900;}
+.bdr-bip-step small{display:block;color:#64748b;font-size:11px;font-weight:800;margin-top:2px;}
+.bdr-bip-scanbox{
+  border:1px solid #bbf7d0;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-radius:14px;
+  min-height:86px;display:grid;place-items:center;text-align:center;color:#15803d;font-weight:900;padding:12px;cursor:pointer;
+}
+.bdr-bip-scanbox.errado{background:#fee2e2;border-color:#fecaca;color:#991b1b;}
+.bdr-bip-scanbox.certo{background:#dcfce7;border-color:#86efac;color:#166534;}
+.bdr-bip-scanbox i{font-size:28px;margin-bottom:5px;display:block;}
+.bdr-bip-input-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:8px;}
+.bdr-bip-input-row input{height:42px;font-weight:900;border-radius:11px;}
+.bdr-bip-input-row button,.bdr-bip-camera,.bdr-bip-alt{
+  border:0;border-radius:11px;font-weight:900;cursor:pointer;padding:0 12px;
+}
+.bdr-bip-camera{height:42px;background:#111827;color:#fff;}
+.bdr-bip-card-item,.bdr-bip-endereco{
+  margin-top:9px;border:1px solid #e5e7eb;background:#fff;border-radius:14px;padding:10px;display:none;
+}
+.bdr-bip-card-item.ativo,.bdr-bip-endereco.ativo{display:block;}
+.bdr-bip-card-item strong,.bdr-bip-endereco strong{display:block;color:#111827;font-size:13px;font-weight:900;}
+.bdr-bip-card-item span,.bdr-bip-endereco span{display:block;color:#64748b;font-size:12px;font-weight:800;margin-top:3px;}
+.bdr-bip-sugerido{
+  border:1px solid #bfdbfe;background:#eff6ff;border-radius:14px;padding:11px;margin-top:8px;
+  color:#1e3a8a;font-weight:900;display:none;
+}
+.bdr-bip-sugerido.ativo{display:block;}
+.bdr-bip-sugerido b{font-size:16px;color:#1d4ed8;}
+.bdr-bip-altbox{
+  background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;padding:11px;text-align:center;color:#9a3412;font-size:12px;font-weight:800;margin-top:10px;
+}
+.bdr-bip-alt{height:36px;margin-top:8px;background:#fff;color:#ea580c;border:1px solid #fed7aa;}
+.bdr-bip-camera-area{display:none;margin-top:9px;border-radius:14px;overflow:hidden;background:#111827;border:2px solid #111827;}
+.bdr-bip-camera-area.ativo{display:block;}
+.bdr-bip-camera-area video{width:100%;max-height:260px;display:block;background:#111827;}
+.bdr-bip-footer{
+  padding:12px 14px;border-top:1px solid #e5e7eb;background:#fff;display:grid;grid-template-columns:1fr 1.3fr;gap:10px;
+}
+.bdr-bip-footer button{height:46px;border:0;border-radius:13px;font-weight:900;cursor:pointer;font-size:14px;}
+.bdr-bip-limpar{background:#f8fafc;color:#334155;border:1px solid #e5e7eb!important;}
+.bdr-bip-confirmar{background:#16a34a;color:#fff;box-shadow:0 8px 18px rgba(22,163,74,.25);}
+.bdr-bip-confirmar:disabled{background:#94a3b8;box-shadow:none;cursor:not-allowed;}
+.bdr-bip-miniaviso{font-size:11px;color:#64748b;font-weight:800;text-align:center;grid-column:1/-1;margin-top:-2px;}
+@media(max-width:760px){
+  .bdr-bip-bg{align-items:stretch;justify-content:center;}
+  .bdr-bip-modal{width:100vw;height:100dvh;}
+  .bdr-bip-footer{grid-template-columns:1fr;}
+  .acao-estoque-card{min-height:118px!important;}
+}
+
+
 </style>
 <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260626-3">
+
+<style>
+/* BDR FIX FINAL BOTÕES */
+
+.acao-card-3d{
+  background:linear-gradient(135deg,#6d28d9,#8b5cf6)!important;
+}
+.acao-card-qr{
+  background:linear-gradient(135deg,#2563eb,#3b82f6)!important;
+}
+.acao-card-bip{
+  background:linear-gradient(135deg,#15803d,#22c55e)!important;
+}
+.acao-card-exp{
+  background:linear-gradient(135deg,#ea580c,#fb923c)!important;
+}
+
+.acao-estoque-card{
+  color:#fff!important;
+  opacity:1!important;
+}
+
+.acao-estoque-card strong{
+  color:#fff!important;
+}
+
+.acao-estoque-card span{
+  color:rgba(255,255,255,.92)!important;
+}
+
+.acao-estoque-card .bdr-card-abrir{
+  background:rgba(255,255,255,.18)!important;
+  color:#fff!important;
+  border:none!important;
+}
+</style>
+
+<style>
+/* =========================================================
+   BDR V8 - AJUSTE FINAL DOS BOTÕES DO ESTOQUE
+   - Cards menores para caber melhor em tablet/notebook
+   - Guardar por bipagem sempre verde e visível
+========================================================= */
+.acoes-estoque-grid{
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr))!important;
+  gap:10px!important;
+}
+.acao-estoque-card{
+  min-height:108px!important;
+  padding:13px 14px 11px!important;
+  border-radius:16px!important;
+  opacity:1!important;
+  filter:none!important;
+}
+.acao-estoque-card strong{
+  font-size:15px!important;
+  line-height:1.05!important;
+}
+.acao-estoque-card span{
+  font-size:11px!important;
+  line-height:1.25!important;
+}
+.acao-estoque-card .bdr-card-abrir{
+  height:29px!important;
+  margin-top:8px!important;
+  font-size:12px!important;
+}
+.acao-card-3d{background:linear-gradient(135deg,#6d28d9,#9b5cf6)!important;color:#fff!important;}
+.acao-card-qr{background:linear-gradient(135deg,#075bd8,#1d7cff)!important;color:#fff!important;}
+.acao-card-bip{
+  background:linear-gradient(135deg,#047a2f,#16a34a)!important;
+  color:#fff!important;
+  border:2px solid rgba(255,255,255,.32)!important;
+  box-shadow:0 12px 26px rgba(22,163,74,.24)!important;
+}
+.acao-card-exp{background:linear-gradient(135deg,#ea580c,#f97316)!important;color:#fff!important;}
+.acao-card-bip strong,.acao-card-bip span,.acao-card-bip .bdr-card-abrir{color:#fff!important;}
+@media(max-width:900px){
+  .acoes-estoque-grid{grid-template-columns:1fr 1fr!important;}
+  .acao-estoque-card{min-height:100px!important;}
+}
+@media(max-width:520px){
+  .acoes-estoque-grid{grid-template-columns:1fr!important;}
+}
+</style>
+<style>
+/* =========================================================
+   BDR V9 - FECHAR MODAL BIPAGEM NO PADRÃO X VERMELHO
+   - Fica no canto superior esquerdo
+   - ESC também fecha pelo JavaScript
+========================================================= */
+.bdr-bip-modal{position:relative!important;}
+.bdr-bip-head{position:relative!important;padding-left:72px!important;}
+.bdr-bip-close{
+  position:absolute!important;
+  left:14px!important;
+  top:14px!important;
+  width:48px!important;
+  height:48px!important;
+  border-radius:13px!important;
+  border:2px solid #7f1d1d!important;
+  background:linear-gradient(180deg,#ff5c5c,#d71920 55%,#a40008)!important;
+  color:#fff!important;
+  font-size:0!important;
+  font-weight:900!important;
+  box-shadow:0 8px 18px rgba(127,29,29,.35), inset 0 2px 0 rgba(255,255,255,.45)!important;
+  cursor:pointer!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+.bdr-bip-close::before,
+.bdr-bip-close::after{
+  content:"";
+  position:absolute;
+  width:28px;
+  height:7px;
+  border-radius:999px;
+  background:#fff;
+  box-shadow:0 2px 4px rgba(0,0,0,.22);
+}
+.bdr-bip-close::before{transform:rotate(45deg);}
+.bdr-bip-close::after{transform:rotate(-45deg);}
+.bdr-bip-close:hover{filter:brightness(1.06)!important;transform:translateY(-1px)!important;}
+.bdr-bip-close:active{transform:scale(.96)!important;}
+@media(max-width:760px){
+  .bdr-bip-head{padding-left:68px!important;}
+  .bdr-bip-close{left:10px!important;top:12px!important;width:46px!important;height:46px!important;}
+}
+
+</style>
+
+<style>
+/* BDR V10 - AJUSTE FINAL BIPAGEM QR */
+.bdr-bip-input-row{grid-template-columns:1fr!important;}
+.bdr-bip-scanbox{border:2px dashed #facc15!important;box-shadow:0 0 0 3px rgba(250,204,21,.18)!important;}
+.bdr-bip-scanbox:hover{transform:translateY(-1px);filter:saturate(1.08);}
+</style>
+<link rel="stylesheet" href="./CSS/bdr-localizador-prateleira.css?v=1">
+
 </head>
 
 <body>
@@ -539,6 +865,9 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active{outline:none
 <script src="./JS/bdrSessaoRealtime.js"></script>
 <script src="./JS/bdrCore.js"></script>
 <script src="./JS/bdrMenuPermissoes.js"></script>
+<script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260629-2"></script>
+<script src="./JS/bdr-menu-permissoes-hard-fix.js?v=20260629-1"></script>
+
 <script>verificarLogin();</script>
 
 <div class="app-layout">
@@ -672,21 +1001,25 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active{outline:none
   <section class="card">
     <h3>⚡ Ações rápidas</h3>
     <div class="acoes-estoque-grid">
-      <div class="acao-estoque-card" data-acao-permissao="ESTOQUE_TRANSFERIR" onclick="if(!bdrPodeAcaoEstoque('ESTOQUE_TRANSFERIR','acessar o endereçamento 3D')) return; ir('prateleiras-3d.html')">
-        <strong>🏗 Endereçamento 3D</strong>
-        <span>Simular, editar e cadastrar endereços físicos.</span>
+      <div class="acao-estoque-card acao-card-3d" data-acao-permissao="ESTOQUE_TRANSFERIR" onclick="if(!bdrPodeAcaoEstoque('ESTOQUE_TRANSFERIR','acessar o endereçamento 3D')) return; ir('prateleiras-3d.html')">
+        <strong><i class="fa-solid fa-cubes-stacked"></i> Endereçamento 3D</strong>
+        <span>Layout das prateleiras, cadastro dos endereços e impressão das etiquetas.</span>
+        <button class="bdr-card-abrir" type="button">Abrir <i class="fa-solid fa-chevron-right"></i></button>
       </div>
-      <div class="acao-estoque-card" data-acao-permissao="ESTOQUE_EXPORTAR" onclick="if(!bdrPodeAcaoEstoque('ESTOQUE_EXPORTAR','gerar etiquetas')) return; abrirCentralEtiquetas()">
-        <strong>🏷 Central QR BDR</strong>
-        <span>Gerar etiquetas de endereço, produto e patrimônio.</span>
+      <div class="acao-estoque-card acao-card-qr" data-acao-permissao="ESTOQUE_EXPORTAR" onclick="if(!bdrPodeAcaoEstoque('ESTOQUE_EXPORTAR','gerar etiquetas')) return; abrirCentralEtiquetas()">
+        <strong><i class="fa-solid fa-qrcode"></i> Central QR BDR</strong>
+        <span>Gerar etiquetas de endereço, produto, patrimônio e volumes.</span>
+        <button class="bdr-card-abrir" type="button">Abrir <i class="fa-solid fa-chevron-right"></i></button>
       </div>
-      <div class="acao-estoque-card" data-acao-permissao="ESTOQUE_ENTRADA" onclick="if(!bdrPodeAcaoEstoque('ESTOQUE_ENTRADA','guardar por bipagem')) return; alert('Em breve: Guardar por bipagem')">
-        <strong>📥 Guardar por bipagem</strong>
-        <span>Bipar produto + endereço e confirmar local real.</span>
+      <div class="acao-estoque-card acao-card-bip" data-acao-permissao="ESTOQUE_ENTRADA" onclick="if(!bdrPodeAcaoEstoque('ESTOQUE_ENTRADA','guardar por bipagem')) return; abrirModalGuardarBipagem()">
+        <strong><i class="fa-solid fa-barcode"></i> Guardar por bipagem</strong>
+        <span>Bipar produto + endereço, confirmar local real e registrar quem guardou.</span>
+        <button class="bdr-card-abrir" type="button">Abrir <i class="fa-solid fa-chevron-right"></i></button>
       </div>
-      <div class="acao-estoque-card" data-acao-permissao="ESTOQUE_SAIDA" onclick="if(!bdrPodeAcaoEstoque('ESTOQUE_SAIDA','abrir separação/expedição')) return; ir('expedicao.html')">
-        <strong>🚚 Separação / Expedição</strong>
-        <span>Pedidos, reserva, retirada e transferência.</span>
+      <div class="acao-estoque-card acao-card-exp" data-acao-permissao="ESTOQUE_SAIDA" onclick="if(!bdrPodeAcaoEstoque('ESTOQUE_SAIDA','abrir separação/expedição')) return; ir('expedicao.html')">
+        <strong><i class="fa-solid fa-truck-fast"></i> Separação / Expedição</strong>
+        <span>Pedidos, reserva, retirada e transferência entre obras/setores.</span>
+        <button class="bdr-card-abrir" type="button">Abrir <i class="fa-solid fa-chevron-right"></i></button>
       </div>
     </div>
   </section>
@@ -741,6 +1074,91 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active{outline:none
       <button data-acao-permissao="ESTOQUE_SAIDA" class="btn btn-green" onclick="if(!bdrPodeAcaoEstoque('ESTOQUE_SAIDA','abrir expedição')) return; ir('expedicao.html')">🚚 Expedição</button>
       <button data-acao-permissao="ESTOQUE_VER" class="btn btn-orange" onclick="if(!bdrPodeAcaoEstoque('ESTOQUE_VER','abrir catálogo')) return; ir('expedicao.html')">📦 Catálogo</button>
       <button class="btn btn-gray" onclick="fecharModalProduto()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- =========================================================
+     BDR ESTOQUE V7 - GUARDAR POR BIPAGEM NO ESTOQUE
+     Este fluxo NÃO fica no 3D. O 3D é só layout/etiquetas.
+========================================================= -->
+<div class="bdr-bip-bg" id="modalGuardarBipagem" onclick="fecharModalGuardarBipagemFora(event)">
+  <div class="bdr-bip-modal" onclick="event.stopPropagation()">
+    <div class="bdr-bip-head">
+      <div class="bdr-bip-title">
+        <div class="bdr-bip-icon"><i class="fa-solid fa-barcode"></i></div>
+        <div>
+          <h2>Guardar por bipagem</h2>
+          <p>Bipar produto e endereço para guardar no local correto.</p>
+        </div>
+      </div>
+      <button class="bdr-bip-close" type="button" onclick="fecharModalGuardarBipagem()" title="Fechar">×</button>
+    </div>
+
+    <div class="bdr-bip-body">
+      <section class="bdr-bip-step">
+        <div class="bdr-bip-step-top">
+          <div class="bdr-bip-num">1</div>
+          <div><h3>Bipar produto</h3><small>Aponte o leitor para o código do produto ou patrimônio.</small></div>
+        </div>
+        <div id="bipProdutoStatus"
+             class="bdr-bip-scanbox"
+             onclick="abrirCameraBipagem('produto')">
+          <div>
+            <i class="fa-solid fa-qrcode"></i>
+            Toque para ler o QR do produto
+            <br>
+            <small>Abrir câmera</small>
+          </div>
+        </div>
+        <div class="bdr-bip-input-row">
+          <input id="bipCodigoProduto" placeholder="Bipe ou digite o código do produto" onkeydown="if(event.key==='Enter') buscarProdutoBipado()">
+        </div>
+        <div id="cameraProdutoBip" class="bdr-bip-camera-area"></div>
+        <div id="bipProdutoInfo" class="bdr-bip-card-item"></div>
+      </section>
+
+      <section class="bdr-bip-step">
+        <div class="bdr-bip-step-top">
+          <div class="bdr-bip-num">2</div>
+          <div><h3>Endereço sugerido pelo sistema</h3><small>O sistema usa grupo, histórico e local disponível.</small></div>
+        </div>
+        <div id="bipEnderecoSugerido" class="bdr-bip-sugerido">Bipe o produto para receber uma sugestão.</div>
+      </section>
+
+      <section class="bdr-bip-step">
+        <div class="bdr-bip-step-top">
+          <div class="bdr-bip-num">3</div>
+          <div><h3>Bipar endereço real</h3><small>Bipe a etiqueta colada na prateleira onde o produto será guardado.</small></div>
+        </div>
+        <div id="bipEnderecoStatus"
+             class="bdr-bip-scanbox"
+             onclick="abrirCameraBipagem('endereco')">
+          <div>
+            <i class="fa-solid fa-qrcode"></i>
+            Toque para ler o QR do endereço
+            <br>
+            <small>Abrir câmera</small>
+          </div>
+        </div>
+        <div class="bdr-bip-input-row">
+          <input id="bipCodigoEndereco" placeholder="Bipe ou digite o QR da prateleira" onkeydown="if(event.key==='Enter') validarEnderecoBipado()">
+        </div>
+        <div id="cameraEnderecoBip" class="bdr-bip-camera-area"></div>
+        <div id="bipEnderecoInfo" class="bdr-bip-endereco"></div>
+        <div class="bdr-bip-altbox">
+          Se for guardar em local diferente do sugerido, libere abaixo antes de bipar.
+          <br><button class="bdr-bip-alt" type="button" onclick="permitirOutraPosicaoBipagem()"><i class="fa-solid fa-right-left"></i> Guardar em outro local</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="bdr-bip-footer">
+      <button class="bdr-bip-limpar" type="button" onclick="limparBipagem()"><i class="fa-solid fa-broom"></i> Limpar</button>
+      <button class="bdr-bip-confirmar" id="btnConfirmarBipagem" type="button" onclick="confirmarGuardarBipagem()" disabled><i class="fa-solid fa-check"></i> Confirmar guarda</button>
+      <div class="bdr-bip-miniaviso"><i class="fa-solid fa-lock"></i> A confirmação registra usuário, data/hora, produto e endereço real.</div>
     </div>
   </div>
 </div>
@@ -863,6 +1281,392 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active{outline:none
 </div>
 
 
+
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<script>
+/* =========================================================
+   BDR ESTOQUE V7 - MOTOR GUARDAR POR BIPAGEM
+   Produto + endereço real + usuário + registro em armazenagens e estoque_movimentacoes.
+========================================================= */
+const BDR_BIP = {
+  produto:null,
+  enderecoSugerido:null,
+  enderecoReal:null,
+  outraPosicao:false,
+  cameraStream:null,
+  cameraTimer:null
+};
+function bdrDb(){ return window.client || window.supabaseClient || window.clientSupabase || globalThis.client; }
+function bdrUsuarioBipagem(){
+  try{return JSON.parse(localStorage.getItem('usuario_logado') || localStorage.getItem('usuarioLogado') || '{}')}catch(e){return {}}
+}
+function bdrNormalizarCodigoBip(v){
+  let codigo = String(v || '')
+    .trim()
+    .replace(/^https?:\/\/[^?]+\?id=/i,'')
+    .replace(/^https?:\/\/[^?]+\?codigo=/i,'')
+    .replace(/^https?:\/\/[^#]+#/i,'')
+    .replace(/^END-/i,'')
+    .replace(/\s+/g,'')
+    .toUpperCase();
+
+  const partes = codigo.match(/R(\d+)-F(\d+)-P(\d+)-C(\d+)-N(\d+)/i);
+
+  if(!partes) return codigo;
+
+  return [
+    `R${partes[1]}`,
+    `F${partes[2]}`,
+    `P${String(partes[3]).padStart(2,'0')}`,
+    `C${String(partes[4]).padStart(2,'0')}`,
+    `N${String(partes[5]).padStart(2,'0')}`
+  ].join('-');
+}
+
+function bdrFormatarEndereco(valor){
+  return bdrNormalizarCodigoBip(valor || '');
+}
+
+function bdrEnderecoPartes(valor){
+  const codigo = bdrFormatarEndereco(valor);
+  const p = codigo.match(/^(R\d+)-(F\d+)-(P\d+)-(C\d+)-(N\d+)$/i);
+  return p ? {codigo, rua:p[1], face:p[2], prateleira:p[3], coluna:p[4], nivel:p[5]} : {codigo};
+}
+
+function bdrSom(tipo){
+  try{
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AudioCtx();
+
+    function bip(freq, inicio, duracao, tipoOsc){
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = tipoOsc || 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.001, ctx.currentTime + inicio);
+      gain.gain.exponentialRampToValueAtTime(0.24, ctx.currentTime + inicio + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + inicio + duracao);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + inicio);
+      osc.stop(ctx.currentTime + inicio + duracao + 0.03);
+    }
+
+    if(tipo === 'ok'){
+      bip(880, 0, 0.18, 'sine');
+      setTimeout(()=>ctx.close(), 320);
+    }else{
+      bip(260, 0, 0.16, 'square');
+      bip(180, 0.22, 0.16, 'square');
+      setTimeout(()=>ctx.close(), 620);
+    }
+  }catch(e){console.warn('Som indisponível:', e);}
+}
+
+function bdrSomCerto(){ bdrSom('ok'); }
+function bdrSomErrado(){ bdrSom('erro'); }
+
+function abrirModalGuardarBipagem(){
+  document.getElementById('modalGuardarBipagem')?.classList.add('ativo');
+  setTimeout(()=>document.getElementById('bipCodigoProduto')?.focus(),150);
+}
+function fecharModalGuardarBipagem(){
+  pararCameraBipagem();
+  document.getElementById('modalGuardarBipagem')?.classList.remove('ativo');
+}
+function fecharModalGuardarBipagemFora(e){ if(e.target?.id==='modalGuardarBipagem') fecharModalGuardarBipagem(); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') fecharModalGuardarBipagem(); });
+function focarBipProduto(){document.getElementById('bipCodigoProduto')?.focus();}
+function focarBipEndereco(){document.getElementById('bipCodigoEndereco')?.focus();}
+function limparBipagem(){
+  BDR_BIP.produto=null; BDR_BIP.enderecoSugerido=null; BDR_BIP.enderecoReal=null; BDR_BIP.outraPosicao=false;
+  ['bipCodigoProduto','bipCodigoEndereco'].forEach(id=>{const el=document.getElementById(id); if(el)el.value='';});
+  document.getElementById('bipProdutoInfo').className='bdr-bip-card-item';
+  document.getElementById('bipProdutoInfo').innerHTML='';
+  document.getElementById('bipEnderecoInfo').className='bdr-bip-endereco';
+  document.getElementById('bipEnderecoInfo').innerHTML='';
+  const sug=document.getElementById('bipEnderecoSugerido'); if(sug){sug.className='bdr-bip-sugerido';sug.innerHTML='Bipe o produto para receber uma sugestão.';}
+  const ps=document.getElementById('bipProdutoStatus'); if(ps){ps.className='bdr-bip-scanbox';ps.innerHTML='<div><i class="fa-solid fa-qrcode"></i>Toque para ler o QR do produto<br><small>Abrir câmera</small></div>';}
+  const es=document.getElementById('bipEnderecoStatus'); if(es){es.className='bdr-bip-scanbox';es.innerHTML='<div><i class="fa-solid fa-qrcode"></i>Toque para ler o QR do endereço<br><small>Abrir câmera</small></div>';}
+  document.getElementById('btnConfirmarBipagem').disabled=true;
+  pararCameraBipagem();
+  setTimeout(focarBipProduto,100);
+}
+async function buscarProdutoBipado(){
+  const codigo=bdrNormalizarCodigoBip(document.getElementById('bipCodigoProduto')?.value);
+  if(!codigo){focarBipProduto();return;}
+  const ps=document.getElementById('bipProdutoStatus');
+  ps.className='bdr-bip-scanbox'; ps.innerHTML='<div><i class="fa-solid fa-spinner fa-spin"></i>Buscando produto...</div>';
+  let produto=null;
+  try{ produto=await bdrBuscarProdutoOuPatrimonio(codigo); }catch(e){console.warn(e);}
+  if(!produto){
+    ps.className='bdr-bip-scanbox errado'; ps.innerHTML='<div><i class="fa-solid fa-xmark"></i>Produto não encontrado<br><small>Confira o código bipado</small></div>'; bdrSom('erro'); return;
+  }
+  BDR_BIP.produto=produto;
+  ps.className='bdr-bip-scanbox certo'; ps.innerHTML='<div><i class="fa-solid fa-check"></i>Produto encontrado</div>'; bdrSom('ok');
+  const info=document.getElementById('bipProdutoInfo'); info.className='bdr-bip-card-item ativo';
+  info.innerHTML=`<strong>${produto.nome || '-'}</strong><span>Código: ${produto.codigo || codigo} • Tipo: ${produto.tipo || '-'} • Estoque: ${produto.quantidade ?? 1}</span>`;
+  await sugerirEnderecoParaProdutoBip(produto);
+  setTimeout(focarBipEndereco,150);
+}
+async function bdrBuscarProdutoOuPatrimonio(codigo){
+  const banco=bdrDb();
+  const cod=bdrNormalizarCodigoBip(codigo);
+  if(!banco) return {codigo:cod,nome:'Produto bipado',tipo:'CONSUMO',quantidade:1};
+  const tabelas=[
+    {nome:'estoque_produtos',tipo:'CONSUMO'},
+    {nome:'produtos',tipo:'CONSUMO'},
+    {nome:'patrimonio',tipo:'PATRIMONIO'}
+  ];
+  for(const t of tabelas){
+    try{
+      const {data,error}=await banco.from(t.nome).select('*').limit(5000);
+      if(error) continue;
+      const achado=(data||[]).find(p=>{
+        const campos=[p.codigo,p.codigo_produto,p.codigo_barras,p.codigo_qr,p.id,p.nome,p.nome_bem];
+        return campos.some(c=>bdrNormalizarCodigoBip(c)===cod);
+      });
+      if(achado){
+        return {
+          id:achado.id,
+          tabela:t.nome,
+          tipo:t.tipo,
+          codigo:achado.codigo || achado.codigo_produto || achado.codigo_barras || achado.codigo_qr || String(achado.id),
+          nome:achado.nome || achado.nome_bem || achado.descricao || 'Produto',
+          quantidade:achado.quantidade ?? achado.qtd ?? 1,
+          local_atual:achado.local || achado.endereco || achado.localizacao || achado.local_destino || ''
+        };
+      }
+    }catch(e){console.warn('Falha buscando em '+t.nome,e);}
+  }
+  return null;
+}
+async function sugerirEnderecoParaProdutoBip(produto){
+  const banco=bdrDb();
+  let endereco=null;
+  try{
+    if(banco){
+      const {data}=await banco.from('enderecamento_estoque').select('*').eq('status','LIVRE').limit(1);
+      endereco=(data||[])[0]||null;
+    }
+  }catch(e){console.warn(e);}
+  if(!endereco){ endereco={id:null,codigo_curto:'R1-F1-P01-C03-N01',rua:'R1',face:'F1',prateleira:'P01',coluna:'C03',nivel:'N01'}; }
+  const enderecoFmt = bdrEnderecoPartes(endereco.codigo_curto || endereco.codigo || endereco.endereco || '');
+  endereco.codigo_curto = enderecoFmt.codigo || bdrFormatarEndereco(endereco.codigo_curto || '');
+  endereco.rua = enderecoFmt.rua || endereco.rua || '-';
+  endereco.face = enderecoFmt.face || endereco.face || '-';
+  endereco.prateleira = enderecoFmt.prateleira || endereco.prateleira || '-';
+  endereco.coluna = enderecoFmt.coluna || endereco.coluna || '-';
+  endereco.nivel = enderecoFmt.nivel || endereco.nivel || '-';
+  BDR_BIP.enderecoSugerido=endereco;
+  const sug=document.getElementById('bipEnderecoSugerido');
+  sug.className='bdr-bip-sugerido ativo';
+  sug.innerHTML=`<div><i class="fa-solid fa-location-dot"></i> <b>${endereco.codigo_curto || '-'}</b> <small style="float:right;background:#dbeafe;color:#1d4ed8;border-radius:999px;padding:3px 7px;">SUGERIDO</small></div><div style="font-size:12px;margin-top:6px;color:#1e40af;">Rua: ${endereco.rua||'-'} • Face: ${endereco.face||'-'} • Prateleira: ${endereco.prateleira||'-'} • Coluna: ${endereco.coluna||'-'} • Nível: ${endereco.nivel||'-'}</div>`;
+}
+function permitirOutraPosicaoBipagem(){
+  BDR_BIP.outraPosicao=true;
+  bdrSom('ok');
+  alert('Liberado. Agora você pode bipar um endereço diferente do sugerido.');
+  focarBipEndereco();
+}
+async function validarEnderecoBipado(){
+  const raw=document.getElementById('bipCodigoEndereco')?.value;
+  const codigo=bdrNormalizarCodigoBip(raw);
+  if(!codigo){focarBipEndereco();return;}
+  const es=document.getElementById('bipEnderecoStatus');
+  let endereco=null;
+  try{ endereco=await bdrBuscarEnderecoBipado(codigo); }catch(e){console.warn(e);}
+  if(!endereco){
+    es.className='bdr-bip-scanbox errado'; es.innerHTML='<div><i class="fa-solid fa-xmark"></i>Endereço não encontrado<br><small>Bipe uma etiqueta END- válida</small></div>'; bdrSom('erro'); return;
+  }
+  const sugerido=bdrNormalizarCodigoBip(BDR_BIP.enderecoSugerido?.codigo_curto);
+  const real=bdrNormalizarCodigoBip(endereco.codigo_curto);
+  if(sugerido && real!==sugerido && !BDR_BIP.outraPosicao){
+    es.className='bdr-bip-scanbox errado'; es.innerHTML='<div><i class="fa-solid fa-triangle-exclamation"></i>Prateleira diferente da sugerida<br><small>Clique em Guardar em outro local para liberar</small></div>'; bdrSom('erro'); return;
+  }
+  const enderecoFmt = bdrEnderecoPartes(endereco.codigo_curto || codigo);
+  endereco.codigo_curto = enderecoFmt.codigo || bdrFormatarEndereco(endereco.codigo_curto || codigo);
+  endereco.rua = enderecoFmt.rua || endereco.rua || '-';
+  endereco.face = enderecoFmt.face || endereco.face || '-';
+  endereco.prateleira = enderecoFmt.prateleira || endereco.prateleira || '-';
+  endereco.coluna = enderecoFmt.coluna || endereco.coluna || '-';
+  endereco.nivel = enderecoFmt.nivel || endereco.nivel || '-';
+  BDR_BIP.enderecoReal=endereco;
+  es.className='bdr-bip-scanbox certo'; es.innerHTML='<div><i class="fa-solid fa-check"></i>Endereço confirmado</div>'; bdrSom('ok');
+  const info=document.getElementById('bipEnderecoInfo'); info.className='bdr-bip-endereco ativo';
+  info.innerHTML=`<strong>${endereco.codigo_curto}</strong><span>Rua: ${endereco.rua||'-'} • Face: ${endereco.face||'-'} • Prateleira: ${endereco.prateleira||'-'} • Coluna: ${endereco.coluna||'-'} • Nível: ${endereco.nivel||'-'}</span>`;
+  atualizarBotaoConfirmarBipagem();
+}
+async function bdrBuscarEnderecoBipado(codigo){
+  const banco=bdrDb();
+  const cod=bdrNormalizarCodigoBip(codigo);
+  if(!banco){return {id:null,codigo_curto:cod,rua:'-',face:'-',prateleira:'-',coluna:'-',nivel:'-'};}
+  const tabelas=['enderecamento_estoque','enderecos_estoque'];
+  for(const t of tabelas){
+    try{
+      const {data,error}=await banco.from(t).select('*').limit(5000);
+      if(error) continue;
+      const achado=(data||[]).find(e=>bdrNormalizarCodigoBip(e.codigo_curto||e.codigo||e.endereco)===cod);
+      if(achado){ achado.codigo_curto = bdrFormatarEndereco(achado.codigo_curto || achado.codigo || achado.endereco); return achado; }
+    }catch(e){console.warn(e);}
+  }
+  return null;
+}
+function atualizarBotaoConfirmarBipagem(){
+  document.getElementById('btnConfirmarBipagem').disabled=!(BDR_BIP.produto && BDR_BIP.enderecoReal);
+}
+async function confirmarGuardarBipagem(){
+  if(!BDR_BIP.produto || !BDR_BIP.enderecoReal){alert('Bipe o produto e o endereço antes de confirmar.');return;}
+  const banco=bdrDb();
+  const u=bdrUsuarioBipagem();
+  const usuarioNome=u?.nome || u?.usuario || 'Usuário não identificado';
+  const enderecoRealFmt = bdrFormatarEndereco(BDR_BIP.enderecoReal?.codigo_curto);
+  const enderecoSugeridoFmt = bdrFormatarEndereco(BDR_BIP.enderecoSugerido?.codigo_curto || '');
+  if(BDR_BIP.enderecoReal) BDR_BIP.enderecoReal.codigo_curto = enderecoRealFmt;
+  if(BDR_BIP.enderecoSugerido) BDR_BIP.enderecoSugerido.codigo_curto = enderecoSugeridoFmt;
+
+  const payloadArm={
+    produto:BDR_BIP.produto.nome,
+    quantidade:Number(BDR_BIP.produto.quantidade||1),
+    endereco_sugerido_id:BDR_BIP.enderecoSugerido?.id || null,
+    endereco_real_id:BDR_BIP.enderecoReal?.id || null,
+    usuario:usuarioNome,
+    status:'CONFIRMADO',
+    confirmado_em:new Date().toISOString()
+  };
+  const payloadMov={
+    produto:BDR_BIP.produto.nome,
+    produto_id:BDR_BIP.produto.id || null,
+    quantidade:Number(BDR_BIP.produto.quantidade||1),
+    tipo:'GUARDA',
+    tipo_movimentacao: BDR_BIP.outraPosicao ? 'GUARDADO_EM_OUTRA_POSICAO' : 'GUARDADO_POR_BIPAGEM',
+    origem:BDR_BIP.produto.local_atual || 'ESTOQUE',
+    destino:enderecoRealFmt,
+    local_origem:BDR_BIP.produto.local_atual || null,
+    local_destino:enderecoRealFmt,
+    usuario:usuarioNome,
+    observacao:`Guardado por bipagem. Sugerido: ${enderecoSugeridoFmt || '-'} | Real: ${enderecoRealFmt || '-'}`
+  };
+  try{
+    if(banco){
+      await banco.from('armazenagens').insert([payloadArm]);
+      await banco.from('estoque_movimentacoes').insert([payloadMov]);
+    }
+    bdrSom('ok');
+    alert(`✅ Produto guardado com sucesso.
+
+Guardado por: ${usuarioNome}
+Endereço: ${enderecoRealFmt}`);
+    limparBipagem();
+    if(typeof renderizarProdutos==='function') renderizarProdutos();
+  }catch(e){
+    console.error(e); bdrSom('erro'); alert('Erro ao registrar guarda: '+(e.message||e));
+  }
+}
+let leitorQR = null;
+
+/* =========================================================
+   BDR QR CODE CAMERA - SOMENTE QR CODE
+   - Produto: lê QR do produto/patrimônio
+   - Endereço: lê QR da prateleira
+   - Fecha a câmera automaticamente após leitura
+========================================================= */
+async function abrirCameraBipagem(tipo){
+  const alvo = tipo === "produto" ? "cameraProdutoBip" : "cameraEnderecoBip";
+  const area = document.getElementById(alvo);
+
+  if(!area) return;
+
+  if(typeof Html5Qrcode === "undefined"){
+    alert("Leitor QR não carregou. Verifique a internet ou use o leitor USB/Bluetooth.");
+    return;
+  }
+
+  await pararCameraBipagem();
+
+  area.classList.add("ativo");
+  area.innerHTML = `
+    <div id="reader-${tipo}" style="width:100%;min-height:260px;background:#111827;border-radius:14px;overflow:hidden;"></div>
+    <div style="padding:8px;text-align:center;background:#111827;color:#fff;font-size:12px;font-weight:900;">
+      Aponte a câmera para o QR Code
+    </div>
+  `;
+
+  leitorQR = new Html5Qrcode(`reader-${tipo}`);
+
+  const configQR = {
+    fps: 10,
+    qrbox: function(viewfinderWidth, viewfinderHeight){
+      const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+      const box = Math.floor(minEdge * 0.72);
+      return { width: box, height: box };
+    }
+  };
+
+  if(window.Html5QrcodeSupportedFormats){
+    configQR.formatsToSupport = [Html5QrcodeSupportedFormats.QR_CODE];
+  }
+
+  try{
+    await leitorQR.start(
+      { facingMode: "environment" },
+      configQR,
+      async (decodedText) => {
+        const codigoLido = String(decodedText || "").trim();
+        if(!codigoLido) return;
+
+        await pararCameraBipagem();
+
+        if(tipo === "produto"){
+          const input = document.getElementById("bipCodigoProduto");
+          if(input) input.value = codigoLido;
+          await buscarProdutoBipado();
+        }else{
+          const input = document.getElementById("bipCodigoEndereco");
+          if(input) input.value = codigoLido;
+          await validarEnderecoBipado();
+        }
+      },
+      () => {}
+    );
+  }catch(err){
+    console.error("Erro câmera QR:", err);
+    await pararCameraBipagem();
+    alert("Não foi possível abrir a câmera. No celular/tablet use HTTPS ou o site publicado. No computador, permita o acesso à câmera.");
+  }
+}
+
+async function pararCameraBipagem(){
+  try{
+    if(leitorQR){
+      try{ await leitorQR.stop(); }catch(e){}
+      try{ await leitorQR.clear(); }catch(e){}
+      leitorQR = null;
+    }
+  }catch(e){}
+
+  if(BDR_BIP.cameraTimer){
+    clearInterval(BDR_BIP.cameraTimer);
+    BDR_BIP.cameraTimer = null;
+  }
+
+  if(BDR_BIP.cameraStream){
+    try{ BDR_BIP.cameraStream.getTracks().forEach(t => t.stop()); }catch(e){}
+    BDR_BIP.cameraStream = null;
+  }
+
+  ["cameraProdutoBip","cameraEnderecoBip"].forEach(id => {
+    const el = document.getElementById(id);
+    if(el){
+      el.classList.remove("ativo");
+      el.innerHTML = "";
+    }
+  });
+}
+</script>
+
 <script>
 /* =========================================================
    BDR ESTOQUE - PERMISSÕES NOVAS POR AÇÃO
@@ -931,5 +1735,6 @@ window.addEventListener("DOMContentLoaded", () => {
 <script src="./JS/offlineSync.js"></script>
 <script defer src="./JS/estoque.js"></script>
 <script src="./JS/bdrUppercase.js"></script>
+<script src="./JS/bdr-localizador-prateleira.js?v=1"></script>
 </body>
 </html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Etiqueta Produto BDR</title>
+<style>
+@page{size:5.5cm 3.5cm;margin:0}
+body{display:flex;justify-content:center;align-items:center;width:5.5cm;height:3.5cm;margin:0;background:#fff;font-family:Arial,sans-serif;overflow:hidden}.etiqueta{width:5.5cm;height:3.5cm;border:2px solid #000;border-radius:6px;padding:5px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;background:#fff}.topo{display:flex;justify-content:space-between;align-items:flex-start}.logo-texto{line-height:1}.logo-principal{font-size:45px;font-weight:999;color:#e30613;letter-spacing:-4px}.engrenagem{display:inline-flex;width:32px;height:32px;border:5px solid #666;border-radius:50%;vertical-align:middle;margin-right:-8px;position:relative}.bdr-texto{color:#e30613;font-size:47px;font-weight:900;letter-spacing:-2px}.logo-sub{font-size:10px;font-style:italic;font-weight:600;color:#555;text-align:right;margin-top:-5px;font-family:cursive}.qr img{width:1.2cm;height:1.2cm}.meio{font-size:9px;font-weight:bold;line-height:1.25}.obra,.item{display:inline-block;max-width:4cm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}.codigo{font-size:11px;font-weight:bold;text-align:right}@media print{body{margin:0}.etiqueta{border:2px solid #000!important}}
+</style>
+</head>
+<body>
+<div class="etiqueta"><div class="topo"><div class="logo-texto"><div class="logo-principal"><span class="engrenagem"></span><span class="bdr-texto">BDR</span></div><div class="logo-sub">Construart</div></div><div class="qr"><img id="qr" src=""></div></div><div class="meio"><div><span>Local:</span> <span class="obra" id="obra">OBRA / SETOR</span></div><div><span>Item:</span> <span class="item" id="item">ITEM</span></div></div><div class="codigo" id="codigo">EST-000000</div></div>
+<script>
+const p=new URLSearchParams(location.search);const codigo=p.get('codigo')||p.get('id')||'EST-000000';const item=p.get('item')||'ITEM';const local=p.get('local')||'SEM LOCAL';function corta(t,l){t=String(t||'-');return t.length>l?t.slice(0,l)+'...':t}document.getElementById('codigo').innerText=codigo;document.getElementById('item').innerText=corta(item,26);document.getElementById('obra').innerText=corta(local,24);document.getElementById('qr').src='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(codigo);
+</script>
+</body>
+</html>

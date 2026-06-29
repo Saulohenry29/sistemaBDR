@@ -10,7 +10,8 @@ console.log("🛡️ BDR OWNER CORE V8 carregado - busca automática + reativar"
 
 /* ALTERE AQUI */
 const BDR_OWNER_LOGIN = "saulo";
-const BDR_OWNER_SENHA = "852410";
+const BDR_OWNER_SENHA = "1234";
+const BDR_OWNER_SENHA_APAGAR = "1234"; // segunda senha só para apagar definitivo
 const BDR_OWNER_CLIQUES = 5;
 const BDR_OWNER_TEMPO = 6000;
 
@@ -702,33 +703,28 @@ window.bdrOwnerApagarSelecionado = bdrOwnerApagarSelecionado;
 async function bdrOwnerApagar(id){
   const cfg = BDR_OWNER_AREAS[bdrOwnerAreaAtual];
 
-  const senha = prompt("Digite sua senha master:");
-  if(senha !== BDR_OWNER_SENHA){
-    alert("Senha incorreta. Nada foi apagado.");
+  const senha1 = prompt("Senha BDR CORE:");
+  if(senha1 !== BDR_OWNER_SENHA){
+    alert("Primeira senha incorreta.");
     return;
   }
 
-  const resp = await bdrOwnerDB()
-    .from(cfg.tabela)
-    .delete()
-    .eq("id", id)
-    .select("id");
-
-  if(resp.error){
-    alert(
-      "Erro ao apagar: " +
-      resp.error.message +
-      "\n\nPode existir vínculo com outra tabela. Nesse caso, use DESATIVAR."
-    );
+  const senha2 = prompt("Segunda senha para APAGAR DEFINITIVO:");
+  if(senha2 !== BDR_OWNER_SENHA_APAGAR){
+    alert("Segunda senha incorreta.");
     return;
   }
 
-  if(!resp.data || resp.data.length === 0){
-    alert(
-      "O Supabase não apagou nenhuma linha.\n\n" +
-      "Provável bloqueio de RLS/policy ou vínculo no banco.\n" +
-      "Nada foi apagado."
-    );
+  const txt = prompt(`Digite exatamente: APAGAR ${id}`);
+  if(String(txt || "").trim().toUpperCase() !== `APAGAR ${id}`){
+    alert("Confirmação cancelada. Nada foi apagado.");
+    return;
+  }
+
+  const { error } = await bdrOwnerDB().from(cfg.tabela).delete().eq("id", id);
+
+  if(error){
+    alert("Erro ao apagar: " + error.message + "\n\nPode existir vínculo com outra tabela. Nesse caso, use DESATIVAR.");
     return;
   }
 

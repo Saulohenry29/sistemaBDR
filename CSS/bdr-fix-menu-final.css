@@ -487,3 +487,33 @@ textarea{
 .bdr-logo-menu span{
   display:none !important;
 }
+
+/* =========================================================
+   BDR FIX MENU LATERAL - NÃO CORTAR ÍCONES
+========================================================= */
+@media(min-width:901px){
+  .bdr-sidebar{
+    height:100vh!important;
+    min-height:100vh!important;
+    max-height:100vh!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    padding-top:28px!important;
+    padding-bottom:12px!important;
+  }
+
+  .bdr-menu{
+    gap:9px!important;
+  }
+
+  .bdr-menu-btn{
+    width:46px!important;
+    height:46px!important;
+    min-width:46px!important;
+    flex:0 0 46px!important;
+  }
+
+  .bdr-sidebar::-webkit-scrollbar{
+    width:0!important;
+  }
+}

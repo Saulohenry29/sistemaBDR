@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Etiqueta Endereço BDR</title>
+<style>
+@page{size:5.5cm 3.5cm;margin:0}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;font-family:Arial,sans-serif;width:5.5cm;height:3.5cm;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.etiqueta{width:5.5cm;height:3.5cm;border:2px solid #000;border-radius:6px;padding:5px;background:#fff;display:grid;grid-template-columns:1.45cm 1fr;gap:6px;align-items:center;overflow:hidden}.qr img{width:1.35cm;height:1.35cm;display:block}.info{min-width:0}.tipo{font-size:9px;font-weight:900;color:#e30613;line-height:1}.codigo{font-size:17px;font-weight:900;line-height:1.05;color:#000;white-space:nowrap}.detalhe{margin-top:4px;font-size:10px;font-weight:800;line-height:1.15;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sub{margin-top:4px;font-size:8px;font-weight:700;color:#555}@media print{body{margin:0}.etiqueta{border:2px solid #000!important}}
+</style>
+</head>
+<body>
+<div class="etiqueta">
+  <div class="qr"><img id="qr" src=""></div>
+  <div class="info">
+    <div class="tipo">ENDEREÇO BDR</div>
+    <div class="codigo" id="codigo">R1-F1-P01-C01-N01</div>
+    <div class="detalhe" id="detalhe">R1 • F1 • P01 • C01 • N01</div>
+    <div class="sub">Prateleira / posição física</div>
+  </div>
+</div>
+<script>
+function normEndereco(v){let c=String(v||'').trim().replace(/^END-/i,'').toUpperCase();const m=c.match(/R(\d+)-F(\d+)-P(\d+)-C(\d+)-N(\d+)/i);if(!m)return c;return `R${m[1]}-F${m[2]}-P${String(m[3]).padStart(2,'0')}-C${String(m[4]).padStart(2,'0')}-N${String(m[5]).padStart(2,'0')}`}
+const p=new URLSearchParams(location.search);const codigo=normEndereco(p.get('id')||p.get('codigo')||'R1-F1-P01-C01-N01');document.getElementById('codigo').innerText=codigo;document.getElementById('detalhe').innerText=codigo.replaceAll('-', ' • ');document.getElementById('qr').src='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent('END-'+codigo);
+</script>
+</body>
+</html>
