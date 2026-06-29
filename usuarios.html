@@ -12,7 +12,6 @@
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
 <link rel="stylesheet" href="./CSS/responsivo-bdr.css">
 <link rel="stylesheet" href="./CSS/bdr-owner-core.css">
-<link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260627-USUARIOS-LIMPO-1">
 <title>BDR - Usuários</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -21,7 +20,7 @@
 <script src="./JS/auth.js"></script>
 <script src="./JS/bdrCore.js"></script>
 <script src="./JS/bdrMenuPermissoes.js"></script>
-<script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260629-final-sem-piscar"></script>
+<script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260629-padrao-unico"></script>
 
 
 <style>
@@ -186,7 +185,29 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active{outline:none
   .ops-grid{grid-template-columns:1fr!important;}
 }
 </style>
-<link rel="stylesheet" href="./CSS/bdr-menu-mobile-dock-fix-final.css?v=20260629-final-v2">
+
+<style>
+/* =========================================================
+   BDR PADRÃO FINAL - USUÁRIOS
+========================================================= */
+body{background:#eef2f7!important;}
+.usuarios-premium-main{background:#eef2f7!important;}
+.bdr-topbar,.master-strip,.usuario-selecionado-card,.panel,.users-panel,.alert-card,.access-box,.summary-card,.profile-card{
+  border-radius:16px!important;
+  box-shadow:0 2px 9px rgba(0,0,0,.08)!important;
+}
+.bdr-topbar{border-left:4px solid #a4161a!important;}
+.bdr-topbar-title,.master-strip h2,.panel-head,.alert-title{color:#a4161a!important;}
+.red-head,.user-table-head{background:#a4161a!important;}
+.btn-red{background:#a4161a!important;}
+@media(max-width:900px){
+  .usuarios-premium-main{padding:10px 10px calc(104px + env(safe-area-inset-bottom))!important;}
+  .bdr-topbar,.master-strip{flex-direction:column!important;align-items:flex-start!important;}
+}
+</style>
+<link rel="stylesheet" href="./CSS/bdr-padrao-telas.css?v=1">
+
+<link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260629-menu-unico-66">
 </head>
 
 <body>

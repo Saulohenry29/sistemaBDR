@@ -1,0 +1,77 @@
+/* =========================================================
+   BDR PADRÃO VISUAL GLOBAL DAS TELAS
+   - Apenas visual de cards/topos/botões
+   - NÃO mexe no menu lateral/inferior
+========================================================= */
+
+body{
+  background:#eef2f7!important;
+}
+
+.bdr-main,
+.usuarios-premium-main,
+.content{
+  background:#eef2f7!important;
+}
+
+.bdr-topbar,
+.relatorio-topbar,
+.triagem-hero,
+.card,
+.card-light,
+.panel,
+.users-panel,
+.master-strip,
+.usuario-selecionado-card,
+.alert-card,
+.summary-card,
+.profile-card,
+.access-box,
+.mes-card,
+.nf-card{
+  background:#fff!important;
+  border-radius:16px!important;
+  border-left:4px solid #a4161a!important;
+  box-shadow:0 2px 9px rgba(0,0,0,.08)!important;
+}
+
+.bdr-topbar-title,
+.relatorio-title,
+.triagem-hero h2,
+.card h2,
+.card h3,
+.card-light h3,
+.panel-head,
+.master-strip h2,
+.alert-title{
+  color:#a4161a!important;
+}
+
+.red-head,
+.user-table-head,
+.aba.ativa,
+.btn-red{
+  background:#a4161a!important;
+  color:#fff!important;
+}
+
+.btn,
+button{
+  border-radius:10px;
+}
+
+@media(max-width:900px){
+  .bdr-main,
+  .usuarios-premium-main,
+  .content{
+    padding:10px 10px calc(104px + env(safe-area-inset-bottom))!important;
+  }
+
+  .bdr-topbar,
+  .relatorio-topbar,
+  .master-strip{
+    flex-direction:column!important;
+    align-items:flex-start!important;
+    gap:8px!important;
+  }
+}
