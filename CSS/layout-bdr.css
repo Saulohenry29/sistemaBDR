@@ -1314,10 +1314,55 @@ main,
 /* Mobile/PWA: garante espaço para menu inferior */
 
 /* =========================================================
-   BDR RESPONSIVO OFICIAL - DOCK CENTRAL + SCROLL PWA
-   ÚNICO BLOCO MOBILE DO layout-bdr.css
-   PC/Notebook: menu lateral esquerdo.
-   Tablet/Celular: menu inferior centralizado tipo dock.
+   BDR RESPONSIVO OFICIAL - MENU INFERIOR MOBILE/TABLET
+   Local: CSS/layout-bdr.css
+
+   =========================================================
+   ✅ ONDE MEXER NO TAMANHO DO MENU MOBILE
+   =========================================================
+
+   1) ALTURA DA FAIXA ESCURA DO MENU:
+      --bdr-mobile-menu-altura
+
+      Exemplo:
+      64px = mais baixo / estreito
+      70px = padrão atual
+      78px = mais alto
+
+   2) TAMANHO DOS BOTÕES:
+      --bdr-mobile-menu-btn
+
+      Exemplo:
+      44px = menor
+      48px = padrão atual
+      54px = maior
+
+   3) TAMANHO DOS ÍCONES:
+      --bdr-mobile-menu-icone
+
+      Exemplo:
+      17px = menor
+      18px = padrão atual
+      21px = maior
+
+   4) ESPAÇO ENTRE OS BOTÕES:
+      --bdr-mobile-menu-gap
+
+      Exemplo:
+      6px = mais junto
+      8px = padrão atual
+      12px = mais separado
+
+   5) ESPAÇO DO CONTEÚDO ACIMA DO MENU:
+      --bdr-mobile-content-bottom
+
+      Aumente se o último card ficar escondido atrás do menu.
+
+   COMPORTAMENTO:
+   - Desktop/notebook acima de 1200px NÃO MUDA.
+   - Tablet/celular até 1200px usa menu inferior.
+   - Se couber todos os botões, ficam CENTRALIZADOS.
+   - Se não couber, continua podendo arrastar para o lado.
 ========================================================= */
 
 html,
@@ -1352,7 +1397,21 @@ main,
   overflow:visible !important;
 }
 
+/* =========================================================
+   TABLET / CELULAR
+   Até 1200px: menu inferior colado no rodapé
+========================================================= */
 @media(max-width:1200px){
+
+  :root{
+    /* ===== AJUSTES PRINCIPAIS DO MENU MOBILE/TABLET ===== */
+    --bdr-mobile-menu-altura:70px;       /* altura da faixa escura */
+    --bdr-mobile-menu-btn:48px;          /* tamanho dos botões */
+    --bdr-mobile-menu-icone:18px;        /* tamanho dos ícones */
+    --bdr-mobile-menu-gap:8px;           /* espaço entre botões */
+    --bdr-mobile-content-bottom:92px;    /* respiro do conteúdo acima do menu */
+  }
+
   html{
     width:100% !important;
     max-width:100% !important;
@@ -1365,7 +1424,7 @@ main,
     width:100% !important;
     max-width:100% !important;
     overflow-x:hidden !important;
-    padding-bottom:92px !important;
+    padding-bottom:var(--bdr-mobile-content-bottom) !important;
     zoom:1 !important;
   }
 
@@ -1375,38 +1434,60 @@ main,
     min-height:100vh !important;
   }
 
+  /* =====================================================
+     FAIXA ESCURA DO MENU MOBILE
+
+     Quer deixar mais estreita?
+     Mude no :root acima:
+     --bdr-mobile-menu-altura:64px;
+
+     Quer deixar mais alta?
+     --bdr-mobile-menu-altura:78px;
+  ===================================================== */
   .bdr-sidebar{
     position:fixed !important;
-    left:50% !important;
-    right:auto !important;
-    bottom:12px !important;
+    left:0 !important;
+    right:0 !important;
+    bottom:0 !important;
     top:auto !important;
-    transform:translateX(-50%) !important;
+    transform:none !important;
 
-    width:auto !important;
-    min-width:auto !important;
-    max-width:calc(100vw - 20px) !important;
+    width:100% !important;
+    min-width:100% !important;
+    max-width:100% !important;
 
-    height:74px !important;
-    min-height:74px !important;
-    max-height:74px !important;
+    height:var(--bdr-mobile-menu-altura) !important;
+    min-height:var(--bdr-mobile-menu-altura) !important;
+    max-height:var(--bdr-mobile-menu-altura) !important;
 
-    padding:8px 12px calc(8px + env(safe-area-inset-bottom)) !important;
+    padding:6px 8px calc(6px + env(safe-area-inset-bottom)) !important;
+
+    display:flex !important;
     flex-direction:row !important;
+
+    /* Centraliza quando couber. O scroll continua funcionando quando não couber. */
     justify-content:center !important;
     align-items:center !important;
 
     overflow-x:auto !important;
     overflow-y:hidden !important;
+    -webkit-overflow-scrolling:touch !important;
+    scrollbar-width:none !important;
 
     z-index:99999 !important;
-    border-radius:22px !important;
-    box-shadow:0 12px 35px rgba(0,0,0,.28) !important;
+    border-radius:0 !important;
+
+    background:rgba(15,34,56,.96) !important;
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+
+    box-shadow:0 -8px 22px rgba(0,0,0,.18) !important;
   }
 
   .bdr-sidebar::-webkit-scrollbar{
-    height:0 !important;
     display:none !important;
+    width:0 !important;
+    height:0 !important;
   }
 
   .bdr-brand,
@@ -1414,22 +1495,48 @@ main,
     display:none !important;
   }
 
+  /* =====================================================
+     LINHA DOS BOTÕES DO MENU
+
+     Este bloco resolve:
+     ✅ centralizado quando cabe tudo
+     ✅ arrastável quando não cabe
+  ===================================================== */
   .bdr-menu{
     width:max-content !important;
-    min-width:max-content !important;
-    max-width:none !important;
+    min-width:0 !important;
+    max-width:max-content !important;
+
+    display:flex !important;
     flex-direction:row !important;
     align-items:center !important;
     justify-content:center !important;
-    gap:8px !important;
-    margin:0 !important;
+
+    gap:var(--bdr-mobile-menu-gap) !important;
+    margin:0 auto !important;
     padding:0 !important;
   }
 
+  /* =====================================================
+     BOTÕES DO MENU
+
+     Quer botão maior?
+     Mude no :root:
+     --bdr-mobile-menu-btn:54px;
+
+     Quer botão menor?
+     --bdr-mobile-menu-btn:44px;
+  ===================================================== */
   .bdr-menu-btn{
-    width:48px !important;
-    height:48px !important;
-    min-width:48px !important;
+    width:var(--bdr-mobile-menu-btn) !important;
+    height:var(--bdr-mobile-menu-btn) !important;
+    min-width:var(--bdr-mobile-menu-btn) !important;
+    min-height:var(--bdr-mobile-menu-btn) !important;
+    max-width:var(--bdr-mobile-menu-btn) !important;
+    max-height:var(--bdr-mobile-menu-btn) !important;
+
+    flex:0 0 var(--bdr-mobile-menu-btn) !important;
+
     border-radius:15px !important;
     transform:none !important;
   }
@@ -1442,11 +1549,25 @@ main,
     display:none !important;
   }
 
+  /* =====================================================
+     ÍCONES DO MENU
+
+     Quer ícone maior?
+     --bdr-mobile-menu-icone:21px;
+
+     Quer ícone menor?
+     --bdr-mobile-menu-icone:16px;
+  ===================================================== */
+  .bdr-menu-icon i,
+  .bdr-menu-btn i{
+    font-size:var(--bdr-mobile-menu-icone) !important;
+  }
+
   .bdr-main,
   .content{
     margin-left:0 !important;
     width:100% !important;
-    padding:10px 10px calc(110px + env(safe-area-inset-bottom)) !important;
+    padding:10px 10px calc(var(--bdr-mobile-content-bottom) + env(safe-area-inset-bottom)) !important;
   }
 
   .bdr-topbar,
@@ -1520,17 +1641,25 @@ main,
   }
 }
 
+/* =========================================================
+   CELULAR PEQUENO
+   Até 520px: ajuste fino só do celular
+========================================================= */
 @media(max-width:520px){
+
+  :root{
+    /* ===== AJUSTE FINO PARA CELULAR PEQUENO ===== */
+    --bdr-mobile-menu-altura:70px;
+    --bdr-mobile-menu-btn:48px;
+    --bdr-mobile-menu-icone:18px;
+    --bdr-mobile-menu-gap:8px;
+    --bdr-mobile-content-bottom:92px;
+  }
+
   .kpi-grid,
   .kpi-row,
   .resumo-grid,
   .money-grid{
     grid-template-columns:1fr !important;
-  }
-
-  .bdr-menu-btn{
-    width:46px !important;
-    height:46px !important;
-    min-width:46px !important;
   }
 }

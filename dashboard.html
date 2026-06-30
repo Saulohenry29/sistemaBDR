@@ -2,6 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:,">
 <title>Torre de Controle BDR</title>
 
@@ -1255,6 +1256,361 @@ grid-template-columns:auto repeat(4,95px) 160px 160px 95px 1fr;
   :root{--dash-card-h:260px;}
   .bottom-grid{grid-template-columns:1fr !important;}
 }
+
+@media(max-width:800px){
+  :root{--dash-card-h:260px;}
+  .bottom-grid{grid-template-columns:1fr !important;}
+}
+
+
+
+
+/* =========================================================
+   BDR DASHBOARD - PADRÃO IGUAL ÀS OUTRAS TELAS
+   ---------------------------------------------------------
+   Regra:
+   - NÃO mexe no menu.
+   - Menu fica por conta do CSS/layout-bdr.css.
+   - Desktop/notebook mantém o desenho original.
+   - Tablet/celular fica compacto, como Entrada/Patrimônio/Usuários.
+
+   Ajuste rápido:
+   --dash-mobile-card-h = altura dos cards no celular/tablet.
+   --dash-mobile-gap    = espaço entre blocos.
+========================================================= */
+
+@media(max-width:1200px){
+
+  :root{
+    --dash-mobile-card-h:230px;
+    --dash-mobile-gap:8px;
+  }
+
+  .dash-container{
+    padding:8px !important;
+  }
+
+  .bdr-topbar{
+    padding:10px 14px !important;
+    margin-bottom:8px !important;
+    border-radius:16px !important;
+    min-height:auto !important;
+  }
+
+  .bdr-topbar-title{
+    font-size:18px !important;
+    line-height:1.15 !important;
+  }
+
+  .bdr-topbar-sub{
+    font-size:11px !important;
+    line-height:1.25 !important;
+  }
+
+  .dash-user{
+    width:100% !important;
+    justify-content:space-between !important;
+    gap:8px !important;
+    font-size:12px !important;
+  }
+
+  .user-menu-top{
+    padding:7px 10px !important;
+  }
+
+  .user-mini{
+    font-size:12px !important;
+  }
+
+  .avatar{
+    width:38px !important;
+    height:38px !important;
+    font-size:17px !important;
+  }
+
+  .notif-btn{
+    width:36px !important;
+    height:36px !important;
+  }
+
+  /* Filtros no mesmo padrão de cards pequenos */
+  .quick-filters{
+    grid-template-columns:1fr 1fr !important;
+    gap:7px !important;
+    margin-bottom:8px !important;
+  }
+
+  .quick-filters label{
+    grid-column:1/-1 !important;
+    font-size:12px !important;
+  }
+
+  .pill-btn,
+  .btn-red,
+  .btn-clear-dashboard,
+  .modo-pill{
+    height:32px !important;
+    min-height:32px !important;
+    font-size:11px !important;
+    border-radius:9px !important;
+    padding:0 10px !important;
+  }
+
+  .filter-premium-btn{
+    height:38px !important;
+    min-height:38px !important;
+    padding:5px 10px !important;
+    border-radius:12px !important;
+  }
+
+  .filter-premium-btn span{
+    font-size:9px !important;
+  }
+
+  .filter-premium-btn b{
+    font-size:11px !important;
+  }
+
+  .update-info{
+    grid-column:1/-1 !important;
+    text-align:center !important;
+    font-size:10px !important;
+    line-height:1.25 !important;
+  }
+
+  /* KPIs: compactos e legíveis */
+  .kpi-row{
+    grid-template-columns:1fr 1fr !important;
+    gap:8px !important;
+    margin-bottom:8px !important;
+  }
+
+  .kpi-card.valor-destaque{
+    grid-column:1/-1 !important;
+  }
+
+  .kpi-card{
+    min-height:72px !important;
+    padding:9px !important;
+    gap:8px !important;
+    border-radius:12px !important;
+  }
+
+  .kpi-icon{
+    width:36px !important;
+    height:36px !important;
+    min-width:36px !important;
+    font-size:16px !important;
+  }
+
+  .kpi-value{
+    font-size:19px !important;
+  }
+
+  .kpi-card.valor-destaque .kpi-value{
+    font-size:23px !important;
+  }
+
+  .kpi-label{
+    font-size:10.5px !important;
+    line-height:1.15 !important;
+    margin-top:3px !important;
+  }
+
+  .kpi-sub{
+    font-size:9.5px !important;
+    line-height:1.15 !important;
+    margin-top:2px !important;
+  }
+
+  /* Cards e gráficos */
+  .dashboard-grid{
+    grid-template-columns:1fr !important;
+    gap:var(--dash-mobile-gap) !important;
+  }
+
+  .left-stack,
+  .mid-stack,
+  .right-stack{
+    gap:var(--dash-mobile-gap) !important;
+    grid-auto-rows:auto !important;
+  }
+
+  .bottom-grid{
+    grid-template-columns:1fr !important;
+    gap:var(--dash-mobile-gap) !important;
+  }
+
+  .card-light{
+    border-radius:16px !important;
+  }
+
+  .card-light h3{
+    min-height:34px !important;
+    font-size:12.5px !important;
+    padding:8px 10px !important;
+    line-height:1.2 !important;
+  }
+
+  .card-body{
+    padding:8px !important;
+  }
+
+  .left-stack > .card-light,
+  .mid-stack > .card-light,
+  .right-stack > .card-light,
+  .bottom-grid,
+  .bottom-grid .card-light{
+    min-height:var(--dash-mobile-card-h) !important;
+  }
+
+  .chart-card canvas,
+  .chart-card.big canvas{
+    height:calc(var(--dash-mobile-card-h) - 62px) !important;
+  }
+
+  .table-mini{
+    font-size:8.5px !important;
+  }
+
+  .table-mini th,
+  .table-mini td{
+    padding:4px !important;
+  }
+
+  .btn-outline{
+    height:28px !important;
+    min-height:28px !important;
+    padding:5px 8px !important;
+    font-size:9.5px !important;
+  }
+
+  .ai-line{
+    min-height:34px !important;
+    padding:6px 8px !important;
+    font-size:10px !important;
+    line-height:1.25 !important;
+  }
+
+  .alert-row,
+  .info-row{
+    min-height:36px !important;
+    padding:6px 8px !important;
+    font-size:10px !important;
+    line-height:1.25 !important;
+  }
+
+  .estoque-niveis{
+    gap:6px !important;
+  }
+
+  .estoque-nivel{
+    padding:7px !important;
+    border-radius:10px !important;
+  }
+
+  .estoque-nivel strong{
+    font-size:16px !important;
+  }
+
+  .estoque-nivel span{
+    font-size:9px !important;
+  }
+
+  .footer-dash{
+    font-size:9.5px !important;
+    margin-top:10px !important;
+  }
+}
+
+/* Celular pequeno: só ajusta um pouco mais, sem zoom */
+@media(max-width:520px){
+  :root{
+    --dash-mobile-card-h:215px;
+    --dash-mobile-gap:7px;
+  }
+
+  .dash-container{
+    padding:7px !important;
+  }
+
+  .kpi-card{
+    min-height:68px !important;
+  }
+
+  .kpi-value{
+    font-size:18px !important;
+  }
+
+  .kpi-card.valor-destaque .kpi-value{
+    font-size:22px !important;
+  }
+}
+
+
+
+/* =========================================================
+   BDR DASHBOARD - REAJUSTE FINO DOS FILTROS
+   ---------------------------------------------------------
+   O que foi ajustado:
+   1. Remove visualmente o "Modo: Atual" se ainda existir.
+   2. Aproxima os botões de período do texto "Filtros rápidos".
+   3. Coloca "Última atualização" do lado direito.
+   4. Mantém o layout geral do dashboard sem mexer nos cards/gráficos.
+========================================================= */
+
+.quick-filters{
+  grid-template-columns:auto 95px 95px 95px 95px 220px 220px 95px 130px 1fr !important;
+  column-gap:8px !important;
+  row-gap:6px !important;
+}
+
+.quick-filters label{
+  white-space:nowrap !important;
+  margin-right:4px !important;
+}
+
+.modo-pill{
+  display:none !important;
+}
+
+.update-info{
+  grid-column:auto !important;
+  justify-self:end !important;
+  text-align:right !important;
+  min-width:190px !important;
+}
+
+/* Notebook menor / tablet deitado */
+@media(max-width:1350px){
+  .quick-filters{
+    grid-template-columns:auto repeat(4,95px) 1fr 1fr 95px 130px !important;
+  }
+
+  .update-info{
+    grid-column:1/-1 !important;
+    justify-self:end !important;
+    text-align:right !important;
+  }
+}
+
+/* Tablet/celular: mantém padrão em 2 colunas */
+@media(max-width:1200px){
+  .quick-filters{
+    grid-template-columns:1fr 1fr !important;
+  }
+
+  .quick-filters label{
+    grid-column:1/-1 !important;
+  }
+
+  .update-info{
+    grid-column:1/-1 !important;
+    justify-self:end !important;
+    text-align:right !important;
+  }
+}
+
 </style>
 
 <style>
@@ -1453,10 +1809,7 @@ grid-template-columns:auto repeat(4,95px) 160px 160px 95px 1fr;
           <span>🧩 Tipo de ativo</span>
           <b id="resumoTiposFiltro">Todos</b>
         </button>
-
-        <div class="modo-pill" id="modoDashboardTexto">Modo: Atual</div>
-
-        <button class="btn-red" onclick="carregarDados()">Atualizar</button>
+<button class="btn-red" onclick="carregarDados()">Atualizar</button>
 
         <button type="button" class="btn-clear-dashboard" onclick="limparFiltrosDashboard()">Limpar filtros</button>
 
