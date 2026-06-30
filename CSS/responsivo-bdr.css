@@ -1,203 +1,107 @@
 /* =========================================================
-   BDR ERP - RESPONSIVO GLOBAL FINAL V2
-   Arquivo: CSS/responsivo-bdr.css
-   Usar depois do CSS/layout-bdr.css
-
-   PC/Notebook: menu lateral esquerdo.
-   Tablet/Celular: menu inferior tipo dock centralizado.
-   Corrige menu cortado no tablet/celular e libera scroll PWA.
+   BDR ERP - MENU FIX FINAL
+   Arquivo: CSS/bdr-fix-menu-final.css
+   RESPONSÁVEL APENAS PELO MENU
 ========================================================= */
 
-html{
-  width:100%;
-  max-width:100%;
-  min-height:100%;
-  height:auto!important;
-  overflow-x:hidden!important;
-  overflow-y:auto!important;
-  -webkit-text-size-adjust:100%;
-  -webkit-overflow-scrolling:touch!important;
+:root{
+  --sidebar-width:72px;
 }
 
-body{
-  width:100%;
-  max-width:100%;
-  min-height:100%;
-  height:auto!important;
-  margin:0;
-  overflow-x:hidden!important;
-  overflow-y:auto!important;
-  overscroll-behavior-y:auto!important;
-  touch-action:pan-y;
-}
-
-*{box-sizing:border-box}
-img,canvas,svg,video{max-width:100%}
-
-.bdr-main,main,.content,.app-layout,.bdr-app{
-  min-height:100vh;
-  height:auto!important;
-  overflow:visible!important;
-}
-
-.card,.card-light,.dashboard-grid,.left-stack,.right-stack{
-  overflow:visible!important;
-}
-
-table{width:100%;max-width:100%;border-collapse:collapse}
-.table-wrap,.tabela-wrap,div[style*="overflow:auto"]{
-  width:100%;
-  overflow-x:auto;
-  -webkit-overflow-scrolling:touch;
-}
-
-/* =========================================================
-   DESKTOP / NOTEBOOK
-========================================================= */
+/* DESKTOP / NOTEBOOK */
 @media(min-width:1201px){
-  :root{--sidebar-width:72px}
-
-  body{zoom:var(--screen-zoom, .85)!important;}
-
-  .app-layout,.bdr-app{
-    display:flex!important;
-    min-height:100vh!important;
-  }
 
   .bdr-sidebar{
     position:fixed!important;
     left:0!important;
     top:0!important;
     bottom:0!important;
-    width:var(--sidebar-width,72px)!important;
+    width:72px!important;
     height:100vh!important;
     min-height:100vh!important;
-    max-height:100vh!important;
-    padding:40px 0 6px 0!important;
+    background:linear-gradient(180deg,#0f2238,#111827)!important;
+    display:flex!important;
     flex-direction:column!important;
-    justify-content:flex-start!important;
     align-items:center!important;
+    justify-content:flex-start!important;
+    padding:18px 0 10px!important;
+    z-index:99999!important;
     overflow:visible!important;
-    border-radius:0!important;
-    transform:none!important;
-    z-index:999999!important;
+    box-shadow:4px 0 18px rgba(0,0,0,.18)!important;
   }
 
-  .bdr-brand{display:none!important;}
+  .bdr-brand{
+    display:none!important;
+  }
 
   .bdr-menu{
     display:flex!important;
     flex-direction:column!important;
     align-items:center!important;
-    justify-content:flex-start!important;
-    gap:12px!important;
-    width:auto!important;
-    min-width:0!important;
-    margin:10px 0 0 0!important;
+    gap:10px!important;
+    width:72px!important;
+    margin:0!important;
     padding:0!important;
-    overflow:visible!important;
   }
 
   .bdr-menu-btn{
     width:46px!important;
     height:46px!important;
-    min-width:46px!important;
     border-radius:14px!important;
-    position:relative!important;
-    overflow:visible!important;
-  }
-
-  .bdr-main,.content{
-    margin-left:var(--sidebar-width,72px)!important;
-    width:calc(100% - var(--sidebar-width,72px))!important;
-  }
-
-  .bdr-menu-btn::after{
-    content:attr(data-tip)!important;
-    position:absolute!important;
-    left:58px!important;
-    top:50%!important;
-    transform:translate(0,-50%)!important;
-    background:#111827!important;
-    color:#fff!important;
-    padding:7px 11px!important;
-    border-radius:8px!important;
-    font-size:12px!important;
-    font-weight:900!important;
-    white-space:nowrap!important;
-    opacity:0!important;
-    visibility:hidden!important;
-    pointer-events:none!important;
-    transition:.18s ease!important;
-    box-shadow:0 8px 18px rgba(0,0,0,.35)!important;
-    z-index:1000000!important;
-  }
-
-  .bdr-menu-btn:hover::after{
-    opacity:1!important;
-    visibility:visible!important;
-    transform:translate(8px,-50%)!important;
   }
 }
 
-/* =========================================================
-   TABLET / CELULAR - DOCK INFERIOR CENTRALIZADO
-   Até 1200px para pegar tablet deitado também.
-========================================================= */
+/* TABLET / CELULAR */
 @media(max-width:1200px){
-  :root{--sidebar-width:0px}
 
-  html,body{
-    width:100%!important;
-    max-width:100%!important;
-    overflow-x:hidden!important;
-    overflow-y:auto!important;
-    zoom:1!important;
-  }
-
-  body{
-    padding-bottom:calc(96px + env(safe-area-inset-bottom))!important;
-  }
-
-  .app-layout,.bdr-app{
-    display:block!important;
-    min-height:100vh!important;
-    height:auto!important;
-    overflow:visible!important;
+  :root{
+    --sidebar-width:0px!important;
   }
 
   .bdr-sidebar{
     position:fixed!important;
-    left:50%!important;
-    right:auto!important;
+    left:0!important;
+    right:0!important;
+    bottom:0!important;
     top:auto!important;
-    bottom:10px!important;
-    transform:translateX(-50%)!important;
+    transform:none!important;
 
-    width:auto!important;
-    max-width:calc(100vw - 18px)!important;
-    height:72px!important;
-    min-height:72px!important;
-    max-height:72px!important;
+    width:100%!important;
+    min-width:100%!important;
+    max-width:100%!important;
 
-    padding:8px 10px calc(8px + env(safe-area-inset-bottom))!important;
+    height:74px!important;
+    min-height:74px!important;
+    max-height:74px!important;
+
+    padding:8px 12px calc(8px + env(safe-area-inset-bottom))!important;
+
     display:flex!important;
     flex-direction:row!important;
-    justify-content:center!important;
     align-items:center!important;
+    justify-content:center!important;
 
     overflow-x:auto!important;
     overflow-y:hidden!important;
-    scrollbar-width:none!important;
-    -webkit-overflow-scrolling:touch!important;
+
+    background:linear-gradient(180deg,#0f2238,#111827)!important;
+    border-radius:18px 18px 0 0!important;
+    box-shadow:0 -8px 24px rgba(0,0,0,.18)!important;
 
     z-index:999999!important;
-    border-radius:22px!important;
-    box-shadow:0 12px 35px rgba(0,0,0,.30)!important;
+    scrollbar-width:none!important;
+    -webkit-overflow-scrolling:touch!important;
   }
 
-  .bdr-sidebar::-webkit-scrollbar{display:none!important;height:0!important;}
-  .bdr-brand,.bdr-menu-footer{display:none!important;}
+  .bdr-sidebar::-webkit-scrollbar{
+    display:none!important;
+    height:0!important;
+  }
+
+  .bdr-brand,
+  .bdr-menu-footer{
+    display:none!important;
+  }
 
   .bdr-menu{
     display:flex!important;
@@ -205,10 +109,9 @@ table{width:100%;max-width:100%;border-collapse:collapse}
     align-items:center!important;
     justify-content:center!important;
     gap:8px!important;
-    width:max-content!important;
-    min-width:max-content!important;
-    max-width:none!important;
-    margin:0 auto!important;
+    width:100%!important;
+    min-width:100%!important;
+    margin:0!important;
     padding:0!important;
   }
 
@@ -216,159 +119,17 @@ table{width:100%;max-width:100%;border-collapse:collapse}
     width:48px!important;
     height:48px!important;
     min-width:48px!important;
-    border-radius:15px!important;
+    min-height:48px!important;
+    border-radius:14px!important;
     flex:0 0 auto!important;
-    transform:none!important;
   }
 
-  .bdr-menu-btn:hover{transform:none!important;}
-  .bdr-menu-btn::after{display:none!important;}
-  .bdr-menu-icon i{font-size:18px!important;}
-
-  .bdr-main,.content{
-    margin-left:0!important;
-    width:100%!important;
-    padding:10px 10px calc(112px + env(safe-area-inset-bottom))!important;
-    min-height:100vh!important;
-    height:auto!important;
-    overflow:visible!important;
-  }
-
-  .bdr-topbar,.hero,.relatorio-topbar{
-    grid-template-columns:1fr!important;
-    flex-direction:column!important;
-    align-items:flex-start!important;
-    gap:8px!important;
-    width:100%!important;
-    border-radius:14px!important;
-    padding:12px!important;
-    margin-bottom:10px!important;
-  }
-
-  .bdr-top-actions,.dash-user,.hero-right,.relatorio-actions{
-    width:100%!important;
-    justify-content:space-between!important;
-    text-align:left!important;
-    flex-wrap:wrap!important;
-  }
-
-  .bdr-topbar-title,.hero-title,.relatorio-title{
-    font-size:17px!important;
-    line-height:1.25!important;
-  }
-
-  .bdr-topbar-sub,.hero-sub,.relatorio-sub{
-    font-size:11px!important;
-    line-height:1.35!important;
-  }
-
-  .notif-dropdown,.user-dropdown,.dropdown-user{
-    position:fixed!important;
-    left:10px!important;
-    right:10px!important;
-    top:75px!important;
-    width:auto!important;
-    max-width:none!important;
-    z-index:1000000!important;
-  }
-
-  .dashboard-grid,.chart-grid,.chart-grid-3,.grid,.filter-grid,
-  .usuario-form-grid,.usuario-filtro-grid,.empresa-form-grid,.empresa-filtro-grid,
-  .quick-filters,.sienge-grid{
-    grid-template-columns:1fr!important;
-    gap:8px!important;
-  }
-
-  .kpi-grid,.kpi-row,.resumo-grid,.usuario-master-resumo,.money-grid,
-  .estoque-niveis,.kpi-relatorio-grid{
-    grid-template-columns:repeat(2,1fr)!important;
-    gap:8px!important;
-  }
-
-  .lista-header,.mov-header,.usuario-header,.empresa-header{display:none!important;}
-
-  .linha-patrimonio,.mov-linha,.usuario-linha,.empresa-linha,.pedido-top,
-  .cart-item,.sienge-row,.row,.row-pat,.row-mov,.row-top{
-    grid-template-columns:1fr!important;
-    gap:6px!important;
-    padding:12px!important;
-    min-height:auto!important;
-  }
-
-  .pat-nome,.pat-local,.pat-tipo,.mov-info,.mov-patrimonio,
-  .usuario-info,.usuario-nome,.empresa-nome,.empresa-info,.row span{
-    white-space:normal!important;
-    overflow:visible!important;
-    text-overflow:unset!important;
-  }
-
-  .status,.badge,.pat-status,.usuario-status,.empresa-status{
-    width:max-content!important;
-    max-width:100%!important;
-    white-space:normal!important;
-  }
-
-  input,select,textarea,button{
-    min-height:42px!important;
-    font-size:16px!important;
-  }
-
-  .card,.card-light{
-    border-radius:14px!important;
-    padding:10px!important;
-    margin-bottom:10px!important;
-    transform:none!important;
-  }
-
-  .card:hover,.card-light:hover{transform:none!important;}
-
-  .chart-box,.chart-box.small,.chart-box.mini,
-  .chart-card canvas,.chart-card.big canvas{
-    height:230px!important;
-  }
-}
-
-/* Celular muito estreito: continua embaixo, centraliza quando couber e permite arrastar quando tiver muitos ícones */
-@media(max-width:520px){
-  .bdr-sidebar{
-    left:0!important;
-    right:0!important;
-    bottom:0!important;
-    transform:none!important;
-    width:100%!important;
-    max-width:100%!important;
-    height:72px!important;
-    border-radius:18px 18px 0 0!important;
-    justify-content:flex-start!important;
-  }
-
-  .bdr-menu{
-    min-width:100%!important;
-    width:max-content!important;
-    justify-content:center!important;
-  }
-
-  .bdr-menu-btn{
-    width:44px!important;
-    height:44px!important;
-    min-width:44px!important;
-  }
-
-  .kpi-grid,.kpi-row,.resumo-grid,.money-grid{
-    grid-template-columns:1fr!important;
-  }
-}
-
-@media(display-mode:standalone){
-  body{overscroll-behavior-y:auto!important;}
-  .bdr-main,.content{min-height:100vh;}
-}
-
-@media print{
-  .bdr-sidebar,.bdr-topbar,.hero,.relatorio-topbar,.notif-wrap,.dash-user,.bdr-menu,.form-actions,button{
+  .bdr-menu-btn::after,
+  .bdr-menu-btn::before{
     display:none!important;
   }
-  .bdr-main,.content{margin:0!important;width:100%!important;padding:0!important;}
-  body{background:#fff!important;zoom:1!important;}
-  .card,.card-light{box-shadow:none!important;border:1px solid #000!important;}
+
+  .bdr-menu-icon i{
+    font-size:18px!important;
+  }
 }
