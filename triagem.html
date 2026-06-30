@@ -12,10 +12,7 @@
 <link rel="icon" href="data:,">
 
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
-<link rel="stylesheet" href="./CSS/responsivo-bdr.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css">
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="./JS/supabaseClient.js"></script>
 <script src="./JS/auth.js"></script>
@@ -115,9 +112,35 @@ input,select,textarea{width:100%;padding:9px;border:1px solid #d1d5db;border-rad
 .triagem-aviso-empresa{background:#eff6ff;border-left:4px solid #2563eb;border-radius:10px;padding:8px;color:#1e3a8a;font-size:12px;font-weight:800;}
 @media(max-width:800px){.triagem-modal-grid,.triagem-modo-box,.triagem-modal-actions{grid-template-columns:1fr;}}
 
+
+/* =========================================================
+   BDR FIX LOCAL - ALINHAMENTO IGUAL ENTRADA
+   Mantém a página dentro da largura padrão do layout/menu.
+========================================================= */
+@media(min-width:1201px){
+  .bdr-main,
+  .usuarios-premium-main,
+  main,
+  .content{
+    box-sizing:border-box!important;
+    overflow-x:hidden!important;
+  }
+}
+
+@media(max-width:1200px){
+  .bdr-main,
+  .usuarios-premium-main,
+  main,
+  .content{
+    margin-left:0!important;
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:hidden!important;
+  }
+}
+
 </style>
-<link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260626-1">
-<link rel="stylesheet" href="./CSS/bdr-menu-mobile-dock-fix-final.css?v=20260629-1">
+<link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260629-layout-limpo">
 </head>
 
 <body>
