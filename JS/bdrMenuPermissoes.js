@@ -26,6 +26,7 @@
     PATRIMONIO: "patrimonio.html",
     EXPEDICAO: "expedicao.html",
     RELATORIOS: "relatorios.html",
+    MOVIMENTACOES: "movimentacoes.html",
     EMPRESAS: "empresa.html",
     USUARIOS: "usuarios.html",
     CONFIGURACOES: "configuracoes.html"
@@ -39,7 +40,7 @@
     "patrimonio.html": "PATRIMONIO_VER",
     "expedicao.html": "EXPEDICAO_VER",
     "relatorios.html": "RELATORIOS_VER",
-    "movimentacoes.html": "RELATORIOS_VER",
+    "movimentacoes.html": "MOVIMENTACOES_VER",
     "empresa.html": "EMPRESAS_VER",
     "usuarios.html": "USUARIOS_VER",
     "configuracoes.html": "CONFIGURACOES_VER",
@@ -55,6 +56,7 @@
     PATRIMONIO: "PATRIMONIO_VER",
     EXPEDICAO: "EXPEDICAO_VER",
     RELATORIOS: "RELATORIOS_VER",
+    MOVIMENTACOES: "MOVIMENTACOES_VER",
     EMPRESAS: "EMPRESAS_VER",
     USUARIOS: "USUARIOS_VER",
     CONFIGURACOES: "CONFIGURACOES_VER"
@@ -68,6 +70,7 @@
     "TRIAGEM_VER",
     "EXPEDICAO_VER",
     "RELATORIOS_VER",
+    "MOVIMENTACOES_VER",
     "EMPRESAS_VER",
     "USUARIOS_VER",
     "CONFIGURACOES_VER"
@@ -81,6 +84,7 @@
     PATRIMONIO: "PATRIMONIO_VER",
     EXPEDICAO: "EXPEDICAO_VER",
     RELATORIOS: "RELATORIOS_VER",
+    MOVIMENTACOES: "MOVIMENTACOES_VER",
     EMPRESAS: "EMPRESAS_VER",
     USUARIOS: "USUARIOS_VER",
     CONFIGURACOES: "CONFIGURACOES_VER",
@@ -269,7 +273,7 @@
       ["patrimonio.html", "PATRIMONIO_VER"],
       ["expedicao.html", "EXPEDICAO_VER"],
       ["relatorios.html", "RELATORIOS_VER"],
-      ["movimentacoes.html", "RELATORIOS_VER"],
+      ["movimentacoes.html", "MOVIMENTACOES_VER"],
       ["empresa.html", "EMPRESAS_VER"],
       ["usuarios.html", "USUARIOS_VER"],
       ["configuracoes.html", "CONFIGURACOES_VER"],
@@ -288,6 +292,7 @@
     if(tip.includes("PATRIMONIO")) return "PATRIMONIO_VER";
     if(tip.includes("EXPEDICAO")) return "EXPEDICAO_VER";
     if(tip.includes("RELATORIO")) return "RELATORIOS_VER";
+    if(tip.includes("MOVIMENTACAO") || tip.includes("MOVIMENTACOES")) return "MOVIMENTACOES_VER";
     if(tip.includes("EMPRESA")) return "EMPRESAS_VER";
     if(tip.includes("USUARIO")) return "USUARIOS_VER";
     if(tip.includes("CONFIG")) return "CONFIGURACOES_VER";

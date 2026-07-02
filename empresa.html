@@ -495,7 +495,6 @@ button,
 
 <script src="./JS/bdrMenuPermissoes.js"></script>
 <script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260629-2"></script>
-<script src="./JS/bdr-menu-permissoes-hard-fix.js?v=20260629-1"></script>
 </head>
 
 <body>
@@ -554,13 +553,27 @@ button,
     </span>
   </button>
 
+  <!-- MOVIMENTAÇÕES -->
+  <button data-permissao="MOVIMENTACOES_VER" class="bdr-menu-btn" data-tip="Movimentações" onclick="ir('movimentacoes.html')">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-right-left"></i>
+    </span>
+  </button>
+
+
   <!-- EXPEDIÇÃO -->
    <button data-permissao="EXPEDICAO_VER" class="bdr-menu-btn " data-tip="Expedição" onclick="ir('expedicao.html')">
      <span class="bdr-menu-icon">
        <i class="fa-solid fa-truck-fast"></i>
       </span>
     </button>
-
+    
+  <!-- MOVIMENTAÇÕES -->
+  <button data-permissao="MOVIMENTACOES_VER" class="bdr-menu-btn" data-tip="Movimentações" onclick="ir('movimentacoes.html')">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-right-left"></i>
+    </span>
+  </button>
   
   <!-- RELATÓRIOS -->
   <button data-permissao="RELATORIOS_VER" class="bdr-menu-btn" data-tip="Relatórios" onclick="ir('relatorios.html')">
@@ -584,8 +597,6 @@ button,
   </button>
 
 </nav>
-
-  </nav>
 </aside>
 
   <main class="bdr-main">
@@ -932,24 +943,51 @@ async function atualizarEmpresaPadraoBDR(dados){
 }
 
 async function salvarOuAtualizarObraDaEmpresa(empresaId, dados){
-  const nomeObra = dados.setor_obra;
+  const nomeObra = String(dados.setor_obra || "").trim();
 
-  const { data: obraAtual, error: erroBusca } = await db()
+  if(!empresaId){
+    throw new Error("Empresa não identificada para vincular a obra.");
+  }
+
+  if(!nomeObra){
+    throw new Error("Informe o nome da obra/setor.");
+  }
+
+  const codigoObra = String(dados.codigo_sienge_obra || dados.codigo_empresa || "").trim();
+
+  /*
+    NÃO usar .single() ou .maybeSingle() aqui.
+    Quando existem obras parecidas, o Supabase pode retornar mais de uma linha e dar:
+    Cannot coerce the result to a single JSON object.
+  */
+  let query = db()
     .from("obras")
     .select("*")
     .eq("empresa_id", empresaId)
-    .ilike("nome", nomeObra)
-    .maybeSingle();
+    .limit(1);
+
+  if(codigoObra){
+    query = query.eq("codigo_obra", codigoObra);
+  }else{
+    query = query.ilike("nome", nomeObra);
+  }
+
+  const { data: obrasEncontradas, error: erroBusca } = await query;
 
   if(erroBusca) throw erroBusca;
 
+  const obraAtual = Array.isArray(obrasEncontradas) && obrasEncontradas.length
+    ? obrasEncontradas[0]
+    : null;
+
   const payloadObra = {
-    empresa_id: empresaId,
+    empresa_id: Number(empresaId),
     nome: nomeObra,
-    codigo_obra: dados.codigo_sienge_obra || dados.codigo_empresa,
-    codigo_sienge: dados.codigo_sienge_obra || null,
-    tabela_insumo: Number(dados.tabela_insumo || EMPRESA_PADRAO_BDR.tabela_insumo),
-    ativa: true
+    codigo_obra: codigoObra || null,
+    codigo_sienge: String(dados.codigo_sienge_obra || "").trim() || null,
+    tabela_insumo: Number(dados.tabela_insumo || EMPRESA_PADRAO_BDR.tabela_insumo || 2),
+    ativa: true,
+    ativo: true
   };
 
   if(obraAtual?.id){
@@ -966,12 +1004,11 @@ async function salvarOuAtualizarObraDaEmpresa(empresaId, dados){
     .from("obras")
     .insert([payloadObra])
     .select()
-    .single();
+    .limit(1);
 
   if(error) throw error;
-  return obraNova?.id || null;
+  return Array.isArray(obraNova) && obraNova[0] ? obraNova[0].id : null;
 }
-
 
 function ir(pagina){
   window.location.href = pagina;
@@ -1920,8 +1957,6 @@ window.addEventListener("load", () => {
   carregarEmpresas();
 });
 </script>
-
-<script src="./JS/bdrSininhoDashboard.js"></script>
 <!-- =========================================================
      BDR OFFLINE QUEUE
      Referência:
@@ -1931,5 +1966,7 @@ window.addEventListener("load", () => {
 ========================================================= -->
 <script src="./JS/offlineQueue.js"></script>
 <script src="./JS/bdrUppercase.js"></script>
+
+<script src="./JS/bdrNotificacoes.js?v=20260702-global-final"></script>
 </body>
 </html>

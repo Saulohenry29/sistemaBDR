@@ -899,6 +899,13 @@ button,
       </span>
     </button>
 
+    <!-- MOVIMENTAÇÕES -->
+  <button data-permissao="MOVIMENTACOES_VER" class="bdr-menu-btn" data-tip="Movimentações" onclick="ir('movimentacoes.html')">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-right-left"></i>
+    </span>
+  </button>
+
   
   <!-- RELATÓRIOS -->
   <button class="bdr-menu-btn active" data-tip="Relatórios" onclick="ir('relatorios.html')" data-permissao="RELATORIOS_VER">
@@ -3128,12 +3135,12 @@ carregarDados();
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="./JS/sienge-insumos-fallback.js"></script>
 <script src="./JS/sienge.js"></script>
-<script src="./JS/bdrSininhoDashboard.js"></script>
-
 <script>
 window.addEventListener("load", () => {
   aplicarPermissoesRelatoriosBDR();
 });
 </script>
+
+<script src="./JS/bdrNotificacoes.js?v=20260702-global-final"></script>
 </body>
 </html>

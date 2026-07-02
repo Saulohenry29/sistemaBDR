@@ -201,6 +201,12 @@ input,select,textarea{width:100%;padding:9px;border:1px solid #d1d5db;border-rad
       </span>
     </button>
 
+    <!-- MOVIMENTAÇÕES -->
+  <button data-permissao="MOVIMENTACOES_VER" class="bdr-menu-btn" data-tip="Movimentações" onclick="ir('movimentacoes.html')">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-right-left"></i>
+    </span>
+  </button>  
   
   <!-- RELATÓRIOS -->
   <button data-permissao="RELATORIOS" class="bdr-menu-btn" data-tip="Relatórios" onclick="ir('relatorios.html')">
@@ -418,7 +424,7 @@ function statusPedidoTexto(status){
 }
 async function gerarNotificacoesReais(){
   // Desativado para não encher o sininho com vários pedidos automaticamente.
-  // O sininho principal fica com JS/bdrSininhoDashboard.js.
+  // O sininho principal fica com JS/bdrNotificacoes.js.
   atualizarNotificacoes([]);
   return;
 
@@ -484,7 +490,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Sininho simples:
   // Não gera lista automática de pedidos aqui.
-  // Deixa o JS/bdrSininhoDashboard.js cuidar do sininho como antes.
+  // Deixa o JS/bdrNotificacoes.js cuidar do sininho como antes.
   if(typeof atualizarNotificacoes === "function"){
     atualizarNotificacoes([]);
   }
@@ -492,7 +498,7 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 
 <!-- Notificações já estão neste HTML. Evita conflito/consulta duplicada. -->
-<script src="./JS/bdrSininhoDashboard.js"></script>
+<script src="./JS/bdrNotificacoes.js"></script>
 <!-- =========================================================
      BDR OFFLINE QUEUE
      Referência:

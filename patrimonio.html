@@ -292,6 +292,13 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
       </span>
     </button>
 
+    <!-- MOVIMENTAÇÕES -->
+  <button data-permissao="MOVIMENTACOES_VER" class="bdr-menu-btn" data-tip="Movimentações" onclick="ir('movimentacoes.html')">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-right-left"></i>
+    </span>
+  </button>  
+
   
   <!-- RELATÓRIOS -->
   <button data-permissao="RELATORIOS_VER" class="bdr-menu-btn" data-tip="Relatórios" onclick="ir('relatorios.html')">
@@ -437,7 +444,7 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
 
   <br>
 
-  <button class="btn-ok" onclick="gerarPatrimonio()">Gerar Patrimônio</button>
+  <button id="btnGerarPatrimonio" class="btn-ok" onclick="gerarPatrimonio()">Gerar Patrimônio</button>
 </div>
 
 <div class="card">
@@ -445,6 +452,10 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
 
   <div class="grid">
     <input id="busca" placeholder="Buscar por nome, código, placa, RENAVAM, chassi, obra, marca..." oninput="renderizarPatrimonios()">
+
+    <select id="filtroObra" onchange="renderizarPatrimonios()">
+      <option value="">Todas as obras/setores</option>
+    </select>
 
     <select id="filtroStatus" onchange="renderizarPatrimonios()">
       <option value="">Todos os status</option>
@@ -649,7 +660,6 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
 <script src="./JS/offlineDB.js"></script>
 <script src="./JS/bdrSyncEngine.js"></script>
 <script src="./JS/bdrSyncCenter.js"></script>
-<script src="./JS/bdrSininhoDashboard.js"></script>
 <script>
 let obras = [];
 let patrimonios = [];
@@ -1028,6 +1038,45 @@ async function bdrProximoSequencialObra(obra){
   return maior + 1;
 }
 
+
+function bdrValorPatrimonioValido(){
+  const valorNumero = moedaParaNumero(valor("valor_bem"));
+  return Number.isFinite(Number(valorNumero)) && Number(valorNumero) > 0;
+}
+
+function bdrSetGerandoPatrimonio(gerando){
+  const btn = document.getElementById("btnGerarPatrimonio");
+  if(!btn) return;
+  btn.disabled = !!gerando;
+  btn.style.opacity = gerando ? "0.65" : "";
+  btn.style.cursor = gerando ? "not-allowed" : "";
+  btn.innerText = gerando ? "Salvando patrimônio..." : "Gerar Patrimônio";
+}
+
+function preencherFiltroObraPatrimonio(){
+  const filtro = document.getElementById("filtroObra");
+  if(!filtro) return;
+
+  const valorAtual = filtro.value;
+  filtro.innerHTML = `<option value="">Todas as obras/setores</option>`;
+
+  (obras || []).forEach(o => {
+    const texto = `${o.codigo_obra || "-"} - ${o.nome || "-"}`;
+    filtro.innerHTML += `<option value="${o.id}">${texto}</option>`;
+  });
+
+  const usuario = usuarioAtual();
+  if(usuario && !usuarioPodeVerTodasObras() && usuario.obra_id){
+    filtro.value = usuario.obra_id;
+    filtro.disabled = true;
+    return;
+  }
+
+  if(valorAtual && [...filtro.options].some(op => op.value === valorAtual)){
+    filtro.value = valorAtual;
+  }
+}
+
 function formatarMoeda(valor){
   if(valor === null || valor === undefined || valor === ""){
     return "R$ 0,00";
@@ -1071,6 +1120,8 @@ async function carregarObras(){
       select.innerHTML += `<option value="${o.id}">${texto}</option>`;
       novaSelect.innerHTML += `<option value="${o.id}">${texto}</option>`;
     });
+
+    preencherFiltroObraPatrimonio();
 
     const usuario = usuarioAtual();
 
@@ -1500,6 +1551,11 @@ async function validarDuplicidadeCampoPatrimonio(campo){
 
 async function gerarPatrimonio(){
 
+  if(window.__BDR_PATRIMONIO_SALVANDO__){
+    alert("Já existe um cadastro de patrimônio sendo salvo. Aguarde finalizar.");
+    return;
+  }
+
   if(!usuarioTemPermissao("PATRIMONIO_CRIAR")){
     alert("Você não tem permissão para cadastrar patrimônio.");
     return;
@@ -1527,6 +1583,16 @@ async function gerarPatrimonio(){
     return;
   }
 
+  if(!bdrValorPatrimonioValido()){
+    alert("🚫 Informe o valor do patrimônio.\n\nO sistema não vai mais aceitar patrimônio sem valor ou com valor R$ 0,00.");
+    const campoValor = document.getElementById("valor_bem");
+    if(campoValor){ campoValor.focus(); campoValor.select?.(); }
+    return;
+  }
+
+  window.__BDR_PATRIMONIO_SALVANDO__ = true;
+  bdrSetGerandoPatrimonio(true);
+
   const dadosParaValidarDuplicidade = {
     nome_bem,
     tipo_item,
@@ -1540,7 +1606,11 @@ async function gerarPatrimonio(){
   };
 
   const podeContinuarDuplicidade = await bdrVerificarDuplicidadePatrimonio(dadosParaValidarDuplicidade, { confirmar:true });
-  if(!podeContinuarDuplicidade) return;
+  if(!podeContinuarDuplicidade){
+    window.__BDR_PATRIMONIO_SALVANDO__ = false;
+    bdrSetGerandoPatrimonio(false);
+    return;
+  }
 
 let sequencial = 1;
 let codigo_qr = "";
@@ -1551,6 +1621,8 @@ try{
 }catch(e){
   console.error(e);
   alert(e.message || "Não foi possível gerar o código do patrimônio.");
+  window.__BDR_PATRIMONIO_SALVANDO__ = false;
+  bdrSetGerandoPatrimonio(false);
   return;
 }
 
@@ -1613,6 +1685,8 @@ usuario_cadastro:
   if(resp.error){
     console.error(resp.error);
     alert(resp.error.message || "Erro ao salvar patrimônio.");
+    window.__BDR_PATRIMONIO_SALVANDO__ = false;
+    bdrSetGerandoPatrimonio(false);
     return;
   }
 
@@ -1641,6 +1715,8 @@ Código: ${codigo_qr}`);
   }
   limparFormularioCadastro();
   renderizarPatrimonios();
+  window.__BDR_PATRIMONIO_SALVANDO__ = false;
+  bdrSetGerandoPatrimonio(false);
 }
 function limparFormularioCadastro(){
   document.getElementById("nome_bem").value = "";
@@ -1763,6 +1839,7 @@ function renderizarPatrimonios(){
   const busca = normalizarBuscaPatrimonio(buscaOriginal);
   const filtroStatus = valor("filtroStatus");
   const filtroTipo = valor("filtroTipo");
+  const filtroObra = valor("filtroObra");
 
   const lista = document.getElementById("lista");
   lista.innerHTML = "";
@@ -1771,6 +1848,7 @@ function renderizarPatrimonios(){
     const textoBusca = normalizarBuscaPatrimonio(textoBuscaPatrimonio(p));
 
     return (!busca || textoBusca.includes(busca)) &&
+      (!filtroObra || String(p.obra_id || "") === String(filtroObra)) &&
       (!filtroStatus || p.status === filtroStatus) &&
       (!filtroTipo || p.tipo_item === filtroTipo);
   });
@@ -3048,5 +3126,7 @@ setTimeout(() => {
   if(typeof aplicarPermissoesTela === "function") aplicarPermissoesTela();
 }, 1200);
 </script>
+
+<script src="./JS/bdrNotificacoes.js?v=20260702-global-final"></script>
 </body>
 </html>

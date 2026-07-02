@@ -836,13 +836,6 @@ function toggleMenuUsuario(event){
   document.getElementById("notifDropdown")?.classList.remove("ativo");
 }
 
-function toggleNotificacoes(event){
-  if(event) event.stopPropagation();
-
-  document.getElementById("notifDropdown")?.classList.toggle("ativo");
-  document.getElementById("dropdownUser")?.classList.remove("ativo");
-}
-
 function fecharMenusTopo(){
   document.getElementById("dropdownUser")?.classList.remove("ativo");
   document.getElementById("notifDropdown")?.classList.remove("ativo");
@@ -851,205 +844,18 @@ function fecharMenusTopo(){
 document.addEventListener("click", fecharMenusTopo);
 
 /* =========================================================
-   SININHO REAL DE PEDIDOS - PADRÃO BDR
-   Lê pedidos_retirada e escuta INSERT/UPDATE via Supabase Realtime.
+   TOPO DA PÁGINA
+   O sininho agora é 100% controlado por JS/bdrNotificacoes.js
 ========================================================= */
-const STATUS_PEDIDOS_ABERTOS = [
-  "AGUARDANDO_AUTORIZACAO",
-  "EM_SEPARACAO",
-  "AGUARDANDO_RETIRADA",
-  "EM_TRANSITO",
-  "AGUARDANDO_CONFERENCIA"
-];
-
-let notificacoesPedidos = [];
-let canalPedidosNotificacoes = null;
-
-function dataBRTopo(data){
-  if(!data) return "";
-  const d = new Date(String(data).replace(" ","T"));
-  return isNaN(d.getTime()) ? String(data) : d.toLocaleString("pt-BR");
-}
-
-function chaveNotificacao(n){
-  return `${n.tipo || "PEDIDO"}-${n.id || ""}-${n.status || ""}`;
-}
-
-function notificacoesLidas(){
-  try{
-    return JSON.parse(localStorage.getItem("bdr_notificacoes_lidas") || "[]");
-  }catch(e){
-    return [];
-  }
-}
-
-function salvarNotificacoesLidas(lista){
-  localStorage.setItem("bdr_notificacoes_lidas", JSON.stringify(lista || []));
-}
-
-function pedidoVisivelParaUsuario(pedido, usuario){
-  const perfil = String(usuario?.perfil || "").toUpperCase();
-
-  if(perfil === "MASTER" || perfil === "ADMIN" || perfil === "ALMOXARIFE"){
-    return true;
-  }
-
-  return (
-    String(pedido.solicitante || "") === String(usuario?.nome || "") ||
-    String(pedido.usuario_criacao || "") === String(usuario?.nome || "") ||
-    String(pedido.obra_id || "") === String(usuario?.obra_id || "") ||
-    String(pedido.obra_destino_id || "") === String(usuario?.obra_id || "")
-  );
-}
-
-function abrirPedidoNotificacao(id){
-  const chaves = notificacoesPedidos.map(chaveNotificacao);
-  salvarNotificacoesLidas([...new Set([...notificacoesLidas(), ...chaves])]);
-  localStorage.setItem("bdr_pedido_foco", String(id || ""));
-  window.location.href = "pedidos.html";
-}
-
-function atualizarNotificacoesPedidos(lista){
-  const badge = document.getElementById("notifBadge");
-  const box = document.getElementById("notifLista");
-
-  if(!badge || !box) return;
-
-  const lidas = new Set(notificacoesLidas());
-  const naoLidas = lista.filter(n => !lidas.has(chaveNotificacao(n)));
-
-  badge.innerText = naoLidas.length > 9 ? "9+" : naoLidas.length;
-  badge.style.display = naoLidas.length > 0 ? "inline-flex" : "none";
-
-  if(lista.length === 0){
-    box.innerHTML = `<div class="notif-item">Nenhuma notificação no momento.</div>`;
-    return;
-  }
-
-  box.innerHTML = `
-    <div class="notif-item" onclick="marcarTodasNotificacoesLidas(event)">
-      <strong>✅ Marcar todas como lidas</strong>
-      <span>Clique aqui para limpar o contador do sininho.</span>
-    </div>
-    ${lista.map(n => {
-      const lida = lidas.has(chaveNotificacao(n));
-      return `
-        <div class="notif-item" onclick="abrirPedidoNotificacao(${Number(n.id) || 0})" style="${lida ? "opacity:.62" : ""}">
-          <strong>${n.titulo}</strong>
-          <span>${n.texto}</span>
-          <small style="display:block;margin-top:4px;color:#6b7280;">${n.data || ""}</small>
-        </div>
-      `;
-    }).join("")}
-  `;
-}
-
-function marcarTodasNotificacoesLidas(event){
-  if(event) event.stopPropagation();
-
-  const chaves = notificacoesPedidos.map(chaveNotificacao);
-  salvarNotificacoesLidas([...new Set([...notificacoesLidas(), ...chaves])]);
-  atualizarNotificacoesPedidos(notificacoesPedidos);
-}
-
-async function gerarNotificacoesPedidos(){
-  const banco = db();
-
-  if(!banco){
-    atualizarNotificacoesPedidos([]);
-    return;
-  }
-
-  try{
-    const usuario = usuarioAtualTopo();
-
-    const { data: pedidos, error } = await banco
-      .from("pedidos_retirada")
-      .select("*")
-      .order("id", { ascending:false })
-      .limit(40);
-
-    if(error){
-      console.warn("Erro ao gerar notificações de pedidos:", error.message);
-      atualizarNotificacoesPedidos([]);
-      return;
-    }
-
-    let base = (pedidos || []).filter(p => pedidoVisivelParaUsuario(p, usuario));
-
-    const abertos = base.filter(p =>
-      STATUS_PEDIDOS_ABERTOS.includes(String(p.status || ""))
-    );
-
-    const recentes = base.slice(0, 10);
-
-    notificacoesPedidos = [];
-
-    abertos.forEach(p => {
-      notificacoesPedidos.push({
-        tipo:"PEDIDO_ABERTO",
-        id:p.id,
-        status:p.status,
-        titulo:"📝 Pedido em andamento",
-        texto:`${p.codigo || "PED-" + String(p.id).padStart(4,"0")} • ${p.obra_nome || "-"} • ${p.status || "-"}`,
-        data:dataBRTopo(p.atualizado_em || p.updated_at || p.criado_em || p.created_at)
-      });
-    });
-
-    recentes
-      .filter(p => !abertos.some(a => Number(a.id) === Number(p.id)))
-      .forEach(p => {
-        notificacoesPedidos.push({
-          tipo:"PEDIDO_RECENTE",
-          id:p.id,
-          status:p.status,
-          titulo:"🔔 Atualização de pedido",
-          texto:`${p.codigo || "PED-" + String(p.id).padStart(4,"0")} • ${p.obra_nome || "-"} • ${p.status || "-"}`,
-          data:dataBRTopo(p.atualizado_em || p.updated_at || p.criado_em || p.created_at)
-        });
-      });
-
-    atualizarNotificacoesPedidos(notificacoesPedidos);
-
-  }catch(e){
-    console.warn("Erro ao gerar notificações de pedidos:", e);
-    atualizarNotificacoesPedidos([]);
-  }
-}
-
-function iniciarRealtimePedidos(){
-  const banco = db();
-
-  if(!banco || canalPedidosNotificacoes) return;
-
-  canalPedidosNotificacoes = banco
-    .channel("bdr-entrada-pedidos-notificacoes")
-    .on("postgres_changes",
-      { event:"INSERT", schema:"public", table:"pedidos_retirada" },
-      async () => { await gerarNotificacoesPedidos(); }
-    )
-    .on("postgres_changes",
-      { event:"UPDATE", schema:"public", table:"pedidos_retirada" },
-      async () => { await gerarNotificacoesPedidos(); }
-    )
-    .on("postgres_changes",
-      { event:"INSERT", schema:"public", table:"historico_pedidos_retirada" },
-      async () => { await gerarNotificacoesPedidos(); }
-    )
-    .subscribe();
-}
-
 document.addEventListener("DOMContentLoaded", () => {
   carregarUsuarioTopo();
-  gerarNotificacoesPedidos();
-  iniciarRealtimePedidos();
 
   if(document.getElementById("data_recebimento") && !document.getElementById("data_recebimento").value){
     document.getElementById("data_recebimento").value = new Date().toISOString().slice(0,10);
   }
 });
 </script>
-<script src="./JS/bdrSininhoDashboard.js"></script>
+<script src="./JS/bdrNotificacoes.js?v=20260702-global-final"></script>
 <!-- =========================================================
      BDR OFFLINE QUEUE
      Referência:

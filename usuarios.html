@@ -11,6 +11,7 @@
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
 <link rel="stylesheet" href="./CSS/bdr-owner-core.css">
+<link rel="stylesheet" href="./CSS/bdr-usuarios-compacto.css?v=20260701">
 <title>BDR - Usuários</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -18,6 +19,7 @@
 <script src="./JS/supabaseClient.js"></script>
 <script src="./JS/auth.js"></script>
 <script src="./JS/bdrCore.js"></script>
+<script src="./JS/bdrAcessoObras.js?v=20260701"></script>
 <script src="./JS/bdrMenuPermissoes.js"></script>
 <script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260629-final-sem-piscar"></script>
 
@@ -252,6 +254,13 @@ if(typeof verificarLogin === "function"){ verificarLogin(); }
       <span class="bdr-menu-icon"><i class="fa-solid fa-truck-fast"></i></span>
     </button>
 
+      <!-- MOVIMENTAÇÕES -->
+  <button data-permissao="MOVIMENTACOES_VER" class="bdr-menu-btn" data-tip="Movimentações" onclick="ir('movimentacoes.html')">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-right-left"></i>
+    </span>
+  </button>
+
     <button class="bdr-menu-btn" data-permissao="RELATORIOS_VER" data-tip="Relatórios" onclick="ir('relatorios.html')">
       <span class="bdr-menu-icon"><i class="fa-regular fa-file-lines"></i></span>
     </button>
@@ -361,7 +370,7 @@ if(typeof verificarLogin === "function"){ verificarLogin(); }
     </section>
 
     <section class="master-strip">
-      <div class="master-icon" onclick="bdrOwnerClickUsuarios()" style="cursor:pointer;"><i class="fa-solid fa-shield-halved"></i></div>
+      <div class="master-icon" onclick="bdrCliqueSecretoOwner(event)" style="cursor:pointer;"><i class="fa-solid fa-shield-halved"></i></div>
       <div>
         <h2>Central de Permissões por Usuário</h2>
         <p>Clique em um usuário na lista, marque as permissões e salve. Não precisa editar dados pessoais.</p>
@@ -375,7 +384,7 @@ if(typeof verificarLogin === "function"){ verificarLogin(); }
           <i class="fa-solid fa-user-plus"></i> Novo usuário
         </button>
 
-        <button class="btn btn-soft" onclick="limparSelecaoPermissao()">
+        <button class="btn btn-soft" onclick="if(typeof limparSelecaoPermissao==='function'){limparSelecaoPermissao()}else{location.reload()}">
           <i class="fa-solid fa-eraser"></i> Limpar seleção
         </button>
 
@@ -563,9 +572,32 @@ if(typeof verificarLogin === "function"){ verificarLogin(); }
 
 
 
+
+<script>
+/* =========================================================
+   BDR FIX USUÁRIOS - COMPATIBILIDADE OWNER / BOTÕES
+========================================================= */
+window.bdrOwnerClickUsuarios = function(event){
+  if(typeof window.bdrCliqueSecretoOwner === "function"){
+    return window.bdrCliqueSecretoOwner(event);
+  }
+  alert("BDR Owner Core ainda não carregou. Confira JS/bdr-owner-core.js");
+};
+
+if(typeof window.limparSelecaoPermissao !== "function"){
+  window.limparSelecaoPermissao = function(){
+    document.querySelectorAll("input.perm[type='checkbox']").forEach(chk => chk.checked = false);
+    document.querySelectorAll("#listaObrasLiberadas input[type='checkbox']").forEach(chk => chk.checked = false);
+  };
+}
+</script>
+
 <script src="./JS/usuarios-master-premium.js?v=20260629-final-v2"></script>
+<script src="./JS/bdr-usuarios-permissoes-reais.js?v=20260701"></script>
 <script src="./JS/offlineQueue.js"></script>
 <script src="./JS/bdr-owner-core.js"></script>
 
+
+<script src="./JS/bdrNotificacoes.js?v=20260702-global-final"></script>
 </body>
 </html>

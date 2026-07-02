@@ -2,6 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:,">
 <title>BDR ERP - Movimentações</title>
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
@@ -44,6 +45,100 @@
 button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:focus,.user-menu:active{outline:none!important;box-shadow:none!important;}
 button{-webkit-tap-highlight-color:transparent;}
 @media(max-width:900px){.bdr-top-actions{width:100%;justify-content:space-between}.notif-dropdown{right:-80px;width:300px}}
+
+/* =========================================================
+   BDR MOVIMENTAÇÕES - LISTA SEM SOBREPOR
+========================================================= */
+.mov-header,
+.mov-linha{
+  display:grid!important;
+  grid-template-columns:160px minmax(260px,1.5fr) minmax(120px,.7fr) minmax(130px,.7fr) 160px 155px!important;
+  gap:12px!important;
+  align-items:center!important;
+}
+
+.mov-header{
+  padding:10px 14px!important;
+  margin-bottom:8px!important;
+  color:#6b7280!important;
+  font-size:12px!important;
+  font-weight:900!important;
+  text-transform:uppercase!important;
+}
+
+.mov-linha{
+  background:#fff!important;
+  border-left:4px solid var(--bdr-red,#a4161a)!important;
+  border-radius:12px!important;
+  padding:10px 14px!important;
+  margin-bottom:7px!important;
+  box-shadow:0 2px 8px rgba(15,23,42,.07)!important;
+  cursor:pointer!important;
+}
+
+.mov-linha > div{
+  min-width:0!important;
+}
+
+.mov-tipo{
+  color:var(--bdr-red,#a4161a)!important;
+  font-weight:900!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+}
+
+.mov-patrimonio,
+.mov-info{
+  min-width:0!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+
+.mov-patrimonio{
+  font-weight:900!important;
+}
+
+.mov-obs{
+  grid-column:1 / -1!important;
+  display:none!important;
+  background:#f8fafc!important;
+  border-left:4px solid #2563eb!important;
+  border-radius:10px!important;
+  padding:10px!important;
+  font-size:12px!important;
+  line-height:1.45!important;
+  color:#374151!important;
+}
+
+.mov-linha.aberta .mov-obs{
+  display:block!important;
+}
+
+@media(max-width:1200px){
+  .mov-header{
+    display:none!important;
+  }
+
+  .mov-linha{
+    grid-template-columns:1fr!important;
+    gap:6px!important;
+    padding:14px!important;
+  }
+
+  .mov-patrimonio,
+  .mov-info{
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:unset!important;
+  }
+
+  .mov-obs{
+    display:block!important;
+    grid-column:auto!important;
+  }
+}
+
 </style>
 
 <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260626-1">
@@ -55,6 +150,8 @@ button{-webkit-tap-highlight-color:transparent;}
 <script src="./JS/auth.js"></script>
 <script src="./JS/bdrSessaoRealtime.js"></script>
 <script src="./JS/bdrCore.js"></script>
+<script src="./JS/bdrMenuPermissoes.js"></script>
+<script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260701-1"></script>
 <script>verificarLogin();</script>
 
 <div class="app-layout">
@@ -66,92 +163,76 @@ button{-webkit-tap-highlight-color:transparent;}
  <nav class="bdr-menu">
 
   <!-- DASHBOARD -->
-  <button class="bdr-menu-btn" data-tip="Dashboard" onclick="ir('dashboard.html')">
+  <button data-permissao="DASHBOARD_VER" class="bdr-menu-btn" data-tip="Dashboard" onclick="ir('dashboard.html')">
     <span class="bdr-menu-icon">
       <i class="fa-solid fa-chart-simple"></i>
     </span>
   </button>
 
   <!-- ENTRADA -->
-  <button class="bdr-menu-btn" data-tip="Entrada" onclick="ir('entrada.html')">
+  <button data-permissao="ENTRADA_VER" class="bdr-menu-btn" data-tip="Entrada" onclick="ir('entrada.html')">
     <span class="bdr-menu-icon">
       <i class="fa-solid fa-arrow-down-wide-short"></i>
     </span>
   </button>
 
   <!-- TRIAGEM -->
-  <button class="bdr-menu-btn" data-tip="Triagem" onclick="ir('triagem.html')">
+  <button data-permissao="TRIAGEM_VER" class="bdr-menu-btn" data-tip="Triagem" onclick="ir('triagem.html')">
     <span class="bdr-menu-icon">
       <i class="fa-solid fa-vials"></i>
     </span>
   </button>
 
-  <!-- PEDIDOS -->
-  <button class="bdr-menu-btn" data-tip="Pedidos" onclick="ir('pedidos.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-clipboard-list"></i>
-    </span>
-  </button>
-
-  <!-- RETIRADA -->
-  <button class="bdr-menu-btn" data-tip="Retirada" onclick="ir('retirada.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-truck-ramp-box"></i>
-    </span>
-  </button>
-
-  <!-- SAÍDA -->
-  <button class="bdr-menu-btn" data-tip="Transferência" onclick="ir('transferencia.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-truck-fast"></i>
-    </span>
-  </button>
-
-  <!-- Estoque -->
-  <button class="bdr-menu-btn" data-tip="Estoque" onclick="ir('estoque.html')">
+ <!-- Estoque -->
+  <button data-permissao="ESTOQUE_VER" class="bdr-menu-btn" data-tip="Estoque" onclick="ir('estoque.html')">
     <span class="bdr-menu-icon">
       <i class="fa-solid fa-boxes-stacked"></i>
     </span>
-  </button>
+  </button>  
 
   <!-- PATRIMÔNIO -->
-  <button class="bdr-menu-btn" data-tip="Patrimônio" onclick="ir('patrimonio.html')">
+  <button data-permissao="PATRIMONIO_VER" class="bdr-menu-btn" data-tip="Patrimônio" onclick="ir('patrimonio.html')">
     <span class="bdr-menu-icon">
       <i class="fa-solid fa-tags"></i>
     </span>
   </button>
 
-  <!-- MOVIMENTAÇÕES -->
-  <button class="bdr-menu-btn active" data-tip="Movimentações" onclick="ir('movimentacoes.html')">
+<!-- EXPEDIÇÃO -->
+   <button data-permissao="EXPEDICAO_VER" class="bdr-menu-btn " data-tip="Expedição" onclick="ir('expedicao.html')">
+     <span class="bdr-menu-icon">
+       <i class="fa-solid fa-truck-fast"></i>
+      </span>
+    </button>
+
+    <!-- MOVIMENTAÇÕES -->
+  <button data-permissao="MOVIMENTACOES_VER" class="bdr-menu-btn active" data-tip="Movimentações" onclick="ir('movimentacoes.html')">
     <span class="bdr-menu-icon">
       <i class="fa-solid fa-right-left"></i>
     </span>
   </button>
 
   <!-- RELATÓRIOS -->
-  <button class="bdr-menu-btn" data-tip="Relatórios" onclick="ir('relatorios.html')">
+  <button data-permissao="RELATORIOS_VER" class="bdr-menu-btn" data-tip="Relatórios" onclick="ir('relatorios.html')">
     <span class="bdr-menu-icon">
       <i class="fa-regular fa-file-lines"></i>
     </span>
   </button>
 
   <!-- EMPRESAS -->
-  <button class="bdr-menu-btn" data-tip="Empresas" onclick="ir('empresa.html')">
+  <button data-permissao="EMPRESAS_VER" class="bdr-menu-btn" data-tip="Empresas" onclick="ir('empresa.html')">
     <span class="bdr-menu-icon">
       <i class="fa-solid fa-building"></i>
     </span>
   </button>
 
   <!-- USUÁRIOS -->
-  <button class="bdr-menu-btn" data-tip="Usuários" onclick="ir('usuarios.html')">
+  <button data-permissao="USUARIOS_VER" class="bdr-menu-btn" data-tip="Usuários" onclick="ir('usuarios.html')">
     <span class="bdr-menu-icon">
       <i class="fa-solid fa-users"></i>
     </span>
   </button>
 
 </nav>
-
-  </nav>
 </aside>
 
 <main class="bdr-main">
@@ -476,6 +557,6 @@ iniciarSininhoReal();
 carregarDados();
 </script>
 
-<script src="./JS/bdrSininhoDashboard.js"></script>
+<script src="./JS/bdrNotificacoes.js?v=20260702-global-final"></script>
 </body>
 </html>

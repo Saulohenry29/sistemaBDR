@@ -10,8 +10,8 @@ console.log("🛡️ BDR OWNER CORE V8 carregado - busca automática + reativar"
 
 /* ALTERE AQUI */
 const BDR_OWNER_LOGIN = "saulo";
-const BDR_OWNER_SENHA = "1234";
-const BDR_OWNER_SENHA_APAGAR = "1234"; // segunda senha só para apagar definitivo
+const BDR_OWNER_SENHA = "852410";
+const BDR_OWNER_SENHA_APAGAR = "8524110"; // segunda senha só para apagar definitivo
 const BDR_OWNER_CLIQUES = 5;
 const BDR_OWNER_TEMPO = 6000;
 
@@ -186,7 +186,9 @@ function bdrOwnerCriarModal(){
 
         <div class="bdr-owner-v6-top">
           <div class="bdr-owner-v6-titlebox">
-            <div class="bdr-owner-v6-shield"><i class="fa-solid fa-shield-halved"></i></div>
+            <div class="bdr-owner-v6-shield" onclick="bdrCliqueSecretoOwner(event)">
+  <i class="fa-solid fa-shield-halved"></i>
+</div>
             <div>
               <h2>BDR CORE <span>Correção segura do sistema</span></h2>
               <p>Área exclusiva para corrigir registros sem acessar o Supabase.</p>
@@ -715,11 +717,10 @@ async function bdrOwnerApagar(id){
     return;
   }
 
-  const txt = prompt(`Digite exatamente: APAGAR ${id}`);
-  if(String(txt || "").trim().toUpperCase() !== `APAGAR ${id}`){
-    alert("Confirmação cancelada. Nada foi apagado.");
-    return;
-  }
+  if(!confirm(`Deseja apagar definitivamente o patrimônio ${id}?`)){
+  alert("Operação cancelada.");
+  return;
+}
 
   const { error } = await bdrOwnerDB().from(cfg.tabela).delete().eq("id", id);
 

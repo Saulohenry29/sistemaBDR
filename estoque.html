@@ -920,6 +920,12 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active{outline:none
       </span>
     </button>
 
+    <!-- MOVIMENTAÇÕES -->
+  <button data-permissao="MOVIMENTACOES_VER" class="bdr-menu-btn" data-tip="Movimentações" onclick="ir('movimentacoes.html')">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-right-left"></i>
+    </span>
+  </button>  
   
   <!-- RELATÓRIOS -->
   <button data-permissao="RELATORIOS_VER" class="bdr-menu-btn" data-tip="Relatórios" onclick="ir('relatorios.html')">
@@ -1735,5 +1741,7 @@ window.addEventListener("DOMContentLoaded", () => {
 <script defer src="./JS/estoque.js"></script>
 <script src="./JS/bdrUppercase.js"></script>
 <script src="./JS/bdr-localizador-prateleira.js?v=1"></script>
+
+<script src="./JS/bdrNotificacoes.js?v=20260702-global-final"></script>
 </body>
 </html>
