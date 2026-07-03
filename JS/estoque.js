@@ -181,11 +181,15 @@ if(st === "ESTOQUE" || st === "DISPONIVEL") return "ESTOQUE";
     document.getElementById("notifDropdown")?.classList.remove("ativo");
   };
 
-  window.toggleNotificacoes = function(event){
-    if(event) event.stopPropagation();
-    document.getElementById("notifDropdown")?.classList.toggle("ativo");
-    document.getElementById("dropdownUser")?.classList.remove("ativo");
-  };
+  // V11.1: o sininho global é controlado por JS/bdrNotificacoes.js.
+  // Esta tela não pode sobrescrever window.toggleNotificacoes.
+  if(!window.BDR_NOTIF && typeof window.toggleNotificacoes !== "function"){
+    window.toggleNotificacoes = function(event){
+      if(event) event.stopPropagation();
+      document.getElementById("notifDropdown")?.classList.toggle("ativo");
+      document.getElementById("dropdownUser")?.classList.remove("ativo");
+    };
+  }
 
   function fecharMenusTopo(){
     document.getElementById("dropdownUser")?.classList.remove("ativo");
@@ -263,30 +267,12 @@ if(st === "ESTOQUE" || st === "DISPONIVEL") return "ESTOQUE";
   }
 
   async function iniciarRealtimeSininho(){
-    // SAFE OFFLINE: se não existir internet real, não abre WebSocket/realtime.
-    if(typeof window.bdrOnlineReal === "function"){
-      const onlineReal = await window.bdrOnlineReal();
-      if(!onlineReal){
-        console.log("BDR: sininho/realtime desativado offline.");
-        atualizarNotificacoes([]);
-        return;
-      }
-    }else if(!navigator.onLine){
-      console.log("BDR: sininho/realtime desativado offline.");
-      atualizarNotificacoes([]);
-      return;
+    // V11.1: desativado aqui para não brigar com o sininho global.
+    // O arquivo JS/bdrNotificacoes.js já faz: buscar, badge, som, animação,
+    // offline visual e marcação de lida.
+    if(window.BDR_NOTIF && typeof window.bdrCarregarNotificacoes === "function"){
+      try{ await window.bdrCarregarNotificacoes(); }catch(e){}
     }
-
-    carregarNotificacoes();
-    setInterval(carregarNotificacoes, 30000);
-
-    try{
-      const banco = db();
-      if(!banco || typeof banco.channel !== "function") return;
-      banco.channel("bdr_estoque_notificacoes_v6")
-        .on("postgres_changes", {event:"*", schema:"public", table:"bdr_notificacoes"}, carregarNotificacoes)
-        .subscribe();
-    }catch(e){ console.warn("Realtime indisponível:", e); }
   }
 
   // =========================================================

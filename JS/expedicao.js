@@ -22,19 +22,22 @@ function db(){ return window.client || window.supabaseClient || window.clientSup
 
 async function bdrExpOnlineReal(){
   if(navigator.onLine === false) return false;
-  if(typeof window.bdrOnline === "function"){
-    try{ if(window.bdrOnline() === false) return false; }catch(e){}
-  }
+
+  // V11.1: a fonte de verdade é o teste real do bdrCore.
+  // Não deixe bdrOnline() antigo prender a Expedição em offline fantasma.
   if(typeof window.bdrOnlineReal === "function"){
     try{ return await window.bdrOnlineReal(); }catch(e){ return false; }
   }
+
+  if(typeof window.bdrOnline === "function"){
+    try{ return window.bdrOnline() !== false; }catch(e){}
+  }
+
   return navigator.onLine !== false;
 }
 
-function bdrExpOfflineReal(){
-  if(navigator.onLine === false) return true;
-  if(typeof window.bdrOnline === "function"){ try{ return window.bdrOnline() === false; }catch(e){} }
-  return false;
+async function bdrExpOfflineReal(){
+  return !(await bdrExpOnlineReal());
 }
 
 function bdrExpErroInternet(err){

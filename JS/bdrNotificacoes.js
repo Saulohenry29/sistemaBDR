@@ -1,5 +1,5 @@
 /* =========================================================
-   BDR NOTIFICAÇÕES Saulo - FLUXO CORRETO: CLICOU, LEU
+   BDR NOTIFICAÇÕES V11.0 - DEFINITIVO
    - Protege contra carregamento duplicado
    - Usa bdrOnlineReal() como fonte de verdade quando existir
    - Não fica preso em bdrOnline() false se bdrOnlineReal() true
@@ -12,6 +12,8 @@
    - Exibe e salva lida_em no horário de Mato Grosso (America/Cuiaba)
    - Toca som e anima o sininho quando chega notificação nova
    - Mostra sino cortado quando offline
+   - Áudio liberado somente após clique real do usuário
+   - Abrir o sininho não limpa; clicar no item marca como lido
 ========================================================= */
 (function(){
   'use strict';
@@ -164,47 +166,81 @@
     }
   }
 
-  function liberarAudioNotificacao(){
-    if(BDR_NOTIF.audioLiberado) return;
+  function usuarioInteragiuComPagina(event){
+    if(event && event.isTrusted === false) return false;
+
+    // userActivation é suportado em Chrome/Edge e evita tentar áudio cedo demais.
+    if(navigator.userActivation && !navigator.userActivation.hasBeenActive){
+      return false;
+    }
+
+    return true;
+  }
+
+  async function liberarAudioNotificacao(event){
+    if(BDR_NOTIF.audioLiberado) return true;
+    if(!usuarioInteragiuComPagina(event)) return false;
 
     try{
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if(!AudioCtx) return;
+      if(!AudioCtx) return false;
 
       if(!BDR_NOTIF.audioCtx){
         BDR_NOTIF.audioCtx = new AudioCtx();
       }
 
       if(BDR_NOTIF.audioCtx.state === 'suspended'){
-        BDR_NOTIF.audioCtx.resume().catch(()=>{});
+        await BDR_NOTIF.audioCtx.resume();
       }
 
-      BDR_NOTIF.audioLiberado = true;
-    }catch(e){}
+      if(BDR_NOTIF.audioCtx.state === 'running'){
+        BDR_NOTIF.audioLiberado = true;
+        removerListenersAudio();
+        return true;
+      }
+    }catch(e){
+      // Navegador pode bloquear mesmo após o primeiro gesto. Mantém listeners ativos.
+      BDR_NOTIF.audioLiberado = false;
+    }
+
+    return false;
+  }
+
+  function adicionarListenersAudio(){
+    document.addEventListener('click', liberarAudioNotificacao, { passive:true });
+    document.addEventListener('pointerdown', liberarAudioNotificacao, { passive:true });
+    document.addEventListener('touchstart', liberarAudioNotificacao, { passive:true });
+    document.addEventListener('keydown', liberarAudioNotificacao);
+  }
+
+  function removerListenersAudio(){
+    document.removeEventListener('click', liberarAudioNotificacao);
+    document.removeEventListener('pointerdown', liberarAudioNotificacao);
+    document.removeEventListener('touchstart', liberarAudioNotificacao);
+    document.removeEventListener('keydown', liberarAudioNotificacao);
   }
 
   function tocarSomNotificacao(){
     if(!BDR_NOTIF.audioLiberado) return;
+    if(!BDR_NOTIF.audioCtx || BDR_NOTIF.audioCtx.state !== 'running') return;
 
     try{
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      const ctx = BDR_NOTIF.audioCtx || new AudioCtx();
-      BDR_NOTIF.audioCtx = ctx;
-
+      const ctx = BDR_NOTIF.audioCtx;
       const agora = ctx.currentTime;
+
       const ganho = ctx.createGain();
       ganho.gain.setValueAtTime(0.0001, agora);
-      ganho.gain.exponentialRampToValueAtTime(0.18, agora + 0.02);
-      ganho.gain.exponentialRampToValueAtTime(0.0001, agora + 0.22);
+      ganho.gain.exponentialRampToValueAtTime(0.16, agora + 0.015);
+      ganho.gain.exponentialRampToValueAtTime(0.0001, agora + 0.20);
       ganho.connect(ctx.destination);
 
       const osc1 = ctx.createOscillator();
       osc1.type = 'sine';
       osc1.frequency.setValueAtTime(880, agora);
-      osc1.frequency.setValueAtTime(1175, agora + 0.10);
+      osc1.frequency.setValueAtTime(1175, agora + 0.09);
       osc1.connect(ganho);
       osc1.start(agora);
-      osc1.stop(agora + 0.23);
+      osc1.stop(agora + 0.21);
     }catch(e){}
   }
 
@@ -567,11 +603,10 @@
 
   document.addEventListener('click', () => dropdownEl()?.classList.remove('ativo'));
 
-  document.addEventListener('pointerdown', liberarAudioNotificacao, { once:true, passive:true });
-  document.addEventListener('keydown', liberarAudioNotificacao, { once:true });
 
   document.addEventListener('DOMContentLoaded', () => {
     aplicarCssSininho();
+    adicionarListenersAudio();
 
     const drop = dropdownEl();
     if(drop){
@@ -606,5 +641,5 @@
   window.bdrMarcarNotificacoesComoLidas = marcarComoLidas;
   window.bdrMarcarNotificacaoComoLida = marcarNotificacaoComoLida;
 
-  console.log('✅ BDR NOTIFICAÇÕES V10.9 carregado - clicou, leu + som + animação');
+  console.log('✅ BDR NOTIFICAÇÕES V11.0 carregado - definitivo');
 })();

@@ -1490,7 +1490,7 @@ movimentacoes = dadosMovimentacoes;
   carregarChecksObrasSienge();
   renderizarRelatorio();
   renderizarMovimentacoes();
-  gerarNotificacoesRelatorio();
+  // BDR V11.1: sininho agora é global em JS/bdrNotificacoes.js; não gerar alertas locais aqui.
 }
 
 function carregarFiltroObras(){
@@ -2958,7 +2958,9 @@ function toggleMenuUsuario(event){
   document.getElementById("notifDropdown")?.classList.remove("ativo");
 }
 
-function toggleNotificacoes(event){
+function toggleNotificacoesRelatorioAntigo(event){
+  // BDR V11.1: função antiga mantida fora do fluxo.
+  // O onclick usa a função global window.toggleNotificacoes do JS/bdrNotificacoes.js.
   if(event) event.stopPropagation();
   document.getElementById("notifDropdown")?.classList.toggle("ativo");
   document.getElementById("dropdownUser")?.classList.remove("ativo");
@@ -2971,7 +2973,7 @@ function fecharMenusTopo(){
 
 document.addEventListener("click", fecharMenusTopo);
 
-function atualizarNotificacoes(lista){
+function atualizarNotificacoesRelatorioAntigo(lista){
   const badge = document.getElementById("notifBadge");
   const box = document.getElementById("notifLista");
   if(!badge || !box) return;
@@ -3044,7 +3046,7 @@ function gerarNotificacoesRelatorio(){
     });
   }
 
-  atualizarNotificacoes(lista);
+  atualizarNotificacoesRelatorioAntigo(lista);
 }
 
 
