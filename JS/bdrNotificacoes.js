@@ -1,18 +1,27 @@
 /* =========================================================
-   BDR NOTIFICAÇÕES V10.2 - OFFLINE SAFE LIMPO
-   - Não chama bdrOnlineReal() em setInterval
+   BDR NOTIFICAÇÕES V10.4 - FINAL LIMPO
+   - Protege contra carregamento duplicado
+   - Não chama bdrOnlineReal() no setInterval
    - Não consulta Supabase quando estiver offline
    - Usa somente usuario_destino_id na tabela notificacoes
-   - Evita erro: column notificacoes.usuario_id does not exist
+   - Corrige contador fantasma
+   - Ao abrir o sininho, marca notificações como lidas
 ========================================================= */
 (function(){
   'use strict';
 
+  if(window.BDR_NOTIF && window.BDR_NOTIF.__loaded){
+    console.warn('BDR notificações já carregado. Ignorando duplicado.');
+    return;
+  }
+
   const BDR_NOTIF = {
-    versao: '10.2-offline-safe',
+    __loaded: true,
+    versao: '10.4-final',
     intervaloMs: 30000,
     timer: null,
     carregando: false,
+    marcandoLidas: false,
     paradoOffline: false,
     ultimoTotal: 0,
     errosSeguidos: 0
@@ -89,7 +98,7 @@
     if(!badge) return;
 
     if(qtd > 0){
-      badge.innerText = String(qtd);
+      badge.innerText = qtd > 99 ? '99+' : String(qtd);
       badge.style.display = 'inline-flex';
       badge.hidden = false;
     }else{
@@ -117,6 +126,13 @@
     if(lista) lista.innerHTML = '<div class="notif-item">⚠️ Notificações indisponíveis no momento.</div>';
   }
 
+  function notificacaoNaoLida(n){
+    return String(n.status || '').toUpperCase() !== 'LIDA' &&
+           n.lida !== true &&
+           n.visualizada !== true &&
+           !n.read_at;
+  }
+
   function renderNotificacoes(rows){
     const lista = listaEl();
     if(!lista) return;
@@ -131,9 +147,10 @@
       const mensagem = escapeHtml(n.mensagem || '');
       const data = n.created_at ? escapeHtml(new Date(n.created_at).toLocaleString('pt-BR')) : '';
       const link = n.link ? escapeHtml(n.link) : '';
+      const classeLida = notificacaoNaoLida(n) ? 'nao-lida' : 'lida';
 
       const item = `
-        <div class="notif-item" data-id="${escapeHtml(n.id || '')}">
+        <div class="notif-item ${classeLida}" data-id="${escapeHtml(n.id || '')}">
           <strong>${titulo}</strong>
           <div>${mensagem}</div>
           <small>${data}</small>
@@ -185,14 +202,14 @@
       BDR_NOTIF.errosSeguidos = 0;
 
       const rows = Array.isArray(data) ? data : [];
-      const naoLidas = rows.filter(n => !n.lida && !n.visualizada && !n.read_at).length;
+      const naoLidas = rows.filter(notificacaoNaoLida).length;
 
       atualizarBadge(naoLidas);
       renderNotificacoes(rows);
     }catch(err){
       const msg = String(err?.message || err || '').toLowerCase();
 
-      if(!onlineLocalRapido() || msg.includes('failed to fetch') || msg.includes('err_name_not_resolved') || msg.includes('network')){
+      if(!onlineLocalRapido() || msg.includes('failed to fetch') || msg.includes('err_name_not_resolved') || msg.includes('network') || msg.includes('connection')){
         pararNotificacoesOffline();
         return;
       }
@@ -207,6 +224,43 @@
       }
     }finally{
       BDR_NOTIF.carregando = false;
+    }
+  }
+
+  async function marcarComoLidas(){
+    if(BDR_NOTIF.marcandoLidas) return;
+    if(!onlineLocalRapido()) return;
+    if(!temSupabase()) return;
+
+    const usuario = usuarioAtualSeguro();
+    const usuarioId = usuario?.id || usuario?.usuario_id;
+    const empresaId = usuario?.empresa_id;
+    if(!usuarioId) return;
+
+    BDR_NOTIF.marcandoLidas = true;
+
+    try{
+      let query = window.client
+        .from('notificacoes')
+        .update({
+          lida: true,
+          visualizada: true,
+          read_at: new Date().toISOString(),
+          status: 'LIDA'
+        })
+        .eq('usuario_destino_id', usuarioId)
+        .is('read_at', null);
+
+      if(empresaId){
+        query = query.eq('empresa_id', empresaId);
+      }
+
+      await query;
+      atualizarBadge(0);
+    }catch(e){
+      // silencioso para não incomodar usuário nem gerar flood
+    }finally{
+      BDR_NOTIF.marcandoLidas = false;
     }
   }
 
@@ -256,8 +310,13 @@
     document.getElementById('dropdownUser')?.classList.remove('ativo');
     drop.classList.toggle('ativo');
 
-    if(drop.classList.contains('ativo') && onlineLocalRapido()){
-      carregarNotificacoes();
+    if(drop.classList.contains('ativo')){
+      if(onlineLocalRapido()){
+        carregarNotificacoes();
+        marcarComoLidas();
+      }else{
+        pararNotificacoesOffline();
+      }
     }
   }
 
@@ -283,6 +342,7 @@
   window.bdrIniciarNotificacoes = iniciarNotificacoes;
   window.bdrPararNotificacoesOffline = pararNotificacoesOffline;
   window.bdrCarregarNotificacoes = carregarNotificacoes;
+  window.bdrMarcarNotificacoesComoLidas = marcarComoLidas;
 
-  console.log('✅ BDR NOTIFICAÇÕES V10.2 carregado - offline safe');
+  console.log('✅ BDR NOTIFICAÇÕES V10.4 carregado - final limpo');
 })();
