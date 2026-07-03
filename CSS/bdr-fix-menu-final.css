@@ -29,7 +29,7 @@
     flex-direction:column!important;
     align-items:center!important;
     justify-content:flex-start!important;
-    padding:18px 0 10px!important;
+    padding:60px 0 30px!important;
     z-index:999999!important;
     overflow:visible!important;
     box-shadow:4px 0 18px rgba(0,0,0,.18)!important;
@@ -155,5 +155,23 @@
     width:100%!important;
     max-width:100%!important;
     padding-bottom:100px!important;
+  }
+}
+
+/* =========================================================
+   BDR FIX NOTEBOOK - MENU LATERAL ALTURA TOTAL
+   Corrige espaço vazio no final do menu quando o sistema usa zoom.
+========================================================= */
+@media(min-width:1201px){
+
+  .bdr-sidebar{
+    height:calc(100vh / var(--screen-zoom, 1))!important;
+    min-height:calc(100vh / var(--screen-zoom, 1))!important;
+    max-height:none!important;
+    bottom:auto!important;
+  }
+
+  .bdr-menu{
+    padding-bottom:20px!important;
   }
 }
