@@ -1,5 +1,5 @@
 /* BDR ERP - Service Worker V4 SAFE OFFLINE */
-const BDR_CACHE_VERSION = "bdr-erp-v4.0.1-menu-fix-20260626";
+const BDR_CACHE_VERSION = "bdr-erp-v4.0.2-sininho-global-20260702";
 
 const BDR_ASSETS = [
   "./",
@@ -36,8 +36,8 @@ const BDR_ASSETS = [
   "./JS/offlineSync.js",
   "./JS/offlineQueue.js",
   "./JS/bdrLocalCache.js",
-  "./JS/bdrSininhoDashboard.js",
-
+  
+  
   "./JS/entrada.js",
   "./JS/triagem.js",
   "./JS/estoque.js",

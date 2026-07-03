@@ -2366,23 +2366,98 @@ async function importarInsumosPremium(){
     alert("Erro ao importar insumos: " + (e.message || e));
   }
 }
-function classificarInsumoSiengePremium(textoOriginal,tabelaRef="2"){
-  const tabela=String(tabelaRef||"2").replace(/[^0-9]/g,"")||"2"; const alvo=normalizarMotorInsumo(textoOriginal);
-  if(!alvo) return {codigo:"",confianca:0,motivo:"Sem texto para classificar",candidatos:[]};
-  const candidatos=(siengeInsumos||[]).filter(x=>String(x.tabela_insumo)===tabela&&x.codigo&&x.descricao);
-  if(!candidatos.length) return {codigo:"",confianca:0,motivo:"Tabela de insumos não carregada na tela. Clique em Recarregar e teste novamente.",candidatos:[]};
-  const alvoTokensBase=tokensMotorInsumo(alvo); const alvoTokens=expandirSinonimosInsumo(alvoTokensBase); let melhores=[];
-  candidatos.forEach(item=>{
-    const descNorm=item.descricao_normalizada||normalizarMotorInsumo(item.descricao); const descTokens=tokensMotorInsumo(descNorm); let score=0; let max=Math.max(20,alvoTokensBase.length*12);
-    if(descNorm===alvo) score+=120; if(descNorm.includes(alvo)||alvo.includes(descNorm)) score+=75;
-    alvoTokens.forEach((tok,idx)=>{if(descTokens.includes(tok)) score+=idx===0?18:12; else if(descNorm.includes(tok)) score+=6;});
-    const primeira=alvoTokensBase[0]||""; const segunda=alvoTokensBase[1]||""; if(primeira&&descNorm.startsWith(primeira)) score+=18; if(primeira&&segunda&&descNorm.includes(`${primeira} ${segunda}`)) score+=25; if(descTokens.length<=2&&alvoTokensBase.length>=4) score-=12;
-    const confianca=Math.max(0,Math.min(99,Math.round((score/(max+70))*100))); if(score>0) melhores.push({codigo:String(item.codigo),descricao:item.descricao,tabela:String(item.tabela_insumo),score,confianca});
+
+function classificarInsumoSiengePremium(texto, tabelaRef="2"){
+  const alvo = normalizarSiengeBusca(texto);
+  const tabela = String(tabelaRef || "2");
+
+  if(!alvo){
+    return {codigo:"", confianca:0, motivo:"Descrição vazia", candidatos:[]};
+  }
+
+  const base = (siengeInsumos || []).filter(item =>
+    item &&
+    item.ativo !== false &&
+    String(item.tabela_insumo) === tabela
+  );
+
+  const exato = base.find(item =>
+    normalizarSiengeBusca(item.descricao) === alvo
+  );
+
+  if(exato){
+    return {
+      codigo:String(exato.codigo),
+      descricao:exato.descricao,
+      tabela:String(exato.tabela_insumo),
+      confianca:99,
+      score:9999,
+      motivo:"Correspondência exata",
+      candidatos:[{
+        codigo:String(exato.codigo),
+        descricao:exato.descricao,
+        tabela:String(exato.tabela_insumo),
+        confianca:99,
+        score:9999
+      }]
+    };
+  }
+
+  const alvoTokens = alvo.split(" ").filter(Boolean);
+  let melhores = [];
+
+  base.forEach(item => {
+    const desc = normalizarSiengeBusca(item.descricao);
+    const descTokens = desc.split(" ").filter(Boolean);
+
+    let score = 0;
+
+    alvoTokens.forEach(tok => {
+      if(descTokens.includes(tok)) score += 10;
+      else if(desc.includes(tok)) score += 4;
+    });
+
+    if(desc.includes(alvo)) score += 80;
+    if(alvo.includes(desc)) score += 60;
+
+    const max = Math.max(alvoTokens.length * 10, 1);
+    const confianca = Math.min(98, Math.max(1, Math.round((score / (max + 80)) * 100)));
+
+    if(score > 0){
+      melhores.push({
+        codigo:String(item.codigo),
+        descricao:item.descricao,
+        tabela:String(item.tabela_insumo),
+        score,
+        confianca
+      });
+    }
   });
-  melhores.sort((a,b)=>b.score-a.score||b.confianca-a.confianca); melhores=melhores.slice(0,5); const melhor=melhores[0];
-  if(!melhor) return {codigo:"",confianca:0,motivo:"Nenhum candidato encontrado",candidatos:[]};
-  return {codigo:melhor.codigo,descricao:melhor.descricao,tabela:melhor.tabela,confianca:melhor.confianca,score:melhor.score,motivo:melhor.confianca>=90?"Alta confiança":melhor.confianca>=70?"Confiança média":"Baixa confiança - revisar",candidatos:melhores};
+
+  melhores.sort((a,b) =>
+    b.score - a.score ||
+    b.confianca - a.confianca ||
+    a.descricao.length - b.descricao.length
+  );
+
+  melhores = melhores.slice(0,5);
+  const melhor = melhores[0];
+
+  if(!melhor){
+    return {codigo:"", confianca:0, motivo:"Nenhum candidato encontrado", candidatos:[]};
+  }
+
+  return {
+    codigo:melhor.codigo,
+    descricao:melhor.descricao,
+    tabela:melhor.tabela,
+    confianca:melhor.confianca,
+    score:melhor.score,
+    motivo:melhor.confianca >= 90 ? "Alta confiança" : melhor.confianca >= 70 ? "Confiança média" : "Baixa confiança - revisar",
+    candidatos:melhores
+  };
 }
+
 function textoClassificacaoPatrimonio(p){return [p?.nome_bem,p?.tipo_item,p?.marca,p?.modelo,p?.observacao,p?.descricao,p?.detalhamento].filter(Boolean).join(" ");}
 function testarMotorInsumoPremium(){
   const txt=document.getElementById("testeInsumoDescricao")?.value||""; const tabela=document.getElementById("testeInsumoTabela")?.value||"2"; const box=document.getElementById("resultadoTesteInsumo"); const r=classificarInsumoSiengePremium(txt,tabela); const classe=r.confianca>=90?"alta":r.confianca>=70?"media":"baixa";
@@ -2689,20 +2764,32 @@ function codigoCorSienge(p){
 }
 
 function codigoEstadoConservacaoSienge(p){
+  /*
+    REGRA OFICIAL BDR:
+    O Sienge precisa receber código numérico.
+    Nunca exportar texto como BOM, RUIM, REGULAR, ÓTIMO.
+  */
+
   if(p.codigo_estado_conservacao && /^\d+$/.test(String(p.codigo_estado_conservacao).trim())){
     return String(p.codigo_estado_conservacao).trim();
   }
 
-  const textoEstado = p.estado_conservacao || p.estado_material || p.estado || "";
+  const textoEstado =
+    p.estado_conservacao ||
+    p.estado_material ||
+    p.estado ||
+    "";
 
-  // Tenta buscar pelo cadastro de códigos Sienge, aceitando nomes diferentes de tipo.
-  return (
+  const codigoCadastrado =
     buscarCodigoSienge("ESTADO_CONSERVACAO", textoEstado) ||
     buscarCodigoSienge("ESTADO", textoEstado) ||
-    buscarCodigoSienge("ESTADO DE CONSERVACAO", textoEstado) ||
-    estadoConservacaoSienge(textoEstado) ||
-    "2" // padrão seguro: BOM, para nunca sair vazio
-  );
+    buscarCodigoSienge("ESTADO DE CONSERVACAO", textoEstado);
+
+  if(/^\d+$/.test(String(codigoCadastrado || "").trim())){
+    return String(codigoCadastrado).trim();
+  }
+
+  return estadoConservacaoSienge(textoEstado) || "2";
 }
 
 function codigoCombustivelSienge(p){
@@ -3038,9 +3125,10 @@ async function upsertInsumoPremiumBDR(codigo, descricao, tabela){
     return false;
   }
 
-  if(typeof carregarSiengeInsumosPremium === "function"){
-    await carregarSiengeInsumosPremium(false);
-  }
+if(typeof carregarSiengeInsumosPremium === "function"){
+  siengeInsumos = [];
+  await carregarSiengeInsumosPremium(true);
+}
 
   return true;
 }
@@ -3135,12 +3223,173 @@ carregarDados();
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="./JS/sienge-insumos-fallback.js"></script>
 <script src="./JS/sienge.js"></script>
+
+<script>
+/* =========================================================
+   BDR SIENGE INSUMO - SALVAR NAS 2 BASES OFICIAIS
+   Regra:
+   - sienge_codigos: lista/consulta do modal
+   - sienge_insumos: motor premium
+========================================================= */
+(function(){
+  "use strict";
+
+  function bdrNormInsumoSalvar(txt){
+    return String(txt || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase()
+      .replace(/ESMERILHADEIRA/g, "ESMERILADORA")
+      .replace(/ESMERILHADORA/g, "ESMERILADORA")
+      .replace(/ESMERILADEIRA/g, "ESMERILADORA")
+      .replace(/[^A-Z0-9]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  async function salvarInsumoNasDuasBasesBDR(){
+    const id = String(valor("codigo_id") || "").trim();
+    const tipo = String(valor("tipo_atual") || window.tipoSiengeAtual || window.tipoAtual || "").toUpperCase().trim();
+    const codigo = String(valor("codigo_sienge") || "").trim();
+    const descricao = String(valor("descricao_sienge") || "").trim();
+    const tabelaLimpa = String(valor("tabela_ref") || "").replace(/\D/g, "").trim();
+
+    if(tipo !== "INSUMO"){
+      return false;
+    }
+
+    if(!codigo || !descricao){
+      alert("Preencha Código Sienge e Descrição / referência.");
+      return true;
+    }
+
+    if(tabelaLimpa !== "2" && tabelaLimpa !== "3"){
+      alert("Para INSUMO, selecione Tabela 2 ou Tabela 3.");
+      return true;
+    }
+
+    const payloadCodigos = {
+      tipo: "INSUMO",
+      codigo,
+      descricao,
+      tabela_ref: tabelaLimpa,
+      ativo: true
+    };
+
+    let respCodigos;
+
+    if(id){
+      respCodigos = await db()
+        .from("sienge_codigos")
+        .update(payloadCodigos)
+        .eq("id", id)
+        .select();
+    }else{
+      respCodigos = await db()
+        .from("sienge_codigos")
+        .upsert([payloadCodigos], {
+          onConflict: "tipo,codigo,tabela_ref,descricao"
+        })
+        .select();
+
+      if(respCodigos.error){
+        respCodigos = await db()
+          .from("sienge_codigos")
+          .insert([payloadCodigos])
+          .select();
+      }
+    }
+
+    if(respCodigos.error){
+      console.error("Erro ao salvar em sienge_codigos:", respCodigos.error);
+      alert("Erro ao salvar na lista Sienge: " + respCodigos.error.message);
+      return true;
+    }
+
+    const payloadMotor = {
+      codigo,
+      descricao,
+      tabela_insumo: Number(tabelaLimpa),
+      descricao_normalizada: bdrNormInsumoSalvar(descricao),
+      ativo: true
+    };
+
+    let respMotor = await db()
+      .from("sienge_insumos")
+      .upsert([payloadMotor], {
+        onConflict: "codigo,tabela_insumo,descricao"
+      })
+      .select();
+
+    if(respMotor.error){
+      respMotor = await db()
+        .from("sienge_insumos")
+        .insert([payloadMotor])
+        .select();
+    }
+
+    if(respMotor.error){
+      console.error("Erro ao salvar em sienge_insumos:", respMotor.error);
+      alert("Salvou na lista, mas deu erro ao salvar no motor: " + respMotor.error.message);
+      return true;
+    }
+
+    // Recarrega as duas listas
+    const codResp = await db()
+      .from("sienge_codigos")
+      .select("*")
+      .eq("ativo", true);
+
+    if(!codResp.error){
+      siengeCodigos = codResp.data || [];
+    }
+
+    if(typeof carregarSiengeInsumosPremium === "function"){
+      window.siengeInsumos = [];
+      try{ siengeInsumos = []; }catch(e){}
+      await carregarSiengeInsumosPremium(true);
+    }
+
+    if(typeof renderizarCodigosSienge === "function"){
+      renderizarCodigosSienge();
+    }
+
+    if(typeof limparFormularioSiengeBDR === "function"){
+      limparFormularioSiengeBDR();
+    }else if(typeof limparFormularioSienge === "function"){
+      limparFormularioSienge();
+    }
+
+    alert("✅ Insumo salvo na lista e no motor.");
+    return true;
+  }
+
+  const salvarAnteriorBDR = window.salvarCodigoSienge;
+
+  window.salvarCodigoSienge = async function(){
+    const tratouInsumo = await salvarInsumoNasDuasBasesBDR();
+
+    if(tratouInsumo){
+      return;
+    }
+
+    if(typeof salvarAnteriorBDR === "function"){
+      return await salvarAnteriorBDR();
+    }
+
+    alert("Função original salvarCodigoSienge não encontrada.");
+  };
+
+  console.log("✅ BDR Sienge: INSUMO salvando nas 2 bases carregado");
+})();
+</script>
+
 <script>
 window.addEventListener("load", () => {
   aplicarPermissoesRelatoriosBDR();
 });
 </script>
 
-<script src="./JS/bdrNotificacoes.js?v=20260702-global-final"></script>
+<script src="./JS/bdrNotificacoes.js?v=20260702-core-online-final"></script>
 </body>
 </html>

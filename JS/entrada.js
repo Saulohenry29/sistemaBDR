@@ -90,11 +90,52 @@ function hojeISO(){
 
 
 /* =========================================================
+   BDR OFFLINE SAFE V10.3 - ENTRADA
+   Usa bdrOnlineReal() quando existir. Evita chamada Supabase offline.
+========================================================= */
+async function bdrEntradaOnlineReal(){
+  if(navigator.onLine === false) return false;
+
+  if(typeof window.bdrOnline === "function"){
+    try{ if(window.bdrOnline() === false) return false; }catch(e){}
+  }
+
+  if(typeof window.bdrOnlineReal === "function"){
+    try{ return await window.bdrOnlineReal(); }catch(e){ return false; }
+  }
+
+  return navigator.onLine !== false;
+}
+
+function bdrEntradaCacheGet(chave){
+  try{ return JSON.parse(localStorage.getItem(chave) || "[]"); }catch(e){ return []; }
+}
+function bdrEntradaCacheSet(chave, dados){
+  try{ localStorage.setItem(chave, JSON.stringify(dados || [])); }catch(e){}
+}
+function bdrEntradaOfflineDisponivel(){
+  return typeof salvarOffline === "function";
+}
+
+
+/* =========================================================
    [04] CARREGAR EMPRESAS E PRODUTOS
 ========================================================= */
 
 async function carregarEmpresas(){
   try{
+    const select = document.getElementById("empresa");
+    if(!select) return;
+
+    if(!(await bdrEntradaOnlineReal())){
+      const cache = bdrEntradaCacheGet("BDR_CACHE_EMPRESAS_V1");
+      select.innerHTML = '<option value="">Selecione</option>';
+      cache.forEach(emp => {
+        select.innerHTML += `<option value="${emp.id}">${emp.codigo_empresa || "-"} - ${emp.nome || "-"}</option>`;
+      });
+      return;
+    }
+
     const { data, error } = await db()
       .from("empresas")
       .select("*")
@@ -105,8 +146,7 @@ async function carregarEmpresas(){
       return;
     }
 
-    const select = document.getElementById("empresa");
-    if(!select) return;
+    bdrEntradaCacheSet("BDR_CACHE_EMPRESAS_V1", data || []);
 
     select.innerHTML = '<option value="">Selecione</option>';
 
@@ -125,6 +165,11 @@ async function carregarEmpresas(){
 
 async function carregarProdutos(){
   try{
+    if(!(await bdrEntradaOnlineReal())){
+      produtos = bdrEntradaCacheGet("BDR_CACHE_ESTOQUE_PRODUTOS_V1");
+      return;
+    }
+
     const { data, error } = await db()
       .from("estoque_produtos")
       .select("*")
@@ -137,6 +182,7 @@ async function carregarProdutos(){
     }
 
     produtos = data || [];
+    bdrEntradaCacheSet("BDR_CACHE_ESTOQUE_PRODUTOS_V1", produtos);
 
   }catch(e){
     console.warn("Erro ao carregar produtos:", e);
@@ -499,7 +545,8 @@ async function salvarEntrada(){
     /* ===============================
        [08.1] MODO OFFLINE
     =============================== */
-    if(typeof estaOnline === "function" && !estaOnline()){
+    if(!(await bdrEntradaOnlineReal())){
+      if(!bdrEntradaOfflineDisponivel()) throw new Error("offlineQueue.js não carregado. Não foi possível salvar entrada offline.");
       await salvarOffline("entrada_completa", "entradas_materiais", {
         entrada,
         itens,

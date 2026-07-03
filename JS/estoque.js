@@ -217,7 +217,10 @@ if(st === "ESTOQUE" || st === "DISPONIVEL") return "ESTOQUE";
   async function carregarNotificacoes(){
     try{
       // SAFE OFFLINE: não tenta Supabase/sininho quando a internet real não existe.
-      if(window.estaOnlineReal){
+      if(typeof window.bdrOnlineReal === "function"){
+        const onlineReal = await window.bdrOnlineReal();
+        if(!onlineReal){ atualizarNotificacoes([]); return; }
+      }else if(window.estaOnlineReal){
         const onlineReal = await window.estaOnlineReal({forcar:true});
         if(!onlineReal){ atualizarNotificacoes([]); return; }
       }else if(!navigator.onLine){
@@ -261,8 +264,8 @@ if(st === "ESTOQUE" || st === "DISPONIVEL") return "ESTOQUE";
 
   async function iniciarRealtimeSininho(){
     // SAFE OFFLINE: se não existir internet real, não abre WebSocket/realtime.
-    if(window.estaOnlineReal){
-      const onlineReal = await window.estaOnlineReal({forcar:true});
+    if(typeof window.bdrOnlineReal === "function"){
+      const onlineReal = await window.bdrOnlineReal();
       if(!onlineReal){
         console.log("BDR: sininho/realtime desativado offline.");
         atualizarNotificacoes([]);
@@ -345,7 +348,9 @@ if(st === "ESTOQUE" || st === "DISPONIVEL") return "ESTOQUE";
 
     let onlineReal = false;
     try{
-      if(window.estaOnlineReal){
+      if(typeof window.bdrOnlineReal === "function"){
+        onlineReal = await window.bdrOnlineReal();
+      }else if(window.estaOnlineReal){
         onlineReal = await window.estaOnlineReal({forcar:true});
       }else{
         onlineReal = navigator.onLine === true;

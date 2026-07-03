@@ -1,475 +1,288 @@
 /* =========================================================
-   BDR NOTIFICAÇÕES GLOBAL - SUPABASE
-   Arquivo único para TODAS as páginas.
-
-   - Online: sino normal, badge e som.
-   - Offline: sino cortado vermelho, sem badge, sem som e sem busca Supabase.
+   BDR NOTIFICAÇÕES V10.2 - OFFLINE SAFE LIMPO
+   - Não chama bdrOnlineReal() em setInterval
+   - Não consulta Supabase quando estiver offline
+   - Usa somente usuario_destino_id na tabela notificacoes
+   - Evita erro: column notificacoes.usuario_id does not exist
 ========================================================= */
 (function(){
-  "use strict";
+  'use strict';
 
-  if(window.BDR_NOTIFICACOES_GLOBAL_ATIVO){
-    console.warn("BDR Notificações: já iniciado nesta página.");
-    return;
+  const BDR_NOTIF = {
+    versao: '10.2-offline-safe',
+    intervaloMs: 30000,
+    timer: null,
+    carregando: false,
+    paradoOffline: false,
+    ultimoTotal: 0,
+    errosSeguidos: 0
+  };
+
+  function temSupabase(){
+    return !!(window.client && typeof window.client.from === 'function');
   }
 
-  window.BDR_NOTIFICACOES_GLOBAL_ATIVO = true;
+  function onlineLocalRapido(){
+    // IMPORTANTE: nunca chamar bdrOnlineReal() aqui.
+    if(navigator.onLine === false) return false;
 
-  const CANAL_NOME = "bdr_notificacoes_global_v1";
-  const STORAGE_SOM = "bdr_som_liberado";
-
-  let notificacoes = [];
-  let canal = null;
-  let intervalo = null;
-  let primeiraCarga = true;
-  let ultimoTotal = 0;
-  let audioCtx = null;
-
-  function db(){
-    if(typeof window.db === "function"){
-      try{
-        const banco = window.db();
-        if(banco) return banco;
-      }catch(e){}
+    if(typeof window.bdrOnline === 'function'){
+      try{ return window.bdrOnline() !== false; }
+      catch(e){ return navigator.onLine !== false; }
     }
 
-    return window.client ||
-           window.supabaseClient ||
-           window.clientSupabase ||
-           globalThis.client ||
-           null;
+    return navigator.onLine !== false;
   }
 
-  function usuarioAtual(){
+  function usuarioAtualSeguro(){
     try{
-      const raw = localStorage.getItem("usuario_logado") || localStorage.getItem("usuarioLogado");
+      if(typeof window.usuarioAtual === 'function') return window.usuarioAtual();
+
+      const raw =
+        localStorage.getItem('usuario_logado') ||
+        localStorage.getItem('usuarioLogado') ||
+        localStorage.getItem('usuarioAtual') ||
+        sessionStorage.getItem('usuario_logado') ||
+        sessionStorage.getItem('usuarioAtual');
+
       return raw ? JSON.parse(raw) : null;
     }catch(e){
       return null;
     }
   }
 
-  function perfilUsuario(){
-    return String(usuarioAtual()?.perfil || "").toUpperCase();
+  function badgeEl(){
+    return document.getElementById('notifBadge') ||
+           document.getElementById('badgeNotificacoes') ||
+           document.getElementById('notificacoesBadge') ||
+           document.getElementById('sininhoBadge') ||
+           document.querySelector('[data-bdr-badge-notificacoes]');
   }
 
-  function permissoesUsuario(){
-    const u = usuarioAtual();
-
-    if(Array.isArray(u?.permissoes)){
-      return u.permissoes.map(x => String(x).trim().toUpperCase()).filter(Boolean);
-    }
-
-    return String(u?.permissoes || "")
-      .split(",")
-      .map(x => x.trim().toUpperCase())
-      .filter(Boolean);
+  function listaEl(){
+    return document.getElementById('notifLista') ||
+           document.getElementById('listaNotificacoes') ||
+           document.getElementById('notificacoesLista') ||
+           document.querySelector('[data-bdr-lista-notificacoes]');
   }
 
-  function podeReceberNotificacoes(){
-    const perfil = perfilUsuario();
-    const ps = permissoesUsuario();
-
-    return ["MASTER","ADMIN","ALMOXARIFE","ALMOXARIFADO"].includes(perfil) ||
-      ps.includes("RECEBER_NOTIFICACOES") ||
-      ps.includes("NOTIFICACOES") ||
-      ps.includes("VER_NOTIFICACOES");
+  function dropdownEl(){
+    return document.getElementById('notifDropdown') ||
+           document.getElementById('notificacoesDropdown') ||
+           document.querySelector('[data-bdr-dropdown-notificacoes]');
   }
 
-  function podeVerTodasNotificacoes(){
-    const ps = permissoesUsuario();
-    return ps.includes("NOTIFICACOES_TODAS") || ps.includes("VER_TODAS_NOTIFICACOES");
+  function escapeHtml(v){
+    return String(v ?? '')
+      .replaceAll('&','&amp;')
+      .replaceAll('<','&lt;')
+      .replaceAll('>','&gt;')
+      .replaceAll('"','&quot;')
+      .replaceAll("'",'&#039;');
   }
 
-  function escapeHtml(txt){
-    return String(txt ?? "").replace(/[&<>'"]/g, c => ({
-      "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;"
-    }[c]));
-  }
+  function atualizarBadge(total){
+    const qtd = Number(total || 0);
+    BDR_NOTIF.ultimoTotal = qtd;
 
-  function dataBR(data){
-    if(!data) return "";
-    const texto = String(data);
-    let d;
+    const badge = badgeEl();
+    if(!badge) return;
 
-    if(texto.includes("T")) d = new Date(texto);
-    else d = new Date(texto.replace(" ", "T") + "-04:00");
-
-    if(isNaN(d.getTime())) return "";
-
-    return d.toLocaleString("pt-BR", {
-      timeZone: "America/Cuiaba",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  }
-
-  function aplicarCss(){
-    if(document.getElementById("bdrNotificacoesCss")) return;
-
-    const style = document.createElement("style");
-    style.id = "bdrNotificacoesCss";
-    style.textContent = `
-      .notif-wrap{position:relative!important;}
-      .notif-btn{position:relative!important;width:38px!important;height:38px!important;border:none!important;border-radius:50%!important;background:#fff!important;color:#111827!important;display:flex!important;align-items:center!important;justify-content:center!important;cursor:pointer!important;padding:0!important;outline:none!important;box-shadow:none!important;caret-color:transparent!important;user-select:none!important;-webkit-user-select:none!important;-webkit-tap-highlight-color:transparent!important;}
-      .notif-btn:hover{background:#fff1f2!important;color:#d71920!important;transform:translateY(-1px)!important;}
-      .notif-btn.notif-offline{background:#fee2e2!important;color:#dc2626!important;border:1px solid #fecaca!important;}
-      .notif-btn.notif-offline:hover{background:#fecaca!important;color:#b91c1c!important;}
-      .notif-btn.notif-offline .fa-bell:before,
-      .notif-btn.notif-offline .fa-regular.fa-bell:before,
-      .notif-btn.notif-offline .fa-solid.fa-bell:before{content:"\\f1f6"!important;font-family:"Font Awesome 6 Free"!important;font-weight:900!important;}
-      .notif-badge{position:absolute!important;top:-3px!important;right:-4px!important;min-width:18px!important;height:18px!important;padding:0 5px!important;border-radius:999px!important;background:#dc2626!important;color:#fff!important;font-size:10px!important;font-weight:900!important;display:none;align-items:center!important;justify-content:center!important;border:2px solid #fff!important;}
-      .notif-dropdown{position:absolute!important;top:50px!important;right:0!important;width:380px!important;background:#fff!important;border:1px solid #e5e7eb!important;border-radius:14px!important;box-shadow:0 18px 35px rgba(15,23,42,.18)!important;overflow:hidden!important;display:none;z-index:99999!important;}
-      .notif-dropdown.ativo{display:block!important;}
-      .notif-head{padding:12px 14px!important;font-weight:900!important;color:#d71920!important;background:#fff5f5!important;border-bottom:1px solid #fecaca!important;display:flex!important;justify-content:space-between!important;align-items:center!important;gap:8px!important;}
-      .notif-list{max-height:350px!important;overflow:auto!important;}
-      .notif-item{padding:11px 14px!important;border-bottom:1px solid #f1f5f9!important;font-size:12px!important;color:#374151!important;cursor:pointer!important;line-height:1.35!important;}
-      .notif-item:hover{background:#fff1f2!important;}
-      .notif-item strong{display:block!important;color:#111827!important;margin-bottom:3px!important;}
-      .notif-item small{color:#6b7280!important;}
-      .notif-empty{padding:14px!important;font-size:12px!important;color:#6b7280!important;line-height:1.45!important;}
-      .notif-empty button{border:0!important;border-radius:9px!important;padding:8px 10px!important;background:#111827!important;color:#fff!important;font-size:11px!important;font-weight:900!important;cursor:pointer!important;}
-      @media(max-width:900px){.notif-dropdown{right:-120px!important;width:310px!important;}}
-    `;
-    document.head.appendChild(style);
-  }
-
-  function atualizarEstadoSinoOffline(offline=false){
-    const btn = document.querySelector(".notif-btn");
-    const badge = document.getElementById("notifBadge");
-    if(!btn) return;
-
-    if(offline){
-      btn.classList.add("notif-offline");
-      btn.title = "Offline - notificações pausadas";
-      if(badge){
-        badge.style.display = "none";
-        badge.innerText = "0";
-      }
+    if(qtd > 0){
+      badge.innerText = String(qtd);
+      badge.style.display = 'inline-flex';
+      badge.hidden = false;
     }else{
-      btn.classList.remove("notif-offline");
-      btn.title = "Notificações";
+      badge.innerText = '0';
+      badge.style.display = 'none';
+      badge.hidden = true;
     }
   }
 
-  async function liberarSom(){
-    try{
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if(!Ctx) return false;
-      if(!audioCtx) audioCtx = new Ctx();
-      if(audioCtx.state === "suspended") await audioCtx.resume();
-      localStorage.setItem(STORAGE_SOM, "SIM");
-      return true;
-    }catch(e){ return false; }
+  function renderOffline(){
+    atualizarBadge(0);
+    const lista = listaEl();
+    if(lista) lista.innerHTML = '<div class="notif-item">📴 Offline. Notificações pausadas.</div>';
   }
 
-  function tocarSom(){
-    try{
-      if(navigator.onLine === false) return;
-      if(localStorage.getItem(STORAGE_SOM) !== "SIM") return;
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if(!Ctx) return;
-      if(!audioCtx) audioCtx = new Ctx();
-
-      [880, 1175].forEach((freq, i) => {
-        const delay = i * 0.16;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delay);
-        gain.gain.setValueAtTime(0.0001, audioCtx.currentTime + delay);
-        gain.gain.linearRampToValueAtTime(0.22, audioCtx.currentTime + delay + 0.02);
-        gain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + delay + 0.13);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start(audioCtx.currentTime + delay);
-        osc.stop(audioCtx.currentTime + delay + 0.16);
-      });
-      if(navigator.vibrate) navigator.vibrate([100,50,100]);
-    }catch(e){}
+  function renderVazio(){
+    atualizarBadge(0);
+    const lista = listaEl();
+    if(lista) lista.innerHTML = '<div class="notif-item">Nenhuma notificação no momento.</div>';
   }
 
-  window.bdrLiberarSomSininho = liberarSom;
-  window.bdrTestarSomSininho = function(){ liberarSom().then(tocarSom); };
-  document.addEventListener("click", liberarSom, { passive:true });
-  document.addEventListener("touchstart", liberarSom, { passive:true });
-
-  function montarFiltroDestinatario(u){
-    const partes = [];
-    if(u?.id) partes.push(`usuario_destino_id.eq.${u.id}`);
-    if(u?.obra_id) partes.push(`obra_destino_id.eq.${u.obra_id}`);
-    return partes.join(",");
+  function renderErro(){
+    atualizarBadge(0);
+    const lista = listaEl();
+    if(lista) lista.innerHTML = '<div class="notif-item">⚠️ Notificações indisponíveis no momento.</div>';
   }
 
-  async function carregar(){
-    if(navigator.onLine === false){
-      notificacoes = [];
-      atualizarEstadoSinoOffline(true);
-      atualizarTela("Offline. O sininho está pausado.");
+  function renderNotificacoes(rows){
+    const lista = listaEl();
+    if(!lista) return;
+
+    if(!Array.isArray(rows) || !rows.length){
+      renderVazio();
       return;
     }
 
-    atualizarEstadoSinoOffline(false);
+    lista.innerHTML = rows.map(n => {
+      const titulo = escapeHtml(n.titulo || n.tipo || 'Notificação');
+      const mensagem = escapeHtml(n.mensagem || '');
+      const data = n.created_at ? escapeHtml(new Date(n.created_at).toLocaleString('pt-BR')) : '';
+      const link = n.link ? escapeHtml(n.link) : '';
 
-    const banco = db();
-    const u = usuarioAtual();
+      const item = `
+        <div class="notif-item" data-id="${escapeHtml(n.id || '')}">
+          <strong>${titulo}</strong>
+          <div>${mensagem}</div>
+          <small>${data}</small>
+        </div>`;
 
-    if(!banco || !u || !podeReceberNotificacoes()){
-      notificacoes = [];
-      atualizarTela();
+      return link ? `<a href="${link}" style="text-decoration:none;color:inherit">${item}</a>` : item;
+    }).join('');
+  }
+
+  async function carregarNotificacoes(){
+    if(BDR_NOTIF.carregando) return;
+
+    if(!onlineLocalRapido()){
+      pararNotificacoesOffline();
       return;
     }
 
-    let query = banco
-      .from("notificacoes")
-      .select("*")
-      .eq("lida", false)
-      .order("created_at", { ascending:false })
-      .limit(50);
+    if(!temSupabase()){
+      renderVazio();
+      return;
+    }
 
-    if(u.empresa_id) query = query.eq("empresa_id", u.empresa_id);
+    const usuario = usuarioAtualSeguro();
+    const usuarioId = usuario?.id || usuario?.usuario_id;
+    const empresaId = usuario?.empresa_id;
 
-    const filtro = montarFiltroDestinatario(u);
+    if(!usuarioId){
+      renderVazio();
+      return;
+    }
 
-    if(!podeVerTodasNotificacoes()){
-      if(!filtro){
-        notificacoes = [];
-        atualizarTela();
+    BDR_NOTIF.carregando = true;
+
+    try{
+      let query = window.client
+        .from('notificacoes')
+        .select('*')
+        .eq('usuario_destino_id', usuarioId)
+        .order('created_at', { ascending:false })
+        .limit(20);
+
+      if(empresaId){
+        query = query.eq('empresa_id', empresaId);
+      }
+
+      const { data, error } = await query;
+      if(error) throw error;
+
+      BDR_NOTIF.errosSeguidos = 0;
+
+      const rows = Array.isArray(data) ? data : [];
+      const naoLidas = rows.filter(n => !n.lida && !n.visualizada && !n.read_at).length;
+
+      atualizarBadge(naoLidas);
+      renderNotificacoes(rows);
+    }catch(err){
+      const msg = String(err?.message || err || '').toLowerCase();
+
+      if(!onlineLocalRapido() || msg.includes('failed to fetch') || msg.includes('err_name_not_resolved') || msg.includes('network')){
+        pararNotificacoesOffline();
         return;
       }
-      query = query.or(filtro);
+
+      BDR_NOTIF.errosSeguidos++;
+      console.warn('BDR notificações: erro ao carregar:', err?.message || err);
+      renderErro();
+
+      // Se o banco estiver retornando erro de estrutura/SQL, para o timer para evitar flood.
+      if(BDR_NOTIF.errosSeguidos >= 2 || msg.includes('does not exist') || msg.includes('bad request')){
+        pararTimer();
+      }
+    }finally{
+      BDR_NOTIF.carregando = false;
     }
-
-    const { data, error } = await query;
-
-    if(error){
-      console.warn("BDR Notificações:", error.message);
-      notificacoes = [];
-      atualizarTela("Erro ao buscar notificações.");
-      return;
-    }
-
-    notificacoes = data || [];
-    const totalAtual = notificacoes.length;
-
-    if(!primeiraCarga && totalAtual > ultimoTotal) tocarSom();
-
-    primeiraCarga = false;
-    ultimoTotal = totalAtual;
-    atualizarTela();
   }
 
-  async function marcarComoLidas(ids){
-    if(navigator.onLine === false) return;
-    const banco = db();
-    if(!banco || !ids?.length) return;
+  function iniciarTimer(){
+    if(BDR_NOTIF.timer) return;
 
-    const { error } = await banco
-      .from("notificacoes")
-      .update({ lida:true, status:"LIDA", lida_em:new Date().toISOString() })
-      .in("id", ids);
-
-    if(error){
-      console.warn("BDR Notificações: erro ao marcar lida:", error.message);
-      return;
-    }
-
-    notificacoes = notificacoes.filter(n => !ids.includes(n.id));
-    atualizarTela();
+    BDR_NOTIF.timer = setInterval(() => {
+      if(!onlineLocalRapido()){
+        pararNotificacoesOffline();
+        return;
+      }
+      carregarNotificacoes();
+    }, BDR_NOTIF.intervaloMs);
   }
 
-  window.bdrMarcarTodasNotificacoesLidas = async function(){
-    await marcarComoLidas(notificacoes.map(n => n.id));
-  };
-
-  window.bdrAbrirNotificacao = async function(id, link){
-    if(navigator.onLine === false) return;
-    await marcarComoLidas([id]);
-    if(link) window.location.href = link;
-  };
-
-  window.bdrCriarNotificacao = async function(dados={}){
-    if(navigator.onLine === false){
-      console.warn("BDR Notificações: offline, não foi possível criar agora.");
-      return { error:{ message:"Offline" } };
+  function pararTimer(){
+    if(BDR_NOTIF.timer){
+      clearInterval(BDR_NOTIF.timer);
+      BDR_NOTIF.timer = null;
     }
-
-    const banco = db();
-    const u = usuarioAtual();
-    if(!banco) return { error:{ message:"Supabase não carregado" } };
-
-    const payload = {
-      empresa_id: dados.empresa_id ?? u?.empresa_id ?? null,
-      usuario_destino_id: dados.usuario_destino_id ?? null,
-      obra_destino_id: dados.obra_destino_id ?? null,
-      obra_origem_id: dados.obra_origem_id ?? null,
-      pedido_id: dados.pedido_id ?? null,
-      patrimonio_id: dados.patrimonio_id ?? null,
-      produto_id: dados.produto_id ?? null,
-      tipo: dados.tipo || "GERAL",
-      titulo: dados.titulo || "Nova notificação",
-      mensagem: dados.mensagem || "Você tem uma nova atualização.",
-      link: dados.link || null,
-      status: "NAO_LIDA",
-      lida: false
-    };
-
-    const { data, error } = await banco.from("notificacoes").insert([payload]).select();
-    if(error) console.warn("BDR Notificações: erro ao criar:", error.message);
-    return { data, error };
-  };
-
-  function atualizarTela(msgErro=""){
-    aplicarCss();
-
-    const badge = document.getElementById("notifBadge");
-    const lista = document.getElementById("notifLista");
-    const head = document.querySelector(".notif-head");
-    const offline = navigator.onLine === false;
-
-    atualizarEstadoSinoOffline(offline);
-
-    if(head){
-      head.innerHTML = offline
-        ? `<span>🔕 Notificações offline</span><small style="font-size:11px;color:#dc2626;font-weight:900;">Pausado</small>`
-        : `<span>🔔 Central de notificações</span><small style="font-size:11px;color:#6b7280;font-weight:800;">Global</small>`;
-    }
-
-    if(!badge || !lista) return;
-
-    if(offline){
-      badge.style.display = "none";
-      lista.innerHTML = `<div class="notif-empty">🔕 Você está offline. O sininho está pausado e volta automaticamente quando a internet retornar.</div>`;
-      return;
-    }
-
-    if(!podeReceberNotificacoes()){
-      badge.style.display = "none";
-      lista.innerHTML = `<div class="notif-empty">Notificações desativadas para este usuário.</div>`;
-      return;
-    }
-
-    const total = notificacoes.length;
-    badge.innerText = total > 9 ? "9+" : total;
-    badge.style.display = total > 0 ? "inline-flex" : "none";
-
-    if(msgErro){
-      lista.innerHTML = `<div class="notif-empty">${escapeHtml(msgErro)}</div>`;
-      return;
-    }
-
-    if(total === 0){
-      lista.innerHTML = `<div class="notif-empty">Nenhuma notificação nova no momento.</div>`;
-      return;
-    }
-
-    lista.innerHTML = notificacoes.map(n => {
-      const id = Number(n.id);
-      const titulo = escapeHtml(n.titulo || "Notificação");
-      const mensagem = escapeHtml(n.mensagem || "");
-      const data = escapeHtml(dataBR(n.created_at));
-      const link = escapeHtml(n.link || "");
-
-      return `
-        <div class="notif-item" onclick="bdrAbrirNotificacao(${id}, '${link}')">
-          <strong>🔴 ${titulo}</strong>
-          <span>${mensagem}</span><br>
-          <small>${data}</small>
-        </div>
-      `;
-    }).join("") + `
-      <div class="notif-empty">
-        <button onclick="bdrMarcarTodasNotificacoesLidas()">Marcar tudo como lido</button>
-      </div>
-    `;
   }
 
-  window.toggleNotificacoes = function(event){
+  function pararNotificacoesOffline(){
+    BDR_NOTIF.paradoOffline = true;
+    pararTimer();
+    renderOffline();
+  }
+
+  async function iniciarNotificacoes(){
+    if(!onlineLocalRapido()){
+      pararNotificacoesOffline();
+      return;
+    }
+
+    BDR_NOTIF.paradoOffline = false;
+    BDR_NOTIF.errosSeguidos = 0;
+    await carregarNotificacoes();
+    iniciarTimer();
+  }
+
+  function toggleNotificacoes(event){
     if(event) event.stopPropagation();
-    const dropdown = document.getElementById("notifDropdown");
-    if(!dropdown) return;
 
-    dropdown.classList.toggle("ativo");
-    document.getElementById("dropdownUser")?.classList.remove("ativo");
-    document.getElementById("userDropdown")?.classList.remove("show");
-    document.getElementById("userMenuTop")?.classList.remove("open");
-    atualizarTela();
-  };
+    const drop = dropdownEl();
+    if(!drop) return;
 
-  function fechar(){
-    document.getElementById("notifDropdown")?.classList.remove("ativo");
-  }
+    document.getElementById('dropdownUser')?.classList.remove('ativo');
+    drop.classList.toggle('ativo');
 
-  document.addEventListener("click", fechar);
-  document.addEventListener("keydown", e => { if(e.key === "Escape") fechar(); });
-
-  function iniciarRealtime(){
-    if(navigator.onLine === false) return;
-    const banco = db();
-    if(!banco || typeof banco.channel !== "function" || canal) return;
-
-    try{
-      canal = banco
-        .channel(CANAL_NOME)
-        .on("postgres_changes", { event:"*", schema:"public", table:"notificacoes" }, carregar)
-        .subscribe();
-    }catch(e){
-      console.warn("BDR Notificações: realtime não iniciado.", e);
+    if(drop.classList.contains('ativo') && onlineLocalRapido()){
+      carregarNotificacoes();
     }
   }
 
-  function pararRealtime(){
-    const banco = db();
-    try{
-      if(canal && banco && typeof banco.removeChannel === "function") banco.removeChannel(canal);
-    }catch(e){}
-    canal = null;
-  }
+  window.addEventListener('offline', () => pararNotificacoesOffline());
 
-  function pausarOffline(){
-    if(intervalo) clearInterval(intervalo);
-    intervalo = null;
-    pararRealtime();
-    notificacoes = [];
-    atualizarEstadoSinoOffline(true);
-    atualizarTela("Offline. O sininho está pausado.");
-  }
-
-  function voltarOnline(){
-    setTimeout(() => {
-      if(navigator.onLine === false) return;
-      atualizarEstadoSinoOffline(false);
-      carregar();
-      iniciarRealtime();
-      if(intervalo) clearInterval(intervalo);
-      intervalo = setInterval(carregar, 30000);
-    }, 1500);
-  }
-
-  window.addEventListener("offline", pausarOffline);
-  window.addEventListener("online", voltarOnline);
-
-  function iniciar(){
-    aplicarCss();
-    atualizarTela();
-
-    if(navigator.onLine === false){
-      pausarOffline();
-      return;
+  window.addEventListener('online', () => {
+    if(typeof window.bdrResetOnlineReal === 'function'){
+      try{ window.bdrResetOnlineReal(); }catch(e){}
     }
+    iniciarNotificacoes();
+  });
 
-    atualizarEstadoSinoOffline(false);
-    carregar();
-    iniciarRealtime();
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible') iniciarNotificacoes();
+  });
 
-    if(intervalo) clearInterval(intervalo);
-    intervalo = setInterval(carregar, 30000);
-  }
+  document.addEventListener('click', () => dropdownEl()?.classList.remove('ativo'));
 
-  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar);
-  else iniciar();
+  document.addEventListener('DOMContentLoaded', () => iniciarNotificacoes());
 
+  window.BDR_NOTIF = BDR_NOTIF;
+  window.toggleNotificacoes = toggleNotificacoes;
+  window.bdrIniciarNotificacoes = iniciarNotificacoes;
+  window.bdrPararNotificacoesOffline = pararNotificacoesOffline;
+  window.bdrCarregarNotificacoes = carregarNotificacoes;
+
+  console.log('✅ BDR NOTIFICAÇÕES V10.2 carregado - offline safe');
 })();

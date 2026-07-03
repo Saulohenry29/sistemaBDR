@@ -5,12 +5,12 @@
    BDR ERP - EXPEDIÇÃO MARKETPLACE INTERNO
    Catálogo compacto + carrinho + aprovação + reserva + retirada
 ========================================================= */
-let itensCatalogo = [];
-let carrinho = [];
-let pedidos = [];
-let obras = [];
-let filtroAtual = "TODOS";
-let pedidoRetiradaAtual = null;
+var itensCatalogo = window.itensCatalogo || [];
+var carrinho = window.carrinho || [];
+var pedidos = window.pedidos || [];
+var obras = window.obras || [];
+var filtroAtual = window.filtroAtual || "TODOS";
+var pedidoRetiradaAtual = window.pedidoRetiradaAtual || null;
 
 /* =========================================================
    OFFLINE BDR - Expedição
@@ -20,8 +20,21 @@ let pedidoRetiradaAtual = null;
 function ir(p){ window.location.href = p; }
 function db(){ return window.client || window.supabaseClient || window.clientSupabase || globalThis.client; }
 
+async function bdrExpOnlineReal(){
+  if(navigator.onLine === false) return false;
+  if(typeof window.bdrOnline === "function"){
+    try{ if(window.bdrOnline() === false) return false; }catch(e){}
+  }
+  if(typeof window.bdrOnlineReal === "function"){
+    try{ return await window.bdrOnlineReal(); }catch(e){ return false; }
+  }
+  return navigator.onLine !== false;
+}
+
 function bdrExpOfflineReal(){
-  return navigator.onLine === false || (typeof estaOnline === "function" && !estaOnline());
+  if(navigator.onLine === false) return true;
+  if(typeof window.bdrOnline === "function"){ try{ return window.bdrOnline() === false; }catch(e){} }
+  return false;
 }
 
 function bdrExpErroInternet(err){
@@ -116,12 +129,17 @@ async function carregarTudo(){
 
   carregarTopo();
 
-  if(bdrExpOfflineReal()){
+  const onlineReal = await bdrExpOnlineReal();
+
+  if(!onlineReal){
     const cache = carregarCacheExpedicao();
     if(cache){
       itensCatalogo = cache.itensCatalogo || [];
       pedidos = cache.pedidos || [];
       obras = cache.obras || [];
+      window.itensCatalogo = itensCatalogo;
+      window.pedidos = pedidos;
+      window.obras = obras;
       renderizarTudo();
       console.log("📦 Expedição carregada do cache local.");
       return;
@@ -136,6 +154,9 @@ async function carregarTudo(){
     obras = ob.data || [];
     await Promise.all([carregarCatalogo(), carregarPedidos()]);
     salvarCacheExpedicao();
+    window.itensCatalogo = itensCatalogo;
+    window.pedidos = pedidos;
+    window.obras = obras;
     renderizarTudo();
   }catch(e){
     if(bdrExpErroInternet(e)){
@@ -262,7 +283,8 @@ async function enviarSolicitacao(){
   /* =========================================================
      OFFLINE: guarda solicitação inteira
   ========================================================= */
-  if(typeof estaOnline === "function" && !estaOnline()){
+  if(!(await bdrExpOnlineReal())){
+    if(typeof salvarOffline !== "function") throw new Error("offlineQueue.js não carregado. Não foi possível salvar solicitação offline.");
     await salvarOffline("nova_solicitacao", "pedidos_retirada", {
       grupos,
       solicitante:u?.nome || "Usuário",
@@ -343,7 +365,7 @@ function acoesPedido(p){ if(p.status==="AGUARDANDO_AUTORIZACAO"&&podeAlmoxarife(
 async function autorizar(id){
   const payload = {status:"EM_SEPARACAO"};
 
-  if(typeof estaOnline === "function" && !estaOnline()){
+  if(!(await bdrExpOnlineReal())){
     await salvarOffline("acao_pedido", "pedidos_retirada", {
       id,
       payload,
@@ -367,7 +389,7 @@ async function negar(id){
   const motivo=prompt("Motivo da negativa:")||"Negado";
   const payload = {status:"NEGADO", motivo_recusa:motivo};
 
-  if(typeof estaOnline === "function" && !estaOnline()){
+  if(!(await bdrExpOnlineReal())){
     await salvarOffline("acao_pedido", "pedidos_retirada", {
       id,
       payload,
@@ -388,7 +410,7 @@ async function negar(id){
   await carregarTudo();
 }
 async function reservar(id){
-  if(typeof estaOnline === "function" && !estaOnline()){
+  if(!(await bdrExpOnlineReal())){
     await salvarOffline("acao_pedido", "pedidos_retirada", {
       id,
       payload:{status:"AGUARDANDO_RETIRADA"},
@@ -432,7 +454,7 @@ async function confirmarRetiradaModal(){
 
   const obs = `Retirado por ${valor("retMotorista")} • ${valor("retPlaca")}`;
 
-  if(typeof estaOnline === "function" && !estaOnline()){
+  if(!(await bdrExpOnlineReal())){
     await salvarOffline("acao_pedido", "pedidos_retirada", {
       id,
       payload,
@@ -457,7 +479,33 @@ async function confirmarRetiradaModal(){
 function abrirDetalhe(origem,id){ const i=buscarItem(origem,id); if(!i) return; document.getElementById("modalTitulo").innerText=i.nome; document.getElementById("modalConteudo").innerHTML=`<div class="modal-grid"><div class="modal-img">${fotoItem(i)?`<img src="${esc(fotoItem(i))}">`:`<div style="font-size:70px">${placeholderIcon(i)}</div>`}</div><div><div class="det-line"><b>Código:</b> ${esc(i.codigo||"-")}</div><div class="det-line"><b>Obra atual:</b> ${esc(nomeObra(i.obra_id))}</div><div class="det-line"><b>Status:</b> <span class="badge-status ${statusClass(normalStatus(i.status))}">${rotStatus(i.status)}</span></div><div class="det-line"><b>Quantidade:</b> ${esc(i.qtd||1)}</div><div class="det-line"><b>Localização:</b> ${esc(i.localizacao||"-")}</div><div class="det-line"><b>Marca/Modelo:</b> ${esc(i.marca||"-")} / ${esc(i.modelo||"-")}</div><div class="det-line"><b>Estado:</b> ${esc(i.estado||"-")}</div><br><button class="btn-ok" onclick="acaoItem('${i.origem_tabela}',${i.id});fecharModalDetalhe()">${normalStatus(i.status)==='ESTOQUE'?'Adicionar ao carrinho':'Registrar interesse'}</button></div></div>`; document.getElementById("modalDetalhe").classList.add("ativo"); }
 function fecharModalDetalhe(){ document.getElementById("modalDetalhe").classList.remove("ativo"); }
 
-document.addEventListener("DOMContentLoaded", carregarTudo);
+
+window.carregarTudo = carregarTudo;
+window.BDRExpedicao = {
+  carregarTudo,
+  get itensCatalogo(){ return itensCatalogo; },
+  get pedidos(){ return pedidos; },
+  get obras(){ return obras; },
+  get carrinho(){ return carrinho; }
+};
+
+function bdrExpedicaoIniciarSeguro(){
+  setTimeout(() => {
+    carregarTudo().catch(e => console.warn("BDR Expedição: falha ao carregar:", e?.message || e));
+  }, 100);
+}
+
+if(document.readyState === "loading"){
+  document.addEventListener("DOMContentLoaded", bdrExpedicaoIniciarSeguro);
+}else{
+  bdrExpedicaoIniciarSeguro();
+}
+
+window.addEventListener("online", async () => {
+  try{ window.bdrResetOnlineReal?.(); }catch(e){}
+  await carregarTudo();
+});
+
 
 
 /* =========================================================

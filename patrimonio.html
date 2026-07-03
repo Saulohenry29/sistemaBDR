@@ -687,38 +687,30 @@ function patrimonioErroInternet(err){
 }
 
 let BDR_PATRIMONIO_ONLINE_REAL = null;
+window.BDR_PATRIMONIO_ONLINE_REAL = null;
 
 async function patrimonioOnlineReal(){
-  if(navigator.onLine === false){
+  /*
+    REGRA OFICIAL:
+    usa o teste global do bdrCore.js.
+    Se o Supabase falhar, é OFFLINE para esta tela.
+  */
+  if(typeof window.bdrOnlineReal === "function"){
+    const ok = await window.bdrOnlineReal();
+    BDR_PATRIMONIO_ONLINE_REAL = ok;
+    window.BDR_PATRIMONIO_ONLINE_REAL = ok;
+    return ok;
+  }
+
+  if(navigator.onLine === false || !db()){
     BDR_PATRIMONIO_ONLINE_REAL = false;
+    window.BDR_PATRIMONIO_ONLINE_REAL = false;
     return false;
   }
 
-  if(!db()){
-    BDR_PATRIMONIO_ONLINE_REAL = false;
-    return false;
-  }
-
-  try{
-    const { error } = await db()
-      .from("obras")
-      .select("id")
-      .limit(1);
-
-    if(error){
-      console.warn("Teste online Supabase falhou, mas navegador está online:", error.message);
-      BDR_PATRIMONIO_ONLINE_REAL = true;
-      return true;
-    }
-
-    BDR_PATRIMONIO_ONLINE_REAL = true;
-    return true;
-
-  }catch(e){
-    console.warn("Internet parece online, mas Supabase falhou:", e);
-    BDR_PATRIMONIO_ONLINE_REAL = navigator.onLine !== false;
-    return BDR_PATRIMONIO_ONLINE_REAL;
-  }
+  BDR_PATRIMONIO_ONLINE_REAL = true;
+  window.BDR_PATRIMONIO_ONLINE_REAL = true;
+  return true;
 }
 
 function patrimonioOffline(){
@@ -3094,17 +3086,47 @@ async function bdrTentarSincronizarPendenciasPatrimonio(){
   }
 }
 
+function bdrPatrimonioOnlineLocalRapido(){
+  // Não consulta Supabase aqui. Evita flood offline.
+  if(navigator.onLine === false) return false;
+
+  if(typeof window.bdrOnline === "function"){
+    try{
+      return window.bdrOnline() !== false;
+    }catch(e){
+      return navigator.onLine !== false;
+    }
+  }
+
+  return navigator.onLine !== false;
+}
+
+window.addEventListener("offline", () => {
+  BDR_PATRIMONIO_ONLINE_REAL = false;
+  window.BDR_PATRIMONIO_ONLINE_REAL = false;
+  mostrarAvisoModoOffline();
+});
+
 window.addEventListener("online", () => {
+  if(typeof window.bdrResetOnlineReal === "function"){
+    try{ window.bdrResetOnlineReal(); }catch(e){}
+  }
   setTimeout(bdrTentarSincronizarPendenciasPatrimonio, 1200);
 });
 
 setInterval(async () => {
-  await patrimonioOnlineReal();
-  if(BDR_PATRIMONIO_ONLINE_REAL === true){
-    await bdrTentarSincronizarPendenciasPatrimonio();
-  }else if(typeof BDRSyncCenter?.atualizar === "function"){
-    BDRSyncCenter.atualizar();
+  // Regra limpa: offline não chama bdrOnlineReal nem Supabase.
+  if(!bdrPatrimonioOnlineLocalRapido()){
+    BDR_PATRIMONIO_ONLINE_REAL = false;
+    window.BDR_PATRIMONIO_ONLINE_REAL = false;
+    mostrarAvisoModoOffline();
+    if(typeof BDRSyncCenter?.atualizar === "function"){
+      BDRSyncCenter.atualizar();
+    }
+    return;
   }
+
+  await bdrTentarSincronizarPendenciasPatrimonio();
 }, 30000);
 
 iniciar();
@@ -3127,6 +3149,6 @@ setTimeout(() => {
 }, 1200);
 </script>
 
-<script src="./JS/bdrNotificacoes.js?v=20260702-global-final"></script>
+<script src="./JS/bdrNotificacoes.js"></script>
 </body>
 </html>

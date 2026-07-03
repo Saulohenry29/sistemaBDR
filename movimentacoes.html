@@ -148,8 +148,12 @@ button{-webkit-tap-highlight-color:transparent;}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="./JS/supabaseClient.js"></script>
 <script src="./JS/auth.js"></script>
-<script src="./JS/bdrSessaoRealtime.js"></script>
 <script src="./JS/bdrCore.js"></script>
+<script src="./JS/offlineQueue.js"></script>
+<script src="./JS/offlineDB.js"></script>
+<script src="./JS/bdrSyncEngine.js"></script>
+<script src="./JS/bdrSyncCenter.js"></script>
+<script src="./JS/bdrNotificacoes.js"></script>
 <script src="./JS/bdrMenuPermissoes.js"></script>
 <script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260701-1"></script>
 <script>verificarLogin();</script>
@@ -320,78 +324,11 @@ function toggleMenuUsuario(event){
   document.getElementById("notifDropdown")?.classList.remove("ativo");
 }
 
-function toggleNotificacoes(event){
-  if(event) event.stopPropagation();
-  document.getElementById("notifDropdown")?.classList.toggle("ativo");
-  document.getElementById("dropdownUser")?.classList.remove("ativo");
-}
-
 function fecharMenusTopo(){
   document.getElementById("dropdownUser")?.classList.remove("ativo");
-  document.getElementById("notifDropdown")?.classList.remove("ativo");
 }
 document.addEventListener("click", fecharMenusTopo);
 document.addEventListener("keydown", e => { if(e.key === "Escape") fecharMenusTopo(); });
-
-function atualizarNotificacoes(lista){
-  const badge = document.getElementById("notifBadge");
-  const box = document.getElementById("notifLista");
-  if(!badge || !box) return;
-  const total = lista.length;
-  badge.innerText = total > 9 ? "9+" : total;
-  badge.style.display = total > 0 ? "inline-flex" : "none";
-  if(total === 0){
-    box.innerHTML = `<div class="notif-item">Nenhuma notificação no momento.</div>`;
-    return;
-  }
-  box.innerHTML = lista.map(n => `
-    <div class="notif-item" onclick="${n.acao || ''}">
-      <strong>${n.titulo}</strong>
-      <span>${n.texto}</span>
-    </div>
-  `).join("");
-}
-
-async function gerarNotificacoesPedidos(){
-  const banco = db();
-  if(!banco){ atualizarNotificacoes([]); return; }
-  const lista = [];
-  try{
-    const { data: pedidos } = await banco
-      .from("pedidos_retirada")
-      .select("id,codigo,status,obra_nome,solicitante,criado_em")
-      .in("status", ["AGUARDANDO_AUTORIZACAO","EM_SEPARACAO","AGUARDANDO_RETIRADA","EM_TRANSITO","AGUARDANDO_CONFERENCIA"])
-      .order("id", { ascending:false })
-      .limit(12);
-
-    (pedidos || []).forEach(p => {
-      const codigo = p.codigo || ("PED-" + String(p.id).padStart(4,"0"));
-      lista.push({
-        titulo: `📦 ${codigo} - ${p.status || "Pedido"}`,
-        texto: `${p.obra_nome || "Obra não informada"} • ${p.solicitante || "Solicitante não informado"}`,
-        acao: "ir('pedidos.html')"
-      });
-    });
-
-    atualizarNotificacoes(lista);
-  }catch(e){
-    console.warn("Erro nas notificações de pedidos:", e);
-    atualizarNotificacoes([]);
-  }
-}
-
-function iniciarSininhoReal(){
-  gerarNotificacoesPedidos();
-  setInterval(gerarNotificacoesPedidos, 30000);
-  try{
-    const banco = db();
-    if(!banco || !banco.channel) return;
-    banco.channel("bdr_movimentacoes_notificacoes_pedidos")
-      .on("postgres_changes", { event:"*", schema:"public", table:"pedidos_retirada" }, gerarNotificacoesPedidos)
-      .on("postgres_changes", { event:"*", schema:"public", table:"historico_pedidos_retirada" }, gerarNotificacoesPedidos)
-      .subscribe();
-  }catch(e){ console.warn("Realtime indisponível:", e); }
-}
 
 function ir(pagina){ window.location.href = pagina; }
 function db(){ return window.client || window.supabaseClient || window.clientSupabase; }
@@ -553,10 +490,9 @@ function renderizarMovimentacoes(){
 }
 
 carregarUsuarioTopo();
-iniciarSininhoReal();
 carregarDados();
 </script>
 
-<script src="./JS/bdrNotificacoes.js?v=20260702-global-final"></script>
+<script src="./JS/bdrNotificacoes.js?v=20260702-core-online-final"></script>
 </body>
 </html>

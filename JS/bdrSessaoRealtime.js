@@ -1,202 +1,112 @@
 /* =========================================================
-   BDR SESSÃO REALTIME - SAFE OFFLINE V4
-   - Não abre WebSocket offline real.
-   - Não consulta usuarios_sistema offline real.
-   - Usa window.estaOnlineReal quando existir.
-========================================================= */
+   BDR SESSÃO REALTIME V10.0 - OFFLINE SAFE
+   Objetivo:
+   - Nunca abrir websocket offline
+   - Remover canal quando cair a internet
+   - Reabrir somente online
+   ========================================================= */
+
 (function(){
-  if(window.__BDR_SESSAO_REALTIME__) return;
-  window.__BDR_SESSAO_REALTIME__ = true;
+  'use strict';
 
-  let canalSessao = null;
-  let intervaloSessao = null;
+  const RT = {
+    versao: '10.0-offline-safe',
+    canal: null,
+    ativo: false,
+    nomeCanal: 'bdr-sessao-realtime'
+  };
 
-  function db(){
-    return window.client || window.supabaseClient || null;
+  function log(...args){
+    if(window.BDR_DEBUG_REALTIME) console.log('[BDR REALTIME]', ...args);
   }
 
-  async function onlineReal(){
-    if(window.estaOnlineReal){
-      return await window.estaOnlineReal();
+  function onlineLocalRapido(){
+    if(navigator.onLine === false) return false;
+    if(typeof window.bdrOnline === 'function'){
+      try { return window.bdrOnline() !== false; }
+      catch(e){ return navigator.onLine !== false; }
     }
-    return navigator.onLine === true;
+    return navigator.onLine !== false;
   }
 
-  function usuarioAtual(){
+  function temRealtime(){
+    return !!(window.client && typeof window.client.channel === 'function');
+  }
+
+  function getUsuarioAtual(){
     try{
-      const u = localStorage.getItem("usuario_logado") || localStorage.getItem("usuarioLogado");
-      return u ? JSON.parse(u) : null;
-    }catch(e){
-      return null;
-    }
+      if(typeof window.usuarioAtual === 'function') return window.usuarioAtual();
+      const raw = localStorage.getItem('usuarioAtual') || localStorage.getItem('usuarioLogado') || sessionStorage.getItem('usuarioAtual');
+      return raw ? JSON.parse(raw) : null;
+    }catch(e){ return null; }
   }
 
-  function sairBloqueado(){
-    localStorage.removeItem("usuario_logado");
-    localStorage.removeItem("usuarioLogado");
-    localStorage.removeItem("perfil_usuario");
-    alert("Seu acesso foi bloqueado ou alterado. Faça login novamente.");
-    window.location.href = "login.html";
-  }
-
-  function atualizarTopo(usuario){
-    const nome = document.getElementById("usuarioNome");
-    const perfil = document.getElementById("usuarioPerfil");
-
-    if(nome) nome.innerText = "Olá, " + (usuario?.nome || "usuário");
-    if(perfil) perfil.innerText = usuario?.perfil || "-";
-  }
-
-  async function sincronizarUsuario(){
-    const online = await onlineReal();
-
-    if(!online){
-      atualizarTopo(usuarioAtual());
-      return;
-    }
-
-    const banco = db();
-    const atual = usuarioAtual();
-
-    if(!banco || !atual?.id){
-      atualizarTopo(atual);
-      return;
-    }
-
-    try{
-      const { data, error } = await banco
-        .from("usuarios_sistema")
-        .select("*")
-        .eq("id", atual.id)
-        .maybeSingle();
-
-      if(error || !data){
-        atualizarTopo(atual);
-        return;
-      }
-
-      if(data.ativo !== true){
-        sairBloqueado();
-        return;
-      }
-
-      localStorage.setItem("usuario_logado", JSON.stringify(data));
-      localStorage.setItem("usuarioLogado", JSON.stringify(data));
-      localStorage.setItem("perfil_usuario", data.perfil || "");
-
-      atualizarTopo(data);
-      window.dispatchEvent(new CustomEvent("bdrUsuarioAtualizado", { detail:data }));
-
-    }catch(e){
-      atualizarTopo(atual);
-    }
-  }
-
-  async function pararRealtimeSessao(){
-    const banco = db();
-
-    if(canalSessao && banco && typeof banco.removeChannel === "function"){
+  async function pararRealtime(){
+    if(RT.canal && window.client){
       try{
-        await banco.removeChannel(canalSessao);
+        if(typeof window.client.removeChannel === 'function'){
+          await window.client.removeChannel(RT.canal);
+        }else if(typeof RT.canal.unsubscribe === 'function'){
+          await RT.canal.unsubscribe();
+        }
       }catch(e){}
     }
-
-    canalSessao = null;
+    RT.canal = null;
+    RT.ativo = false;
+    log('parado');
   }
 
-  async function iniciarRealtimeSessao(){
-    const online = await onlineReal();
+  function iniciarRealtime(){
+    if(RT.ativo || RT.canal) return;
+    if(!onlineLocalRapido()) return;
+    if(!temRealtime()) return;
 
-    if(!online){
-      await pararRealtimeSessao();
-      console.log("BDR sessão realtime desativado offline.");
-      return;
-    }
-
-    const banco = db();
-    const atual = usuarioAtual();
-
-    if(!banco || !atual?.id || typeof banco.channel !== "function" || canalSessao){
-      return;
-    }
+    const usuario = getUsuarioAtual();
+    const usuarioId = usuario?.id || usuario?.usuario_id;
+    if(!usuarioId) return;
 
     try{
-      canalSessao = banco
-        .channel("bdr_sessao_usuario_" + atual.id)
-        .on("postgres_changes", {
-          event:"UPDATE",
-          schema:"public",
-          table:"usuarios_sistema",
-          filter:"id=eq." + atual.id
+      RT.canal = window.client
+        .channel(`${RT.nomeCanal}-${usuarioId}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'sessoes_ativas'
         }, payload => {
-          const novo = payload.new;
-
-          if(!novo || novo.ativo !== true){
-            sairBloqueado();
-            return;
-          }
-
-          localStorage.setItem("usuario_logado", JSON.stringify(novo));
-          localStorage.setItem("usuarioLogado", JSON.stringify(novo));
-          localStorage.setItem("perfil_usuario", novo.perfil || "");
-
-          atualizarTopo(novo);
-          window.dispatchEvent(new CustomEvent("bdrUsuarioAtualizado", { detail:novo }));
+          window.dispatchEvent(new CustomEvent('bdr-sessao-realtime', { detail: payload }));
         })
-        .subscribe();
-
-    }catch(e){
-      canalSessao = null;
+        .subscribe(status => {
+          RT.ativo = status === 'SUBSCRIBED';
+          log('status', status);
+        });
+    }catch(err){
+      RT.canal = null;
+      RT.ativo = false;
+      if(onlineLocalRapido()) console.warn('BDR realtime: erro ao iniciar:', err?.message || err);
     }
   }
 
-  async function iniciar(){
-    atualizarTopo(usuarioAtual());
+  window.addEventListener('offline', () => {
+    pararRealtime();
+  });
 
-    const online = await onlineReal();
+  window.addEventListener('online', () => {
+    // Reabre sem chamar bdrOnlineReal. Quem valida internet real é o core/sync.
+    setTimeout(iniciarRealtime, 1500);
+  });
 
-    if(online){
-      await sincronizarUsuario();
-      await iniciarRealtimeSessao();
-    }else{
-      await pararRealtimeSessao();
-    }
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'hidden') return;
+    if(onlineLocalRapido()) iniciarRealtime();
+  });
 
-    document.addEventListener("visibilitychange", async () => {
-      if(!document.hidden){
-        const ok = await onlineReal();
-        if(ok) await sincronizarUsuario();
-      }
-    });
+  document.addEventListener('DOMContentLoaded', () => {
+    iniciarRealtime();
+  });
 
-    window.addEventListener("offline", async () => {
-      await pararRealtimeSessao();
-      atualizarTopo(usuarioAtual());
-    });
+  window.BDR_REALTIME = RT;
+  window.bdrIniciarSessaoRealtime = iniciarRealtime;
+  window.bdrPararSessaoRealtime = pararRealtime;
 
-    window.addEventListener("online", async () => {
-      const ok = await onlineReal();
-      if(ok){
-        await sincronizarUsuario();
-        await iniciarRealtimeSessao();
-      }
-    });
-
-    if(!intervaloSessao){
-      intervaloSessao = setInterval(async () => {
-        const ok = await onlineReal();
-        if(ok) await sincronizarUsuario();
-      }, 30000);
-    }
-  }
-
-  window.bdrSincronizarUsuario = sincronizarUsuario;
-  window.bdrPararRealtimeSessao = pararRealtimeSessao;
-  window.bdrIniciarRealtimeSessao = iniciarRealtimeSessao;
-
-  if(document.readyState === "loading"){
-    document.addEventListener("DOMContentLoaded", iniciar);
-  }else{
-    iniciar();
-  }
+  console.log('✅ BDR SESSÃO REALTIME V10.0 carregado - offline safe');
 })();

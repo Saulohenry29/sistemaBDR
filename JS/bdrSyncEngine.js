@@ -1,312 +1,329 @@
 /* =========================================================
-   BDR SYNC ENGINE V2 - OFFLINE FIRST PROFISSIONAL
-   Salva primeiro no tablet e sincroniza automaticamente.
-
-   Melhorias:
-   - Evento bdr-sync-finalizado após sincronizar
-   - Evento bdr-sync-item-sincronizado por item
-   - Evita sync duplicado
-   - Testa internet real antes de enviar
+   BDR SYNC ENGINE V10.2 - OFFLINE FIRST
+   Objetivo:
+   - Patrimônio e outras páginas podem salvar offline em fila
+   - Só tenta sincronizar quando houver internet real
+   - Evita flood de Supabase offline
+   - Compatível com bdrSyncCenter.js antigo
 ========================================================= */
+
 (function(){
-  "use strict";
+  'use strict';
 
-  const TENTATIVAS_MAX = 5;
-  const INTERVALO_SYNC_MS = 30000;
-  const PING_TIMEOUT_MS = 1800;
+  const KEY_FILA = 'BDR_SYNC_QUEUE_V1';
+  const KEY_FILA_LEGADO = 'BDR_SYNC_QUEUE';
 
-  let sincronizandoAgora = false;
-  let ultimaChecagemOnline = 0;
-  let ultimoOnlineReal = null;
+  const SYNC = {
+    versao: '10.2-offline-first',
+    timer: null,
+    sincronizando: false,
+    intervaloBaseMs: 15000,
+    intervaloAtualMs: 15000,
+    intervaloMaxMs: 120000,
+    ultimaFalha: null
+  };
 
-  function db(){
-    return window.client || window.supabaseClient || window.clientSupabase || null;
+  function log(...args){
+    if(window.BDR_DEBUG_SYNC) console.log('[BDR SYNC]', ...args);
   }
 
-  function agora(){
-    return new Date().toISOString();
-  }
-
-  function emitirStatus(extra={}){
-    window.dispatchEvent(new CustomEvent("bdr-sync-status", {
-      detail:{ em:agora(), ...extra }
-    }));
-  }
-
-  function emitirFinalizado(resultado){
-    window.dispatchEvent(new CustomEvent("bdr-sync-finalizado", {
-      detail:{ em:agora(), ...resultado }
-    }));
-  }
-
-  function emitirItemSincronizado(item, data){
-    window.dispatchEvent(new CustomEvent("bdr-sync-item-sincronizado", {
-      detail:{ em:agora(), item, data }
-    }));
-  }
-
-  async function onlineReal(){
-    if(window.BDR_PATRIMONIO_ONLINE_REAL === false) return false;
+  function onlineLocalRapido(){
     if(navigator.onLine === false) return false;
-    if(!db()) return false;
 
-    const agoraMs = Date.now();
-
-    if(ultimoOnlineReal !== null && (agoraMs - ultimaChecagemOnline) < 8000){
-      return ultimoOnlineReal;
+    if(typeof window.bdrOnline === 'function'){
+      try { return window.bdrOnline() !== false; }
+      catch(e){ return navigator.onLine !== false; }
     }
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), PING_TIMEOUT_MS);
+    return navigator.onLine !== false;
+  }
 
+  async function onlineRealSeguro(){
+    if(!onlineLocalRapido()) return false;
+
+    if(typeof window.bdrOnlineReal === 'function'){
+      try{ return await window.bdrOnlineReal(); }
+      catch(e){ return false; }
+    }
+
+    return onlineLocalRapido();
+  }
+
+  function temSupabase(){
+    return !!(window.client && typeof window.client.from === 'function');
+  }
+
+  function lerJsonArray(chave){
     try{
-      const { error } = await db()
-        .from("obras")
-        .select("id")
-        .limit(1)
-        .abortSignal(controller.signal);
-
-      clearTimeout(timer);
-
-      ultimoOnlineReal = !error;
-      ultimaChecagemOnline = Date.now();
-
-      return ultimoOnlineReal;
+      const raw = localStorage.getItem(chave);
+      const fila = raw ? JSON.parse(raw) : [];
+      return Array.isArray(fila) ? fila : [];
     }catch(e){
-      clearTimeout(timer);
-
-      ultimoOnlineReal = false;
-      ultimaChecagemOnline = Date.now();
-
-      return false;
+      return [];
     }
   }
 
-  function online(){
-    if(window.BDR_PATRIMONIO_ONLINE_REAL === false) return false;
-    return navigator.onLine === true && !!db();
-  }
+  function lerFila(){
+    const principal = lerJsonArray(KEY_FILA);
+    const legado = lerJsonArray(KEY_FILA_LEGADO);
 
-  async function salvarLocal(tabela, acao, payload, match=null, meta={}){
-    if(!window.BDROfflineDB){
-      throw new Error("BDROfflineDB não carregado. Inclua JS/offlineDB.js antes do bdrSyncEngine.js");
-    }
+    if(!legado.length) return principal;
 
-    const item = await window.BDROfflineDB.adicionarPendente({
-      tabela,
-      acao,
-      payload,
-      match,
-      meta,
-      status:"pendente"
+    const ids = new Set(principal.map(i => i && i.id).filter(Boolean));
+    const juntada = principal.slice();
+
+    legado.forEach(item => {
+      if(item && item.id && ids.has(item.id)) return;
+      juntada.push(item);
     });
 
-    emitirStatus({motivo:"novo_pendente", item});
+    return juntada;
+  }
 
-    if(await onlineReal()){
-      sincronizarPendentes({silencioso:true});
-    }
+  function salvarFila(fila){
+    const segura = Array.isArray(fila) ? fila : [];
+    localStorage.setItem(KEY_FILA, JSON.stringify(segura));
+    // Mantém a chave antiga zerada para não duplicar item em tela antiga.
+    localStorage.setItem(KEY_FILA_LEGADO, JSON.stringify([]));
+    atualizarIndicador();
+  }
 
+  function criarId(){
+    return 'sync_' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+  }
+
+  function normalizarOperacao(op){
+    op = String(op || 'upsert').toLowerCase();
+    if(op === 'criar') return 'insert';
+    if(op === 'editar') return 'update';
+    if(op === 'remover') return 'delete';
+    return op;
+  }
+
+  function enfileirar(acao){
+    const item = {
+      id: acao.id || criarId(),
+      criado_em: acao.criado_em || new Date().toISOString(),
+      tentativas: Number(acao.tentativas || 0),
+      tabela: acao.tabela,
+      operacao: normalizarOperacao(acao.operacao || acao.tipo || 'upsert'),
+      dados: acao.dados || acao.payload || {},
+      match: acao.match || acao.filtro || null,
+      meta: acao.meta || {},
+      ultimo_erro: acao.ultimo_erro || null,
+      ultima_tentativa: acao.ultima_tentativa || null
+    };
+
+    if(!item.tabela) throw new Error('BDR Sync: tabela é obrigatória.');
+
+    const fila = lerFila();
+    fila.push(item);
+    salvarFila(fila);
+    iniciar();
     return item;
   }
 
-  async function criar(tabela, payload, meta={}){
-    return await salvarLocal(tabela, "insert", payload, null, meta);
+  async function executarItem(item){
+    const tabela = item.tabela;
+    const op = normalizarOperacao(item.operacao);
+    const dados = item.dados || {};
+
+    if(op === 'insert'){
+      const payload = Array.isArray(dados) ? dados : [dados];
+      return await window.client.from(tabela).insert(payload).select();
+    }
+
+    if(op === 'update'){
+      let q = window.client.from(tabela).update(dados);
+      const match = item.match || {};
+      Object.keys(match).forEach(k => { q = q.eq(k, match[k]); });
+      return await q.select();
+    }
+
+    if(op === 'delete'){
+      let q = window.client.from(tabela).delete();
+      const match = item.match || {};
+      Object.keys(match).forEach(k => { q = q.eq(k, match[k]); });
+      return await q;
+    }
+
+    const payload = Array.isArray(dados) ? dados : [dados];
+    return await window.client.from(tabela).upsert(payload).select();
   }
 
-  async function atualizar(tabela, match, payload, meta={}){
-    return await salvarLocal(tabela, "update", payload, match, meta);
-  }
+  async function sincronizarAgora(){
+    if(SYNC.sincronizando) return false;
+    if(!temSupabase()) return false;
+    if(!onlineLocalRapido()) return false;
 
-  async function excluir(tabela, match, meta={}){
-    return await salvarLocal(tabela, "delete", {}, match, meta);
-  }
-
-  async function buscarOnlineECriarCache(tabela, queryBuilder){
-    if(!window.BDROfflineDB) return [];
-
-    if(await onlineReal() && typeof queryBuilder === "function"){
-      try{
-        const resp = await queryBuilder(db().from(tabela));
-        if(resp.error) throw resp.error;
-
-        await window.BDROfflineDB.salvarTabela(tabela, resp.data || []);
-        return resp.data || [];
-      }catch(e){
-        console.warn("BDR Sync: falha online, usando cache:", tabela, e.message || e);
-      }
+    const fila = lerFila();
+    if(!fila.length){
+      atualizarIndicador();
+      return true;
     }
 
-    return await window.BDROfflineDB.lerTabela(tabela);
-  }
+    SYNC.sincronizando = true;
 
-  async function aplicarItem(item){
-    const banco = db();
-    if(!banco) throw new Error("Supabase indisponível.");
+    try{
+      const okReal = await onlineRealSeguro();
+      if(!okReal) return false;
 
-    let resp;
+      const pendentes = lerFila();
+      const restantes = [];
 
-    if(item.acao === "insert"){
-      resp = await banco.from(item.tabela).insert([item.payload]).select();
-    }
-
-    if(item.acao === "update"){
-      if(!item.match) throw new Error("Update sem match/filtro.");
-
-      let q = banco.from(item.tabela).update(item.payload);
-      Object.entries(item.match).forEach(([campo, valor]) => {
-        q = q.eq(campo, valor);
-      });
-      resp = await q.select();
-    }
-
-    if(item.acao === "delete"){
-      if(!item.match) throw new Error("Delete sem match/filtro.");
-
-      let q = banco.from(item.tabela).delete();
-      Object.entries(item.match).forEach(([campo, valor]) => {
-        q = q.eq(campo, valor);
-      });
-      resp = await q.select();
-    }
-
-    if(resp?.error) throw resp.error;
-    return resp?.data || null;
-  }
-
-  async function sincronizarPendentes(opcoes={}){
-    if(sincronizandoAgora){
-      return {ok:false, motivo:"sync_em_andamento"};
-    }
-
-    if(!window.BDROfflineDB){
-      return {ok:false, motivo:"offlineDB_indisponivel"};
-    }
-
-    if(!(await onlineReal())){
-      emitirStatus({motivo:"offline"});
-      return {ok:false, motivo:"offline"};
-    }
-
-    sincronizandoAgora = true;
-
-    const pendentes = await window.BDROfflineDB.listarPendentes();
-
-    let ok = 0;
-    let erro = 0;
-    let pulados = 0;
-
-    emitirStatus({motivo:"inicio_sync", total:pendentes.length});
-
-    for(const item of pendentes){
-      try{
-        if(!(await onlineReal())){
-          pulados++;
-          break;
+      for(const item of pendentes){
+        try{
+          const { error } = await executarItem(item);
+          if(error) throw error;
+          log('sincronizado', item.id, item.tabela);
+        }catch(err){
+          item.tentativas = Number(item.tentativas || 0) + 1;
+          item.ultimo_erro = String(err?.message || err);
+          item.ultima_tentativa = new Date().toISOString();
+          restantes.push(item);
         }
-
-        await window.BDROfflineDB.atualizarPendente(item.id, {
-          status:"sincronizando",
-          atualizado_em:agora()
-        });
-
-        const data = await aplicarItem(item);
-
-        await window.BDROfflineDB.atualizarPendente(item.id, {
-          status:"sincronizado",
-          erro:null,
-          atualizado_em:agora()
-        });
-
-        ok++;
-        emitirItemSincronizado(item, data);
-
-      }catch(e){
-        const tentativas = Number(item.tentativas || 0) + 1;
-        const status = tentativas >= TENTATIVAS_MAX ? "erro" : "pendente";
-
-        await window.BDROfflineDB.atualizarPendente(item.id, {
-          status,
-          tentativas,
-          erro:e.message || String(e),
-          atualizado_em:agora()
-        });
-
-        erro++;
       }
 
-      emitirStatus({motivo:"item_processado"});
+      salvarFila(restantes);
+
+      if(restantes.length){
+        falhou('Alguns itens não sincronizaram.');
+      }else{
+        SYNC.intervaloAtualMs = SYNC.intervaloBaseMs;
+        SYNC.ultimaFalha = null;
+      }
+
+      return restantes.length === 0;
+    }catch(err){
+      falhou(err?.message || err);
+      return false;
+    }finally{
+      SYNC.sincronizando = false;
+      reagendar();
     }
-
-    sincronizandoAgora = false;
-
-    const resultado = {
-      ok:true,
-      sincronizados:ok,
-      erros:erro,
-      pulados
-    };
-
-    if(!opcoes.silencioso && (ok || erro || pulados)){
-      console.log(`BDR Sync: ${ok} sincronizado(s), ${erro} erro(s), ${pulados} pulado(s).`);
-    }
-
-    emitirStatus({motivo:"fim_sync", ...resultado});
-
-    if(ok > 0 || erro > 0){
-      emitirFinalizado(resultado);
-    }
-
-    return resultado;
   }
 
-  async function listarTudo(){
-    if(!window.BDROfflineDB) return [];
-
-    const indexed = await window.BDROfflineDB.abrirDB();
-
-    return new Promise((resolve, reject) => {
-      const tx = indexed.transaction("fila_sincronizacao", "readonly");
-      const store = tx.objectStore("fila_sincronizacao");
-      const req = store.getAll();
-
-      req.onsuccess = () => resolve(req.result || []);
-      req.onerror = () => reject(req.error);
-    });
+  function falhou(msg){
+    SYNC.ultimaFalha = String(msg || 'Falha ao sincronizar');
+    SYNC.intervaloAtualMs = Math.min(SYNC.intervaloAtualMs * 2, SYNC.intervaloMaxMs);
+    log('falha:', SYNC.ultimaFalha, 'próxima em', SYNC.intervaloAtualMs);
   }
 
-  async function contadores(){
-    const todos = await listarTudo();
+  function parar(){
+    if(SYNC.timer){
+      clearTimeout(SYNC.timer);
+      SYNC.timer = null;
+    }
+  }
 
+  function reagendar(){
+    parar();
+    if(!onlineLocalRapido()) return;
+    if(!lerFila().length) return;
+    SYNC.timer = setTimeout(() => sincronizarAgora(), SYNC.intervaloAtualMs);
+  }
+
+  function iniciar(){
+    parar();
+    if(!onlineLocalRapido()) return;
+    if(!lerFila().length) return;
+    SYNC.timer = setTimeout(() => sincronizarAgora(), 1000);
+  }
+
+  function atualizarIndicador(){
+    const qtd = lerFila().length;
+    const el = document.getElementById('bdrSyncStatus') || document.querySelector('[data-bdr-sync-status]');
+    if(el){
+      el.textContent = qtd ? `🔄 ${qtd} pendente(s) para sincronizar` : '✅ Sincronizado';
+      el.style.display = 'inline-flex';
+    }
+    window.dispatchEvent(new CustomEvent('bdr-sync-queue-change', { detail:{ pendentes:qtd } }));
+  }
+
+  function contadores(){
+    const fila = lerFila();
+    const erros = fila.filter(i => i && i.ultimo_erro).length;
     return {
-      pendentes: todos.filter(x => x.status === "pendente" || x.status === "sincronizando").length,
-      sincronizados: todos.filter(x => x.status === "sincronizado").length,
-      erros: todos.filter(x => x.status === "erro").length,
-      conflitos: todos.filter(x => x.status === "conflito").length,
-      total: todos.length
+      total: fila.length,
+      pendentes: fila.length,
+      sincronizados: 0,
+      erros,
+      erro: erros,
+      ultimaFalha: SYNC.ultimaFalha,
+      sincronizando: !!SYNC.sincronizando
     };
   }
 
-  window.addEventListener("online", () => {
-    setTimeout(() => sincronizarPendentes({silencioso:true}), 1500);
+  function listarTudo(){
+    return lerFila();
+  }
+
+  async function limparTudo(){
+    salvarFila([]);
+    return true;
+  }
+
+  async function remover(id){
+    const fila = lerFila().filter(i => String(i.id) !== String(id));
+    salvarFila(fila);
+    return true;
+  }
+
+  window.addEventListener('offline', () => {
+    parar();
+    atualizarIndicador();
   });
 
-  setInterval(() => {
-    sincronizarPendentes({silencioso:true});
-  }, INTERVALO_SYNC_MS);
+  window.addEventListener('online', () => {
+    if(typeof window.bdrResetOnlineReal === 'function'){
+      try{ window.bdrResetOnlineReal(); }catch(e){}
+    }
+    SYNC.intervaloAtualMs = SYNC.intervaloBaseMs;
+    iniciar();
+  });
 
-  window.BDRSync = {
-    online,
-    onlineReal,
-    criar,
-    atualizar,
-    excluir,
-    salvarLocal,
-    buscarOnlineECriarCache,
-    sincronizarPendentes,
-    listarTudo,
-    contadores
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible') iniciar();
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    atualizarIndicador();
+    iniciar();
+  });
+
+  window.BDR_SYNC = SYNC;
+  window.bdrSyncEnfileirar = enfileirar;
+  window.bdrSyncAgora = sincronizarAgora;
+  window.bdrSyncForcarAgora = sincronizarAgora;
+  window.bdrSyncFila = lerFila;
+  window.bdrSyncPendentes = () => lerFila().length;
+
+  window.BDRSync = window.BDRSync || {};
+  window.BDRSync.criar = async function(tabela, dados, meta){
+    return enfileirar({
+      tabela,
+      operacao:'insert',
+      dados:Array.isArray(dados) ? dados : [dados],
+      meta:meta || {}
+    });
   };
+  window.BDRSync.atualizar = async function(tabela, match, dados, meta){
+    return enfileirar({
+      tabela,
+      operacao:'update',
+      match:match || {},
+      dados:dados || {},
+      meta:meta || {}
+    });
+  };
+  window.BDRSync.sincronizar = sincronizarAgora;
+  window.BDRSync.sincronizarAgora = sincronizarAgora;
+  window.BDRSync.processarFila = sincronizarAgora;
+  window.BDRSync.pendentes = function(){ return lerFila().length; };
+  window.BDRSync.contadores = async function(){ return contadores(); };
+  window.BDRSync.listarTudo = async function(){ return listarTudo(); };
+  window.BDRSync.limparTudo = limparTudo;
+  window.BDRSync.remover = remover;
 
-  console.log("✅ BDR Sync Engine V2 carregado - offline-first ativo");
+  console.log('✅ BDR SYNC ENGINE V10.2 carregado - offline first compatível');
 })();

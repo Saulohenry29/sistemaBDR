@@ -5,8 +5,42 @@
 const SUPABASE_URL = "https://ytalegphxrntlomkltbc.supabase.co";
 const SUPABASE_KEY = "sb_publishable_VXvPi5TQMiPyOxknM5Fw_g_0NHwZYss";
 
+let __bdrUltimoTesteOnline = null;
+let __bdrUltimoTesteTempo = 0;
+
+async function bdrOnlineReal(){
+  if(navigator.onLine === false) return false;
+  if(!window.client) return false;
+
+  const agora = Date.now();
+
+  if(
+    __bdrUltimoTesteOnline !== null &&
+    (agora - __bdrUltimoTesteTempo) < 3000
+  ){
+    return __bdrUltimoTesteOnline;
+  }
+
+  try{
+    const { error } = await window.client
+      .from("obras")
+      .select("id")
+      .limit(1);
+
+    __bdrUltimoTesteOnline = !error;
+    __bdrUltimoTesteTempo = agora;
+
+    return __bdrUltimoTesteOnline;
+
+  }catch(e){
+    __bdrUltimoTesteOnline = false;
+    __bdrUltimoTesteTempo = agora;
+    return false;
+  }
+}
+
 function bdrOnline(){
-  return navigator.onLine === true;
+  return __bdrUltimoTesteOnline === true;
 }
 
 if (!window.client && window.supabase && window.supabase.createClient) {
@@ -196,3 +230,11 @@ document.addEventListener("input", function(e){
     e.target.value = e.target.value.toUpperCase();
   }
 });
+
+window.bdrResetOnlineReal = function(){
+  __bdrUltimoTesteOnline = null;
+  __bdrUltimoTesteTempo = 0;
+};
+
+window.bdrOnline = bdrOnline;
+window.bdrOnlineReal = bdrOnlineReal;
