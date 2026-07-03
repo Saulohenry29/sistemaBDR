@@ -1,11 +1,17 @@
 /* =========================================================
-   BDR NOTIFICAÇÕES V10.4 - FINAL LIMPO
+   BDR NOTIFICAÇÕES Saulo - FLUXO CORRETO: CLICOU, LEU
    - Protege contra carregamento duplicado
-   - Não chama bdrOnlineReal() no setInterval
-   - Não consulta Supabase quando estiver offline
-   - Usa somente usuario_destino_id na tabela notificacoes
-   - Corrige contador fantasma
-   - Ao abrir o sininho, marca notificações como lidas
+   - Usa bdrOnlineReal() como fonte de verdade quando existir
+   - Não fica preso em bdrOnline() false se bdrOnlineReal() true
+   - Não consulta Supabase quando estiver offline real
+   - Usa usuario_destino_id na tabela notificacoes
+   - Contador sem fantasma
+   - Busca somente notificações não lidas
+   - Abrir o sininho NÃO marca como lida
+   - Clicar no item marca como lida; se tiver link, navega depois
+   - Exibe e salva lida_em no horário de Mato Grosso (America/Cuiaba)
+   - Toca som e anima o sininho quando chega notificação nova
+   - Mostra sino cortado quando offline
 ========================================================= */
 (function(){
   'use strict';
@@ -17,24 +23,42 @@
 
   const BDR_NOTIF = {
     __loaded: true,
-    versao: '10.4-final',
+    versao: '10.9-clicou-leu',
     intervaloMs: 30000,
     timer: null,
     carregando: false,
     marcandoLidas: false,
     paradoOffline: false,
     ultimoTotal: 0,
-    errosSeguidos: 0
+    errosSeguidos: 0,
+    ultimaVerificacaoOnline: 0,
+    ultimoOnlineReal: null,
+    primeiraCargaConcluida: false,
+    audioLiberado: false,
+    audioCtx: null
   };
 
   function temSupabase(){
     return !!(window.client && typeof window.client.from === 'function');
   }
 
-  function onlineLocalRapido(){
-    // IMPORTANTE: nunca chamar bdrOnlineReal() aqui.
+  async function onlineLocalRapido(){
     if(navigator.onLine === false) return false;
 
+    // Fonte oficial quando existir: internet real do bdrCore.js
+    if(typeof window.bdrOnlineReal === 'function'){
+      try{
+        const ok = await window.bdrOnlineReal();
+        BDR_NOTIF.ultimaVerificacaoOnline = Date.now();
+        BDR_NOTIF.ultimoOnlineReal = !!ok;
+        return !!ok;
+      }catch(e){
+        BDR_NOTIF.ultimoOnlineReal = false;
+        return false;
+      }
+    }
+
+    // Fallback antigo, usado só se não existir bdrOnlineReal.
     if(typeof window.bdrOnline === 'function'){
       try{ return window.bdrOnline() !== false; }
       catch(e){ return navigator.onLine !== false; }
@@ -81,6 +105,135 @@
            document.querySelector('[data-bdr-dropdown-notificacoes]');
   }
 
+  function notifBtnEl(){
+    return document.querySelector('.notif-btn') ||
+           document.querySelector('[data-bdr-btn-notificacoes]');
+  }
+
+  function aplicarCssSininho(){
+    if(document.getElementById('bdrNotifAnimCss')) return;
+
+    const css = document.createElement('style');
+    css.id = 'bdrNotifAnimCss';
+    css.textContent = `
+      @keyframes bdrBellShake{
+        0%{transform:rotate(0deg) scale(1)}
+        15%{transform:rotate(-16deg) scale(1.08)}
+        30%{transform:rotate(14deg) scale(1.08)}
+        45%{transform:rotate(-10deg) scale(1.06)}
+        60%{transform:rotate(8deg) scale(1.06)}
+        75%{transform:rotate(-4deg) scale(1.03)}
+        100%{transform:rotate(0deg) scale(1)}
+      }
+      @keyframes bdrBadgePulse{
+        0%{transform:scale(1)}
+        50%{transform:scale(1.28)}
+        100%{transform:scale(1)}
+      }
+      .notif-btn.bdr-notif-animando i{
+        animation:bdrBellShake .75s ease-in-out 0s 2;
+        transform-origin:50% 0%;
+      }
+      .notif-badge.bdr-badge-pulse{
+        animation:bdrBadgePulse .75s ease-in-out 0s 2;
+      }
+      .notif-btn.bdr-notif-offline{
+        opacity:.75;
+        filter:grayscale(.25);
+      }
+      .notif-btn.bdr-notif-offline i{
+        color:#6b7280!important;
+      }
+    `;
+    document.head.appendChild(css);
+  }
+
+  function setIconeOffline(offline){
+    const btn = notifBtnEl();
+    const icon = btn?.querySelector('i');
+    if(!btn || !icon) return;
+
+    if(offline){
+      btn.classList.add('bdr-notif-offline');
+      icon.className = 'fa-regular fa-bell-slash';
+      btn.title = 'Notificações pausadas offline';
+    }else{
+      btn.classList.remove('bdr-notif-offline');
+      icon.className = 'fa-regular fa-bell';
+      btn.title = 'Notificações';
+    }
+  }
+
+  function liberarAudioNotificacao(){
+    if(BDR_NOTIF.audioLiberado) return;
+
+    try{
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if(!AudioCtx) return;
+
+      if(!BDR_NOTIF.audioCtx){
+        BDR_NOTIF.audioCtx = new AudioCtx();
+      }
+
+      if(BDR_NOTIF.audioCtx.state === 'suspended'){
+        BDR_NOTIF.audioCtx.resume().catch(()=>{});
+      }
+
+      BDR_NOTIF.audioLiberado = true;
+    }catch(e){}
+  }
+
+  function tocarSomNotificacao(){
+    if(!BDR_NOTIF.audioLiberado) return;
+
+    try{
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = BDR_NOTIF.audioCtx || new AudioCtx();
+      BDR_NOTIF.audioCtx = ctx;
+
+      const agora = ctx.currentTime;
+      const ganho = ctx.createGain();
+      ganho.gain.setValueAtTime(0.0001, agora);
+      ganho.gain.exponentialRampToValueAtTime(0.18, agora + 0.02);
+      ganho.gain.exponentialRampToValueAtTime(0.0001, agora + 0.22);
+      ganho.connect(ctx.destination);
+
+      const osc1 = ctx.createOscillator();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(880, agora);
+      osc1.frequency.setValueAtTime(1175, agora + 0.10);
+      osc1.connect(ganho);
+      osc1.start(agora);
+      osc1.stop(agora + 0.23);
+    }catch(e){}
+  }
+
+  function animarSininho(){
+    aplicarCssSininho();
+
+    const btn = notifBtnEl();
+    const badge = badgeEl();
+
+    if(btn){
+      btn.classList.remove('bdr-notif-animando');
+      void btn.offsetWidth;
+      btn.classList.add('bdr-notif-animando');
+      setTimeout(() => btn.classList.remove('bdr-notif-animando'), 1700);
+    }
+
+    if(badge){
+      badge.classList.remove('bdr-badge-pulse');
+      void badge.offsetWidth;
+      badge.classList.add('bdr-badge-pulse');
+      setTimeout(() => badge.classList.remove('bdr-badge-pulse'), 1700);
+    }
+  }
+
+  function avisarNovaNotificacao(){
+    tocarSomNotificacao();
+    animarSininho();
+  }
+
   function escapeHtml(v){
     return String(v ?? '')
       .replaceAll('&','&amp;')
@@ -88,6 +241,57 @@
       .replaceAll('>','&gt;')
       .replaceAll('"','&quot;')
       .replaceAll("'",'&#039;');
+  }
+
+  /* =========================================================
+     HORÁRIO OFICIAL BDR
+     Banco salva timestamp sem timezone. Para não aparecer horário
+     adiantado, o sininho trata o horário como UTC e exibe em MT.
+  ========================================================= */
+  function bdrDataComoUTC(valor){
+    if(!valor) return null;
+
+    const txt = String(valor).trim();
+
+    // Se já vier com timezone, mantém.
+    if(/[zZ]$|[+-]\d{2}:?\d{2}$/.test(txt)){
+      return new Date(txt);
+    }
+
+    // Timestamp sem timezone do Supabase: considera UTC.
+    return new Date(txt.replace(' ', 'T') + 'Z');
+  }
+
+  function formatarDataBDR(valor){
+    const data = bdrDataComoUTC(valor);
+    if(!data || isNaN(data.getTime())) return '';
+
+    return data.toLocaleString('pt-BR', {
+      timeZone: 'America/Cuiaba',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  function agoraCuiabaParaSQL(){
+    const partes = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Cuiaba',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).formatToParts(new Date());
+
+    const obj = {};
+    partes.forEach(p => obj[p.type] = p.value);
+
+    return `${obj.year}-${obj.month}-${obj.day} ${obj.hour}:${obj.minute}:${obj.second}`;
   }
 
   function atualizarBadge(total){
@@ -109,18 +313,21 @@
   }
 
   function renderOffline(){
+    setIconeOffline(true);
     atualizarBadge(0);
     const lista = listaEl();
     if(lista) lista.innerHTML = '<div class="notif-item">📴 Offline. Notificações pausadas.</div>';
   }
 
   function renderVazio(){
+    setIconeOffline(false);
     atualizarBadge(0);
     const lista = listaEl();
     if(lista) lista.innerHTML = '<div class="notif-item">Nenhuma notificação no momento.</div>';
   }
 
   function renderErro(){
+    setIconeOffline(false);
     atualizarBadge(0);
     const lista = listaEl();
     if(lista) lista.innerHTML = '<div class="notif-item">⚠️ Notificações indisponíveis no momento.</div>';
@@ -128,9 +335,7 @@
 
   function notificacaoNaoLida(n){
     return String(n.status || '').toUpperCase() !== 'LIDA' &&
-           n.lida !== true &&
-           n.visualizada !== true &&
-           !n.read_at;
+           n.lida !== true;
   }
 
   function renderNotificacoes(rows){
@@ -145,28 +350,30 @@
     lista.innerHTML = rows.map(n => {
       const titulo = escapeHtml(n.titulo || n.tipo || 'Notificação');
       const mensagem = escapeHtml(n.mensagem || '');
-      const data = n.created_at ? escapeHtml(new Date(n.created_at).toLocaleString('pt-BR')) : '';
+      const data = n.created_at ? escapeHtml(formatarDataBDR(n.created_at)) : '';
       const link = n.link ? escapeHtml(n.link) : '';
       const classeLida = notificacaoNaoLida(n) ? 'nao-lida' : 'lida';
 
-      const item = `
-        <div class="notif-item ${classeLida}" data-id="${escapeHtml(n.id || '')}">
+      return `
+        <div class="notif-item ${classeLida}" data-id="${escapeHtml(n.id || '')}" data-link="${link}" role="button" tabindex="0" title="Clique para abrir e marcar como lida">
           <strong>${titulo}</strong>
           <div>${mensagem}</div>
           <small>${data}</small>
         </div>`;
-
-      return link ? `<a href="${link}" style="text-decoration:none;color:inherit">${item}</a>` : item;
     }).join('');
   }
 
   async function carregarNotificacoes(){
     if(BDR_NOTIF.carregando) return;
 
-    if(!onlineLocalRapido()){
+    const online = await onlineLocalRapido();
+    if(!online){
       pararNotificacoesOffline();
       return;
     }
+
+    BDR_NOTIF.paradoOffline = false;
+    setIconeOffline(false);
 
     if(!temSupabase()){
       renderVazio();
@@ -189,6 +396,7 @@
         .from('notificacoes')
         .select('*')
         .eq('usuario_destino_id', usuarioId)
+        .eq('lida', false)
         .order('created_at', { ascending:false })
         .limit(20);
 
@@ -203,13 +411,22 @@
 
       const rows = Array.isArray(data) ? data : [];
       const naoLidas = rows.filter(notificacaoNaoLida).length;
+      const totalAnterior = Number(BDR_NOTIF.ultimoTotal || 0);
+      const primeiraCarga = !BDR_NOTIF.primeiraCargaConcluida;
 
       atualizarBadge(naoLidas);
       renderNotificacoes(rows);
+
+      if(!primeiraCarga && naoLidas > totalAnterior){
+        avisarNovaNotificacao();
+      }
+
+      BDR_NOTIF.primeiraCargaConcluida = true;
     }catch(err){
       const msg = String(err?.message || err || '').toLowerCase();
+      const aindaOnline = await onlineLocalRapido();
 
-      if(!onlineLocalRapido() || msg.includes('failed to fetch') || msg.includes('err_name_not_resolved') || msg.includes('network') || msg.includes('connection')){
+      if(!aindaOnline || msg.includes('failed to fetch') || msg.includes('err_name_not_resolved') || msg.includes('network') || msg.includes('connection')){
         pararNotificacoesOffline();
         return;
       }
@@ -218,7 +435,6 @@
       console.warn('BDR notificações: erro ao carregar:', err?.message || err);
       renderErro();
 
-      // Se o banco estiver retornando erro de estrutura/SQL, para o timer para evitar flood.
       if(BDR_NOTIF.errosSeguidos >= 2 || msg.includes('does not exist') || msg.includes('bad request')){
         pararTimer();
       }
@@ -227,14 +443,16 @@
     }
   }
 
-  async function marcarComoLidas(){
+  async function marcarNotificacaoComoLida(id, link){
+    if(!id) return;
     if(BDR_NOTIF.marcandoLidas) return;
-    if(!onlineLocalRapido()) return;
+    if(!(await onlineLocalRapido())) return;
     if(!temSupabase()) return;
 
     const usuario = usuarioAtualSeguro();
     const usuarioId = usuario?.id || usuario?.usuario_id;
     const empresaId = usuario?.empresa_id;
+
     if(!usuarioId) return;
 
     BDR_NOTIF.marcandoLidas = true;
@@ -244,31 +462,46 @@
         .from('notificacoes')
         .update({
           lida: true,
-          visualizada: true,
-          read_at: new Date().toISOString(),
+          lida_em: agoraCuiabaParaSQL(),
           status: 'LIDA'
         })
-        .eq('usuario_destino_id', usuarioId)
-        .is('read_at', null);
+        .eq('id', id)
+        .eq('usuario_destino_id', usuarioId);
 
       if(empresaId){
         query = query.eq('empresa_id', empresaId);
       }
 
-      await query;
-      atualizarBadge(0);
+      const { error } = await query;
+      if(error) throw error;
+
+      await carregarNotificacoes();
+
+      if(link){
+        window.location.href = link;
+      }
+
     }catch(e){
-      // silencioso para não incomodar usuário nem gerar flood
+      console.warn('BDR notificações: erro ao marcar item como lido:', e?.message || e);
+      if(link){
+        window.location.href = link;
+      }
     }finally{
       BDR_NOTIF.marcandoLidas = false;
     }
   }
 
+  async function marcarComoLidas(){
+    // Mantido apenas para compatibilidade com telas antigas.
+    // A regra oficial V10.9 é: abrir o sino NÃO limpa; clicar no item marca como lida.
+    return;
+  }
+
   function iniciarTimer(){
     if(BDR_NOTIF.timer) return;
 
-    BDR_NOTIF.timer = setInterval(() => {
-      if(!onlineLocalRapido()){
+    BDR_NOTIF.timer = setInterval(async () => {
+      if(!(await onlineLocalRapido())){
         pararNotificacoesOffline();
         return;
       }
@@ -290,7 +523,7 @@
   }
 
   async function iniciarNotificacoes(){
-    if(!onlineLocalRapido()){
+    if(!(await onlineLocalRapido())){
       pararNotificacoesOffline();
       return;
     }
@@ -301,7 +534,7 @@
     iniciarTimer();
   }
 
-  function toggleNotificacoes(event){
+  async function toggleNotificacoes(event){
     if(event) event.stopPropagation();
 
     const drop = dropdownEl();
@@ -311,9 +544,8 @@
     drop.classList.toggle('ativo');
 
     if(drop.classList.contains('ativo')){
-      if(onlineLocalRapido()){
-        carregarNotificacoes();
-        marcarComoLidas();
+      if(await onlineLocalRapido()){
+        await carregarNotificacoes();
       }else{
         pararNotificacoesOffline();
       }
@@ -335,7 +567,36 @@
 
   document.addEventListener('click', () => dropdownEl()?.classList.remove('ativo'));
 
-  document.addEventListener('DOMContentLoaded', () => iniciarNotificacoes());
+  document.addEventListener('pointerdown', liberarAudioNotificacao, { once:true, passive:true });
+  document.addEventListener('keydown', liberarAudioNotificacao, { once:true });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    aplicarCssSininho();
+
+    const drop = dropdownEl();
+    if(drop){
+      drop.addEventListener('click', async e => {
+        e.stopPropagation();
+        const item = e.target.closest('.notif-item[data-id]');
+        if(!item) return;
+        const id = item.getAttribute('data-id');
+        const link = item.getAttribute('data-link') || '';
+        await marcarNotificacaoComoLida(id, link);
+      });
+
+      drop.addEventListener('keydown', async e => {
+        if(e.key !== 'Enter' && e.key !== ' ') return;
+        const item = e.target.closest('.notif-item[data-id]');
+        if(!item) return;
+        e.preventDefault();
+        const id = item.getAttribute('data-id');
+        const link = item.getAttribute('data-link') || '';
+        await marcarNotificacaoComoLida(id, link);
+      });
+    }
+
+    iniciarNotificacoes();
+  });
 
   window.BDR_NOTIF = BDR_NOTIF;
   window.toggleNotificacoes = toggleNotificacoes;
@@ -343,6 +604,7 @@
   window.bdrPararNotificacoesOffline = pararNotificacoesOffline;
   window.bdrCarregarNotificacoes = carregarNotificacoes;
   window.bdrMarcarNotificacoesComoLidas = marcarComoLidas;
+  window.bdrMarcarNotificacaoComoLida = marcarNotificacaoComoLida;
 
-  console.log('✅ BDR NOTIFICAÇÕES V10.4 carregado - final limpo');
+  console.log('✅ BDR NOTIFICAÇÕES V10.9 carregado - clicou, leu + som + animação');
 })();
