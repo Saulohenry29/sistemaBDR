@@ -79,7 +79,7 @@
     display:flex!important;
     flex-direction:row!important;
     align-items:center!important;
-    justify-content:center!important;
+    justify-content:flex-start!important;
 
     overflow-x:auto!important;
     overflow-y:hidden!important;
@@ -104,16 +104,18 @@
   }
 
   .bdr-menu{
-    display:flex!important;
-    flex-direction:row!important;
-    align-items:center!important;
-    justify-content:center!important;
-    gap:8px!important;
-    width:100%!important;
-    min-width:100%!important;
-    margin:0!important;
-    padding:0!important;
-  }
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:8px!important;
+
+  width:max-content!important;
+  min-width:max-content!important;
+
+  margin:0!important;
+  padding:0 88px 0 8px!important;
+}
 
   .bdr-menu-btn{
     width:48px!important;

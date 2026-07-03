@@ -1465,8 +1465,8 @@ main,
     display:flex !important;
     flex-direction:row !important;
 
-    /* Centraliza quando couber. O scroll continua funcionando quando não couber. */
-    justify-content:center !important;
+    /* Mobile: começa no primeiro botão e permite rolar até o último sem cortar. */
+    justify-content:flex-start !important;
     align-items:center !important;
 
     overflow-x:auto !important;
@@ -1498,23 +1498,25 @@ main,
   /* =====================================================
      LINHA DOS BOTÕES DO MENU
 
-     Este bloco resolve:
-     ✅ centralizado quando cabe tudo
-     ✅ arrastável quando não cabe
+     Comportamento final:
+     ✅ começa no primeiro botão
+     ✅ arrasta até o último botão
+     ✅ não corta Dashboard nem Usuários
+     ✅ tem respiro à direita para o dedo/iphone
   ===================================================== */
   .bdr-menu{
     width:max-content !important;
-    min-width:0 !important;
-    max-width:max-content !important;
+    min-width:max-content !important;
+    max-width:none !important;
 
     display:flex !important;
     flex-direction:row !important;
     align-items:center !important;
-    justify-content:center !important;
+    justify-content:flex-start !important;
 
     gap:var(--bdr-mobile-menu-gap) !important;
-    margin:0 auto !important;
-    padding:0 !important;
+    margin:0 !important;
+    padding:0 88px 0 8px !important;
   }
 
   /* =====================================================

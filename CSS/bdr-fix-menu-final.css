@@ -1,0 +1,159 @@
+/* =========================================================
+   BDR ERP - MENU FIX FINAL V10.6
+   Arquivo esperado pelos HTMLs: CSS/bdr-fix-menu-final.css
+   Responsável apenas pelo menu lateral/inferior.
+   Corrige: arquivo 404/MIME text-html + menu mobile cortando as pontas.
+========================================================= */
+
+:root{
+  --sidebar-width:72px;
+  --bdr-mobile-menu-altura:70px;
+  --bdr-mobile-menu-btn:48px;
+  --bdr-mobile-menu-icone:18px;
+  --bdr-mobile-menu-gap:8px;
+  --bdr-mobile-content-bottom:92px;
+}
+
+/* DESKTOP / NOTEBOOK */
+@media(min-width:1201px){
+  .bdr-sidebar{
+    position:fixed!important;
+    left:0!important;
+    top:0!important;
+    bottom:0!important;
+    width:72px!important;
+    height:100vh!important;
+    min-height:100vh!important;
+    background:linear-gradient(180deg,#0f2238,#111827)!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    padding:18px 0 10px!important;
+    z-index:999999!important;
+    overflow:visible!important;
+    box-shadow:4px 0 18px rgba(0,0,0,.18)!important;
+  }
+
+  .bdr-brand{display:none!important;}
+
+  .bdr-menu{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    gap:10px!important;
+    width:72px!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:visible!important;
+  }
+
+  .bdr-menu-btn{
+    width:46px!important;
+    height:46px!important;
+    min-width:46px!important;
+    min-height:46px!important;
+    border-radius:14px!important;
+    flex:0 0 auto!important;
+  }
+
+  .bdr-menu-btn[data-tip]::before,
+  .bdr-menu-btn[data-tip]::after{
+    display:none!important;
+  }
+}
+
+/* TABLET / CELULAR */
+@media(max-width:1200px){
+  :root{--sidebar-width:0px!important;}
+
+  .bdr-sidebar{
+    position:fixed!important;
+    left:0!important;
+    right:0!important;
+    bottom:0!important;
+    top:auto!important;
+
+    width:100%!important;
+    height:74px!important;
+    min-height:74px!important;
+    max-height:74px!important;
+
+    padding:6px 12px calc(6px + env(safe-area-inset-bottom))!important;
+
+    display:flex!important;
+    flex-direction:row!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    scrollbar-width:none!important;
+    -webkit-overflow-scrolling:touch!important;
+
+    background:linear-gradient(180deg,#0f2238,#111827)!important;
+    border-radius:0!important;
+    box-shadow:0 -8px 24px rgba(0,0,0,.18)!important;
+    z-index:999999!important;
+  }
+
+  .bdr-sidebar::-webkit-scrollbar{
+    display:none!important;
+  }
+
+  .bdr-brand,
+  .bdr-menu-footer{
+    display:none!important;
+  }
+
+  .bdr-menu{
+    display:flex!important;
+    flex-direction:row!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    gap:8px!important;
+
+    width:max-content!important;
+    min-width:max-content!important;
+
+    margin:0!important;
+    padding:0 28px!important;
+  }
+
+  .bdr-menu-btn{
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    min-height:48px!important;
+    max-width:48px!important;
+    max-height:48px!important;
+
+    flex:0 0 48px!important;
+    border-radius:15px!important;
+    transform:none!important;
+  }
+
+  .bdr-menu-btn:hover{
+    transform:none!important;
+  }
+
+  .bdr-menu-btn::after,
+  .bdr-menu-btn::before{
+    display:none!important;
+  }
+
+  .bdr-menu-icon i,
+  .bdr-menu-btn i{
+    font-size:18px!important;
+  }
+
+  .bdr-main,
+  .content,
+  .usuarios-premium-main{
+    margin-left:0!important;
+    width:100%!important;
+    max-width:100%!important;
+    padding-bottom:100px!important;
+  }
+}
