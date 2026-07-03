@@ -25,24 +25,17 @@
   }
 
   document.addEventListener("pointerdown", function(e){
-    if(e.target.closest(".bdr-menu-btn")){
-      salvarPosicao();
-    }
+    if(e.target.closest(".bdr-menu-btn")) salvarPosicao();
   }, true);
 
   document.addEventListener("click", function(e){
-    if(e.target.closest(".bdr-menu-btn")){
-      salvarPosicao();
-    }
+    if(e.target.closest(".bdr-menu-btn")) salvarPosicao();
   }, true);
 
   document.addEventListener("DOMContentLoaded", function(){
     restaurarPosicao();
-
     const m = menu();
-    if(m){
-      m.addEventListener("scroll", salvarPosicao, { passive:true });
-    }
+    if(m) m.addEventListener("scroll", salvarPosicao, { passive:true });
   });
 
   window.addEventListener("pageshow", restaurarPosicao);

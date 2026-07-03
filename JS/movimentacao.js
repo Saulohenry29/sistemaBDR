@@ -1,7 +1,11 @@
 /* =========================================================
-   BDR ERP - MOVIMENTAÇÃO SIMPLES DE PATRIMÔNIO
+   BDR ERP - MOVIMENTAÇÃO DE PATRIMÔNIO ENTRE OBRAS
    Arquivo: JS/movimentacao.js
-   V10.3 - offline first compatível com bdrSyncEngine.js
+   V10.6 - offline first + origem/destino
+   Regra:
+   - usuário pode enviar patrimônio da sua obra para outra obra;
+   - nova obra destino fica livre;
+   - lançamento novo continua controlado no patrimonio.html.
 ========================================================= */
 
 function bdrMovUsuarioAtual(){
@@ -24,9 +28,31 @@ async function bdrMovOnlineReal(){
   return navigator.onLine !== false;
 }
 
+function bdrMovEhOwnerOuMaster(usuario){
+  const perfil = String(usuario?.perfil || "").toUpperCase();
+  return Number(usuario?.id) === 1 || perfil === "MASTER" || perfil === "OWNER";
+}
+
+function bdrMovTemPermissao(usuario, permissao){
+  if(!usuario) return false;
+  if(bdrMovEhOwnerOuMaster(usuario)) return true;
+
+  const alvo = String(permissao || "").toUpperCase();
+  const lista = Array.isArray(usuario.permissoes)
+    ? usuario.permissoes
+    : String(usuario.permissoes || "").split(",");
+
+  return lista.map(p => String(p).trim().toUpperCase()).includes(alvo);
+}
+
 async function moverPatrimonio(id, novoStatus, novaLocal){
   const usuario = bdrMovUsuarioAtual();
   const online = await bdrMovOnlineReal();
+
+  if(!bdrMovTemPermissao(usuario, "PATRIMONIO_MOVIMENTAR")){
+    alert("Você não tem permissão para movimentar patrimônio.");
+    return false;
+  }
 
   if(!online){
     if(window.BDRSync && typeof window.BDRSync.atualizar === "function"){
@@ -37,14 +63,15 @@ async function moverPatrimonio(id, novoStatus, novaLocal){
       }, {
         origem:"movimentacao.js",
         acao:"MOVER_PATRIMONIO",
-        responsavel:usuario?.nome || "SISTEMA"
+        responsavel:usuario?.nome || "SISTEMA",
+        obra_destino_id:novaLocal || null
       });
     }else if(typeof salvarOffline === "function"){
       await salvarOffline("mover_patrimonio", "patrimonio", {
         codigo_qr:id,
         novoStatus,
         novaLocal,
-        empresa_id:null,
+        empresa_id:usuario?.empresa_id || null,
         responsavel:usuario?.nome || "SISTEMA",
         observacao:"movimentação registrada offline",
         criado_offline_em:new Date().toISOString()
@@ -54,7 +81,7 @@ async function moverPatrimonio(id, novoStatus, novaLocal){
     }
 
     alert("📦 Sem internet. Movimentação salva no aparelho e será sincronizada quando a internet voltar.");
-    return;
+    return true;
   }
 
   const { data: atual, error } = await client
@@ -65,16 +92,20 @@ async function moverPatrimonio(id, novoStatus, novaLocal){
 
   if(error || !atual){
     alert("Patrimônio não encontrado");
-    return;
+    return false;
   }
 
   await client.from("movimentacoes").insert([{
     patrimonio_id: atual.id,
+    empresa_id: atual.empresa_id || usuario?.empresa_id || null,
+    obra_origem_id: atual.obra_id || null,
+    obra_destino_id: novaLocal || null,
     status_anterior: atual.status,
     status_novo: novoStatus,
-    local_anterior: atual.localizacao,
-    local_novo: novaLocal,
-    responsavel: usuario?.nome || "SISTEMA"
+    local_anterior: atual.localizacao || null,
+    local_novo: novaLocal || null,
+    responsavel: usuario?.nome || "SISTEMA",
+    observacao: "Movimentação entre obras/setores"
   }]);
 
   await client
@@ -87,6 +118,7 @@ async function moverPatrimonio(id, novoStatus, novaLocal){
     .eq("codigo_qr", id);
 
   alert("Movimentação registrada com sucesso!");
+  return true;
 }
 
 document.addEventListener("keydown", function(e){
@@ -106,4 +138,4 @@ document.addEventListener("keydown", function(e){
   }
 });
 
-console.log("✅ movimentacao.js V10.3 carregado - offline first");
+console.log("✅ movimentacao.js V10.6 carregado - obra destino livre + offline first");

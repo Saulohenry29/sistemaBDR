@@ -432,6 +432,7 @@ if(typeof verificarLogin === "function"){ verificarLogin(); }
           <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico orange"><i class="fa-solid fa-vials"></i></div><div class="perm-text"><b>Menu Triagem</b><span>Mostrar botão e liberar tela de triagem.</span></div><label class="switch"><input type="checkbox" class="perm" value="TRIAGEM_VER"><span class="slider"></span></label></div>
           <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico green"><i class="fa-solid fa-boxes-stacked"></i></div><div class="perm-text"><b>Menu Estoque</b><span>Mostrar botão e liberar tela de estoque.</span></div><label class="switch"><input type="checkbox" class="perm" value="ESTOQUE_VER"><span class="slider"></span></label></div>
           <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico"><i class="fa-solid fa-tags"></i></div><div class="perm-text"><b>Menu Patrimônio</b><span>Mostrar botão e liberar tela de patrimônio.</span></div><label class="switch"><input type="checkbox" class="perm" value="PATRIMONIO_VER"><span class="slider"></span></label></div>
+          <div class="perm-row" style="background:#fff7ed;border-color:#fed7aa;"><div class="perm-ico orange"><i class="fa-solid fa-map-location-dot"></i></div><div class="perm-text"><b>Lançar patrimônio em qualquer obra</b><span>Se desligado, o usuário lança somente na obra vinculada ao cadastro.</span></div><label class="switch"><input type="checkbox" class="perm" value="PATRIMONIO_LANCAR_QUALQUER_OBRA"><span class="slider"></span></label></div>
           <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico blue"><i class="fa-solid fa-truck-fast"></i></div><div class="perm-text"><b>Menu Expedição</b><span>Mostrar botão e liberar tela de expedição.</span></div><label class="switch"><input type="checkbox" class="perm" value="EXPEDICAO_VER"><span class="slider"></span></label></div>
           <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico orange"><i class="fa-regular fa-file-lines"></i></div><div class="perm-text"><b>Menu Relatórios</b><span>Mostrar botão e liberar tela de relatórios.</span></div><label class="switch"><input type="checkbox" class="perm" value="RELATORIOS_VER"><span class="slider"></span></label></div>
           <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico gray"><i class="fa-solid fa-building"></i></div><div class="perm-text"><b>Menu Empresas</b><span>Mostrar botão e liberar tela de empresas/obras.</span></div><label class="switch"><input type="checkbox" class="perm" value="EMPRESAS_VER"><span class="slider"></span></label></div>
@@ -598,7 +599,7 @@ if(typeof window.limparSelecaoPermissao !== "function"){
 <script src="./JS/bdr-owner-core.js"></script>
 
 
-<script src="./JS/bdrNotificacoes.js?v=20260702-core-online-final"></script>
+<script src="./JS/bdrNotificacoes.js"></script>
 <script src="./JS/bdrMenuMobileAtivo.js?v=20260702-3"></script>
 </body>
 </html>
