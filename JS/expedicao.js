@@ -7,6 +7,7 @@
 ========================================================= */
 var itensCatalogo = window.itensCatalogo || [];
 var carrinho = window.carrinho || [];
+window.carrinho = carrinho;
 var pedidos = window.pedidos || [];
 var obras = window.obras || [];
 var filtroAtual = window.filtroAtual || "TODOS";
@@ -105,6 +106,54 @@ document.addEventListener("DOMContentLoaded", () => setTimeout(aplicarStatusExpT
 function valor(id){ return String(document.getElementById(id)?.value || "").trim(); }
 function esc(v){ return String(v ?? "").replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
 function usuarioAtual(){ try{ const u=localStorage.getItem("usuario_logado") || localStorage.getItem("usuarioLogado"); return u ? JSON.parse(u) : null; }catch(e){ return null; } }
+
+/* =========================================================
+   ATLAS CARRINHO PERSISTENTE POR USUÁRIO
+   - Mantém carrinho após F5/fechar navegador
+   - Salva separado por usuário logado
+   - Limpa somente após enviar solicitação com sucesso
+========================================================= */
+function chaveCarrinhoExpedicao(){
+  const u = usuarioAtual() || {};
+  const id = u.id || u.usuario_id || u.email || u.usuario || u.nome || "anonimo";
+  return "atlas_carrinho_expedicao_" + String(id).replace(/[^a-zA-Z0-9_@.-]/g, "_");
+}
+
+function carregarCarrinhoExpedicaoSalvo(){
+  try{
+    const chave = chaveCarrinhoExpedicao();
+    const antigo = "carrinhoExpedicao";
+    let raw = localStorage.getItem(chave);
+
+    // Compatibilidade com versões anteriores do Atlas.
+    if(!raw){
+      raw = localStorage.getItem(antigo);
+    }
+
+    const lista = raw ? JSON.parse(raw) : [];
+    carrinho = Array.isArray(lista) ? lista : [];
+    window.carrinho = carrinho;
+
+    if(carrinho.length){
+      localStorage.setItem(chave, JSON.stringify(carrinho));
+    }
+
+    return carrinho;
+  }catch(e){
+    carrinho = [];
+    window.carrinho = carrinho;
+    return carrinho;
+  }
+}
+
+function limparCarrinhoExpedicaoSalvo(){
+  try{
+    localStorage.removeItem(chaveCarrinhoExpedicao());
+    localStorage.removeItem("carrinhoExpedicao");
+  }catch(e){}
+  carrinho = [];
+  window.carrinho = carrinho;
+}
 function perfil(){ return String(usuarioAtual()?.perfil || "").toUpperCase(); }
 function perms(){ return String(usuarioAtual()?.permissoes || "").toUpperCase(); }
 function podeTudo(){ return ["MASTER","ADMIN"].includes(perfil()) || perms().includes("VER_TODAS_OBRAS"); }
@@ -131,6 +180,7 @@ async function carregarTudo(){
   if(!db()){ alert("Supabase não carregado."); return; }
 
   carregarTopo();
+  carregarCarrinhoExpedicaoSalvo();
 
   const onlineReal = await bdrExpOnlineReal();
 
@@ -248,28 +298,238 @@ function renderizarCatalogo(){
   if(!lista.length){ grid.innerHTML = `<div class="cart-empty" style="grid-column:1/-1">Nenhum item encontrado.</div>`; return; }
   grid.innerHTML = lista.map(i => cardItem(i)).join("");
 }
+
+/* =========================================================
+   ATLAS CARRINHO UX - estilo marketplace
+   - adiciona sem abrir o modal
+   - marca visualmente o card como adicionado
+   - sincroniza window/localStorage
+   - atualiza contador do topo
+========================================================= */
+function itemEstaNoCarrinho(item){
+  return carrinho.some(c =>
+    c.origem_tabela === item.origem_tabela &&
+    Number(c.id) === Number(item.id)
+  );
+}
+
+function sincronizarCarrinhoExpedicao(){
+  window.carrinho = carrinho;
+  try{
+    const json = JSON.stringify(carrinho || []);
+    localStorage.setItem(chaveCarrinhoExpedicao(), json);
+    // Mantém compatibilidade com versões antigas; pode ser removido no futuro.
+    localStorage.setItem("carrinhoExpedicao", json);
+  }catch(e){}
+  const topo = document.getElementById("cartQtdTopo");
+  if(topo) topo.innerText = carrinho.length;
+}
+
+function garantirCssCarrinhoAtlas(){
+  if(document.getElementById("atlasCarrinhoUxCss")) return;
+  const css = document.createElement("style");
+  css.id = "atlasCarrinhoUxCss";
+  css.textContent = `
+    @keyframes atlasPop{
+      0%{transform:scale(.86)}
+      55%{transform:scale(1.18)}
+      100%{transform:scale(1)}
+    }
+    @keyframes atlasPulse{
+      0%{transform:scale(1)}
+      45%{transform:scale(1.22)}
+      100%{transform:scale(1)}
+    }
+    .produto-card.produto-no-carrinho{
+      border:2px solid #16a34a!important;
+      box-shadow:0 8px 24px rgba(22,163,74,.15)!important;
+      background:#fff!important;
+    }
+    .btn-card-action.adicionado{
+      background:#16a34a!important;
+      color:#fff!important;
+    }
+    .btn-card-action.atlas-pop{
+      animation:atlasPop .28s ease-out;
+    }
+    #cartQtdTopo.atlas-pulse, .btn-cart-top.atlas-pulse{
+      animation:atlasPulse .32s ease-out;
+    }
+
+    .atlas-toast{
+      position:fixed;
+      right:16px;
+      bottom:18px;
+      z-index:9999999;
+      background:#111827;
+      color:#fff;
+      padding:10px 13px;
+      border-radius:12px;
+      box-shadow:0 14px 35px rgba(15,23,42,.25);
+      font-size:12px;
+      font-weight:900;
+      opacity:0;
+      transform:translateY(8px);
+      transition:.22s ease;
+      pointer-events:none;
+      max-width:290px;
+    }
+    .atlas-toast.ativo{opacity:1;transform:translateY(0)}
+  `;
+  document.head.appendChild(css);
+}
+
+
+function atlasToast(msg){
+  try{
+    garantirCssCarrinhoAtlas();
+    let t = document.getElementById("atlasToastCarrinho");
+    if(!t){
+      t = document.createElement("div");
+      t.id = "atlasToastCarrinho";
+      t.className = "atlas-toast";
+      document.body.appendChild(t);
+    }
+    t.innerHTML = msg;
+    t.classList.add("ativo");
+    clearTimeout(window.__atlasToastTimer);
+    window.__atlasToastTimer = setTimeout(()=>t.classList.remove("ativo"), 1700);
+  }catch(e){}
+}
+
+function atlasMotionPop(el){
+  try{
+    if(window.AtlasMotion && typeof window.AtlasMotion.pop === "function") return window.AtlasMotion.pop(el);
+    if(!el) return;
+    el.classList.remove("atlas-pop");
+    void el.offsetWidth;
+    el.classList.add("atlas-pop");
+    setTimeout(()=>el.classList.remove("atlas-pop"), 350);
+  }catch(e){}
+}
+
+function atlasMotionPulse(el){
+  try{
+    if(window.AtlasMotion && typeof window.AtlasMotion.pulse === "function") return window.AtlasMotion.pulse(el);
+    if(!el) return;
+    el.classList.remove("atlas-pulse");
+    void el.offsetWidth;
+    el.classList.add("atlas-pulse");
+    setTimeout(()=>el.classList.remove("atlas-pulse"), 380);
+  }catch(e){}
+}
+
+function animarCarrinhoTopo(){
+  atlasMotionPulse(document.getElementById("cartQtdTopo"));
+  atlasMotionPulse(document.querySelector(".btn-cart-top"));
+}
+
+function animarBotaoItem(origem,id){
+  setTimeout(()=>{
+    const sel = `.btn-card-action[data-origem="${String(origem).replace(/"/g,'\\"')}"][data-id="${Number(id)}"]`;
+    atlasMotionPop(document.querySelector(sel));
+  }, 30);
+}
+
 function cardItem(i){
+  garantirCssCarrinhoAtlas();
   const st = normalStatus(i.status);
-  const podePedir = st === "ESTOQUE" && (podeSolicitarOutras() || String(i.obra_id||"") === String(usuarioAtual()?.obra_id||""));
-  const acao = st === "ESTOQUE" ? "fa-cart-shopping" : st === "EM_USO" ? "fa-eye" : st === "MANUTENCAO" ? "fa-wrench" : "fa-lock";
-  const cls = st === "ESTOQUE" ? "ok" : st === "EM_USO" ? "info" : "block";
+  const noCarrinho = itemEstaNoCarrinho(i);
+  const acao = noCarrinho ? "fa-check" : (st === "ESTOQUE" ? "fa-cart-shopping" : st === "EM_USO" ? "fa-eye" : st === "MANUTENCAO" ? "fa-wrench" : "fa-lock");
+  const cls = noCarrinho ? "ok adicionado" : (st === "ESTOQUE" ? "ok" : st === "EM_USO" ? "info" : "block");
+  const tituloAcao = noCarrinho ? "No carrinho • clique para remover" : (st==='ESTOQUE'?'Adicionar ao carrinho':st==='EM_USO'?'Registrar interesse':'Indisponível');
   const foto = fotoItem(i);
-  return `<div class="produto-card" onclick="abrirDetalhe('${i.origem_tabela}',${i.id})">
-    <button class="btn-card-action ${cls}" onclick="event.stopPropagation();acaoItem('${i.origem_tabela}',${i.id})" title="${st==='ESTOQUE'?'Adicionar ao carrinho':st==='EM_USO'?'Registrar interesse':'Indisponível'}"><i class="fa-solid ${acao}"></i></button>
+  return `<div class="produto-card ${noCarrinho ? 'produto-no-carrinho' : ''}" onclick="abrirDetalhe('${i.origem_tabela}',${i.id})">
+    <button class="btn-card-action ${cls}" data-origem="${esc(i.origem_tabela)}" data-id="${Number(i.id)}" onclick="event.stopPropagation();acaoItem('${i.origem_tabela}',${i.id})" title="${tituloAcao}"><i class="fa-solid ${acao}"></i></button>
     <div class="produto-foto">${foto ? `<img src="${esc(foto)}" onerror="this.outerHTML='<div class=placeholder>${placeholderIcon(i)}</div>'">` : `<div class="placeholder">${placeholderIcon(i)}</div>`}<div class="hover-detalhe">👁 Ver detalhes</div></div>
     <div class="produto-info"><div class="produto-nome">${esc(i.nome)}</div><div class="produto-obra">📍 ${esc(obraCurta(i.obra_id,i.obra_nome))}</div><div class="produto-rodape"><span class="badge-status ${statusClass(st)}">${rotStatus(st)}</span><span class="produto-qtd">${Number(i.qtd||1)} unid</span></div></div>
   </div>`;
 }
 function buscarItem(origem,id){ return itensCatalogo.find(i=>i.origem_tabela===origem && Number(i.id)===Number(id)); }
-function acaoItem(origem,id){ const item = buscarItem(origem,id); if(!item) return; const st=normalStatus(item.status); if(st === "ESTOQUE") addCarrinho(item); else if(st === "EM_USO") addInteresse(item); else alert("Item indisponível para solicitação no momento."); }
-function addCarrinho(item){ if(carrinho.some(c=>c.origem_tabela===item.origem_tabela && Number(c.id)===Number(item.id))) return; carrinho.push({...item, tipo_solicitacao:"RETIRADA"}); renderizarCarrinho(); }
-function addInteresse(item){ if(carrinho.some(c=>c.origem_tabela===item.origem_tabela && Number(c.id)===Number(item.id))) return; carrinho.push({...item, tipo_solicitacao:"INTERESSE"}); renderizarCarrinho(); }
-function removerCarrinho(origem,id){ carrinho = carrinho.filter(c=>!(c.origem_tabela===origem && Number(c.id)===Number(id))); renderizarCarrinho(); }
+function acaoItem(origem,id){
+  const item = buscarItem(origem,id);
+  if(!item) return;
+  const st=normalStatus(item.status);
+
+  // Marketplace Atlas: clicou no check, remove do carrinho.
+  if(itemEstaNoCarrinho(item)){
+    removerCarrinho(origem,id);
+    animarCarrinhoTopo();
+    return;
+  }
+
+  if(st === "ESTOQUE") addCarrinho(item);
+  else if(st === "EM_USO") addInteresse(item);
+  else alert("Item indisponível para solicitação no momento.");
+}
+function addCarrinho(item){
+  if(itemEstaNoCarrinho(item)) return;
+  carrinho.push({...item, tipo_solicitacao:"RETIRADA"});
+  sincronizarCarrinhoExpedicao();
+  renderizarCarrinho();
+  renderizarCatalogo();
+  animarBotaoItem(item.origem_tabela,item.id);
+  animarCarrinhoTopo();
+  atlasToast("✔ Adicionado ao carrinho<br><small>" + esc(item.nome || item.descricao || "Item") + "</small>");
+}
+function addInteresse(item){
+  if(itemEstaNoCarrinho(item)) return;
+  carrinho.push({...item, tipo_solicitacao:"INTERESSE"});
+  sincronizarCarrinhoExpedicao();
+  renderizarCarrinho();
+  renderizarCatalogo();
+  animarBotaoItem(item.origem_tabela,item.id);
+  animarCarrinhoTopo();
+  atlasToast("✔ Adicionado ao carrinho<br><small>" + esc(item.nome || item.descricao || "Item") + "</small>");
+}
+function removerCarrinho(origem,id){
+  carrinho = carrinho.filter(c=>!(c.origem_tabela===origem && Number(c.id)===Number(id)));
+  sincronizarCarrinhoExpedicao();
+  renderizarCarrinho();
+  renderizarCatalogo();
+  animarCarrinhoTopo();
+  atlasToast("↩ Removido do carrinho");
+}
 function renderizarCarrinho(){
-  const box=document.getElementById("cartItens"); document.getElementById("cartQtd").innerText=carrinho.length; document.getElementById("cartResumoItens").innerText=carrinho.length; document.getElementById("cartResumoObras").innerText=new Set(carrinho.map(c=>String(c.obra_id||""))).size;
+  sincronizarCarrinhoExpedicao();
+  const box=document.getElementById("cartItens");
+  const q1=document.getElementById("cartQtd"); if(q1) q1.innerText=carrinho.length;
+  const q2=document.getElementById("cartResumoItens"); if(q2) q2.innerText=carrinho.length;
+  const q3=document.getElementById("cartResumoObras"); if(q3) q3.innerText=new Set(carrinho.map(c=>String(c.obra_id||""))).size;
   if(!carrinho.length){ box.innerHTML=`<div class="cart-empty">Carrinho vazio.</div>`; return; }
   box.innerHTML = carrinho.map(i=>`<div class="cart-item"><div class="cart-img">${fotoItem(i)?`<img src="${esc(fotoItem(i))}">`:placeholderIcon(i)}</div><div class="cart-info"><strong>${esc(i.nome)}</strong><span>${esc(obraCurta(i.obra_id,i.obra_nome))} • ${i.tipo_solicitacao==='INTERESSE'?'Interesse':'Retirada'}</span></div><button class="cart-remove" onclick="removerCarrinho('${i.origem_tabela}',${i.id})"><i class="fa-solid fa-trash"></i></button></div>`).join("");
 }
+
+
+/* =========================================================
+   ATLAS SPRINT 2.4 - MODAL DO CARRINHO
+   Corrige botão superior do carrinho e mantém UX Marketplace.
+========================================================= */
+function abrirModalCarrinho(){
+  try{
+    sincronizarCarrinhoExpedicao?.();
+    renderizarCarrinho?.();
+  }catch(e){}
+
+  const modal = document.getElementById("modalCarrinho");
+  if(!modal){
+    console.warn("Atlas Expedição: modalCarrinho não encontrado.");
+    return;
+  }
+  modal.classList.add("ativo");
+
+  try{
+    const painel = modal.querySelector(".modal") || modal;
+    atlasMotionPop?.(painel);
+  }catch(e){}
+}
+
+function fecharModalCarrinho(){
+  document.getElementById("modalCarrinho")?.classList.remove("ativo");
+}
+
+window.abrirModalCarrinho = abrirModalCarrinho;
+window.fecharModalCarrinho = fecharModalCarrinho;
 
 async function enviarSolicitacao(){
   if(!carrinho.length){ alert("Adicione itens ao carrinho."); return; }
@@ -296,7 +556,7 @@ async function enviarSolicitacao(){
       observacao:valor("obsSolicitacao") || "Solicitação criada offline."
     });
 
-    carrinho = [];
+    limparCarrinhoExpedicaoSalvo();
     if(document.getElementById("obsSolicitacao")) document.getElementById("obsSolicitacao").value = "";
     renderizarCarrinho();
 
@@ -312,7 +572,7 @@ async function enviarSolicitacao(){
 
     const pedido = {
       codigo,
-      status:"AGUARDANDO_AUTORIZACAO",
+      status:"SOLICITADO",
       solicitante:u?.nome||"Usuário",
       usuario_criacao:u?.nome||"Usuário",
       obra_id:obraDestinoId,
@@ -341,12 +601,25 @@ async function enviarSolicitacao(){
     const ri=await db().from("itens_retirada").insert(itensPayload);
     if(ri.error){ alert("Pedido criado, mas erro nos itens: "+ri.error.message); return; }
 
-    await hist(r.data.id,null,"AGUARDANDO_AUTORIZACAO",`Solicitação criada por ${u?.nome||"Usuário"}.`);
-    await notificarGestao("Nova solicitação de expedição", `${u?.nome||"Usuário"} solicitou ${itens.length} item(ns) de ${nomeObra(origemId)}.`, "expedicao.html");
+    // ATLAS SPRINT 2.3: a tela cria o pedido, mas quem registra histórico,
+    // movimentação e notificação oficial é o AtlasWorkflow.
+    if(window.AtlasWorkflow && typeof AtlasWorkflow.notificarOrigemPedidoCriado === "function"){
+      try{
+        await AtlasWorkflow.notificarOrigemPedidoCriado(r.data.id);
+      }catch(e){
+        console.warn("AtlasWorkflow: falha ao notificar origem:", e?.message || e);
+      }
+    }else{
+      await hist(r.data.id,null,"SOLICITADO",`Solicitação criada por ${u?.nome||"Usuário"}.`);
+      await notificarGestao("Nova solicitação de expedição", `${u?.nome||"Usuário"} solicitou ${itens.length} item(ns) de ${nomeObra(origemId)}.`, "expedicao.html?aba=solicitacoes");
+    }
   }
 
-  carrinho=[];
+  limparCarrinhoExpedicaoSalvo();
+  sincronizarCarrinhoExpedicao();
   if(document.getElementById("obsSolicitacao")) document.getElementById("obsSolicitacao").value="";
+  renderizarCarrinho();
+  renderizarCatalogo();
   alert("Solicitação enviada com sucesso!");
   await carregarTudo();
 }
@@ -524,3 +797,183 @@ document.addEventListener("keydown", function(e){
     el.classList.remove("ativo");
   });
 });
+
+
+/* =========================================================
+   ATLAS SPRINT 2.3 - APROVAÇÃO PARCIAL POR ITEM
+   - Recusar todos
+   - Autorizar parcial
+   - Autorizar todos
+   - Notificação oficial via AtlasWorkflow
+========================================================= */
+(function(){
+  "use strict";
+
+  function isSolicitado(p){
+    return ["SOLICITADO","AGUARDANDO_AUTORIZACAO"].includes(String(p?.status || "").toUpperCase());
+  }
+
+  function pedidoLocal(id){
+    return (window.pedidos || pedidos || []).find(p => Number(p.id) === Number(id));
+  }
+
+  function itensDoPedidoLocal(p){
+    return Array.isArray(p?.itens_retirada) ? p.itens_retirada : [];
+  }
+
+  function itemTituloAtlas(i){
+    return esc(i.patrimonio_codigo || i.patrimonio_nome || i.produto_id || ("ITEM-" + i.id));
+  }
+
+  renderizarPedidos = function(){
+    const todos = window.pedidos || pedidos || [];
+    const solicitados = todos.filter(p => isSolicitado(p));
+    lista("listaSolicitacoes", solicitados);
+    lista("listaSeparacao", todos.filter(p => ["APROVADO","APROVADO_PARCIAL","EM_SEPARACAO"].includes(String(p.status||"").toUpperCase())));
+    lista("listaReservados", todos.filter(p => String(p.status||"").toUpperCase()==="AGUARDANDO_RETIRADA"));
+    lista("listaRetirada", todos.filter(p => String(p.status||"").toUpperCase()==="AGUARDANDO_RETIRADA"));
+    lista("listaTransito", todos.filter(p => String(p.status||"").toUpperCase()==="EM_TRANSITO"));
+    lista("listaHistorico", todos.filter(p => ["RECEBIDO","RECEBIDO_PARCIAL","RECUSADO","CANCELADO","ENTREGUE","NEGADO","RECEBIDO_COM_DIVERGENCIA"].includes(String(p.status||"").toUpperCase())));
+  };
+
+  acoesPedido = function(p){
+    const st = String(p.status || "").toUpperCase();
+
+    if(isSolicitado(p) && podeAlmoxarife()){
+      return `
+        <button class="btn-mini btn-red" onclick="recusarTodosAtlas(${p.id})">Recusar todos</button>
+        <button class="btn-mini btn-blue" onclick="abrirAprovacaoParcialAtlas(${p.id})">Autorizar parcial</button>
+        <button class="btn-mini btn-ok" onclick="autorizarTodosAtlas(${p.id})">Autorizar todos</button>`;
+    }
+
+    if(["APROVADO","APROVADO_PARCIAL","EM_SEPARACAO"].includes(st) && podeAlmoxarife()){
+      return `<button class="btn-mini btn-ok" onclick="reservar(${p.id})">Separar / Reservar</button>`;
+    }
+
+    if(st==="AGUARDANDO_RETIRADA" && podeAlmoxarife()){
+      return `<button class="btn-mini btn-ok" onclick="abrirRetirada(${p.id})">Retirada</button>`;
+    }
+
+    if(st==="EM_TRANSITO"){
+      return `<button class="btn-mini btn-blue" onclick="alert('Recebimento pelo destino será a próxima etapa da Sprint.')">Acompanhar</button>`;
+    }
+
+    return `<button class="btn-mini btn-blue" onclick="abrirDetalhePedidoAtlas(${p.id})">Detalhes</button>`;
+  };
+
+  pedidoHTML = function(p){
+    const itens = itensDoPedidoLocal(p);
+    const resumoItens = itens.map(i => `${esc(i.patrimonio_codigo || i.patrimonio_nome || 'Item')} - ${esc(i.status || '-')}`).join('<br>');
+    return `<div class="pedido-card">
+      <div class="pedido-top">
+        <div class="pedido-cod">${esc(p.codigo||"PED-"+p.id)}</div>
+        <div>
+          <b>${esc(p.obra_nome||"-")}</b>
+          <div class="pedido-small">Solicitante: ${esc(p.solicitante||"-")} • Origem: ${esc(nomeObra(p.obra_origem_id))}</div>
+          <div class="pedido-small" style="margin-top:4px">${resumoItens || 'Sem itens carregados'}</div>
+        </div>
+        <div><span class="badge-status ${statusClass(p.status)}">${esc(p.status)}</span><div class="pedido-small">${itens.length} item(ns)</div></div>
+        <div class="pedido-actions">${acoesPedido(p)}</div>
+      </div>
+    </div>`;
+  };
+
+  window.autorizarTodosAtlas = async function(pedidoId){
+    if(!confirm("Autorizar todos os itens deste pedido?")) return;
+    if(!window.AtlasWorkflow?.aprovarTodosItensPedido){ alert("AtlasWorkflow Sprint 2.3 não carregado."); return; }
+    try{
+      await AtlasWorkflow.aprovarTodosItensPedido(pedidoId);
+      alert("Pedido autorizado com sucesso. Notificação enviada ao solicitante.");
+      await carregarTudo();
+      if(typeof window.bdrCarregarNotificacoes === "function") await window.bdrCarregarNotificacoes();
+    }catch(e){
+      alert("Erro ao autorizar: " + (e?.message || e));
+    }
+  };
+
+  window.recusarTodosAtlas = async function(pedidoId){
+    const motivo = prompt("Motivo para recusar todos os itens:") || "Recusado pela origem.";
+    if(!window.AtlasWorkflow?.recusarTodosItensPedido){ alert("AtlasWorkflow Sprint 2.3 não carregado."); return; }
+    try{
+      await AtlasWorkflow.recusarTodosItensPedido(pedidoId, motivo);
+      alert("Pedido recusado. Notificação enviada ao solicitante.");
+      await carregarTudo();
+      if(typeof window.bdrCarregarNotificacoes === "function") await window.bdrCarregarNotificacoes();
+    }catch(e){
+      alert("Erro ao recusar: " + (e?.message || e));
+    }
+  };
+
+  window.abrirAprovacaoParcialAtlas = function(pedidoId){
+    const p = pedidoLocal(pedidoId);
+    if(!p){ alert("Pedido não encontrado na tela. Atualize a página."); return; }
+    const itens = itensDoPedidoLocal(p);
+    if(!itens.length){ alert("Pedido sem itens carregados."); return; }
+
+    document.getElementById("modalTitulo").innerText = "Autorizar parcial - " + (p.codigo || ("PED-" + p.id));
+    document.getElementById("modalConteudo").innerHTML = `
+      <div class="info-box" style="margin-top:0">Escolha item por item. O Atlas vai definir o status geral automaticamente: APROVADO, RECUSADO ou APROVADO_PARCIAL.</div>
+      <div style="display:grid;gap:10px;margin-top:12px">
+        ${itens.map(i => `
+          <div class="cart-item" style="grid-template-columns:1fr 135px;align-items:center">
+            <div class="cart-info">
+              <strong>${itemTituloAtlas(i)}</strong>
+              <span>${esc(i.patrimonio_nome || '')}</span>
+              <input id="motivoItem_${i.id}" placeholder="Motivo se recusar" style="margin-top:7px;width:100%;height:36px;border:1px solid #d1d5db;border-radius:9px;padding:0 9px">
+            </div>
+            <select id="decisaoItem_${i.id}" style="height:38px;border:1px solid #d1d5db;border-radius:9px;padding:0 8px;font-weight:900">
+              <option value="APROVAR">Autorizar</option>
+              <option value="RECUSAR">Recusar</option>
+            </select>
+          </div>`).join('')}
+      </div>
+      <br>
+      <button class="btn-ok" onclick="confirmarAprovacaoParcialAtlas(${p.id})">Confirmar seleção</button>
+    `;
+    document.getElementById("modalDetalhe").classList.add("ativo");
+  };
+
+  window.confirmarAprovacaoParcialAtlas = async function(pedidoId){
+    const p = pedidoLocal(pedidoId);
+    const itens = itensDoPedidoLocal(p);
+    const decisoes = itens.map(i => ({
+      item_id: i.id,
+      acao: document.getElementById("decisaoItem_" + i.id)?.value || "APROVAR",
+      motivo: document.getElementById("motivoItem_" + i.id)?.value || ""
+    }));
+
+    if(!window.AtlasWorkflow?.aprovarItensPedido){ alert("AtlasWorkflow Sprint 2.3 não carregado."); return; }
+
+    try{
+      await AtlasWorkflow.aprovarItensPedido(pedidoId, decisoes);
+      fecharModalDetalhe();
+      alert("Decisão parcial salva. Notificação enviada ao solicitante.");
+      await carregarTudo();
+      if(typeof window.bdrCarregarNotificacoes === "function") await window.bdrCarregarNotificacoes();
+    }catch(e){
+      alert("Erro ao salvar aprovação parcial: " + (e?.message || e));
+    }
+  };
+
+  window.abrirDetalhePedidoAtlas = function(pedidoId){
+    const p = pedidoLocal(pedidoId);
+    if(!p) return;
+    const itens = itensDoPedidoLocal(p);
+    document.getElementById("modalTitulo").innerText = "Detalhes - " + (p.codigo || ("PED-" + p.id));
+    document.getElementById("modalConteudo").innerHTML = `
+      <div class="det-line"><b>Status:</b> ${esc(p.status || '-')}</div>
+      <div class="det-line"><b>Solicitante:</b> ${esc(p.solicitante || '-')}</div>
+      <div class="det-line"><b>Origem:</b> ${esc(nomeObra(p.obra_origem_id))}</div>
+      <div class="det-line"><b>Destino:</b> ${esc(nomeObra(p.obra_destino_id || p.obra_id))}</div>
+      <br>
+      ${itens.map(i => `<div class="cart-item"><div class="cart-info"><strong>${itemTituloAtlas(i)}</strong><span>Status: ${esc(i.status || '-')} ${i.motivo_recusa ? '• Motivo: '+esc(i.motivo_recusa) : ''}</span></div></div>`).join('')}
+    `;
+    document.getElementById("modalDetalhe").classList.add("ativo");
+  };
+
+  // Compatibilidade com botões antigos, caso algum HTML cacheado ainda chame autorizar/negar.
+  window.autorizar = window.autorizarTodosAtlas;
+  window.negar = window.recusarTodosAtlas;
+
+  console.log("✅ ATLAS SPRINT 2.3 patch Expedição carregado - aprovação parcial");
+})();

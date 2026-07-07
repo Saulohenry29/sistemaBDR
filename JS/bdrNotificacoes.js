@@ -25,7 +25,7 @@
 
   const BDR_NOTIF = {
     __loaded: true,
-    versao: '10.9-clicou-leu',
+    versao: '11.1-atlas-event-bus',
     intervaloMs: 30000,
     timer: null,
     carregando: false,
@@ -37,7 +37,8 @@
     ultimoOnlineReal: null,
     primeiraCargaConcluida: false,
     audioLiberado: false,
-    audioCtx: null
+    audioCtx: null,
+    ultimoAvisoEm: 0
   };
 
   function temSupabase(){
@@ -266,6 +267,9 @@
   }
 
   function avisarNovaNotificacao(){
+    const agora = Date.now();
+    if(agora - Number(BDR_NOTIF.ultimoAvisoEm || 0) < 700) return;
+    BDR_NOTIF.ultimoAvisoEm = agora;
     tocarSomNotificacao();
     animarSininho();
   }
@@ -588,6 +592,37 @@
     }
   }
 
+
+  async function tratarAtlasNotificacaoCriada(payload){
+    try{
+      // Atualiza o sininho imediatamente quando o Atlas criar uma notificação.
+      // O som só toca se o navegador já tiver liberado áudio após interação real.
+      await carregarNotificacoes();
+      avisarNovaNotificacao();
+    }catch(e){
+      console.warn('BDR Notificações: falha ao processar evento Atlas:', e?.message || e);
+    }
+  }
+
+  function registrarAtlasEventBus(){
+    try{
+      if(window.AtlasEvents && typeof window.AtlasEvents.on === 'function'){
+        window.AtlasEvents.on('notificacao.criada', tratarAtlasNotificacaoCriada);
+        window.AtlasEvents.on('pedido.criado', () => {
+          try{ animarSininho(); }catch(e){}
+        });
+      }
+
+      // Fallback para eventos DOM caso o Event Bus carregue depois ou não exista.
+      window.addEventListener('atlas:notificacao.criada', e => tratarAtlasNotificacaoCriada(e?.detail?.payload || e?.detail || {}));
+      window.addEventListener('atlas:pedido.criado', () => {
+        try{ animarSininho(); }catch(e){}
+      });
+    }catch(e){
+      console.warn('BDR Notificações: não foi possível registrar Atlas Event Bus:', e?.message || e);
+    }
+  }
+
   window.addEventListener('offline', () => pararNotificacoesOffline());
 
   window.addEventListener('online', () => {
@@ -607,6 +642,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     aplicarCssSininho();
     adicionarListenersAudio();
+    registrarAtlasEventBus();
 
     const drop = dropdownEl();
     if(drop){
@@ -638,8 +674,9 @@
   window.bdrIniciarNotificacoes = iniciarNotificacoes;
   window.bdrPararNotificacoesOffline = pararNotificacoesOffline;
   window.bdrCarregarNotificacoes = carregarNotificacoes;
+  window.bdrAvisarNovaNotificacao = avisarNovaNotificacao;
   window.bdrMarcarNotificacoesComoLidas = marcarComoLidas;
   window.bdrMarcarNotificacaoComoLida = marcarNotificacaoComoLida;
 
-  console.log('✅ BDR NOTIFICAÇÕES V11.0 carregado - definitivo');
+  console.log('✅ BDR NOTIFICAÇÕES V11.1 carregado - Atlas Event Bus');
 })();
