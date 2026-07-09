@@ -9,7 +9,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:,">
-<title>BDR Patrimônio - UX Performance</title>
+<title>BDR Patrimônio - Obra Ativa 3.1.5</title>
 
 <!-- CSS visual padrão do sistema -->
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
@@ -252,9 +252,370 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
 .lista-header{background:#111827;color:#fff;border-radius:10px;padding:10px 8px;margin-bottom:7px;font-size:12px;font-weight:900}
 @media(max-width:900px){#cardObraLancamento .lock-row{grid-template-columns:1fr}.bdr-lista-tools{align-items:flex-start}.linha-patrimonio{padding:12px}}
 
+
+/* =========================================================
+   BDR ERP 3.1.5 - ATLAS ONE / PATRIMÔNIO VISUAL PRO
+   Objetivo:
+   - manter fluxo atual
+   - manter cadastro aberto
+   - manter menu lateral
+   - melhorar organização visual, leitura e fluidez
+========================================================= */
+
+/* Fundo geral mais limpo */
+body{
+  background:
+    radial-gradient(circle at top right, rgba(164,22,26,.06), transparent 34%),
+    #eef2f7!important;
+}
+
+/* Topbar mais premium sem mudar estrutura */
+.bdr-topbar{
+  min-height:76px;
+  border-left:5px solid var(--bdr-red,#a4161a)!important;
+  background:
+    radial-gradient(circle at right top, rgba(215,25,32,.12), transparent 34%),
+    linear-gradient(135deg,#ffffff 0%,#fffafa 48%,#f8fafc 100%)!important;
+  box-shadow:0 8px 22px rgba(15,23,42,.08)!important;
+}
+
+.bdr-topbar-title{
+  font-size:21px!important;
+  letter-spacing:-.02em;
+}
+
+.bdr-topbar-sub{
+  font-size:12px!important;
+  color:#64748b!important;
+}
+
+/* Cards mais consistentes */
+.card{
+  border-radius:18px!important;
+  padding:14px!important;
+  border-left-width:5px!important;
+  box-shadow:0 8px 22px rgba(15,23,42,.07)!important;
+}
+
+.card:hover{
+  transform:none!important;
+}
+
+/* Obra de lançamento compacta e clara */
+#cardObraLancamento{
+  padding:12px 14px!important;
+  background:linear-gradient(135deg,#fff,#f8fafc)!important;
+}
+
+#cardObraLancamento h3{
+  font-size:15px!important;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+#cardObraLancamento .lock-row{
+  max-width:720px!important;
+  grid-template-columns:minmax(260px,1fr) 150px!important;
+}
+
+#obraSelect{
+  font-weight:800!important;
+  color:#111827!important;
+}
+
+#btnTravarObra{
+  border-radius:12px!important;
+  font-weight:900!important;
+}
+
+/* Cadastro continua aberto, mas agora tem cara de área principal */
+#cardEntradaPatrimonio{
+  border-left-color:#16a34a!important;
+  background:
+    linear-gradient(180deg,#ffffff 0%,#ffffff 70%,#f8fffb 100%)!important;
+}
+
+#cardEntradaPatrimonio h3{
+  font-size:16px!important;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+#cardEntradaPatrimonio h3::after{
+  content:"Cadastro diário";
+  display:inline-flex;
+  align-items:center;
+  padding:4px 9px;
+  border-radius:999px;
+  background:#dcfce7;
+  color:#166534;
+  font-size:10px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+
+#cardEntradaPatrimonio .grid{
+  grid-template-columns:1.15fr .9fr .9fr .9fr .9fr!important;
+  gap:10px!important;
+}
+
+#cardEntradaPatrimonio input,
+#cardEntradaPatrimonio select,
+#cardEntradaPatrimonio textarea{
+  border-radius:12px!important;
+  min-height:42px!important;
+  border-color:#dbe3ee!important;
+}
+
+#cardEntradaPatrimonio textarea{
+  min-height:64px!important;
+}
+
+#btnGerarPatrimonio{
+  border-radius:12px!important;
+  min-height:40px!important;
+  padding:10px 14px!important;
+  font-weight:900!important;
+  box-shadow:0 8px 18px rgba(42,157,143,.18)!important;
+}
+
+/* Consulta ganha destaque sem ocupar mais espaço */
+.card:has(#busca){
+  border-left-color:#a4161a!important;
+  background:
+    linear-gradient(135deg,#ffffff,#fffafa)!important;
+}
+
+.card:has(#busca) h3{
+  font-size:16px!important;
+  margin-bottom:12px!important;
+}
+
+.card:has(#busca) .grid{
+  grid-template-columns:1.25fr .9fr .9fr .9fr!important;
+  gap:10px!important;
+}
+
+#busca{
+  min-height:44px!important;
+  border:2px solid #fecaca!important;
+  background:#fff!important;
+  font-size:14px!important;
+  font-weight:900!important;
+  border-radius:13px!important;
+  box-shadow:0 5px 14px rgba(164,22,26,.06)!important;
+}
+
+#busca::placeholder{
+  color:#7f1d1d!important;
+  opacity:.75!important;
+}
+
+#busca:focus{
+  border-color:var(--bdr-red,#a4161a)!important;
+  box-shadow:0 0 0 4px rgba(164,22,26,.10)!important;
+}
+
+/* Lista com cara de módulo principal */
+.card:has(#lista){
+  border-left-color:#111827!important;
+  background:#ffffff!important;
+}
+
+.card:has(#lista) h3{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:12px!important;
+}
+
+.card:has(#lista) h3::after{
+  content:"30 por página";
+  padding:4px 9px;
+  border-radius:999px;
+  background:#eef2ff;
+  color:#1d4ed8;
+  font-size:10px;
+  font-weight:900;
+  text-transform:uppercase;
+}
+
+/* Barra de resumo da lista mais bonita */
+.bdr-lista-tools{
+  background:linear-gradient(135deg,#f8fafc,#ffffff)!important;
+  border:1px solid #e2e8f0!important;
+  border-radius:14px!important;
+  padding:12px 14px!important;
+  margin-bottom:12px!important;
+}
+
+.bdr-lista-tools strong{
+  font-size:14px!important;
+  color:#0f172a!important;
+}
+
+.bdr-lista-tools span{
+  color:#64748b!important;
+}
+
+/* Cabeçalho e linhas mais legíveis */
+.lista-header{
+  background:linear-gradient(135deg,#111827,#0f2238)!important;
+  border-radius:12px!important;
+  padding:11px 12px!important;
+  box-shadow:0 8px 18px rgba(15,23,42,.12)!important;
+}
+
+.linha-patrimonio{
+  min-height:58px!important;
+  border-radius:13px!important;
+  border-left:4px solid #a4161a!important;
+  padding:11px 12px!important;
+  box-shadow:0 3px 10px rgba(15,23,42,.06)!important;
+  margin-bottom:7px!important;
+}
+
+.linha-patrimonio:hover{
+  background:#fff7f7!important;
+  transform:translateX(3px)!important;
+  box-shadow:0 9px 20px rgba(15,23,42,.10)!important;
+}
+
+.pat-codigo{
+  color:#991b1b!important;
+  font-size:13px!important;
+}
+
+.pat-nome{
+  font-size:14px!important;
+  color:#0f172a!important;
+}
+
+.pat-local,.pat-tipo{
+  color:#334155!important;
+}
+
+.pat-valor{
+  color:#0f172a!important;
+}
+
+/* Paginação mais refinada */
+.bdr-paginacao{
+  padding-top:8px!important;
+}
+
+.bdr-paginacao button{
+  min-height:38px!important;
+  border-radius:12px!important;
+}
+
+.bdr-paginacao .pagina-info{
+  border-radius:12px!important;
+  background:#111827!important;
+  color:#fff!important;
+  border-color:#111827!important;
+}
+
+/* Modal do patrimônio um pouco mais premium, sem mudar fluxo */
+.modal{
+  border-radius:18px!important;
+  box-shadow:0 26px 70px rgba(15,23,42,.36)!important;
+  border-left:5px solid var(--bdr-red,#a4161a)!important;
+}
+
+.modal-info{
+  border-radius:13px!important;
+  background:#f8fafc!important;
+  border:1px solid #e2e8f0!important;
+}
+
+.acoes button{
+  border-radius:12px!important;
+  min-height:40px!important;
+}
+
+/* Responsividade */
+@media(max-width:1200px){
+  #cardEntradaPatrimonio .grid,
+  .card:has(#busca) .grid{
+    grid-template-columns:1fr!important;
+  }
+
+  #cardObraLancamento .lock-row{
+    grid-template-columns:1fr!important;
+  }
+}
+
+
+/* =========================================================
+   BDR 3.1.5 - OBRA ATIVA / CADEADO INTELIGENTE
+========================================================= */
+#cardObraLancamento{
+  border-left-color:#0f766e!important;
+}
+#cardObraLancamento h3{
+  margin-bottom:4px!important;
+}
+.obra-lock-helper{
+  margin:0 0 10px;
+  color:#475569;
+  font-size:12px;
+  font-weight:800;
+}
+#cardObraLancamento .lock-row{
+  display:grid!important;
+  grid-template-columns:minmax(260px, 520px) 190px!important;
+  gap:10px!important;
+  align-items:center!important;
+}
+#obraSelect{
+  height:42px!important;
+  border-radius:13px!important;
+  border:2px solid #e2e8f0!important;
+  background:#fff!important;
+  font-weight:900!important;
+  color:#0f172a!important;
+}
+#obraSelect:disabled{
+  opacity:1!important;
+  color:#0f172a!important;
+  background:#f8fffb!important;
+  border-color:#86efac!important;
+  cursor:not-allowed!important;
+}
+#btnTravarObra{
+  height:42px!important;
+  border-radius:13px!important;
+  font-weight:900!important;
+  border:0!important;
+  transition:.18s ease!important;
+}
+#btnTravarObra.lock-on{
+  background:linear-gradient(135deg,#16a34a,#059669)!important;
+  color:#fff!important;
+  box-shadow:0 8px 18px rgba(22,163,74,.24)!important;
+}
+#btnTravarObra.lock-off{
+  background:linear-gradient(135deg,#f59e0b,#f97316)!important;
+  color:#fff!important;
+  box-shadow:0 8px 18px rgba(249,115,22,.24)!important;
+}
+#btnTravarObra:hover{
+  filter:brightness(.97)!important;
+  transform:translateY(-1px)!important;
+}
+@media(max-width:900px){
+  #cardObraLancamento .lock-row{
+    grid-template-columns:1fr!important;
+  }
+}
+
 </style>
 
-<link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260629-menu-unico-66">
+<link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260709-obra-ativa-315">
 </head>
 
 <body>
@@ -365,7 +726,7 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
   <div>
     <div class="bdr-topbar-title">📦 BDR Patrimônio</div>
     <div class="bdr-topbar-sub">
-      Cadastro, controle, edição e movimentação de patrimônios.
+      Cadastro, consulta e controle de patrimônios com performance otimizada.
     </div>
   </div>
 
@@ -406,6 +767,9 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
 </div>
 <div class="card" id="cardObraLancamento">
   <h3>🏗 Obra de lançamento</h3>
+  <div id="obraLockHelper" class="obra-lock-helper">
+    🔓 Escolha a obra e confirme para lançar patrimônios nela.
+  </div>
 
   <div class="lock-row">
     <select id="obraSelect">
@@ -413,7 +777,7 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
     </select>
 
     <button id="btnTravarObra" class="lock-btn lock-off" onclick="alternarTravaObra()">
-      🔓 Livre
+      ✅ Confirmar obra
     </button>
   </div>
 </div>
@@ -481,7 +845,7 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
 </div>
 
 <div class="card">
-  <h3>🔍 Consultar Patrimônios</h3>
+  <h3>🔎 Localizar patrimônio</h3>
 
   <div class="grid">
     <input id="busca" placeholder="Pesquisar por PAT, nome, placa, série, obra, marca..." oninput="bdrResetPaginaPatrimonio(); renderizarPatrimonios()">
@@ -1294,6 +1658,21 @@ function alternarTravaObra(){
   }
 
   if(window.obraTravada){
+    const temDados =
+      valor("nome_bem") ||
+      valor("valor_bem") ||
+      valor("observacao") ||
+      valor("tipo_item");
+
+    if(temDados){
+      const ok = confirm(
+        "Você vai alterar a obra de lançamento.\n\n" +
+        "Os dados preenchidos no formulário serão mantidos.\n\n" +
+        "Deseja destravar para escolher outra obra?"
+      );
+      if(!ok) return;
+    }
+
     destravarObra();
     return;
   }
@@ -1342,17 +1721,31 @@ function atualizarVisualTrava(){
 
   const btn = document.getElementById("btnTravarObra");
   const textoTopo = document.getElementById("obraAtivaTexto");
+  const select = document.getElementById("obraSelect");
+  const helper = document.getElementById("obraLockHelper");
 
   if(window.obraTravada && window.obraAtiva){
 
+    if(select){
+      select.value = String(window.obraAtiva.id);
+      select.disabled = true;
+      select.title = "Obra ativa para lançamento. Clique no cadeado para alterar.";
+    }
+
     if(btn){
       btn.className = "lock-btn lock-on";
-      btn.innerText = "🔒 Travado";
+      btn.innerText = "🟢 🔒 Obra ativa";
+      btn.title = "Clique para destravar e escolher outra obra.";
+    }
+
+    if(helper){
+      helper.innerText =
+        "🟢 Lançando nesta obra. Clique no cadeado para alterar antes de escolher outra.";
     }
 
     if(textoTopo){
       textoTopo.innerText =
-        "🔒 TRAVADO: " +
+        "🔒 OBRA ATIVA: " +
         (window.obraAtiva.codigo_obra || "-") +
         " - " +
         (window.obraAtiva.nome || "-");
@@ -1360,13 +1753,24 @@ function atualizarVisualTrava(){
 
   }else{
 
+    if(select){
+      select.disabled = false;
+      select.title = "Escolha a obra e confirme para travar o lançamento.";
+    }
+
     if(btn){
       btn.className = "lock-btn lock-off";
-      btn.innerText = "🔓 Livre";
+      btn.innerText = "✅ Confirmar obra";
+      btn.title = "Confirmar a obra selecionada para lançamento.";
+    }
+
+    if(helper){
+      helper.innerText =
+        "🔓 Escolha a obra e confirme. Depois disso, todos os patrimônios serão lançados nela.";
     }
 
     if(textoTopo){
-      textoTopo.innerText = "🔓 Lançamento livre";
+      textoTopo.innerText = "🔓 Escolha uma obra de lançamento";
     }
   }
 }
