@@ -10,7 +10,7 @@
 
   if(window.AtlasModal && window.AtlasModal.__loaded) return;
 
-  const AtlasModal = { __loaded:true, versao:"1.2-sprint-3.1.2-cores-recebimento" };
+  const AtlasModal = { __loaded:true, versao:"1.2.1-sprint-3.1.5-mobile-fix" };
 
   function esc(v){
     return String(v ?? "")
@@ -90,7 +90,55 @@
       .atlas-bar{height:8px; background:#e5e7eb; border-radius:999px; overflow:hidden; margin-top:12px;}
       .atlas-bar span{display:block; height:100%; width:45%; background:#16a34a; border-radius:999px; animation:atlasBar 1.1s ease-in-out infinite alternate;}
       @keyframes atlasBar{from{transform:translateX(-80%)}to{transform:translateX(160%)}}
-      @media(max-width:640px){.atlas-recebimento-grid,.atlas-choice-row,.atlas-status-row{grid-template-columns:1fr}.atlas-modal-actions{justify-content:stretch}.atlas-btn{flex:1}}
+      @media(max-width:640px){
+        .atlas-modal-bg{
+          align-items:flex-start!important;
+          justify-content:center!important;
+          padding:10px 10px calc(96px + env(safe-area-inset-bottom))!important;
+          overflow-y:auto!important;
+          -webkit-overflow-scrolling:touch!important;
+        }
+        .atlas-modal-card{
+          width:100%!important;
+          max-width:100%!important;
+          max-height:none!important;
+          margin:0 auto calc(92px + env(safe-area-inset-bottom))!important;
+          border-radius:18px!important;
+          overflow:visible!important;
+        }
+        .atlas-modal-head{
+          position:sticky!important;
+          top:0!important;
+          z-index:3!important;
+          border-radius:18px 18px 0 0!important;
+        }
+        .atlas-modal-body{
+          padding:14px!important;
+          overflow:visible!important;
+        }
+        .atlas-recebimento-grid,.atlas-choice-row,.atlas-status-row{
+          grid-template-columns:1fr!important;
+        }
+        .atlas-modal-actions{
+          display:grid!important;
+          grid-template-columns:1fr 1fr!important;
+          gap:10px!important;
+          justify-content:stretch!important;
+          padding-bottom:calc(18px + env(safe-area-inset-bottom))!important;
+        }
+        .atlas-btn{
+          flex:1;
+          min-height:48px!important;
+          border-radius:14px!important;
+          white-space:normal!important;
+          line-height:1.2!important;
+        }
+        .atlas-choice{min-height:auto!important;}
+        .atlas-textarea,input,textarea,select{font-size:16px!important;}
+      }
+      @media(max-width:380px){
+        .atlas-modal-actions{grid-template-columns:1fr!important;}
+      }
     `;
     document.head.appendChild(css);
   }
