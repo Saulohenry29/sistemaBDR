@@ -9,7 +9,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:,">
-<title>BDR Patrimônio - Obra Ativa 3.1.5</title>
+<title>BDR Patrimônio - Mobile Fix 3.1.5</title>
 
 <!-- CSS visual padrão do sistema -->
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
@@ -219,6 +219,8 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
   .bdr-etiqueta-modal{width:94vw}
   .bdr-etiqueta-frame{height:220px}
 }
+
+
 
 
 /* =========================================================
@@ -611,6 +613,82 @@ body{
   #cardObraLancamento .lock-row{
     grid-template-columns:1fr!important;
   }
+}
+
+
+/* =========================================================
+   BDR 3.1.5 - MODAL MOBILE + DIGITAÇÃO ESTÁVEL
+========================================================= */
+@media(max-width:900px){
+  .modal-bg{
+    align-items:flex-start!important;
+    justify-content:center!important;
+    padding:10px 10px calc(96px + env(safe-area-inset-bottom))!important;
+    overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+
+  .modal{
+    width:100%!important;
+    max-width:100%!important;
+    max-height:none!important;
+    margin:0 auto calc(92px + env(safe-area-inset-bottom))!important;
+    border-radius:18px!important;
+    overflow:visible!important;
+  }
+
+  .modal h2{
+    font-size:22px!important;
+    line-height:1.15!important;
+    padding-right:48px!important;
+  }
+
+  .modal-info{
+    max-height:none!important;
+    overflow:visible!important;
+    font-size:14px!important;
+    line-height:1.45!important;
+  }
+
+  .modal textarea,
+  .modal select,
+  .modal input{
+    font-size:16px!important;
+  }
+
+  .modal .acoes{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:10px!important;
+    padding-bottom:calc(18px + env(safe-area-inset-bottom))!important;
+  }
+
+  .modal .acoes button{
+    min-height:48px!important;
+    font-size:14px!important;
+    border-radius:14px!important;
+    white-space:normal!important;
+    line-height:1.2!important;
+  }
+
+  .fechar{
+    position:absolute!important;
+    top:14px!important;
+    right:14px!important;
+    z-index:2!important;
+  }
+}
+
+@media(max-width:380px){
+  .modal .acoes{
+    grid-template-columns:1fr!important;
+  }
+}
+
+input, textarea{
+  caret-color:auto!important;
+  user-select:text!important;
+  -webkit-user-select:text!important;
 }
 
 </style>
@@ -1027,7 +1105,7 @@ body{
 <div class="bdr-etiqueta-modal-bg" id="modalEtiquetaBg">
   <div class="bdr-etiqueta-modal">
     <div class="bdr-etiqueta-modal-head">
-      <h2>🏷 Etiqueta</h2>
+      <h2>🏷 Etiqueta <small style="font-size:11px;color:#64748b;font-weight:800;">ENTER imprime • ESC fecha</small></h2>
       <button class="bdr-etiqueta-close" type="button" onclick="fecharModalEtiqueta()" title="Fechar">X</button>
     </div>
 
@@ -1069,6 +1147,60 @@ let manutencoesPatrimonio = [];
 let statusDestinoDepoisManutencao = null;
 window.obraAtiva = null;
 window.obraTravada = false;
+
+
+/* =========================================================
+   BDR 3.1.5 - DIGITAÇÃO ESTÁVEL
+   Evita cursor ir para o final em campos de texto.
+   Melhora entrada por voz do teclado do celular.
+========================================================= */
+function bdrCampoTextoLivre(el){
+  if(!el) return false;
+
+  const id = String(el.id || "").toLowerCase();
+  const type = String(el.type || "").toLowerCase();
+
+  if(el.tagName === "TEXTAREA") return true;
+
+  if(el.tagName === "INPUT"){
+    if(type && !["text", "search", "tel", "email", "url", ""].includes(type)) return false;
+    if(id.includes("valor")) return false;
+    return true;
+  }
+
+  return false;
+}
+
+function bdrMaiusculoSemMoverCursor(el){
+  if(!bdrCampoTextoLivre(el)) return;
+
+  const inicio = el.selectionStart;
+  const fim = el.selectionEnd;
+  const antigo = el.value || "";
+  const novo = antigo.toUpperCase();
+
+  if(antigo === novo) return;
+
+  el.value = novo;
+
+  try{
+    if(document.activeElement === el && typeof inicio === "number" && typeof fim === "number"){
+      el.setSelectionRange(inicio, fim);
+    }
+  }catch(e){}
+}
+
+document.addEventListener("change", function(e){
+  if(e && e.target && e.target.matches("input, textarea")){
+    bdrMaiusculoSemMoverCursor(e.target);
+  }
+}, true);
+
+document.addEventListener("blur", function(e){
+  if(e && e.target && e.target.matches("input, textarea")){
+    bdrMaiusculoSemMoverCursor(e.target);
+  }
+}, true);
 
 function ir(pagina){
   window.location.href = pagina;
@@ -3384,6 +3516,33 @@ document.addEventListener("keydown", function(event){
   }
 });
 
+
+
+/* =========================================================
+   BDR ETIQUETA - ATALHOS DO MODAL
+   ENTER = imprime
+   ESC   = fecha
+========================================================= */
+document.addEventListener("keydown", function(event){
+  const modal = document.getElementById("modalEtiquetaBg");
+
+  if(!modal || !modal.classList.contains("ativo")){
+    return;
+  }
+
+  if(event.key === "Enter"){
+    event.preventDefault();
+    event.stopPropagation();
+    imprimirEtiquetaModalBDR();
+    return;
+  }
+
+  if(event.key === "Escape"){
+    event.preventDefault();
+    event.stopPropagation();
+    fecharModalEtiqueta();
+  }
+});
 
 function montarCamposEdicaoPorTipo(){
   const tipo = valor("edit_tipo_item") || String(patrimonioSelecionado?.tipo_item || "");
