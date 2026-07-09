@@ -175,3 +175,41 @@
     padding-bottom:20px!important;
   }
 }
+
+/* =========================================================
+   MENU DESKTOP - NOME NO HOVER
+========================================================= */
+@media (min-width:1201px){
+
+  .bdr-menu-btn[data-tip]::after{
+    display:block!important;
+    content:attr(data-tip)!important;
+    position:absolute!important;
+    left:46px!important; /* Distancia do nome da pagina do menu */
+    top:50%!important;
+    transform:translate(8px,-50%)!important;
+
+    background:#111827!important;
+    color:#ffffff!important;
+    border:1px solid rgba(255,255,255,.08)!important;
+    border-radius:10px!important;
+    padding:8px 14px!important;
+
+    font-size:13px!important;
+    font-weight:800!important;
+    white-space:nowrap!important;
+
+    opacity:0!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+    box-shadow:0 10px 24px rgba(0,0,0,.18)!important;
+    transition:.18s ease!important;
+    z-index:1000000!important;
+  }
+
+  .bdr-menu-btn[data-tip]:hover::after{
+    opacity:1!important;
+    visibility:visible!important;
+    transform:translate(14px,-50%)!important;
+  }
+}

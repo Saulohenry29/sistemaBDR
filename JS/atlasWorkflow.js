@@ -1,13 +1,15 @@
 /* =========================================================
-   ATLAS WORKFLOW V1.3 - MOTOR DE FLUXO LOGÍSTICO
+   ATLAS WORKFLOW V1.7 - MOTOR DE FLUXO LOGÍSTICO
    Arquivo: JS/atlasWorkflow.js
-   Sprint 2.4.2: notificações oficiais via usuarios_sistema
+   Sprint 2.8: integrado ao AtlasGestorNotificacoes e AtlasGestorReservas
+   - Workflow executa regra de negócio
+   - Gestor decide destinatários e cria notificações
 ========================================================= */
 (function(){
   "use strict";
 
   const AtlasWorkflow = {
-    versao: "1.4-atlas-event-bus"
+    versao: "1.8-logistica"
   };
 
   const STATUS = {
@@ -20,7 +22,9 @@
     EM_TRANSITO: "EM_TRANSITO",
     RECEBIDO: "RECEBIDO",
     RECEBIDO_PARCIAL: "RECEBIDO_PARCIAL",
-    CANCELADO: "CANCELADO"
+    CANCELADO: "CANCELADO",
+    EM_FILA: "EM_FILA",
+    AGUARDANDO_CONFIRMACAO: "AGUARDANDO_CONFIRMACAO"
   };
 
   function db(){
@@ -86,6 +90,40 @@
       perms.includes("EXPEDICAO_ENTREGAR");
   }
 
+  function listaObrasLiberadas(u){
+    return String(u?.obras_liberadas || "")
+      .split(/[;,|]/)
+      .map(x => x.trim())
+      .filter(Boolean);
+  }
+
+  function usuarioPertenceObra(u, obraId){
+    if(!obraId) return false;
+    const obraTxt = String(obraId);
+    return String(u?.obra_id || "") === obraTxt ||
+      listaObrasLiberadas(u).includes(obraTxt);
+  }
+
+  function usuarioEhMasterGlobal(u){
+    return String(u?.perfil || "").toUpperCase() === "MASTER";
+  }
+
+  function usuarioEhMesmoSolicitante(u, pedido){
+    const logadoId = usuarioIdAtual();
+    const solicitante = String(pedido?.solicitante || pedido?.usuario_criacao || "").trim().toLowerCase();
+    const nome = String(u?.nome || "").trim().toLowerCase();
+    const usuario = String(u?.usuario || "").trim().toLowerCase();
+    const email = String(u?.email || "").trim().toLowerCase();
+
+    if(logadoId && String(u?.id || "") === String(logadoId)) return true;
+    if(solicitante && (nome === solicitante || usuario === solicitante || email === solicitante)) return true;
+    return false;
+  }
+
+  function filtrarUsuariosExcetoSolicitante(lista, pedido){
+    return unicoPorId((lista || []).filter(u => !usuarioEhMesmoSolicitante(u, pedido)));
+  }
+
   function unicoPorId(lista){
     const mapa = new Map();
     (lista || []).forEach(u => {
@@ -146,12 +184,14 @@
     let lista = Array.isArray(data) ? data : [];
 
     if(obra_id && !incluirTodosResponsaveis){
-      const obraTxt = String(obra_id);
       lista = lista.filter(u => {
-        const liberadas = String(u.obras_liberadas || "");
-        return String(u.obra_id || "") === obraTxt ||
-          liberadas.split(/[;,|]/).map(x => x.trim()).includes(obraTxt) ||
-          perfilEhResponsavel(u);
+        // Regra oficial Atlas:
+        // - MASTER recebe como gestor global;
+        // - ADMIN/ALMOXARIFE/permissões precisam pertencer à obra origem
+        //   ou ter a obra liberada. Isso evita o solicitante/destino
+        //   receber a notificação inicial do próprio pedido.
+        if(usuarioEhMasterGlobal(u)) return true;
+        return usuarioPertenceObra(u, obra_id);
       });
     }
 
@@ -344,33 +384,65 @@
 
   async function notificarOrigemPedidoCriado(pedidoId){
     const pedido = await buscarPedido(pedidoId);
+    const itens = await buscarItensPedido(pedidoId);
     const origemId = pedido.obra_origem_id || null;
     const destinoId = pedido.obra_destino_id || pedido.obra_id || null;
-    const empresaId = pedido.empresa_id || empresaAtualId();
 
     await registrarMovimentacaoSolicitada(pedidoId);
 
-    const usuarios = await buscarUsuariosSistema({
+    // Sprint 2.6: a decisão de quem recebe saiu do Workflow.
+    // O AtlasGestorNotificacoes é a central oficial para permissões, obra, cargo e bloqueios.
+    if(window.AtlasGestorNotificacoes && typeof window.AtlasGestorNotificacoes.notificarPedidoCriado === "function"){
+      const resultado = await window.AtlasGestorNotificacoes.notificarPedidoCriado(pedido, itens);
+
+      await registrarHistoricoPedido({
+        pedido_id: pedidoId,
+        status_anterior: null,
+        status_novo: pedido.status || STATUS.SOLICITADO,
+        observacao: resultado.ok
+          ? "Pedido criado e notificação enviada pelo Atlas Gestor para " + resultado.notificacoes + " destinatário(s)."
+          : "Pedido criado, mas o Atlas Gestor não encontrou destinatários: " + (resultado.motivo || "sem motivo informado")
+      });
+
+      return {
+        ok: !!resultado.ok,
+        notificacoes: resultado.notificacoes || 0,
+        origemId,
+        destinoId,
+        motivo: resultado.motivo || null,
+        destinatarios: resultado.destinatarios || []
+      };
+    }
+
+    // Fallback antigo caso o Gestor não esteja carregado.
+    const empresaId = pedido.empresa_id || empresaAtualId();
+    const usuariosOrigem = await buscarUsuariosSistema({
       empresa_id: empresaId,
       obra_id: origemId,
       incluirTodosResponsaveis: false
     });
+
+    const usuarios = filtrarUsuariosExcetoSolicitante(usuariosOrigem, pedido);
 
     if(!usuarios.length){
       await registrarHistoricoPedido({
         pedido_id: pedidoId,
         status_anterior: null,
         status_novo: pedido.status || STATUS.SOLICITADO,
-        observacao: "Pedido criado, mas nenhum usuário responsável foi encontrado em usuarios_sistema."
+        observacao: "Pedido criado, mas nenhum usuário responsável da origem foi encontrado e o Gestor não estava carregado."
       });
-      return { ok:false, motivo:"Nenhum responsável encontrado em usuarios_sistema." };
+      return { ok:false, motivo:"Nenhum responsável encontrado e Gestor não carregado.", origemId, destinoId };
     }
+
+    const resumoItens = itens.length
+      ? " Itens: " + itens.slice(0,6).map(i => i.patrimonio_codigo || i.patrimonio_nome || i.produto_id || i.id).join("; ")
+      : "";
 
     const total = await notificarUsuarios(usuarios, {
       empresa_id: empresaId,
       tipo: "PEDIDO_CRIADO",
       titulo: "📋 Novo pedido recebido",
-      mensagem: "Pedido " + (pedido.codigo || "#" + pedido.id) + " aguardando análise. Solicitante: " + (pedido.solicitante || pedido.usuario_criacao || "-") + ".",
+      mensagem: "Pedido " + (pedido.codigo || "#" + pedido.id) + " aguardando análise. Solicitante: " + (pedido.solicitante || pedido.usuario_criacao || "-") + "." + resumoItens,
       link: "expedicao.html?aba=solicitacoes",
       pedido_id: pedido.id,
       obra_origem_id: origemId,
@@ -385,6 +457,7 @@
     });
 
     emitirAtlas("pedido.criado", {
+      modulo:"EXPEDICAO",
       pedido_id: pedido.id,
       codigo: pedido.codigo || null,
       status: pedido.status || STATUS.SOLICITADO,
@@ -397,6 +470,11 @@
   }
 
   async function notificarSolicitantePedido(pedido, tipo, titulo, mensagem, link){
+    if(window.AtlasGestorNotificacoes && typeof window.AtlasGestorNotificacoes.notificarDestinoPedido === "function"){
+      const r = await window.AtlasGestorNotificacoes.notificarDestinoPedido(pedido, tipo, titulo, mensagem, link);
+      return r.notificacoes || 0;
+    }
+
     const usuariosDestino = await buscarUsuariosDestinoPedido(pedido);
     return await notificarUsuarios(usuariosDestino, {
       empresa_id: pedido.empresa_id || empresaAtualId(),
@@ -487,15 +565,40 @@
       data_aprovacao: agora
     });
 
+    // Sprint 2.8: Reservas e fila saem do Workflow.
+    // O Workflow decide a aprovação; o AtlasGestorReservas garante disponibilidade,
+    // reserva o item aprovado e coloca concorrentes em EM_FILA quando necessário.
+    let resultadoReservas = null;
+    if(window.AtlasGestorReservas && typeof window.AtlasGestorReservas.processarPedidoAprovado === "function"){
+      try{
+        resultadoReservas = await window.AtlasGestorReservas.processarPedidoAprovado(pedidoId);
+        if(resultadoReservas && resultadoReservas.statusPedido){
+          statusPedido = resultadoReservas.statusPedido;
+        }
+      }catch(e){
+        console.warn("AtlasWorkflow: falha no AtlasGestorReservas:", e?.message || e);
+        await registrarHistoricoPedido({
+          pedido_id: pedidoId,
+          status_anterior: pedido.status || STATUS.SOLICITADO,
+          status_novo: statusPedido,
+          observacao: "Aprovação registrada, mas o Gestor de Reservas falhou: " + (e?.message || e)
+        });
+      }
+    }
+
+    const msgReserva = resultadoReservas
+      ? " Reservas: " + (resultadoReservas.reservas || 0) + ", em fila: " + (resultadoReservas.filas || 0) + "."
+      : "";
+
     await notificarSolicitantePedido(
       { ...pedido, status: statusPedido },
-      statusPedido === STATUS.RECUSADO ? "PEDIDO_RECUSADO" : "PEDIDO_APROVADO",
-      statusPedido === STATUS.RECUSADO ? "❌ Pedido recusado" : "✅ Pedido analisado",
-      "Pedido " + (pedido.codigo || "#" + pedido.id) + " foi analisado por " + usuario + ". Status: " + statusPedido + ".",
+      statusPedido === STATUS.RECUSADO ? "PEDIDO_RECUSADO" : statusPedido === STATUS.EM_FILA ? "PEDIDO_EM_FILA" : "PEDIDO_APROVADO",
+      statusPedido === STATUS.RECUSADO ? "❌ Pedido recusado" : statusPedido === STATUS.EM_FILA ? "⏳ Pedido em fila" : "✅ Pedido analisado",
+      "Pedido " + (pedido.codigo || "#" + pedido.id) + " foi analisado por " + usuario + ". Status: " + statusPedido + "." + msgReserva,
       "expedicao.html?aba=historico"
     );
 
-    return { ok:true, statusPedido, total, aprovados, recusados };
+    return { ok:true, statusPedido, total, aprovados, recusados, reservas:resultadoReservas };
   }
 
   async function aprovarTodosItensPedido(pedidoId){
@@ -622,5 +725,5 @@
 
   window.AtlasWorkflow = AtlasWorkflow;
 
-  console.log("✅ ATLAS WORKFLOW V1.4 carregado - Atlas Event Bus integrado");
+  console.log("✅ ATLAS WORKFLOW V1.8 carregado - Logística integrada");
 })();

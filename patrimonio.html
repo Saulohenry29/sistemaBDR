@@ -9,7 +9,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:,">
-<title>BDR Patrimônio</title>
+<title>BDR Patrimônio - UX Performance</title>
 
 <!-- CSS visual padrão do sistema -->
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
@@ -219,6 +219,39 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
   .bdr-etiqueta-modal{width:94vw}
   .bdr-etiqueta-frame{height:220px}
 }
+
+
+/* =========================================================
+   ATLAS / BDR PATRIMÔNIO UX + PERFORMANCE V3.2
+   - Mantém o menu atual
+   - Deixa cadastro/consulta mais claros
+   - Oculta analytics pesado desta tela
+   - Paginação visual da lista
+========================================================= */
+#obraAtivaTexto{display:none!important}
+#cardObraLancamento h3::after{content:""}
+#cardObraLancamento{border-left:4px solid var(--bdr-red,#d71920)}
+#cardObraLancamento h3{margin-bottom:10px!important}
+#cardObraLancamento .lock-row{display:grid;grid-template-columns:minmax(240px,1fr) 120px;gap:10px;align-items:center}
+#btnTravarObra{white-space:nowrap;min-height:38px}
+#cardEntradaPatrimonio{border-left:4px solid #16a34a}
+#cardEntradaPatrimonio h3::after{content:"  • Cadastro";font-size:11px;color:#6b7280;font-weight:800}
+#cardEntradaPatrimonio .grid{gap:12px!important}
+#cardEntradaPatrimonio input,#cardEntradaPatrimonio select,#cardEntradaPatrimonio textarea{min-height:40px}
+#busca{min-height:42px;font-size:14px;border:1px solid #fecaca!important;background:#fffafa!important;font-weight:800}
+#busca:focus{outline:3px solid rgba(215,25,32,.12);border-color:var(--bdr-red,#d71920)!important}
+#cardAnalyticsManutencao{display:none!important}
+.bdr-lista-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;flex-wrap:wrap;background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:10px 12px}
+.bdr-lista-tools strong{color:#111827;font-size:13px}.bdr-lista-tools span{color:#6b7280;font-size:12px;font-weight:800}
+.bdr-paginacao{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.bdr-paginacao button{border:1px solid #fecaca;background:#fff;color:var(--bdr-red,#d71920);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:900;cursor:pointer}
+.bdr-paginacao button:disabled{opacity:.45;cursor:not-allowed;background:#f9fafb;color:#9ca3af;border-color:#e5e7eb}
+.bdr-paginacao .pagina-info{font-size:12px;font-weight:900;color:#374151;background:#f8fafc;border:1px solid #e5e7eb;border-radius:999px;padding:8px 12px}
+.linha-patrimonio{transition:.14s ease;background:#fff;border-bottom:1px solid #f1f5f9;padding:10px 8px;border-radius:10px;margin-bottom:4px;cursor:pointer}
+.linha-patrimonio:hover{background:#fff7f7;transform:translateX(2px);box-shadow:0 5px 14px rgba(15,23,42,.06)}
+.lista-header{background:#111827;color:#fff;border-radius:10px;padding:10px 8px;margin-bottom:7px;font-size:12px;font-weight:900}
+@media(max-width:900px){#cardObraLancamento .lock-row{grid-template-columns:1fr}.bdr-lista-tools{align-items:flex-start}.linha-patrimonio{padding:12px}}
+
 </style>
 
 <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260629-menu-unico-66">
@@ -372,7 +405,7 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
   </div>
 </div>
 <div class="card" id="cardObraLancamento">
-  <h3>🏗 Obra / Setor de Lançamento</h3>
+  <h3>🏗 Obra de lançamento</h3>
 
   <div class="lock-row">
     <select id="obraSelect">
@@ -386,7 +419,7 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
 </div>
 
 <div class="card" id="cardEntradaPatrimonio">
-  <h3>📥 Entrada de Patrimônio</h3>
+  <h3>➕ Novo Patrimônio</h3>
 
   <div class="grid">
     <input id="nome_bem" placeholder="Nome do item Ex: TV Samsung">
@@ -448,16 +481,16 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
 </div>
 
 <div class="card">
-  <h3>🔎 Buscar / Filtrar Patrimônios</h3>
+  <h3>🔍 Consultar Patrimônios</h3>
 
   <div class="grid">
-    <input id="busca" placeholder="Buscar por nome, código, placa, RENAVAM, chassi, obra, marca..." oninput="renderizarPatrimonios()">
+    <input id="busca" placeholder="Pesquisar por PAT, nome, placa, série, obra, marca..." oninput="bdrResetPaginaPatrimonio(); renderizarPatrimonios()">
 
-    <select id="filtroObra" onchange="renderizarPatrimonios()">
+    <select id="filtroObra" onchange="bdrResetPaginaPatrimonio(); renderizarPatrimonios()">
       <option value="">Todas as obras/setores</option>
     </select>
 
-    <select id="filtroStatus" onchange="renderizarPatrimonios()">
+    <select id="filtroStatus" onchange="bdrResetPaginaPatrimonio(); renderizarPatrimonios()">
       <option value="">Todos os status</option>
       <option value="ESTOQUE">Estoque</option>
       <option value="EM_USO">Em uso</option>
@@ -465,7 +498,7 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
       <option value="BAIXADO">Baixado</option>
     </select>
 
-    <select id="filtroTipo" onchange="renderizarPatrimonios()">
+    <select id="filtroTipo" onchange="bdrResetPaginaPatrimonio(); renderizarPatrimonios()">
       <option value="">Todos os tipos</option>
       <option value="ELETRONICO">Eletrônico</option>
       <option value="ELETRODOMESTICO">Eletrodoméstico</option>
@@ -495,7 +528,7 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
 </div>
 
 <div class="card">
-  <h3>🏷 Patrimônios cadastrados</h3>
+  <h3>📋 Patrimônios cadastrados</h3>
   <div id="lista"></div>
 </div>
 
@@ -664,6 +697,9 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
 <script>
 let obras = [];
 let patrimonios = [];
+let bdrPatrimonioPaginaAtual = 1;
+const bdrPatrimonioPorPagina = 30;
+let bdrPatrimonioUltimaChaveFiltro = "";
 let patrimonioSelecionado = null;
 let manutencoesPatrimonio = [];
 let statusDestinoDepoisManutencao = null;
@@ -984,7 +1020,7 @@ function aplicarRegraObraLancamentoBDR(){
     if(btn){
       btn.disabled = true;
       btn.className = "lock-btn lock-off";
-      btn.innerText = "⚠️ Sem obra vinculada";
+      btn.innerText = "⚠️ Sem obra";
     }
     window.obraAtiva = null;
     window.obraTravada = false;
@@ -999,7 +1035,7 @@ function aplicarRegraObraLancamentoBDR(){
   if(btn){
     btn.disabled = true;
     btn.className = "lock-btn lock-on";
-    btn.innerText = "🔒 " + (obraUsuario.codigo_obra || "-") + " - " + (obraUsuario.nome || "-");
+    btn.innerText = "🔒 Travado";
   }
 
   mostrarAvisoModoOffline();
@@ -1311,11 +1347,7 @@ function atualizarVisualTrava(){
 
     if(btn){
       btn.className = "lock-btn lock-on";
-      btn.innerText =
-        "🔒 " +
-        (window.obraAtiva.codigo_obra || "-") +
-        " - " +
-        (window.obraAtiva.nome || "-");
+      btn.innerText = "🔒 Travado";
     }
 
     if(textoTopo){
@@ -1958,6 +1990,34 @@ function textoBuscaPatrimonio(p){
 }
 
 
+
+function bdrResetPaginaPatrimonio(){
+  bdrPatrimonioPaginaAtual = 1;
+}
+
+function bdrPatrimonioFiltroChave(){
+  return [
+    valor("busca"),
+    valor("filtroObra"),
+    valor("filtroStatus"),
+    valor("filtroTipo")
+  ].join("||");
+}
+
+function bdrPatrimonioPaginaAnterior(){
+  if(bdrPatrimonioPaginaAtual > 1){
+    bdrPatrimonioPaginaAtual--;
+    renderizarPatrimonios();
+  }
+}
+
+function bdrPatrimonioProximaPagina(totalPaginas){
+  if(bdrPatrimonioPaginaAtual < Number(totalPaginas || 1)){
+    bdrPatrimonioPaginaAtual++;
+    renderizarPatrimonios();
+  }
+}
+
 function renderizarPatrimonios(){
 
   const buscaOriginal = valor("busca");
@@ -1965,6 +2025,12 @@ function renderizarPatrimonios(){
   const filtroStatus = valor("filtroStatus");
   const filtroTipo = valor("filtroTipo");
   const filtroObra = valor("filtroObra");
+
+  const chaveFiltro = bdrPatrimonioFiltroChave();
+  if(chaveFiltro !== bdrPatrimonioUltimaChaveFiltro){
+    bdrPatrimonioPaginaAtual = 1;
+    bdrPatrimonioUltimaChaveFiltro = chaveFiltro;
+  }
 
   const lista = document.getElementById("lista");
   lista.innerHTML = "";
@@ -1978,7 +2044,16 @@ function renderizarPatrimonios(){
       (!filtroTipo || p.tipo_item === filtroTipo);
   });
 
-  if(filtrados.length === 0){
+  const total = filtrados.length;
+  const porPagina = bdrPatrimonioPorPagina;
+  const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
+  if(bdrPatrimonioPaginaAtual > totalPaginas) bdrPatrimonioPaginaAtual = totalPaginas;
+
+  const inicio = (bdrPatrimonioPaginaAtual - 1) * porPagina;
+  const fim = Math.min(inicio + porPagina, total);
+  const pagina = filtrados.slice(inicio, fim);
+
+  if(total === 0){
     lista.innerHTML = `
       <p>Nenhum patrimônio encontrado.</p>
       ${buscaOriginal ? `<p style="color:#6b7280;font-size:12px;">Busca feita por: <b>${buscaOriginal}</b></p>` : ""}
@@ -1987,6 +2062,14 @@ function renderizarPatrimonios(){
   }
 
   lista.innerHTML = `
+    <div class="bdr-lista-tools">
+      <div>
+        <strong>Exibindo ${inicio + 1}–${fim} de ${total}</strong><br>
+        <span>${buscaOriginal ? "Resultado filtrado" : "Últimos patrimônios carregados"} • ${porPagina} por página</span>
+      </div>
+      <span>Use a pesquisa para localizar PAT, placa, série, nome ou obra.</span>
+    </div>
+
     <div class="lista-header">
       <div>Código</div>
       <div>Patrimônio</div>
@@ -1997,7 +2080,7 @@ function renderizarPatrimonios(){
     </div>
   `;
 
-  filtrados.forEach(p => {
+  pagina.forEach(p => {
 
     const statusClasse = String(p.status || "")
       .replaceAll(" ", "-")
@@ -2044,6 +2127,14 @@ function renderizarPatrimonios(){
       </div>
     `;
   });
+
+  lista.innerHTML += `
+    <div class="bdr-paginacao">
+      <button type="button" onclick="bdrPatrimonioPaginaAnterior()" ${bdrPatrimonioPaginaAtual <= 1 ? "disabled" : ""}>◀ Anterior</button>
+      <span class="pagina-info">Página ${bdrPatrimonioPaginaAtual} de ${totalPaginas}</span>
+      <button type="button" onclick="bdrPatrimonioProximaPagina(${totalPaginas})" ${bdrPatrimonioPaginaAtual >= totalPaginas ? "disabled" : ""}>Próxima ▶</button>
+    </div>
+  `;
 }
 
 function bdrLabelTipo(tipo, tipoOutro=""){

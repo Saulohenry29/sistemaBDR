@@ -296,7 +296,7 @@
     const agora = agoraISO();
 
     const { error } = await banco.from("itens_retirada").update({
-      status:STATUS.APROVADO,
+      status:STATUS.RESERVADO,
       reservado:true,
       estoque_reservado:true,
       data_reserva:agora,
@@ -304,10 +304,8 @@
     }).eq("id", item.id);
     if(error) throw error;
 
-    if(item.patrimonio_id){
-      const p = await banco.from("patrimonio").update({ status:"RESERVADO" }).eq("id", item.patrimonio_id);
-      if(p.error) throw p.error;
-    }
+    // Sprint 3.1.4: reserva operacional não altera o status do patrimônio.
+    // O patrimônio só muda no recebimento do destino.
 
     emitir("reserva.criada", {
       modulo:"RESERVAS",
@@ -365,7 +363,7 @@
     let novo = pedido.status || STATUS.SOLICITADO;
     if(fila === total) novo = STATUS.EM_FILA;
     else if(recusados === total) novo = STATUS.RECUSADO;
-    else if(aprovados === total) novo = STATUS.APROVADO;
+    else if(aprovados === total) novo = STATUS.RESERVADO;
     else if(aprovados > 0 || fila > 0 || recusados > 0) novo = STATUS.APROVADO_PARCIAL;
 
     if(normalStatus(pedido.status) !== novo){
