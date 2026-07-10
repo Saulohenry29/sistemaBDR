@@ -9,7 +9,7 @@
   "use strict";
 
   const AtlasWorkflow = {
-    versao: "1.8-logistica"
+    versao: "1.9-expedicao-fluxo-3.1.8"
   };
 
   const STATUS = {
@@ -590,6 +590,66 @@
       ? " Reservas: " + (resultadoReservas.reservas || 0) + ", em fila: " + (resultadoReservas.filas || 0) + "."
       : "";
 
+    /*
+      REGRA OFICIAL ATLAS 3.1.8
+      - Produto aprovado fica RESERVADO no catálogo.
+      - Pedido aprovado entra imediatamente em EM_SEPARACAO.
+      - Não existe mais uma etapa manual "Iniciar separação".
+    */
+    if(aprovados > 0 && ![STATUS.RECUSADO, STATUS.EM_FILA, STATUS.CANCELADO].includes(statusPedido)){
+      const statusAntesSeparacao = statusPedido;
+      statusPedido = STATUS.EM_SEPARACAO;
+
+      const { error:erroPedidoSeparacao } = await banco
+        .from("pedidos_retirada")
+        .update({ status: STATUS.EM_SEPARACAO })
+        .eq("id", pedidoId);
+      if(erroPedidoSeparacao) throw erroPedidoSeparacao;
+
+      const idsAprovados = itensAtualizados
+        .filter(i => String(i.status || "").toUpperCase() === STATUS.APROVADO)
+        .map(i => i.id);
+
+      if(idsAprovados.length){
+        const { error:erroItensReservados } = await banco
+          .from("itens_retirada")
+          .update({ status: "RESERVADO" })
+          .in("id", idsAprovados);
+        if(erroItensReservados) throw erroItensReservados;
+      }
+
+      await registrarHistoricoPedido({
+        pedido_id: pedidoId,
+        status_anterior: statusAntesSeparacao,
+        status_novo: STATUS.EM_SEPARACAO,
+        observacao: "Pedido autorizado e encaminhado automaticamente para separação por " + usuario + "."
+      });
+
+      await atualizarMovimentacoesPedido(pedidoId, {
+        status: STATUS.EM_SEPARACAO,
+        aprovado_por: usuario,
+        data_aprovacao: agora
+      });
+
+      try{
+        if(window.AtlasGestorNotificacoes?.notificarMovimentacaoPedido){
+          await window.AtlasGestorNotificacoes.notificarMovimentacaoPedido(
+            { ...pedido, status: STATUS.EM_SEPARACAO },
+            {
+              tipo:"PEDIDO_AGUARDANDO_SEPARACAO",
+              titulo:"📦 Pedido aguardando separação",
+              mensagem:"Pedido " + (pedido.codigo || "#" + pedido.id) +
+                " foi autorizado por " + usuario + " e já pode ser separado.",
+              link:"expedicao.html?aba=separacao",
+              exigeAcao:true
+            }
+          );
+        }
+      }catch(e){
+        console.warn("AtlasWorkflow: notificação da separação não enviada:", e?.message || e);
+      }
+    }
+
     await notificarSolicitantePedido(
       { ...pedido, status: statusPedido },
       statusPedido === STATUS.RECUSADO ? "PEDIDO_RECUSADO" : statusPedido === STATUS.EM_FILA ? "PEDIDO_EM_FILA" : "PEDIDO_APROVADO",
@@ -725,5 +785,5 @@
 
   window.AtlasWorkflow = AtlasWorkflow;
 
-  console.log("✅ ATLAS WORKFLOW V1.8 carregado - Logística integrada");
+  console.log("✅ ATLAS WORKFLOW V1.9 carregado - aprovação direto para separação");
 })();

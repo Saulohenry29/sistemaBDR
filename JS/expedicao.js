@@ -1,3 +1,4 @@
+/* ATLAS EXPEDIÇÃO 3.1.8 - FLUXO DIRETO PARA SEPARAÇÃO */
 /* =========================================================
    ATUALIZADO: EXPEDIÇÃO COM OFFLINE BDR
 ========================================================= */
@@ -763,7 +764,7 @@ async function notificarGestao(titulo,mensagem,link){
 }
 function renderizarPedidos(){
   const por = s => pedidos.filter(p=>p.status===s);
-  lista("listaSolicitacoes", por("AGUARDANDO_AUTORIZACAO")); lista("listaSeparacao", por("EM_SEPARACAO")); lista("listaReservados", pedidos.filter(p=>["RESERVADO","APROVADO","APROVADO_PARCIAL"].includes(String(p.status||"").toUpperCase()))); lista("listaRetirada", por("AGUARDANDO_RETIRADA")); lista("listaTransito", por("EM_TRANSITO")); lista("listaHistorico", pedidos.filter(p=>["ENTREGUE","NEGADO","RECEBIDO_COM_DIVERGENCIA"].includes(p.status)));
+  lista("listaSolicitacoes", por("AGUARDANDO_AUTORIZACAO")); lista("listaSeparacao", por("EM_SEPARACAO")); lista("listaRetirada", por("AGUARDANDO_RETIRADA")); lista("listaTransito", por("EM_TRANSITO")); lista("listaHistorico", pedidos.filter(p=>["ENTREGUE","NEGADO","RECEBIDO_COM_DIVERGENCIA"].includes(p.status)));
 }
 function lista(id, arr){ const el=document.getElementById(id); if(!el) return; if(!arr.length){ el.innerHTML=`<div class="cart-empty">Nenhum registro encontrado.</div>`; return; } el.innerHTML=arr.map(p=>pedidoHTML(p)).join(""); }
 function pedidoHTML(p){ const itens=p.itens_retirada||[]; return `<div class="pedido-card"><div class="pedido-top"><div class="pedido-cod">${esc(p.codigo||"PED-"+p.id)}</div><div><b>${esc(p.obra_nome||"-")}</b><div class="pedido-small">Solicitante: ${esc(p.solicitante||"-")} • Origem: ${esc(nomeObra(p.obra_origem_id))}</div></div><div><span class="badge-status ${statusClass(p.status)}">${esc(p.status)}</span><div class="pedido-small">${itens.length} item(ns)</div></div><div class="pedido-actions">${acoesPedido(p)}</div></div></div>`; }
@@ -979,8 +980,7 @@ document.addEventListener("keydown", function(e){
     const solicitados = todos.filter(p => isSolicitado(p));
     lista("listaSolicitacoes", solicitados);
     lista("listaSeparacao", todos.filter(p => ["EM_SEPARACAO"].includes(String(p.status||"").toUpperCase())));
-    lista("listaReservados", todos.filter(p => ["RESERVADO","APROVADO","APROVADO_PARCIAL"].includes(String(p.status||"").toUpperCase())));
-    lista("listaRetirada", todos.filter(p => String(p.status||"").toUpperCase()==="AGUARDANDO_RETIRADA"));
+        lista("listaRetirada", todos.filter(p => String(p.status||"").toUpperCase()==="AGUARDANDO_RETIRADA"));
     lista("listaTransito", todos.filter(p => String(p.status||"").toUpperCase()==="EM_TRANSITO"));
     lista("listaHistorico", todos.filter(p => ["RECEBIDO","RECEBIDO_PARCIAL","RECUSADO","CANCELADO","ENTREGUE","NEGADO","RECEBIDO_COM_DIVERGENCIA"].includes(String(p.status||"").toUpperCase())));
   };
@@ -995,9 +995,6 @@ document.addEventListener("keydown", function(e){
         <button class="btn-mini btn-ok" onclick="autorizarTodosAtlas(${p.id})">Autorizar todos</button>`;
     }
 
-    if(["RESERVADO","APROVADO","APROVADO_PARCIAL"].includes(st) && podeAlmoxarife()){
-      return `<button class="btn-mini btn-ok" onclick="iniciarSeparacaoAtlas(${p.id})">Iniciar separação</button>`;
-    }
 
     if(st === "EM_SEPARACAO" && podeAlmoxarife()){
       return `<button class="btn-mini btn-ok" onclick="reservar(${p.id})">Concluir separação</button>`;
@@ -1059,10 +1056,10 @@ document.addEventListener("keydown", function(e){
   window.autorizarTodosAtlas = async function(pedidoId){
     if(!window.AtlasWorkflow?.aprovarTodosItensPedido){ alert("AtlasWorkflow Sprint 2.3 não carregado."); return; }
     atlasBtnProcessando(pedidoId, "Processando...");
-    atlasAtualizarPedidoLocal(pedidoId, "RESERVADO");
+    atlasAtualizarPedidoLocal(pedidoId, "EM_SEPARACAO");
     try{
       const r = await AtlasWorkflow.aprovarTodosItensPedido(pedidoId);
-      atlasAtualizarPedidoLocal(pedidoId, r?.statusPedido || "RESERVADO");
+      atlasAtualizarPedidoLocal(pedidoId, r?.statusPedido || "EM_SEPARACAO");
       fecharModalDetalhe?.();
       await carregarTudo();
       if(typeof window.bdrCarregarNotificacoes === "function") await window.bdrCarregarNotificacoes();
@@ -1128,7 +1125,7 @@ document.addEventListener("keydown", function(e){
     try{
       atlasBtnProcessando(pedidoId, "Processando...");
       const r = await AtlasWorkflow.aprovarItensPedido(pedidoId, decisoes);
-      atlasAtualizarPedidoLocal(pedidoId, r?.statusPedido || "RESERVADO");
+      atlasAtualizarPedidoLocal(pedidoId, r?.statusPedido || "EM_SEPARACAO");
       fecharModalDetalhe();
       await carregarTudo();
       if(typeof window.bdrCarregarNotificacoes === "function") await window.bdrCarregarNotificacoes();
@@ -1420,7 +1417,6 @@ document.addEventListener("keydown", function(e){
     const destino = obraLabelCurtaAtlas(p.obra_destino_id || p.obra_id, p.obra_nome);
     const origem = obraLabelCurtaAtlas(p.obra_origem_id);
     const podeDecidir = ["SOLICITADO","AGUARDANDO_AUTORIZACAO"].includes(st) && podeAlmoxarife();
-    const podeIniciarSeparacao = ["RESERVADO","APROVADO","APROVADO_PARCIAL"].includes(st) && podeAlmoxarife();
     const podeConcluirSeparacao = st === "EM_SEPARACAO" && podeAlmoxarife();
     const podeRetirar = st === "AGUARDANDO_RETIRADA" && podeAlmoxarife();
 
@@ -1430,10 +1426,6 @@ document.addEventListener("keydown", function(e){
         <button style="background:#16a34a;color:#fff" onclick="autorizarTodosAtlas(${Number(p.id)})">Autorizar todos</button>
         <button style="background:#2563eb;color:#fff" onclick="abrirAprovacaoParcialAtlas(${Number(p.id)})">Autorizar parcial</button>
         <button style="background:#b91c1c;color:#fff" onclick="recusarTodosAtlas(${Number(p.id)})">Recusar todos</button>
-        <button style="background:#e5e7eb;color:#0f172a" onclick="fecharModalDetalhe()">Fechar</button>`;
-    }else if(podeIniciarSeparacao){
-      botoes = `
-        <button style="background:#16a34a;color:#fff" onclick="iniciarSeparacaoAtlas(${Number(p.id)})">Iniciar separação</button>
         <button style="background:#e5e7eb;color:#0f172a" onclick="fecharModalDetalhe()">Fechar</button>`;
     }else if(podeConcluirSeparacao){
       botoes = `

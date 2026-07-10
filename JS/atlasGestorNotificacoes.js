@@ -20,7 +20,7 @@
 
   const Gestor = {
     __loaded:true,
-    versao:"1.2-master-global-expedicao"
+    versao:"1.4-central-inteligente"
   };
 
   const PERFIS_OPERACIONAIS = ["MASTER", "ADMIN", "ALMOXARIFE", "ALMOXARIFADO", "SUPERVISOR", "GESTOR", "LOGISTICA", "LOGÍSTICA"];
@@ -313,7 +313,7 @@
 
     const total = await notificarLista(responsaveis, {
       empresa_id: empresaId,
-      tipo:"PEDIDO_CRIADO",
+      tipo:"PEDIDO_AGUARDANDO_ANALISE",
       titulo:"📋 Novo pedido recebido",
       mensagem:mensagemPedidoCriado(pedido, itens),
       link:"expedicao.html?aba=solicitacoes",
@@ -392,5 +392,5 @@
 
   window.AtlasGestorNotificacoes = Gestor;
 
-  console.log("✅ ATLAS GESTOR NOTIFICAÇÕES V1.2 carregado - MASTER global recebe expedição");
+  console.log("✅ ATLAS GESTOR NOTIFICAÇÕES V1.4 carregado - central inteligente");
 })();

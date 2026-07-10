@@ -1,19 +1,14 @@
 /* =========================================================
-   BDR NOTIFICAÇÕES V11.0 - DEFINITIVO
-   - Protege contra carregamento duplicado
-   - Usa bdrOnlineReal() como fonte de verdade quando existir
-   - Não fica preso em bdrOnline() false se bdrOnlineReal() true
-   - Não consulta Supabase quando estiver offline real
-   - Usa usuario_destino_id na tabela notificacoes
-   - Contador sem fantasma
-   - Busca somente notificações não lidas
-   - Abrir o sininho NÃO marca como lida
-   - Clicar no item marca como lida; se tiver link, navega depois
-   - Exibe e salva lida_em no horário de Mato Grosso (America/Cuiaba)
-   - Toca som e anima o sininho quando chega notificação nova
-   - Mostra sino cortado quando offline
-   - Áudio liberado somente após clique real do usuário
-   - Abrir o sininho não limpa; clicar no item marca como lido
+   BDR NOTIFICAÇÕES V12.0 - CENTRAL INTELIGENTE
+   - Sintaxe validada
+   - Pendentes separadas de atualizações
+   - X fecha sem navegar
+   - Botão de ação apenas quando necessário
+   - Marcar todas como lidas
+   - Som forte em 3 toques
+   - Vibração quando suportada
+   - Realtime + fallback por intervalo
+   - Compatível com Atlas Event Bus
 ========================================================= */
 (function(){
   'use strict';
@@ -24,44 +19,34 @@
   }
 
   const BDR_NOTIF = {
-    __loaded: true,
-    versao: '11.1-atlas-event-bus',
-    intervaloMs: 30000,
-    timer: null,
-    carregando: false,
-    marcandoLidas: false,
-    paradoOffline: false,
-    ultimoTotal: 0,
-    errosSeguidos: 0,
-    ultimaVerificacaoOnline: 0,
-    ultimoOnlineReal: null,
-    primeiraCargaConcluida: false,
-    audioLiberado: false,
-    audioCtx: null,
-    ultimoAvisoEm: 0
+    __loaded:true,
+    versao:'12.1-card-acao-clicavel',
+    intervaloMs:10000,
+    timer:null,
+    carregando:false,
+    marcandoLidas:false,
+    paradoOffline:false,
+    ultimoTotal:0,
+    errosSeguidos:0,
+    primeiraCargaConcluida:false,
+    audioLiberado:false,
+    audioCtx:null,
+    ultimoAvisoEm:0,
+    realtimeChannel:null
   };
 
   function temSupabase(){
     return !!(window.client && typeof window.client.from === 'function');
   }
 
-  async function onlineLocalRapido(){
+  async function onlineReal(){
     if(navigator.onLine === false) return false;
 
-    // Fonte oficial quando existir: internet real do bdrCore.js
     if(typeof window.bdrOnlineReal === 'function'){
-      try{
-        const ok = await window.bdrOnlineReal();
-        BDR_NOTIF.ultimaVerificacaoOnline = Date.now();
-        BDR_NOTIF.ultimoOnlineReal = !!ok;
-        return !!ok;
-      }catch(e){
-        BDR_NOTIF.ultimoOnlineReal = false;
-        return false;
-      }
+      try{ return !!(await window.bdrOnlineReal()); }
+      catch(e){ return false; }
     }
 
-    // Fallback antigo, usado só se não existir bdrOnlineReal.
     if(typeof window.bdrOnline === 'function'){
       try{ return window.bdrOnline() !== false; }
       catch(e){ return navigator.onLine !== false; }
@@ -89,35 +74,44 @@
 
   function badgeEl(){
     return document.getElementById('notifBadge') ||
-           document.getElementById('badgeNotificacoes') ||
-           document.getElementById('notificacoesBadge') ||
-           document.getElementById('sininhoBadge') ||
-           document.querySelector('[data-bdr-badge-notificacoes]');
+      document.getElementById('badgeNotificacoes') ||
+      document.getElementById('notificacoesBadge') ||
+      document.getElementById('sininhoBadge') ||
+      document.querySelector('[data-bdr-badge-notificacoes]');
   }
 
   function listaEl(){
     return document.getElementById('notifLista') ||
-           document.getElementById('listaNotificacoes') ||
-           document.getElementById('notificacoesLista') ||
-           document.querySelector('[data-bdr-lista-notificacoes]');
+      document.getElementById('listaNotificacoes') ||
+      document.getElementById('notificacoesLista') ||
+      document.querySelector('[data-bdr-lista-notificacoes]');
   }
 
   function dropdownEl(){
     return document.getElementById('notifDropdown') ||
-           document.getElementById('notificacoesDropdown') ||
-           document.querySelector('[data-bdr-dropdown-notificacoes]');
+      document.getElementById('notificacoesDropdown') ||
+      document.querySelector('[data-bdr-dropdown-notificacoes]');
   }
 
   function notifBtnEl(){
     return document.querySelector('.notif-btn') ||
-           document.querySelector('[data-bdr-btn-notificacoes]');
+      document.querySelector('[data-bdr-btn-notificacoes]');
   }
 
-  function aplicarCssSininho(){
-    if(document.getElementById('bdrNotifAnimCss')) return;
+  function escapeHtml(v){
+    return String(v ?? '')
+      .replaceAll('&','&amp;')
+      .replaceAll('<','&lt;')
+      .replaceAll('>','&gt;')
+      .replaceAll('"','&quot;')
+      .replaceAll("'",'&#039;');
+  }
+
+  function aplicarCss(){
+    if(document.getElementById('bdrNotifV12Css')) return;
 
     const css = document.createElement('style');
-    css.id = 'bdrNotifAnimCss';
+    css.id = 'bdrNotifV12Css';
     css.textContent = `
       @keyframes bdrBellShake{
         0%{transform:rotate(0deg) scale(1)}
@@ -140,12 +134,71 @@
       .notif-badge.bdr-badge-pulse{
         animation:bdrBadgePulse .75s ease-in-out 0s 2;
       }
-      .notif-btn.bdr-notif-offline{
-        opacity:.75;
-        filter:grayscale(.25);
+      .notif-dropdown{
+        width:min(400px,calc(100vw - 24px))!important;
       }
-      .notif-btn.bdr-notif-offline i{
-        color:#6b7280!important;
+      .notif-head{
+        display:flex!important;
+        align-items:center!important;
+        justify-content:space-between!important;
+        gap:10px!important;
+      }
+      .bdr-notif-limpar-todas{
+        border:0;background:#fff;color:#2563eb;font-size:11px;font-weight:900;
+        border-radius:9px;padding:7px 9px;cursor:pointer;
+      }
+      .bdr-notif-grupo-titulo{
+        padding:9px 12px 6px;color:#64748b;font-size:10px;font-weight:950;
+        text-transform:uppercase;letter-spacing:.08em;background:#f8fafc;
+        border-bottom:1px solid #eef2f7;
+      }
+      .notif-item{
+        position:relative;padding:11px 42px 11px 13px!important;
+        cursor:default!important;border-bottom:1px solid #eef2f7;
+      }
+      .notif-item.bdr-notif-acao{
+        border-left:4px solid #2563eb;
+        background:#eff6ff;
+        cursor:pointer!important;
+        transition:.16s ease;
+      }
+      .notif-item.bdr-notif-acao:hover{
+        background:#dbeafe;
+        transform:translateX(2px);
+      }
+      .notif-item.bdr-notif-acao::after{
+        content:"Clique para abrir";
+        display:block;
+        margin-top:7px;
+        color:#1d4ed8;
+        font-size:10px;
+        font-weight:900;
+      }
+      .notif-item.bdr-notif-info{
+        border-left:4px solid #16a34a;background:#fff;
+      }
+      .bdr-notif-fechar{
+        position:absolute;top:8px;right:8px;width:27px;height:27px;border:0;
+        border-radius:9px;background:#f1f5f9;color:#475569;font-size:15px;
+        font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;
+      }
+      .bdr-notif-fechar:hover{background:#e2e8f0;color:#0f172a}
+      .notif-item small{display:block;margin-top:5px;color:#64748b}
+      .notif-btn.bdr-notif-offline{opacity:.75;filter:grayscale(.25)}
+      .bdr-notif-toast-forte{
+        position:fixed;top:14px;left:50%;transform:translate(-50%,-18px);
+        width:min(520px,calc(100vw - 24px));background:linear-gradient(135deg,#1d4ed8,#2563eb);
+        color:#fff;border-radius:16px;padding:13px 16px;z-index:2147483647;
+        box-shadow:0 18px 45px rgba(37,99,235,.34);opacity:0;pointer-events:none;
+        transition:.22s ease;font-size:13px;font-weight:900;text-align:center;
+      }
+      .bdr-notif-toast-forte.ativo{opacity:1;transform:translate(-50%,0)}
+      @media(max-width:640px){
+        .notif-dropdown{
+          position:fixed!important;left:10px!important;right:10px!important;top:82px!important;
+          width:auto!important;max-height:calc(100dvh - 170px)!important;
+        }
+        .notif-list{max-height:calc(100dvh - 230px)!important}
       }
     `;
     document.head.appendChild(css);
@@ -167,87 +220,89 @@
     }
   }
 
-  function usuarioInteragiuComPagina(event){
+  function usuarioInteragiu(event){
     if(event && event.isTrusted === false) return false;
-
-    // userActivation é suportado em Chrome/Edge e evita tentar áudio cedo demais.
-    if(navigator.userActivation && !navigator.userActivation.hasBeenActive){
-      return false;
-    }
-
+    if(navigator.userActivation && !navigator.userActivation.hasBeenActive) return false;
     return true;
   }
 
-  async function liberarAudioNotificacao(event){
+  async function liberarAudio(event){
     if(BDR_NOTIF.audioLiberado) return true;
-    if(!usuarioInteragiuComPagina(event)) return false;
+    if(!usuarioInteragiu(event)) return false;
 
     try{
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if(!AudioCtx) return false;
 
-      if(!BDR_NOTIF.audioCtx){
-        BDR_NOTIF.audioCtx = new AudioCtx();
-      }
-
-      if(BDR_NOTIF.audioCtx.state === 'suspended'){
-        await BDR_NOTIF.audioCtx.resume();
-      }
+      if(!BDR_NOTIF.audioCtx) BDR_NOTIF.audioCtx = new AudioCtx();
+      if(BDR_NOTIF.audioCtx.state === 'suspended') await BDR_NOTIF.audioCtx.resume();
 
       if(BDR_NOTIF.audioCtx.state === 'running'){
         BDR_NOTIF.audioLiberado = true;
-        removerListenersAudio();
         return true;
       }
-    }catch(e){
-      // Navegador pode bloquear mesmo após o primeiro gesto. Mantém listeners ativos.
-      BDR_NOTIF.audioLiberado = false;
-    }
+    }catch(e){}
 
     return false;
   }
 
-  function adicionarListenersAudio(){
-    document.addEventListener('click', liberarAudioNotificacao, { passive:true });
-    document.addEventListener('pointerdown', liberarAudioNotificacao, { passive:true });
-    document.addEventListener('touchstart', liberarAudioNotificacao, { passive:true });
-    document.addEventListener('keydown', liberarAudioNotificacao);
+  function registrarLiberacaoAudio(){
+    ['click','pointerdown','touchstart','keydown'].forEach(evt => {
+      document.addEventListener(evt, liberarAudio, { passive:true });
+    });
   }
 
-  function removerListenersAudio(){
-    document.removeEventListener('click', liberarAudioNotificacao);
-    document.removeEventListener('pointerdown', liberarAudioNotificacao);
-    document.removeEventListener('touchstart', liberarAudioNotificacao);
-    document.removeEventListener('keydown', liberarAudioNotificacao);
-  }
-
-  function tocarSomNotificacao(){
+  function tocarSom(){
     if(!BDR_NOTIF.audioLiberado) return;
     if(!BDR_NOTIF.audioCtx || BDR_NOTIF.audioCtx.state !== 'running') return;
 
     try{
       const ctx = BDR_NOTIF.audioCtx;
-      const agora = ctx.currentTime;
+      const inicio = ctx.currentTime + 0.02;
 
-      const ganho = ctx.createGain();
-      ganho.gain.setValueAtTime(0.0001, agora);
-      ganho.gain.exponentialRampToValueAtTime(0.16, agora + 0.015);
-      ganho.gain.exponentialRampToValueAtTime(0.0001, agora + 0.20);
-      ganho.connect(ctx.destination);
+      [0,0.34,0.68].forEach((deslocamento, indice) => {
+        const agora = inicio + deslocamento;
+        const ganho = ctx.createGain();
+        ganho.gain.setValueAtTime(0.0001, agora);
+        ganho.gain.exponentialRampToValueAtTime(0.34, agora + 0.018);
+        ganho.gain.exponentialRampToValueAtTime(0.0001, agora + 0.25);
+        ganho.connect(ctx.destination);
 
-      const osc1 = ctx.createOscillator();
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(880, agora);
-      osc1.frequency.setValueAtTime(1175, agora + 0.09);
-      osc1.connect(ganho);
-      osc1.start(agora);
-      osc1.stop(agora + 0.21);
+        const osc = ctx.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(indice === 2 ? 1320 : 880, agora);
+        osc.frequency.exponentialRampToValueAtTime(indice === 2 ? 1760 : 1240, agora + 0.16);
+        osc.connect(ganho);
+        osc.start(agora);
+        osc.stop(agora + 0.26);
+      });
     }catch(e){}
   }
 
-  function animarSininho(){
-    aplicarCssSininho();
+  function vibrar(){
+    try{
+      if(typeof navigator.vibrate === 'function'){
+        navigator.vibrate([260,120,260,120,480]);
+      }
+    }catch(e){}
+  }
 
+  function mostrarToast(texto){
+    let toast = document.getElementById('bdrNotifToastForte');
+    if(!toast){
+      toast = document.createElement('div');
+      toast.id = 'bdrNotifToastForte';
+      toast.className = 'bdr-notif-toast-forte';
+      document.body.appendChild(toast);
+    }
+
+    toast.textContent = texto || '🔔 Nova movimentação no Atlas';
+    toast.classList.add('ativo');
+    clearTimeout(window.__bdrNotifToastTimer);
+    window.__bdrNotifToastTimer = setTimeout(() => toast.classList.remove('ativo'), 4200);
+  }
+
+  function animarSininho(){
     const btn = notifBtnEl();
     const badge = badgeEl();
 
@@ -266,71 +321,42 @@
     }
   }
 
-  function avisarNovaNotificacao(){
+  function avisarNovaNotificacao(mensagem){
     const agora = Date.now();
-    if(agora - Number(BDR_NOTIF.ultimoAvisoEm || 0) < 700) return;
+    if(agora - BDR_NOTIF.ultimoAvisoEm < 850) return;
     BDR_NOTIF.ultimoAvisoEm = agora;
-    tocarSomNotificacao();
+
+    tocarSom();
+    vibrar();
     animarSininho();
+    mostrarToast(mensagem);
   }
 
-  function escapeHtml(v){
-    return String(v ?? '')
-      .replaceAll('&','&amp;')
-      .replaceAll('<','&lt;')
-      .replaceAll('>','&gt;')
-      .replaceAll('"','&quot;')
-      .replaceAll("'",'&#039;');
-  }
-
-  /* =========================================================
-     HORÁRIO OFICIAL BDR
-     Banco salva timestamp sem timezone. Para não aparecer horário
-     adiantado, o sininho trata o horário como UTC e exibe em MT.
-  ========================================================= */
   function bdrDataComoUTC(valor){
     if(!valor) return null;
-
     const txt = String(valor).trim();
-
-    // Se já vier com timezone, mantém.
-    if(/[zZ]$|[+-]\d{2}:?\d{2}$/.test(txt)){
-      return new Date(txt);
-    }
-
-    // Timestamp sem timezone do Supabase: considera UTC.
-    return new Date(txt.replace(' ', 'T') + 'Z');
+    if(/[zZ]$|[+-]\d{2}:?\d{2}$/.test(txt)) return new Date(txt);
+    return new Date(txt.replace(' ','T') + 'Z');
   }
 
   function formatarDataBDR(valor){
     const data = bdrDataComoUTC(valor);
-    if(!data || isNaN(data.getTime())) return '';
+    if(!data || Number.isNaN(data.getTime())) return '';
 
     return data.toLocaleString('pt-BR', {
-      timeZone: 'America/Cuiaba',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      timeZone:'America/Cuiaba',
+      day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'
     });
   }
 
   function agoraCuiabaParaSQL(){
     const partes = new Intl.DateTimeFormat('pt-BR', {
-      timeZone: 'America/Cuiaba',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
+      timeZone:'America/Cuiaba',
+      year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false
     }).formatToParts(new Date());
 
     const obj = {};
-    partes.forEach(p => obj[p.type] = p.value);
-
+    partes.forEach(p => { obj[p.type] = p.value; });
     return `${obj.year}-${obj.month}-${obj.day} ${obj.hour}:${obj.minute}:${obj.second}`;
   }
 
@@ -342,40 +368,54 @@
     if(!badge) return;
 
     if(qtd > 0){
-      badge.innerText = qtd > 99 ? '99+' : String(qtd);
+      badge.textContent = qtd > 99 ? '99+' : String(qtd);
       badge.style.display = 'inline-flex';
       badge.hidden = false;
     }else{
-      badge.innerText = '0';
+      badge.textContent = '0';
       badge.style.display = 'none';
       badge.hidden = true;
     }
   }
 
-  function renderOffline(){
-    setIconeOffline(true);
-    atualizarBadge(0);
+  function renderMensagem(texto){
     const lista = listaEl();
-    if(lista) lista.innerHTML = '<div class="notif-item">📴 Offline. Notificações pausadas.</div>';
-  }
-
-  function renderVazio(){
-    setIconeOffline(false);
-    atualizarBadge(0);
-    const lista = listaEl();
-    if(lista) lista.innerHTML = '<div class="notif-item">Nenhuma notificação no momento.</div>';
-  }
-
-  function renderErro(){
-    setIconeOffline(false);
-    atualizarBadge(0);
-    const lista = listaEl();
-    if(lista) lista.innerHTML = '<div class="notif-item">⚠️ Notificações indisponíveis no momento.</div>';
+    if(lista) lista.innerHTML = `<div class="notif-item">${escapeHtml(texto)}</div>`;
   }
 
   function notificacaoNaoLida(n){
-    return String(n.status || '').toUpperCase() !== 'LIDA' &&
-           n.lida !== true;
+    return String(n?.status || '').toUpperCase() !== 'LIDA' && n?.lida !== true;
+  }
+
+  function tipoEhAcao(n){
+    const tipo = String(n?.tipo || '').toUpperCase();
+    return [
+      'PEDIDO_CRIADO','PEDIDO_AGUARDANDO_ANALISE','PEDIDO_APROVACAO',
+      'PEDIDO_EM_SEPARACAO','PEDIDO_AGUARDANDO_SEPARACAO',
+      'PEDIDO_AGUARDANDO_RETIRADA','PEDIDO_AGUARDANDO_RECEBIMENTO',
+      'PEDIDO_DIVERGENCIA','PEDIDO_RECEBIDO_DIVERGENCIA'
+    ].some(x => tipo.includes(x));
+  }
+
+  function rotuloAcao(n){
+    const tipo = String(n?.tipo || '').toUpperCase();
+    if(tipo.includes('SEPAR')) return 'Abrir separação';
+    if(tipo.includes('RETIRADA')) return 'Abrir retirada';
+    if(tipo.includes('RECEB')) return 'Confirmar recebimento';
+    if(tipo.includes('DIVERGEN')) return 'Analisar divergência';
+    if(tipo.includes('APROV') || tipo.includes('CRIADO') || tipo.includes('ANALISE')) return 'Analisar pedido';
+    return 'Abrir';
+  }
+
+  function linkSeguro(n){
+    const tipo = String(n?.tipo || '').toUpperCase();
+    const atual = String(n?.link || '').trim();
+    if(atual) return atual;
+    if(tipo.includes('SEPAR')) return 'expedicao.html?aba=separacao';
+    if(tipo.includes('RETIRADA')) return 'expedicao.html?aba=retirada';
+    if(tipo.includes('RECEB') || tipo.includes('TRANSITO')) return 'expedicao.html?aba=transito';
+    if(tipo.includes('APROV') || tipo.includes('CRIADO') || tipo.includes('ANALISE')) return 'expedicao.html?aba=solicitacoes';
+    return '';
   }
 
   function renderNotificacoes(rows){
@@ -383,40 +423,58 @@
     if(!lista) return;
 
     if(!Array.isArray(rows) || !rows.length){
-      renderVazio();
+      renderMensagem('Nenhuma notificação no momento.');
       return;
     }
 
-    lista.innerHTML = rows.map(n => {
+    const pendentes = rows.filter(tipoEhAcao);
+    const atualizacoes = rows.filter(n => !tipoEhAcao(n));
+
+    function htmlItem(n){
+      const acao = tipoEhAcao(n);
+      const link = escapeHtml(linkSeguro(n));
       const titulo = escapeHtml(n.titulo || n.tipo || 'Notificação');
       const mensagem = escapeHtml(n.mensagem || '');
-      const data = n.created_at ? escapeHtml(formatarDataBDR(n.created_at)) : '';
-      const link = n.link ? escapeHtml(n.link) : '';
-      const classeLida = notificacaoNaoLida(n) ? 'nao-lida' : 'lida';
+      const data = escapeHtml(formatarDataBDR(n.created_at));
 
       return `
-        <div class="notif-item ${classeLida}" data-id="${escapeHtml(n.id || '')}" data-link="${link}" role="button" tabindex="0" title="Clique para abrir e marcar como lida">
+        <div class="notif-item ${acao ? 'bdr-notif-acao' : 'bdr-notif-info'}"
+             data-id="${escapeHtml(n.id || '')}"
+             data-link="${link}">
+          <button type="button" class="bdr-notif-fechar" data-fechar-notif title="Marcar como lida e remover">×</button>
           <strong>${titulo}</strong>
           <div>${mensagem}</div>
           <small>${data}</small>
+
         </div>`;
-    }).join('');
+    }
+
+    let html = '';
+    if(pendentes.length){
+      html += '<div class="bdr-notif-grupo-titulo">Pendentes</div>';
+      html += pendentes.map(htmlItem).join('');
+    }
+    if(atualizacoes.length){
+      html += '<div class="bdr-notif-grupo-titulo">Atualizações</div>';
+      html += atualizacoes.map(htmlItem).join('');
+    }
+
+    lista.innerHTML = html;
   }
 
   async function carregarNotificacoes(){
     if(BDR_NOTIF.carregando) return;
 
-    const online = await onlineLocalRapido();
-    if(!online){
-      pararNotificacoesOffline();
+    if(!(await onlineReal())){
+      setIconeOffline(true);
+      atualizarBadge(0);
+      renderMensagem('📴 Offline. Notificações pausadas.');
       return;
     }
 
-    BDR_NOTIF.paradoOffline = false;
     setIconeOffline(false);
-
     if(!temSupabase()){
-      renderVazio();
+      renderMensagem('Nenhuma notificação no momento.');
       return;
     }
 
@@ -425,7 +483,7 @@
     const empresaId = usuario?.empresa_id;
 
     if(!usuarioId){
-      renderVazio();
+      renderMensagem('Nenhuma notificação no momento.');
       return;
     }
 
@@ -438,115 +496,101 @@
         .eq('usuario_destino_id', usuarioId)
         .eq('lida', false)
         .order('created_at', { ascending:false })
-        .limit(20);
+        .limit(50);
 
-      if(empresaId){
-        query = query.eq('empresa_id', empresaId);
-      }
+      if(empresaId) query = query.eq('empresa_id', empresaId);
 
       const { data, error } = await query;
       if(error) throw error;
 
-      BDR_NOTIF.errosSeguidos = 0;
-
       const rows = Array.isArray(data) ? data : [];
+      const totalAnterior = BDR_NOTIF.ultimoTotal;
       const naoLidas = rows.filter(notificacaoNaoLida).length;
-      const totalAnterior = Number(BDR_NOTIF.ultimoTotal || 0);
       const primeiraCarga = !BDR_NOTIF.primeiraCargaConcluida;
 
       atualizarBadge(naoLidas);
       renderNotificacoes(rows);
 
       if(!primeiraCarga && naoLidas > totalAnterior){
-        avisarNovaNotificacao();
+        const nova = rows[0] || {};
+        avisarNovaNotificacao([nova.titulo,nova.mensagem].filter(Boolean).join(' — '));
       }
 
       BDR_NOTIF.primeiraCargaConcluida = true;
-    }catch(err){
-      const msg = String(err?.message || err || '').toLowerCase();
-      const aindaOnline = await onlineLocalRapido();
-
-      if(!aindaOnline || msg.includes('failed to fetch') || msg.includes('err_name_not_resolved') || msg.includes('network') || msg.includes('connection')){
-        pararNotificacoesOffline();
-        return;
-      }
-
+      BDR_NOTIF.errosSeguidos = 0;
+    }catch(e){
       BDR_NOTIF.errosSeguidos++;
-      console.warn('BDR notificações: erro ao carregar:', err?.message || err);
-      renderErro();
-
-      if(BDR_NOTIF.errosSeguidos >= 2 || msg.includes('does not exist') || msg.includes('bad request')){
-        pararTimer();
-      }
+      console.warn('BDR notificações: erro ao carregar:', e?.message || e);
+      renderMensagem('⚠️ Notificações indisponíveis no momento.');
     }finally{
       BDR_NOTIF.carregando = false;
     }
   }
 
   async function marcarNotificacaoComoLida(id, link){
-    if(!id) return;
-    if(BDR_NOTIF.marcandoLidas) return;
-    if(!(await onlineLocalRapido())) return;
-    if(!temSupabase()) return;
+    if(!id || BDR_NOTIF.marcandoLidas) return;
+    if(!(await onlineReal()) || !temSupabase()) return;
 
     const usuario = usuarioAtualSeguro();
     const usuarioId = usuario?.id || usuario?.usuario_id;
     const empresaId = usuario?.empresa_id;
-
     if(!usuarioId) return;
 
     BDR_NOTIF.marcandoLidas = true;
-
     try{
       let query = window.client
         .from('notificacoes')
-        .update({
-          lida: true,
-          lida_em: agoraCuiabaParaSQL(),
-          status: 'LIDA'
-        })
+        .update({ lida:true, lida_em:agoraCuiabaParaSQL(), status:'LIDA' })
         .eq('id', id)
         .eq('usuario_destino_id', usuarioId);
 
-      if(empresaId){
-        query = query.eq('empresa_id', empresaId);
-      }
+      if(empresaId) query = query.eq('empresa_id', empresaId);
 
       const { error } = await query;
       if(error) throw error;
 
       await carregarNotificacoes();
-
-      if(link){
-        window.location.href = link;
-      }
-
+      if(link) window.location.href = link;
     }catch(e){
-      console.warn('BDR notificações: erro ao marcar item como lido:', e?.message || e);
-      if(link){
-        window.location.href = link;
-      }
+      console.warn('BDR notificações: erro ao marcar como lida:', e?.message || e);
+      if(link) window.location.href = link;
     }finally{
       BDR_NOTIF.marcandoLidas = false;
     }
   }
 
-  async function marcarComoLidas(){
-    // Mantido apenas para compatibilidade com telas antigas.
-    // A regra oficial V10.9 é: abrir o sino NÃO limpa; clicar no item marca como lida.
-    return;
+  async function marcarTodasComoLidas(){
+    if(BDR_NOTIF.marcandoLidas) return;
+    if(!(await onlineReal()) || !temSupabase()) return;
+
+    const usuario = usuarioAtualSeguro();
+    const usuarioId = usuario?.id || usuario?.usuario_id;
+    const empresaId = usuario?.empresa_id;
+    if(!usuarioId) return;
+
+    BDR_NOTIF.marcandoLidas = true;
+    try{
+      let query = window.client
+        .from('notificacoes')
+        .update({ lida:true, lida_em:agoraCuiabaParaSQL(), status:'LIDA' })
+        .eq('usuario_destino_id', usuarioId)
+        .eq('lida', false);
+
+      if(empresaId) query = query.eq('empresa_id', empresaId);
+
+      const { error } = await query;
+      if(error) throw error;
+      await carregarNotificacoes();
+    }catch(e){
+      console.warn('BDR notificações: erro ao marcar todas:', e?.message || e);
+    }finally{
+      BDR_NOTIF.marcandoLidas = false;
+    }
   }
 
   function iniciarTimer(){
     if(BDR_NOTIF.timer) return;
-
-    BDR_NOTIF.timer = setInterval(async () => {
-      if(!(await onlineLocalRapido())){
-        pararNotificacoesOffline();
-        return;
-      }
-      carregarNotificacoes();
-    }, BDR_NOTIF.intervaloMs);
+    BDR_NOTIF.timer = setInterval(carregarNotificacoes, BDR_NOTIF.intervaloMs);
   }
 
   function pararTimer(){
@@ -556,127 +600,152 @@
     }
   }
 
-  function pararNotificacoesOffline(){
-    BDR_NOTIF.paradoOffline = true;
-    pararTimer();
-    renderOffline();
+  function pararRealtime(){
+    try{
+      if(BDR_NOTIF.realtimeChannel && window.client?.removeChannel){
+        window.client.removeChannel(BDR_NOTIF.realtimeChannel);
+      }
+    }catch(e){}
+    BDR_NOTIF.realtimeChannel = null;
+  }
+
+  function iniciarRealtime(){
+    try{
+      if(!temSupabase() || typeof window.client.channel !== 'function') return;
+      if(BDR_NOTIF.realtimeChannel) return;
+
+      const usuario = usuarioAtualSeguro();
+      const usuarioId = usuario?.id || usuario?.usuario_id;
+      const empresaId = usuario?.empresa_id;
+      if(!usuarioId) return;
+
+      BDR_NOTIF.realtimeChannel = window.client
+        .channel('bdr-notif-' + usuarioId + '-' + Date.now())
+        .on('postgres_changes', {
+          event:'INSERT',schema:'public',table:'notificacoes',
+          filter:'usuario_destino_id=eq.' + usuarioId
+        }, async payload => {
+          const nova = payload?.new || {};
+          if(empresaId && nova.empresa_id && String(empresaId) !== String(nova.empresa_id)) return;
+          await carregarNotificacoes();
+          avisarNovaNotificacao([nova.titulo,nova.mensagem].filter(Boolean).join(' — '));
+        })
+        .subscribe();
+    }catch(e){
+      console.warn('BDR notificações: realtime indisponível:', e?.message || e);
+    }
   }
 
   async function iniciarNotificacoes(){
-    if(!(await onlineLocalRapido())){
-      pararNotificacoesOffline();
+    if(!(await onlineReal())){
+      pararTimer();
+      pararRealtime();
+      setIconeOffline(true);
+      renderMensagem('📴 Offline. Notificações pausadas.');
       return;
     }
 
-    BDR_NOTIF.paradoOffline = false;
-    BDR_NOTIF.errosSeguidos = 0;
     await carregarNotificacoes();
+    iniciarRealtime();
     iniciarTimer();
   }
 
   async function toggleNotificacoes(event){
-    if(event) event.stopPropagation();
-
+    event?.stopPropagation();
     const drop = dropdownEl();
     if(!drop) return;
 
     document.getElementById('dropdownUser')?.classList.remove('ativo');
     drop.classList.toggle('ativo');
 
-    if(drop.classList.contains('ativo')){
-      if(await onlineLocalRapido()){
+    if(drop.classList.contains('ativo')) await carregarNotificacoes();
+  }
+
+  function registrarEventBus(){
+    try{
+      const tratar = async payload => {
         await carregarNotificacoes();
-      }else{
-        pararNotificacoesOffline();
-      }
-    }
-  }
+        const n = payload?.notificacao || payload || {};
+        avisarNovaNotificacao([n.titulo,n.mensagem].filter(Boolean).join(' — '));
+      };
 
-
-  async function tratarAtlasNotificacaoCriada(payload){
-    try{
-      // Atualiza o sininho imediatamente quando o Atlas criar uma notificação.
-      // O som só toca se o navegador já tiver liberado áudio após interação real.
-      await carregarNotificacoes();
-      avisarNovaNotificacao();
-    }catch(e){
-      console.warn('BDR Notificações: falha ao processar evento Atlas:', e?.message || e);
-    }
-  }
-
-  function registrarAtlasEventBus(){
-    try{
-      if(window.AtlasEvents && typeof window.AtlasEvents.on === 'function'){
-        window.AtlasEvents.on('notificacao.criada', tratarAtlasNotificacaoCriada);
-        window.AtlasEvents.on('pedido.criado', () => {
-          try{ animarSininho(); }catch(e){}
-        });
+      if(window.AtlasEvents?.on){
+        window.AtlasEvents.on('notificacao.criada', tratar);
       }
 
-      // Fallback para eventos DOM caso o Event Bus carregue depois ou não exista.
-      window.addEventListener('atlas:notificacao.criada', e => tratarAtlasNotificacaoCriada(e?.detail?.payload || e?.detail || {}));
-      window.addEventListener('atlas:pedido.criado', () => {
-        try{ animarSininho(); }catch(e){}
+      window.addEventListener('atlas:notificacao.criada', e => {
+        tratar(e?.detail?.payload || e?.detail || {});
       });
-    }catch(e){
-      console.warn('BDR Notificações: não foi possível registrar Atlas Event Bus:', e?.message || e);
-    }
+    }catch(e){}
   }
 
-  window.addEventListener('offline', () => pararNotificacoesOffline());
+  document.addEventListener('DOMContentLoaded', () => {
+    aplicarCss();
+    registrarLiberacaoAudio();
+    registrarEventBus();
 
-  window.addEventListener('online', () => {
-    if(typeof window.bdrResetOnlineReal === 'function'){
-      try{ window.bdrResetOnlineReal(); }catch(e){}
+    const drop = dropdownEl();
+    if(drop){
+      const head = drop.querySelector('.notif-head');
+      if(head && !head.querySelector('[data-marcar-todas]')){
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'bdr-notif-limpar-todas';
+        btn.setAttribute('data-marcar-todas','');
+        btn.textContent = 'Marcar todas como lidas';
+        head.appendChild(btn);
+      }
+
+      drop.addEventListener('click', async e => {
+        e.stopPropagation();
+
+        if(e.target.closest('[data-marcar-todas]')){
+          await marcarTodasComoLidas();
+          return;
+        }
+
+        const item = e.target.closest('.notif-item[data-id]');
+        if(!item) return;
+
+        const id = item.getAttribute('data-id');
+        const link = item.getAttribute('data-link') || '';
+
+        if(e.target.closest('[data-fechar-notif]')){
+          await marcarNotificacaoComoLida(id, '');
+          return;
+        }
+
+        if(item.classList.contains('bdr-notif-acao') && link){
+          await marcarNotificacaoComoLida(id, link);
+        }
+      });
     }
+
     iniciarNotificacoes();
+  });
+
+  document.addEventListener('click', e => {
+    if(!e.target.closest('.notif-wrap')) dropdownEl()?.classList.remove('ativo');
   });
 
   document.addEventListener('visibilitychange', () => {
     if(document.visibilityState === 'visible') iniciarNotificacoes();
   });
 
-  document.addEventListener('click', () => dropdownEl()?.classList.remove('ativo'));
-
-
-  document.addEventListener('DOMContentLoaded', () => {
-    aplicarCssSininho();
-    adicionarListenersAudio();
-    registrarAtlasEventBus();
-
-    const drop = dropdownEl();
-    if(drop){
-      drop.addEventListener('click', async e => {
-        e.stopPropagation();
-        const item = e.target.closest('.notif-item[data-id]');
-        if(!item) return;
-        const id = item.getAttribute('data-id');
-        const link = item.getAttribute('data-link') || '';
-        await marcarNotificacaoComoLida(id, link);
-      });
-
-      drop.addEventListener('keydown', async e => {
-        if(e.key !== 'Enter' && e.key !== ' ') return;
-        const item = e.target.closest('.notif-item[data-id]');
-        if(!item) return;
-        e.preventDefault();
-        const id = item.getAttribute('data-id');
-        const link = item.getAttribute('data-link') || '';
-        await marcarNotificacaoComoLida(id, link);
-      });
-    }
-
-    iniciarNotificacoes();
+  window.addEventListener('online', iniciarNotificacoes);
+  window.addEventListener('offline', () => {
+    pararTimer();
+    pararRealtime();
+    setIconeOffline(true);
   });
 
   window.BDR_NOTIF = BDR_NOTIF;
   window.toggleNotificacoes = toggleNotificacoes;
   window.bdrIniciarNotificacoes = iniciarNotificacoes;
-  window.bdrPararNotificacoesOffline = pararNotificacoesOffline;
   window.bdrCarregarNotificacoes = carregarNotificacoes;
   window.bdrAvisarNovaNotificacao = avisarNovaNotificacao;
-  window.bdrMarcarNotificacoesComoLidas = marcarComoLidas;
   window.bdrMarcarNotificacaoComoLida = marcarNotificacaoComoLida;
+  window.bdrMarcarTodasNotificacoesComoLidas = marcarTodasComoLidas;
 
-  console.log('✅ BDR NOTIFICAÇÕES V11.1 carregado - Atlas Event Bus');
+  console.log('✅ BDR NOTIFICAÇÕES V12.1 carregado - cartão azul clicável');
 })();
