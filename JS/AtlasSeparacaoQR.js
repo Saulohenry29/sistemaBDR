@@ -22,7 +22,7 @@
 
   const AtlasSeparacaoQR = {
     __loaded:true,
-    versao:"1.0-separacao-guiada"
+    versao:"1.1-camera-universal-preview"
   };
 
   const estado = {
@@ -36,6 +36,9 @@
     detector:null,
     cameraAtiva:false,
     loopId:null,
+    html5Scanner:null,
+    cameraTipo:null,
+    ultimoDetectado:"",
     bloqueado:false
   };
 
@@ -168,11 +171,32 @@
       .asq-btn-red{background:#dc2626;color:#fff}
       .asq-btn:disabled{opacity:.45;cursor:not-allowed}
       .asq-camera{
-        margin-top:12px;background:#020617;border-radius:16px;overflow:hidden;
-        position:relative;display:none;min-height:230px
+        margin:0 0 14px;background:#020617;border-radius:16px;overflow:hidden;
+        position:relative;display:none;min-height:270px;
+        border:2px solid #334155;
+        box-shadow:0 10px 28px rgba(15,23,42,.20)
       }
       .asq-camera.ativo{display:block}
-      .asq-camera video{width:100%;height:280px;object-fit:cover;display:block}
+      .asq-camera video{width:100%;height:300px;object-fit:cover;display:block}
+      .asq-camera #asqHtml5Reader{width:100%;min-height:270px;background:#020617}
+      .asq-camera #asqHtml5Reader video{width:100%!important;min-height:270px!important;object-fit:cover!important}
+      .asq-camera-head{
+        position:absolute;left:10px;right:10px;top:10px;z-index:8;
+        display:flex;justify-content:space-between;align-items:flex-start;gap:8px;
+        pointer-events:none
+      }
+      .asq-camera-target,.asq-camera-detectado{
+        background:rgba(15,23,42,.88);color:#fff;border:1px solid rgba(255,255,255,.28);
+        border-radius:10px;padding:7px 9px;font-size:11px;font-weight:950;
+        backdrop-filter:blur(6px);max-width:72%;overflow-wrap:anywhere
+      }
+      .asq-camera-detectado{background:rgba(22,101,52,.92);display:none}
+      .asq-camera-detectado.ativo{display:block}
+      .asq-camera-fechar{
+        position:absolute;right:10px;bottom:10px;z-index:9;
+        border:0;border-radius:10px;padding:8px 10px;
+        background:rgba(220,38,38,.94);color:#fff;font-weight:950
+      }
       .asq-camera-line{
         position:absolute;left:8%;right:8%;top:50%;height:2px;
         background:#22c55e;box-shadow:0 0 16px #22c55e;
@@ -201,7 +225,7 @@
         .asq-shell{width:100%;height:100%;max-height:none;border-radius:0}
         .asq-grid{grid-template-columns:1fr}
         .asq-reader{grid-template-columns:1fr}
-        .asq-camera video{height:240px}
+        .asq-camera video{height:270px}
         .asq-foot .asq-btn{flex:1}
       }
     `;
@@ -213,7 +237,11 @@
       window.__atlasSeparacaoAudio =
         window.__atlasSeparacaoAudio ||
         new (window.AudioContext || window.webkitAudioContext)();
-      return window.__atlasSeparacaoAudio;
+      const ctx = window.__atlasSeparacaoAudio;
+      if(ctx?.state === "suspended"){
+        ctx.resume().catch(()=>{});
+      }
+      return ctx;
     }catch(e){ return null; }
   }
 
@@ -238,8 +266,16 @@
   }
 
   function somErro(){
-    tom(220,0,.18,.22); tom(165,.22,.24,.22);
-    try{ navigator.vibrate?.([180,80,180]); }catch(e){}
+    const ctx = audioCtx();
+    try{ ctx?.resume?.(); }catch(e){}
+    tom(260,0,.20,.30);
+    tom(180,.24,.28,.32);
+    tom(130,.56,.20,.26);
+    try{
+      if(typeof navigator.vibrate === "function"){
+        navigator.vibrate([240,100,240,100,320]);
+      }
+    }catch(e){}
   }
 
   function somItem(){
@@ -384,8 +420,9 @@
   function etapaHtml(i){
     const endereco = normalizarCodigo(i?.endereco_esperado);
     const semEndereco = !endereco;
-    const etapaEnderecoOk = estado.etapa !== "ENDERECO";
-    const etapaItemOk = estado.etapa === "QUANTIDADE" || itemConferido(i);
+    const concluido = itemConferido(i);
+    const etapaEnderecoOk = concluido || estado.etapa !== "ENDERECO";
+    const etapaItemOk = concluido || estado.etapa === "QUANTIDADE";
 
     return `
       <div class="asq-step ${etapaEnderecoOk ? "ok" : ""}" id="asqStepEndereco">
@@ -431,9 +468,11 @@
       <div class="asq-step ${itemConferido(i) ? "ok" : ""}" id="asqStepQtd">
         <div class="asq-step-title">${itemConferido(i) ? "✅" : "3️⃣"} Confirmar quantidade</div>
         <div class="asq-step-text">
-          ${etapaItemOk
-            ? "Confira fisicamente a quantidade antes de concluir este item."
-            : "Aguardando a leitura do item."
+          ${itemConferido(i)
+            ? `Quantidade conferida: <b>${numero(i.quantidade_separada,0)} de ${Math.max(1,numero(i.quantidade,1))}</b>.`
+            : etapaItemOk
+              ? "Confira fisicamente a quantidade antes de concluir este item."
+              : "Aguardando a leitura do item."
           }
         </div>
         ${etapaItemOk && !itemConferido(i) ? `
@@ -509,11 +548,18 @@
                 <div class="asq-mini"><small>Endereço</small><b>${esc(i.endereco_esperado || "Não cadastrado")}</b></div>
               </div>
 
-              ${etapaHtml(i)}
               <div class="asq-camera" id="asqCameraBox">
+                <div class="asq-camera-head">
+                  <div class="asq-camera-target" id="asqCameraTarget">Aponte para o QR</div>
+                  <div class="asq-camera-detectado" id="asqCameraDetectado"></div>
+                </div>
                 <video id="asqVideo" playsinline muted></video>
+                <div id="asqHtml5Reader"></div>
                 <div class="asq-camera-line"></div>
+                <button class="asq-camera-fechar" onclick="AtlasSeparacaoQR.fecharCamera()">Fechar câmera</button>
               </div>
+
+              ${etapaHtml(i)}
             </div>
           </div>
 
@@ -769,64 +815,223 @@
     render();
   }
 
+  function atualizarCameraInfo(tipo, valor){
+    const alvo = document.getElementById("asqCameraTarget");
+    const detectado = document.getElementById("asqCameraDetectado");
+    const i = itemAtual();
+
+    if(alvo){
+      alvo.textContent = tipo === "ENDERECO"
+        ? "Esperado: " + codigoEnderecoQR(i?.endereco_esperado || "")
+        : "Esperado: " + codigoItem(i);
+    }
+
+    if(detectado && valor){
+      estado.ultimoDetectado = String(valor);
+      detectado.textContent = "Lido: " + String(valor);
+      detectado.classList.add("ativo");
+    }
+  }
+
+  function tratarLeituraCamera(tipo, valor){
+    if(!valor || estado.bloqueado) return;
+    estado.bloqueado = true;
+    atualizarCameraInfo(tipo, valor);
+
+    setTimeout(()=>{
+      try{
+        if(tipo === "ENDERECO") validarEndereco(valor);
+        else validarItem(valor);
+      }finally{
+        estado.bloqueado = false;
+      }
+    },120);
+  }
+
   async function abrirCamera(tipo){
     const video = document.getElementById("asqVideo");
     const box = document.getElementById("asqCameraBox");
-    if(!video || !box) return;
+    const html5Reader = document.getElementById("asqHtml5Reader");
+    if(!box) return;
 
     fecharCamera();
+    estado.cameraTipo = tipo;
+    estado.ultimoDetectado = "";
+    box.classList.add("ativo");
+    atualizarCameraInfo(tipo,"");
 
-    if(!("BarcodeDetector" in window)){
-      somErro();
-      toast("A câmera automática não é compatível neste navegador. Use o leitor ou digite o código.","erro");
-      return;
-    }
+    // Mantém a câmera visível imediatamente, sem precisar rolar.
+    setTimeout(()=>{
+      box.scrollIntoView({behavior:"smooth",block:"start"});
+    },80);
 
-    try{
-      const formatos = await BarcodeDetector.getSupportedFormats();
-      const preferidos = ["qr_code","code_128","code_39","ean_13"].filter(x=>formatos.includes(x));
-      estado.detector = new BarcodeDetector({formats:preferidos.length?preferidos:["qr_code"]});
-      estado.stream = await navigator.mediaDevices.getUserMedia({
-        video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}},
-        audio:false
-      });
-      video.srcObject = estado.stream;
-      await video.play();
-      box.classList.add("ativo");
-      estado.cameraAtiva = true;
+    // 1) BarcodeDetector nativo: rápido em Android/Chrome.
+    if("BarcodeDetector" in window && video){
+      try{
+        if(html5Reader) html5Reader.style.display = "none";
+        video.style.display = "block";
 
-      const detectar = async ()=>{
-        if(!estado.cameraAtiva) return;
-        try{
-          const codigos = await estado.detector.detect(video);
-          if(codigos?.length){
-            const valor = codigos[0].rawValue || "";
+        const formatos = await BarcodeDetector.getSupportedFormats();
+        const preferidos = ["qr_code","code_128","code_39","ean_13"]
+          .filter(x=>formatos.includes(x));
+
+        estado.detector = new BarcodeDetector({
+          formats:preferidos.length ? preferidos : ["qr_code"]
+        });
+
+        estado.stream = await navigator.mediaDevices.getUserMedia({
+          video:{
+            facingMode:{ideal:"environment"},
+            width:{ideal:1280},
+            height:{ideal:720}
+          },
+          audio:false
+        });
+
+        video.srcObject = estado.stream;
+        await video.play();
+        estado.cameraAtiva = true;
+
+        const detectar = async ()=>{
+          if(!estado.cameraAtiva) return;
+          try{
+            const codigos = await estado.detector.detect(video);
+            const valor = codigos?.[0]?.rawValue || "";
             if(valor){
-              if(tipo === "ENDERECO") validarEndereco(valor);
-              else validarItem(valor);
+              tratarLeituraCamera(tipo,valor);
               return;
             }
-          }
-        }catch(e){}
-        estado.loopId = requestAnimationFrame(detectar);
-      };
-      detectar();
-    }catch(e){
-      console.warn("AtlasSeparacaoQR câmera:",e);
-      somErro();
-      toast("Não foi possível abrir a câmera. Verifique a permissão.","erro");
-      fecharCamera();
+          }catch(e){}
+          estado.loopId = requestAnimationFrame(detectar);
+        };
+
+        detectar();
+        return;
+      }catch(e){
+        console.warn("AtlasSeparacaoQR: detector nativo indisponível, usando fallback.",e);
+        fecharCamera();
+        box.classList.add("ativo");
+        atualizarCameraInfo(tipo,"");
+      }
     }
+
+    // 2) Fallback universal: iPhone/Safari e notebooks sem BarcodeDetector.
+    if(window.Html5Qrcode && html5Reader){
+      try{
+        if(video) video.style.display = "none";
+        html5Reader.style.display = "block";
+        html5Reader.innerHTML = "";
+
+        estado.html5Scanner = new Html5Qrcode("asqHtml5Reader",{
+          verbose:false,
+          formatsToSupport:[
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.EAN_13
+          ].filter(Boolean)
+        });
+
+        const config = {
+          fps:18,
+          qrbox:(viewWidth,viewHeight)=>{
+            const lado = Math.floor(Math.min(viewWidth,viewHeight)*0.72);
+            return {width:lado,height:lado};
+          },
+          aspectRatio:1.333334,
+          disableFlip:false
+        };
+
+        await estado.html5Scanner.start(
+          {facingMode:"environment"},
+          config,
+          texto => tratarLeituraCamera(tipo,texto),
+          ()=>{}
+        );
+
+        estado.cameraAtiva = true;
+        return;
+      }catch(e){
+        console.warn("AtlasSeparacaoQR fallback câmera traseira:",e);
+
+        // Notebook: tenta qualquer webcam disponível.
+        try{
+          await estado.html5Scanner?.clear?.();
+        }catch(_){}
+
+        try{
+          estado.html5Scanner = new Html5Qrcode("asqHtml5Reader");
+          const cameras = await Html5Qrcode.getCameras();
+          if(!cameras?.length) throw new Error("Nenhuma câmera encontrada.");
+
+          await estado.html5Scanner.start(
+            cameras[0].id,
+            {
+              fps:15,
+              qrbox:{width:250,height:250},
+              disableFlip:false
+            },
+            texto => tratarLeituraCamera(tipo,texto),
+            ()=>{}
+          );
+
+          estado.cameraAtiva = true;
+          return;
+        }catch(e2){
+          console.warn("AtlasSeparacaoQR fallback webcam:",e2);
+        }
+      }
+    }
+
+    fecharCamera();
+    somErro();
+    toast(
+      "Não foi possível abrir a câmera. Confira a permissão do navegador ou use o leitor/campo digitável.",
+      "erro"
+    );
   }
 
   function fecharCamera(){
     estado.cameraAtiva = false;
-    if(estado.loopId) cancelAnimationFrame(estado.loopId);
-    estado.loopId = null;
-    try{ estado.stream?.getTracks()?.forEach(t=>t.stop()); }catch(e){}
+
+    if(estado.loopId){
+      cancelAnimationFrame(estado.loopId);
+      estado.loopId = null;
+    }
+
+    try{
+      estado.stream?.getTracks()?.forEach(t=>t.stop());
+    }catch(e){}
     estado.stream = null;
+
+    const scanner = estado.html5Scanner;
+    estado.html5Scanner = null;
+    if(scanner){
+      Promise.resolve()
+        .then(()=>scanner.stop?.())
+        .catch(()=>{})
+        .then(()=>scanner.clear?.())
+        .catch(()=>{});
+    }
+
+    const video = document.getElementById("asqVideo");
+    if(video){
+      try{ video.pause(); }catch(e){}
+      video.srcObject = null;
+      video.style.display = "none";
+    }
+
+    const reader = document.getElementById("asqHtml5Reader");
+    if(reader){
+      reader.innerHTML = "";
+      reader.style.display = "none";
+    }
+
     const box = document.getElementById("asqCameraBox");
     if(box) box.classList.remove("ativo");
+
+    estado.cameraTipo = null;
+    estado.ultimoDetectado = "";
   }
 
   document.addEventListener("keydown",e=>{
@@ -863,5 +1068,5 @@
   AtlasSeparacaoQR.normalizarCodigo = normalizarCodigo;
 
   window.AtlasSeparacaoQR = AtlasSeparacaoQR;
-  console.log("✅ ATLAS SEPARAÇÃO QR V1.0 carregado - câmera, leitor e conferência");
+  console.log("✅ ATLAS SEPARAÇÃO QR V1.1 carregado - câmera universal e preview visível");
 })();

@@ -10,7 +10,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:,">
 <link rel="manifest" href="./manifest.json">
-<title>BDR ERP - Expedição 3.2.0</title>
+<title>BDR ERP - Expedição 3.2.1</title>
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
@@ -556,9 +556,20 @@
 .modal{
   background:#fff;
   width:min(760px,100%);
+  max-height:calc(100dvh - 24px);
   border-radius:18px;
   box-shadow:0 20px 60px rgba(0,0,0,.32);
   overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+.modal-head{flex:0 0 auto}
+.modal-body{
+  padding:16px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:max(22px,env(safe-area-inset-bottom));
 }
 .modal-head{
   display:flex;
@@ -569,7 +580,7 @@
   color:var(--bdr-red);
   font-weight:900;
 }
-.modal-body{padding:16px;}
+
 .modal-grid{
   display:grid;
   grid-template-columns:220px 1fr;
@@ -652,7 +663,22 @@
   .cart-panel{position:relative;top:auto;}
   .kpi-row{grid-template-columns:repeat(3,1fr);}
 }
+/* ATLAS MODAL MOBILE 3.2.1 */
 @media(max-width:700px){
+  .modal-bg{
+    align-items:flex-start;
+    padding:10px 8px calc(92px + env(safe-area-inset-bottom));
+    overflow-y:auto;
+  }
+  .modal{
+    width:100%;
+    max-height:calc(100dvh - 110px - env(safe-area-inset-bottom));
+    border-radius:18px;
+  }
+  .modal-body{
+    padding-bottom:28px;
+  }
+
   .catalogo-grid{grid-template-columns:repeat(2,1fr);}
   .searchbar{grid-template-columns:1fr;}
   .modal-grid{grid-template-columns:1fr;}
@@ -956,8 +982,9 @@
 
 <script src="./JS/bdrUppercase.js"></script>
 <script src="./JS/AtlasMotion.js?v=20260706-sprint242"></script>
-<script src="./JS/AtlasSeparacaoQR.js?v=20260710-sprint320"></script>
-<script src="./JS/expedicao.js?v=20260710-sprint320"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="./JS/AtlasSeparacaoQR.js?v=20260710-sprint321"></script>
+<script src="./JS/expedicao.js?v=20260710-sprint321"></script>
 <script src="./JS/bdrMenuMobileAtivo.js?v=20260702-3"></script>
 </body>
 </html>
