@@ -22,7 +22,7 @@
 
   const AtlasSeparacaoQR = {
     __loaded:true,
-    versao:"1.1-camera-universal-preview"
+    versao:"1.3-leitura-inteligente-esperado"
   };
 
   const estado = {
@@ -39,6 +39,9 @@
     html5Scanner:null,
     cameraTipo:null,
     ultimoDetectado:"",
+    erroCandidato:"",
+    erroContagem:0,
+    cameraAbertaEm:0,
     bloqueado:false
   };
 
@@ -815,22 +818,65 @@
     render();
   }
 
-  function atualizarCameraInfo(tipo, valor){
+  function atualizarCameraInfo(tipo, valor, status=""){
     const alvo = document.getElementById("asqCameraTarget");
     const detectado = document.getElementById("asqCameraDetectado");
     const i = itemAtual();
 
     if(alvo){
       alvo.textContent = tipo === "ENDERECO"
-        ? "Esperado: " + codigoEnderecoQR(i?.endereco_esperado || "")
-        : "Esperado: " + codigoItem(i);
+        ? "Aponte para: " + codigoEnderecoQR(i?.endereco_esperado || "")
+        : "Aponte para: " + codigoItem(i);
     }
 
     if(detectado && valor){
       estado.ultimoDetectado = String(valor);
-      detectado.textContent = "Lido: " + String(valor);
+      detectado.textContent =
+        status === "confirmando" ? "Verificando: " + String(valor) :
+        status === "errado" ? "QR diferente: " + String(valor) :
+        "Lido: " + String(valor);
       detectado.classList.add("ativo");
     }
+  }
+
+  function codigoEsperadoCamera(tipo){
+    const i = itemAtual();
+    if(!i) return [];
+    if(tipo === "ENDERECO"){
+      return [normalizarCodigo(i.endereco_esperado)].filter(Boolean);
+    }
+    return Array.isArray(i.codigos_validos) ? i.codigos_validos : [];
+  }
+
+  function tratarLeituraInteligente(tipo, valor){
+    if(!valor || estado.bloqueado) return;
+    if(Date.now() - Number(estado.cameraAbertaEm || 0) < 650) return;
+
+    const lidoNormalizado = normalizarCodigo(valor);
+    const esperados = codigoEsperadoCamera(tipo);
+    if(!lidoNormalizado) return;
+
+    if(esperados.includes(lidoNormalizado)){
+      estado.erroCandidato = "";
+      estado.erroContagem = 0;
+      atualizarCameraInfo(tipo,valor,"correto");
+      tratarLeituraCamera(tipo,valor);
+      return;
+    }
+
+    if(lidoNormalizado === estado.erroCandidato){
+      estado.erroContagem += 1;
+    }else{
+      estado.erroCandidato = lidoNormalizado;
+      estado.erroContagem = 1;
+    }
+
+    atualizarCameraInfo(tipo,valor,estado.erroContagem >= 2 ? "errado" : "confirmando");
+    if(estado.erroContagem < 2) return;
+
+    estado.erroCandidato = "";
+    estado.erroContagem = 0;
+    tratarLeituraCamera(tipo,valor);
   }
 
   function tratarLeituraCamera(tipo, valor){
@@ -857,6 +903,9 @@
     fecharCamera();
     estado.cameraTipo = tipo;
     estado.ultimoDetectado = "";
+    estado.erroCandidato = "";
+    estado.erroContagem = 0;
+    estado.cameraAbertaEm = Date.now();
     box.classList.add("ativo");
     atualizarCameraInfo(tipo,"");
 
@@ -898,8 +947,7 @@
             const codigos = await estado.detector.detect(video);
             const valor = codigos?.[0]?.rawValue || "";
             if(valor){
-              tratarLeituraCamera(tipo,valor);
-              return;
+              tratarLeituraInteligente(tipo,valor);
             }
           }catch(e){}
           estado.loopId = requestAnimationFrame(detectar);
@@ -935,7 +983,7 @@
         const config = {
           fps:18,
           qrbox:(viewWidth,viewHeight)=>{
-            const lado = Math.floor(Math.min(viewWidth,viewHeight)*0.72);
+            const lado = Math.floor(Math.min(viewWidth,viewHeight)*0.64);
             return {width:lado,height:lado};
           },
           aspectRatio:1.333334,
@@ -945,7 +993,7 @@
         await estado.html5Scanner.start(
           {facingMode:"environment"},
           config,
-          texto => tratarLeituraCamera(tipo,texto),
+          texto => tratarLeituraInteligente(tipo,texto),
           ()=>{}
         );
 
@@ -971,7 +1019,7 @@
               qrbox:{width:250,height:250},
               disableFlip:false
             },
-            texto => tratarLeituraCamera(tipo,texto),
+            texto => tratarLeituraInteligente(tipo,texto),
             ()=>{}
           );
 
@@ -1032,6 +1080,9 @@
 
     estado.cameraTipo = null;
     estado.ultimoDetectado = "";
+    estado.erroCandidato = "";
+    estado.erroContagem = 0;
+    estado.cameraAbertaEm = 0;
   }
 
   document.addEventListener("keydown",e=>{
@@ -1068,5 +1119,5 @@
   AtlasSeparacaoQR.normalizarCodigo = normalizarCodigo;
 
   window.AtlasSeparacaoQR = AtlasSeparacaoQR;
-  console.log("✅ ATLAS SEPARAÇÃO QR V1.1 carregado - câmera universal e preview visível");
+  console.log("✅ ATLAS SEPARAÇÃO QR V1.3 carregado - leitura inteligente pelo QR esperado");
 })();
