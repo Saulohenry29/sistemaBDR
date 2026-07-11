@@ -9,7 +9,7 @@
   "use strict";
 
   const AtlasWorkflow = {
-    versao: "1.9-expedicao-fluxo-3.1.8"
+    versao: "2.2-notificacao-separacao-3.1.13"
   };
 
   const STATUS = {
@@ -632,17 +632,14 @@
       });
 
       try{
-        if(window.AtlasGestorNotificacoes?.notificarMovimentacaoPedido){
-          await window.AtlasGestorNotificacoes.notificarMovimentacaoPedido(
-            { ...pedido, status: STATUS.EM_SEPARACAO },
+        if(window.AtlasGestorNotificacoes?.notificarSeparacaoPedido){
+          await window.AtlasGestorNotificacoes.notificarSeparacaoPedido(
             {
-              tipo:"PEDIDO_AGUARDANDO_SEPARACAO",
-              titulo:"📦 Pedido aguardando separação",
-              mensagem:"Pedido " + (pedido.codigo || "#" + pedido.id) +
-                " foi autorizado por " + usuario + " e já pode ser separado.",
-              link:"expedicao.html?aba=separacao",
-              exigeAcao:true
-            }
+              ...pedido,
+              status: STATUS.EM_SEPARACAO,
+              itens_retirada: itensAtualizados
+            },
+            usuario
           );
         }
       }catch(e){
@@ -697,7 +694,7 @@
       separado_por: nomeUsuario(),
       data_separacao: new Date().toISOString()
     });
-    await notificarSolicitantePedido(pedido, "PEDIDO_AGUARDANDO_RETIRADA", "🚚 Pedido aguardando retirada", "Pedido " + (pedido.codigo || "#" + pedido.id) + " foi separado e aguarda motorista/retirada.", "expedicao.html?aba=historico");
+    await notificarSolicitantePedido(pedido, "PEDIDO_AGUARDANDO_RETIRADA", "📦 Pedido aguardando retirada", "Pedido " + (pedido.codigo || "#" + pedido.id) + " foi separado por " + nomeUsuario() + " e aguarda motorista/retirada.", "");
     return pedido;
   }
 
@@ -785,5 +782,5 @@
 
   window.AtlasWorkflow = AtlasWorkflow;
 
-  console.log("✅ ATLAS WORKFLOW V1.9 carregado - aprovação direto para separação");
+  console.log("✅ ATLAS WORKFLOW V2.2 carregado - notificação correta da separação");
 })();

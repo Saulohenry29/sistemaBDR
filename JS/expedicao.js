@@ -1,4 +1,4 @@
-/* ATLAS EXPEDIÇÃO 3.1.8 - FLUXO DIRETO PARA SEPARAÇÃO */
+/* ATLAS EXPEDIÇÃO 3.2.0 - SEPARAÇÃO GUIADA POR QR */
 /* =========================================================
    ATUALIZADO: EXPEDIÇÃO COM OFFLINE BDR
 ========================================================= */
@@ -163,7 +163,7 @@ function podeSolicitarOutras(){ return podeTudo() || perms().includes("SOLICITAR
 function podeAlmoxarife(){ return ["MASTER","ADMIN","ALMOXARIFE","ALMOXARIFADO"].includes(perfil()); }
 function dataBR(d){ if(!d) return "-"; const x=new Date(String(d).replace(" ","T")); return isNaN(x.getTime()) ? String(d) : x.toLocaleString("pt-BR"); }
 function normalStatus(s){ s = String(s || "").toUpperCase().replaceAll(" ","_"); if(["DISPONIVEL","NO_ESTOQUE"].includes(s)) return "ESTOQUE"; return s; }
-function rotStatus(s){ const m={ESTOQUE:"ESTOQUE",DISPONIVEL:"ESTOQUE",NO_ESTOQUE:"ESTOQUE",EM_USO:"EM USO",MANUTENCAO:"MANUTENÇÃO",BAIXADO:"BAIXADO",QUEBRADO:"QUEBRADO",RESERVADO:"RESERVADO"}; return m[String(s||"").toUpperCase().replaceAll(" ","_")] || s || "-"; }
+function rotStatus(s){ const m={ESTOQUE:"DISPONÍVEL",DISPONIVEL:"DISPONÍVEL",NO_ESTOQUE:"DISPONÍVEL",EM_USO:"EM USO",MANUTENCAO:"MANUTENÇÃO",BAIXADO:"BAIXADO",QUEBRADO:"QUEBRADO",RESERVADO:"RESERVADO",INDISPONIVEL:"INDISPONÍVEL"}; return m[String(s||"").toUpperCase().replaceAll(" ","_")] || s || "-"; }
 function statusClass(s){ return "st-" + String(s || "").toUpperCase().replaceAll(" ","_"); }
 function nomeObra(id){ const o=obras.find(x=>String(x.id)===String(id)); return o ? `${o.codigo_obra || "-"} - ${o.nome || "-"}` : "Sem obra"; }
 function obraCurta(id, fallback){ const txt = fallback || nomeObra(id); return txt.replace(/^\d+\s*-\s*/,'').slice(0,28); }
@@ -264,38 +264,43 @@ async function aplicarReservasNoCatalogoAtlas(lista){
     if(idsPat.length){
       const rPat = await db()
         .from("itens_retirada")
-        .select("id,pedido_id,patrimonio_id,produto_id,status,obra_destino_id,patrimonio_codigo,patrimonio_nome")
+        .select("id,pedido_id,patrimonio_id,produto_id,status,quantidade,obra_destino_id,patrimonio_codigo,patrimonio_nome")
         .in("patrimonio_id", idsPat)
         .in("status", statusBloqueantes);
-      if(!rPat.error && Array.isArray(rPat.data)) reservas.push(...rPat.data);
+
+      if(!rPat.error && Array.isArray(rPat.data)){
+        reservas.push(...rPat.data);
+      }
     }
 
     if(idsProd.length){
       const rProd = await db()
         .from("itens_retirada")
-        .select("id,pedido_id,patrimonio_id,produto_id,status,obra_destino_id,patrimonio_codigo,patrimonio_nome")
+        .select("id,pedido_id,patrimonio_id,produto_id,status,quantidade,obra_destino_id,patrimonio_codigo,patrimonio_nome")
         .in("produto_id", idsProd)
         .in("status", statusBloqueantes);
-      if(!rProd.error && Array.isArray(rProd.data)) reservas.push(...rProd.data);
+
+      if(!rProd.error && Array.isArray(rProd.data)){
+        reservas.push(...rProd.data);
+      }
     }
 
-    if(!reservas.length) return lista;
-
     const pedidoIds = [...new Set(reservas.map(r => Number(r.pedido_id)).filter(Boolean))];
-    let pedidosMap = {};
+    const pedidosMap = {};
 
     if(pedidoIds.length){
       const rp = await db()
         .from("pedidos_retirada")
         .select("id,codigo,status,obra_nome,obra_destino_id,obra_origem_id,solicitante")
         .in("id", pedidoIds);
+
       if(!rp.error && Array.isArray(rp.data)){
         rp.data.forEach(p => pedidosMap[String(p.id)] = p);
       }
     }
 
     const reservaPorPat = {};
-    const reservaPorProd = {};
+    const reservadoPorProd = {};
 
     reservas.forEach(r => {
       const pedido = pedidosMap[String(r.pedido_id)] || {};
@@ -310,25 +315,65 @@ async function aplicarReservasNoCatalogoAtlas(lista){
         destino_id: pedido.obra_destino_id || r.obra_destino_id || null
       };
 
-      if(r.patrimonio_id && !reservaPorPat[String(r.patrimonio_id)]) reservaPorPat[String(r.patrimonio_id)] = info;
-      if(r.produto_id && !reservaPorProd[String(r.produto_id)]) reservaPorProd[String(r.produto_id)] = info;
+      // Patrimônio é único: uma reserva bloqueia o item inteiro.
+      if(r.patrimonio_id && !reservaPorPat[String(r.patrimonio_id)]){
+        reservaPorPat[String(r.patrimonio_id)] = info;
+      }
+
+      // Estoque comum: soma somente a quantidade comprometida.
+      if(r.produto_id){
+        const chave = String(r.produto_id);
+        const qtdReserva = Math.max(0, Number(r.quantidade || 1));
+        reservadoPorProd[chave] = Number(reservadoPorProd[chave] || 0) + qtdReserva;
+      }
     });
 
     return lista.map(i => {
-      const res = i.patrimonio_id ? reservaPorPat[String(i.patrimonio_id)] : reservaPorProd[String(i.produto_id)];
-      if(!res) return i;
+      // PATRIMÔNIO
+      if(i.patrimonio_id){
+        const res = reservaPorPat[String(i.patrimonio_id)];
+        if(!res){
+          return {
+            ...i,
+            qtd_total:1,
+            qtd_reservada:0,
+            qtd_disponivel:1
+          };
+        }
+
+        return {
+          ...i,
+          status:"RESERVADO",
+          qtd_total:1,
+          qtd_reservada:1,
+          qtd_disponivel:0,
+          reservado_atlas:true,
+          reserva_atlas:res,
+          reserva_pedido_id:res.pedido_id,
+          reserva_pedido_visual:res.pedido_visual,
+          reserva_destino_nome:res.destino_nome,
+          reserva_solicitante:res.solicitante
+        };
+      }
+
+      // ESTOQUE COM QUANTIDADE
+      const totalFisico = Math.max(0, Number(i.qtd || i.quantidade || 0));
+      const reservado = Math.max(0, Number(reservadoPorProd[String(i.produto_id)] || 0));
+      const disponivel = Math.max(0, totalFisico - reservado);
 
       return {
         ...i,
-        status:"RESERVADO",
-        reservado_atlas:true,
-        reserva_atlas:res,
-        reserva_pedido_id:res.pedido_id,
-        reserva_pedido_visual:res.pedido_visual,
-        reserva_destino_nome:res.destino_nome,
-        reserva_solicitante:res.solicitante
+        status: disponivel > 0 ? "ESTOQUE" : "INDISPONIVEL",
+        qtd_total: totalFisico,
+        qtd_reservada: reservado,
+        qtd_disponivel: disponivel,
+        // O campo qtd passa a representar o que ainda pode ser solicitado.
+        qtd: disponivel,
+        reservado_atlas: reservado > 0,
+        indisponivel_atlas: disponivel <= 0
       };
     });
+
   }catch(e){
     console.warn("Atlas Expedição: falha ao aplicar reservas no catálogo:", e?.message || e);
     return lista;
@@ -461,6 +506,25 @@ function garantirCssCarrinhoAtlas(){
       border:2px solid #7c3aed!important;
       box-shadow:0 8px 24px rgba(124,58,237,.12)!important;
     }
+    .produto-saldo-atlas{
+      margin:6px 0 7px;
+      display:grid;
+      gap:3px;
+      color:#475569;
+      font-size:10px;
+      font-weight:900;
+      line-height:1.25;
+    }
+    .produto-saldo-atlas strong{color:#0f172a}
+    .produto-saldo-atlas .saldo-ok{color:#15803d}
+    .produto-saldo-atlas .saldo-reserva{color:#7c3aed}
+    .produto-saldo-atlas .saldo-zero{color:#b91c1c}
+    .produto-card.produto-indisponivel-atlas{
+      border:2px solid #fca5a5!important;
+      background:#fffafa!important;
+      box-shadow:0 8px 24px rgba(220,38,38,.10)!important;
+    }
+    .st-INDISPONIVEL{background:#dc2626!important}
     .produto-reserva-atlas{
       margin:4px 0 7px;
       color:#6d28d9;
@@ -561,21 +625,145 @@ function animarBotaoItem(origem,id){
   }, 30);
 }
 
+
+/* =========================================================
+   ATLAS 3.1.9 - REGRAS DE SOLICITAÇÃO
+========================================================= */
+function atlasMesmaObraOrigemDestino(item){
+  const u = usuarioAtual() || {};
+  const origem = String(item?.obra_id || "");
+  const destino = String(u?.obra_id || "");
+  return !!origem && !!destino && origem === destino;
+}
+
+function atlasQtdMaximaItem(item){
+  if(!item) return 1;
+  if(item.origem_tabela === "patrimonio" || item.patrimonio_id) return 1;
+  const qtd = Number(
+    item.qtd_disponivel ??
+    item.qtd ??
+    item.quantidade ??
+    0
+  );
+  return Number.isFinite(qtd) && qtd > 0 ? qtd : 0;
+}
+
+function atualizarQtdCarrinho(origem,id,valorNovo){
+  const item = carrinho.find(c =>
+    c.origem_tabela === origem && Number(c.id) === Number(id)
+  );
+  if(!item) return;
+
+  const max = atlasQtdMaximaItem(item);
+  let qtd = Number(String(valorNovo).replace(",", "."));
+
+  if(!Number.isFinite(qtd) || qtd <= 0) qtd = 1;
+  if(qtd > max) qtd = max;
+
+  item.quantidade_solicitada = qtd;
+  sincronizarCarrinhoExpedicao();
+  renderizarCarrinho();
+}
+window.atualizarQtdCarrinho = atualizarQtdCarrinho;
+
 function cardItem(i){
   garantirCssCarrinhoAtlas();
+
   const st = normalStatus(i.status);
   const noCarrinho = itemEstaNoCarrinho(i);
-  const acao = noCarrinho ? "fa-check" : (st === "ESTOQUE" ? "fa-cart-shopping" : st === "EM_USO" ? "fa-eye" : st === "MANUTENCAO" ? "fa-wrench" : "fa-lock");
-  const cls = noCarrinho ? "ok adicionado" : (st === "ESTOQUE" ? "ok" : st === "EM_USO" ? "info" : "block");
-  const tituloAcao = noCarrinho ? "No carrinho • clique para remover" : (st==='ESTOQUE'?'Adicionar ao carrinho':st==='EM_USO'?'Registrar interesse':'Indisponível');
+  const ehPatrimonio = !!i.patrimonio_id;
+  const total = ehPatrimonio ? 1 : Number(i.qtd_total ?? i.qtd ?? 0);
+  const reservado = ehPatrimonio ? Number(i.qtd_reservada || 0) : Number(i.qtd_reservada || 0);
+  const disponivel = ehPatrimonio
+    ? Number(i.qtd_disponivel ?? (st === "ESTOQUE" ? 1 : 0))
+    : Number(i.qtd_disponivel ?? i.qtd ?? 0);
+
+  const semDisponibilidade = disponivel <= 0 || st === "INDISPONIVEL";
+  const acao = noCarrinho
+    ? "fa-check"
+    : semDisponibilidade
+      ? "fa-lock"
+      : st === "ESTOQUE"
+        ? "fa-cart-shopping"
+        : st === "EM_USO"
+          ? "fa-eye"
+          : st === "MANUTENCAO"
+            ? "fa-wrench"
+            : "fa-lock";
+
+  const cls = noCarrinho
+    ? "ok adicionado"
+    : semDisponibilidade
+      ? "block"
+      : st === "ESTOQUE"
+        ? "ok"
+        : st === "EM_USO"
+          ? "info"
+          : "block";
+
+  const tituloAcao = noCarrinho
+    ? "No carrinho • clique para remover"
+    : semDisponibilidade
+      ? "Indisponível"
+      : st === "ESTOQUE"
+        ? "Adicionar ao carrinho"
+        : st === "EM_USO"
+          ? "Registrar interesse"
+          : "Indisponível";
+
   const foto = fotoItem(i);
-  const reservaInfo = i.reservado_atlas ? `<div class="produto-reserva-atlas">🔒 ${esc(i.reserva_pedido_visual || 'Reservado')} • ${esc(obraCurta(null, i.reserva_destino_nome || 'Destino'))}</div>` : "";
-  return `<div class="produto-card ${noCarrinho ? 'produto-no-carrinho' : ''} ${i.reservado_atlas ? 'produto-reservado-atlas' : ''}" onclick="abrirDetalhe('${i.origem_tabela}',${i.id})">
-    <button class="btn-card-action ${cls}" data-origem="${esc(i.origem_tabela)}" data-id="${Number(i.id)}" onclick="event.stopPropagation();acaoItem('${i.origem_tabela}',${i.id})" title="${tituloAcao}"><i class="fa-solid ${acao}"></i></button>
-    <div class="produto-foto">${foto ? `<img src="${esc(foto)}" onerror="this.outerHTML='<div class=placeholder>${placeholderIcon(i)}</div>'">` : `<div class="placeholder">${placeholderIcon(i)}</div>`}<div class="hover-detalhe">👁 Ver detalhes</div></div>
-    <div class="produto-info"><div class="produto-nome">${esc(i.nome)}</div><div class="produto-obra">📍 ${esc(obraCurta(i.obra_id,i.obra_nome))}</div>${reservaInfo}<div class="produto-rodape"><span class="badge-status ${statusClass(st)}">${rotStatus(st)}</span><span class="produto-qtd">${Number(i.qtd||1)} unid</span></div></div>
+
+  let saldoInfo = "";
+  if(ehPatrimonio){
+    saldoInfo = i.reservado_atlas
+      ? `<div class="produto-reserva-atlas">🔒 ${esc(i.reserva_pedido_visual || 'Reservado')} • ${esc(obraCurta(null, i.reserva_destino_nome || 'Destino'))}</div>`
+      : `<div class="produto-saldo-atlas"><span class="saldo-ok">1 disponível</span></div>`;
+  }else{
+    saldoInfo = `
+      <div class="produto-saldo-atlas">
+        <span><strong>${total}</strong> em estoque</span>
+        ${reservado > 0 ? `<span class="saldo-reserva">${reservado} reservado(s)</span>` : ""}
+        <span class="${disponivel > 0 ? "saldo-ok" : "saldo-zero"}">${disponivel} disponível(is)</span>
+      </div>`;
+  }
+
+  return `<div class="produto-card
+      ${noCarrinho ? 'produto-no-carrinho' : ''}
+      ${ehPatrimonio && i.reservado_atlas ? 'produto-reservado-atlas' : ''}
+      ${semDisponibilidade ? 'produto-indisponivel-atlas' : ''}"
+      onclick="abrirDetalhe('${i.origem_tabela}',${i.id})">
+
+    <button
+      class="btn-card-action ${cls}"
+      data-origem="${esc(i.origem_tabela)}"
+      data-id="${Number(i.id)}"
+      onclick="event.stopPropagation();acaoItem('${i.origem_tabela}',${i.id})"
+      title="${tituloAcao}">
+      <i class="fa-solid ${acao}"></i>
+    </button>
+
+    <div class="produto-foto">
+      ${foto
+        ? `<img src="${esc(foto)}" onerror="this.outerHTML='<div class=placeholder>${placeholderIcon(i)}</div>'">`
+        : `<div class="placeholder">${placeholderIcon(i)}</div>`
+      }
+      <div class="hover-detalhe">👁 Ver detalhes</div>
+    </div>
+
+    <div class="produto-info">
+      <div class="produto-nome">${esc(i.nome)}</div>
+      <div class="produto-obra">📍 ${esc(obraCurta(i.obra_id,i.obra_nome))}</div>
+      ${saldoInfo}
+      <div class="produto-rodape">
+        <span class="badge-status ${statusClass(semDisponibilidade ? "INDISPONIVEL" : st)}">
+          ${semDisponibilidade ? "INDISPONÍVEL" : rotStatus(st)}
+        </span>
+        <span class="produto-qtd">${ehPatrimonio ? "1 unid" : disponivel + " disp."}</span>
+      </div>
+    </div>
   </div>`;
 }
+
 function buscarItem(origem,id){ return itensCatalogo.find(i=>i.origem_tabela===origem && Number(i.id)===Number(id)); }
 function acaoItem(origem,id){
   const item = buscarItem(origem,id);
@@ -589,13 +777,25 @@ function acaoItem(origem,id){
     return;
   }
 
+  if(atlasMesmaObraOrigemDestino(item)){
+    atlasToast("ℹ Este item já pertence à sua obra/setor.");
+    return;
+  }
+
+  const disponivel = Number(item.qtd_disponivel ?? item.qtd ?? 0);
+
+  if(st === "INDISPONIVEL" || disponivel <= 0){
+    atlasToast("🔒 Indisponível<br><small>Não há quantidade disponível para solicitar.</small>");
+    return;
+  }
+
   if(st === "ESTOQUE") addCarrinho(item);
   else if(st === "EM_USO") addInteresse(item);
-  else alert("Item indisponível para solicitação no momento.");
+  else atlasToast("ℹ Item indisponível para solicitação no momento.");
 }
 function addCarrinho(item){
   if(itemEstaNoCarrinho(item)) return;
-  carrinho.push({...item, tipo_solicitacao:"RETIRADA"});
+  carrinho.push({...item, tipo_solicitacao:"RETIRADA", quantidade_solicitada:1});
   sincronizarCarrinhoExpedicao();
   renderizarCarrinho();
   renderizarCatalogo();
@@ -605,7 +805,7 @@ function addCarrinho(item){
 }
 function addInteresse(item){
   if(itemEstaNoCarrinho(item)) return;
-  carrinho.push({...item, tipo_solicitacao:"INTERESSE"});
+  carrinho.push({...item, tipo_solicitacao:"INTERESSE", quantidade_solicitada:1});
   sincronizarCarrinhoExpedicao();
   renderizarCarrinho();
   renderizarCatalogo();
@@ -628,7 +828,36 @@ function renderizarCarrinho(){
   const q2=document.getElementById("cartResumoItens"); if(q2) q2.innerText=carrinho.length;
   const q3=document.getElementById("cartResumoObras"); if(q3) q3.innerText=new Set(carrinho.map(c=>String(c.obra_id||""))).size;
   if(!carrinho.length){ box.innerHTML=`<div class="cart-empty">Carrinho vazio.</div>`; return; }
-  box.innerHTML = carrinho.map(i=>`<div class="cart-item"><div class="cart-img">${fotoItem(i)?`<img src="${esc(fotoItem(i))}">`:placeholderIcon(i)}</div><div class="cart-info"><strong>${esc(i.nome)}</strong><span>${esc(obraCurta(i.obra_id,i.obra_nome))} • ${i.tipo_solicitacao==='INTERESSE'?'Interesse':'Retirada'}</span></div><button class="cart-remove" onclick="removerCarrinho('${i.origem_tabela}',${i.id})"><i class="fa-solid fa-trash"></i></button></div>`).join("");
+  box.innerHTML = carrinho.map(i=>{
+    const max = atlasQtdMaximaItem(i);
+    const permiteQtd = i.origem_tabela === "estoque_produtos" && !i.patrimonio_id;
+    const qtdAtual = Number(i.quantidade_solicitada || 1);
+
+    return `<div class="cart-item">
+      <div class="cart-img">${fotoItem(i)?`<img src="${esc(fotoItem(i))}">`:placeholderIcon(i)}</div>
+      <div class="cart-info">
+        <strong>${esc(i.nome)}</strong>
+        <span>${esc(obraCurta(i.obra_id,i.obra_nome))} • ${i.tipo_solicitacao==='INTERESSE'?'Interesse':'Retirada'}</span>
+        ${permiteQtd ? `
+          <label style="display:flex;align-items:center;gap:7px;margin-top:7px;font-size:11px;font-weight:900;color:#334155">
+            Quantidade:
+            <input
+              type="number"
+              min="1"
+              max="${max}"
+              step="1"
+              value="${qtdAtual}"
+              style="width:86px;height:34px;border:1px solid #cbd5e1;border-radius:9px;padding:0 8px;font-size:16px;font-weight:900"
+              onchange="atualizarQtdCarrinho('${i.origem_tabela}',${i.id},this.value)"
+            >
+            <small>de ${max}</small>
+          </label>` :
+          `<div style="margin-top:6px;font-size:11px;font-weight:900;color:#334155">Quantidade: 1</div>`
+        }
+      </div>
+      <button class="cart-remove" onclick="removerCarrinho('${i.origem_tabela}',${i.id})"><i class="fa-solid fa-trash"></i></button>
+    </div>`;
+  }).join("");
 }
 
 
@@ -662,10 +891,130 @@ function fecharModalCarrinho(){
 window.abrirModalCarrinho = abrirModalCarrinho;
 window.fecharModalCarrinho = fecharModalCarrinho;
 
+
+async function validarDisponibilidadeAtualCarrinhoAtlas(){
+  const statusBloqueantes = [
+    "APROVADO",
+    "RESERVADO",
+    "EM_SEPARACAO",
+    "AGUARDANDO_RETIRADA",
+    "AGUARDANDO_CONFIRMACAO",
+    "EM_TRANSITO"
+  ];
+
+  for(const item of carrinho){
+    // Patrimônio: exclusivo
+    if(item.patrimonio_id){
+      const { data, error } = await db()
+        .from("itens_retirada")
+        .select("id")
+        .eq("patrimonio_id", item.patrimonio_id)
+        .in("status", statusBloqueantes)
+        .limit(1);
+
+      if(error) throw error;
+
+      if(Array.isArray(data) && data.length){
+        return {
+          ok:false,
+          item,
+          mensagem:"Este patrimônio acabou de ser reservado por outro pedido."
+        };
+      }
+
+      continue;
+    }
+
+    // Estoque: saldo físico menos todas as reservas ativas
+    if(item.produto_id){
+      const produto = await db()
+        .from("estoque_produtos")
+        .select("id,quantidade")
+        .eq("id", item.produto_id)
+        .maybeSingle();
+
+      if(produto.error) throw produto.error;
+
+      const totalFisico = Math.max(
+        0,
+        Number(produto.data?.quantidade ?? item.qtd_total ?? item.quantidade ?? 0)
+      );
+
+      const reservas = await db()
+        .from("itens_retirada")
+        .select("quantidade")
+        .eq("produto_id", item.produto_id)
+        .in("status", statusBloqueantes);
+
+      if(reservas.error) throw reservas.error;
+
+      const reservado = (reservas.data || []).reduce(
+        (soma, r) => soma + Math.max(0, Number(r.quantidade || 1)),
+        0
+      );
+
+      const disponivel = Math.max(0, totalFisico - reservado);
+      const solicitado = Math.max(0, Number(item.quantidade_solicitada || 1));
+
+      if(solicitado > disponivel){
+        return {
+          ok:false,
+          item,
+          solicitado,
+          disponivel,
+          mensagem:
+            "Quantidade indisponível para " + (item.nome || "o item") + ". " +
+            "Solicitado: " + solicitado + ". Disponível agora: " + disponivel + "."
+        };
+      }
+    }
+  }
+
+  return {ok:true};
+}
+
 async function enviarSolicitacao(){
-  if(!carrinho.length){ alert("Adicione itens ao carrinho."); return; }
+  if(!carrinho.length){
+    atlasToast("ℹ Adicione itens ao carrinho.");
+    return;
+  }
 
   const u = usuarioAtual();
+  const obraDestinoIdUsuario = Number(u?.obra_id || 0);
+
+  if(!obraDestinoIdUsuario){
+    atlasToast("⚠ Seu usuário não possui obra/setor de destino.");
+    return;
+  }
+
+  const itemMesmaObra = carrinho.find(i => atlasMesmaObraOrigemDestino(i));
+  if(itemMesmaObra){
+    atlasToast("ℹ " + esc(itemMesmaObra.nome || "Item") + " já pertence à sua obra.");
+    return;
+  }
+
+  const qtdInvalida = carrinho.find(i => {
+    const qtd = Number(i.quantidade_solicitada || 1);
+    return !Number.isFinite(qtd) || qtd <= 0 || qtd > atlasQtdMaximaItem(i);
+  });
+  if(qtdInvalida){
+    atlasToast("⚠ Confira a quantidade solicitada de " + esc(qtdInvalida.nome || "item") + ".");
+    return;
+  }
+
+  try{
+    const validacaoAtual = await validarDisponibilidadeAtualCarrinhoAtlas();
+
+    if(!validacaoAtual.ok){
+      atlasToast("🔒 " + esc(validacaoAtual.mensagem || "Item indisponível."));
+      await carregarTudo();
+      return;
+    }
+  }catch(e){
+    console.warn("Atlas: falha ao validar saldo atual:", e?.message || e);
+    atlasToast("⚠ Não foi possível confirmar o saldo agora. Tente novamente.");
+    return;
+  }
 
   const grupos = {};
   carrinho.forEach(i => {
@@ -682,8 +1031,8 @@ async function enviarSolicitacao(){
     await salvarOffline("nova_solicitacao", "pedidos_retirada", {
       grupos,
       solicitante:u?.nome || "Usuário",
-      obraDestinoId:u?.obra_id || null,
-      obraNome:nomeObra(u?.obra_id || null),
+      obraDestinoId:obraDestinoIdUsuario,
+      obraNome:nomeObra(obraDestinoIdUsuario),
       observacao:valor("obsSolicitacao") || "Solicitação criada offline."
     });
 
@@ -699,7 +1048,7 @@ async function enviarSolicitacao(){
   for(const origemId of Object.keys(grupos)){
     const itens=grupos[origemId];
     const codigo="EXP-"+new Date().getFullYear()+"-"+String(Date.now()).slice(-6)+"-"+Math.floor(Math.random()*99);
-    const obraDestinoId = u?.obra_id || null;
+    const obraDestinoId = obraDestinoIdUsuario;
 
     const pedido = {
       codigo,
@@ -726,7 +1075,7 @@ async function enviarSolicitacao(){
       obra_origem_id:i.obra_id || null,
       obra_destino_id:obraDestinoId,
       status:i.tipo_solicitacao==="INTERESSE"?"INTERESSE":"PENDENTE",
-      quantidade:1
+      quantidade:Number(i.quantidade_solicitada || 1)
     }));
 
     const ri=await db().from("itens_retirada").insert(itensPayload);
@@ -751,7 +1100,8 @@ async function enviarSolicitacao(){
   if(document.getElementById("obsSolicitacao")) document.getElementById("obsSolicitacao").value="";
   renderizarCarrinho();
   renderizarCatalogo();
-  alert("Solicitação enviada com sucesso!");
+  fecharModalCarrinho();
+  atlasToast("✅ Solicitação enviada com sucesso.");
   await carregarTudo();
 }
 async function hist(pedidoId, anterior, novo, obs){ try{ const u=usuarioAtual(); await db().from("historico_pedidos_retirada").insert([{pedido_id:pedidoId,status_anterior:anterior,status_novo:novo,usuario:u?.nome||"Sistema",observacao:obs}]); }catch(e){} }
@@ -902,7 +1252,184 @@ async function confirmarRetiradaModal(){
   fecharModalRetirada();
   await carregarTudo();
 }
-function abrirDetalhe(origem,id){ const i=buscarItem(origem,id); if(!i) return; document.getElementById("modalTitulo").innerText=i.nome; document.getElementById("modalConteudo").innerHTML=`<div class="modal-grid"><div class="modal-img">${fotoItem(i)?`<img src="${esc(fotoItem(i))}">`:`<div style="font-size:70px">${placeholderIcon(i)}</div>`}</div><div><div class="det-line"><b>Código:</b> ${esc(i.codigo||"-")}</div><div class="det-line"><b>Obra atual:</b> ${esc(nomeObra(i.obra_id))}</div><div class="det-line"><b>Status:</b> <span class="badge-status ${statusClass(normalStatus(i.status))}">${rotStatus(i.status)}</span></div><div class="det-line"><b>Quantidade:</b> ${esc(i.qtd||1)}</div><div class="det-line"><b>Localização:</b> ${esc(i.localizacao||"-")}</div><div class="det-line"><b>Marca/Modelo:</b> ${esc(i.marca||"-")} / ${esc(i.modelo||"-")}</div><div class="det-line"><b>Estado:</b> ${esc(i.estado||"-")}</div><br><button class="btn-ok" onclick="acaoItem('${i.origem_tabela}',${i.id});fecharModalDetalhe()">${normalStatus(i.status)==='ESTOQUE'?'Adicionar ao carrinho':'Registrar interesse'}</button></div></div>`; document.getElementById("modalDetalhe").classList.add("ativo"); }
+
+/* =========================================================
+   ATLAS 3.1.12 - SELETOR DE QUANTIDADE ANTES DO CARRINHO
+========================================================= */
+function normalizarQtdEscolhidaAtlas(item, valor){
+  const max = atlasQtdMaximaItem(item);
+  let qtd = Number(String(valor ?? 1).replace(",", "."));
+
+  if(!Number.isFinite(qtd) || qtd < 1) qtd = 1;
+  if(qtd > max) qtd = max;
+
+  return qtd;
+}
+
+function ajustarQtdDetalheAtlas(delta){
+  const input = document.getElementById("atlasQtdDetalhe");
+  if(!input) return;
+
+  const origem = input.dataset.origem;
+  const id = Number(input.dataset.id);
+  const item = buscarItem(origem, id);
+  if(!item) return;
+
+  const atual = Number(input.value || 1);
+  input.value = normalizarQtdEscolhidaAtlas(item, atual + Number(delta || 0));
+}
+
+function adicionarDetalheAoCarrinhoAtlas(origem,id){
+  const item = buscarItem(origem,id);
+  if(!item) return;
+
+  if(itemEstaNoCarrinho(item)){
+    fecharModalDetalhe();
+    abrirModalCarrinho();
+    return;
+  }
+
+  if(atlasMesmaObraOrigemDestino(item)){
+    atlasToast("ℹ Este item já pertence à sua obra/setor.");
+    return;
+  }
+
+  const disponivel = atlasQtdMaximaItem(item);
+  if(disponivel <= 0 || normalStatus(item.status) === "INDISPONIVEL"){
+    atlasToast("🔒 Indisponível<br><small>Não há quantidade disponível para solicitar.</small>");
+    return;
+  }
+
+  let qtd = 1;
+  if(item.origem_tabela === "estoque_produtos" && !item.patrimonio_id){
+    const input = document.getElementById("atlasQtdDetalhe");
+    qtd = normalizarQtdEscolhidaAtlas(item, input?.value || 1);
+  }
+
+  carrinho.push({
+    ...item,
+    tipo_solicitacao:"RETIRADA",
+    quantidade_solicitada:qtd
+  });
+
+  sincronizarCarrinhoExpedicao();
+  renderizarCarrinho();
+  renderizarCatalogo();
+  animarBotaoItem(item.origem_tabela,item.id);
+  animarCarrinhoTopo();
+  fecharModalDetalhe();
+
+  atlasToast(
+    "✔ Adicionado ao carrinho<br><small>" +
+    esc(item.nome || item.descricao || "Item") +
+    " • Qtd: " + qtd + "</small>"
+  );
+}
+
+window.normalizarQtdEscolhidaAtlas = normalizarQtdEscolhidaAtlas;
+window.ajustarQtdDetalheAtlas = ajustarQtdDetalheAtlas;
+window.adicionarDetalheAoCarrinhoAtlas = adicionarDetalheAoCarrinhoAtlas;
+
+function abrirDetalhe(origem,id){
+  const i = buscarItem(origem,id);
+  if(!i) return;
+
+  const ehPatrimonio = !!i.patrimonio_id || i.origem_tabela === "patrimonio";
+  const total = ehPatrimonio ? 1 : Number(i.qtd_total ?? i.quantidade ?? i.qtd ?? 0);
+  const reservado = ehPatrimonio ? Number(i.qtd_reservada || 0) : Number(i.qtd_reservada || 0);
+  const disponivel = ehPatrimonio
+    ? Number(i.qtd_disponivel ?? (normalStatus(i.status) === "ESTOQUE" ? 1 : 0))
+    : Number(i.qtd_disponivel ?? i.qtd ?? 0);
+
+  const semDisponibilidade = disponivel <= 0 || normalStatus(i.status) === "INDISPONIVEL";
+  const jaNoCarrinho = itemEstaNoCarrinho(i);
+
+  const seletorQtd = (!ehPatrimonio && !semDisponibilidade)
+    ? `
+      <div style="margin-top:14px;padding:13px;border:1px solid #dbeafe;background:#eff6ff;border-radius:14px">
+        <div style="font-size:12px;font-weight:950;color:#1e3a8a;margin-bottom:8px">
+          Escolha a quantidade
+        </div>
+
+        <div style="display:flex;align-items:center;gap:9px">
+          <button
+            type="button"
+            onclick="ajustarQtdDetalheAtlas(-1)"
+            style="width:40px;height:40px;border:1px solid #bfdbfe;border-radius:11px;background:#fff;color:#1d4ed8;font-size:21px;font-weight:950;cursor:pointer"
+          >−</button>
+
+          <input
+            id="atlasQtdDetalhe"
+            data-origem="${esc(i.origem_tabela)}"
+            data-id="${Number(i.id)}"
+            type="number"
+            min="1"
+            max="${disponivel}"
+            step="1"
+            value="1"
+            oninput="this.value=normalizarQtdEscolhidaAtlas(buscarItem(this.dataset.origem,Number(this.dataset.id)),this.value)"
+            style="width:90px;height:42px;border:1px solid #93c5fd;border-radius:11px;padding:0 10px;text-align:center;font-size:18px;font-weight:950;color:#0f172a"
+          >
+
+          <button
+            type="button"
+            onclick="ajustarQtdDetalheAtlas(1)"
+            style="width:40px;height:40px;border:1px solid #bfdbfe;border-radius:11px;background:#fff;color:#1d4ed8;font-size:21px;font-weight:950;cursor:pointer"
+          >+</button>
+
+          <span style="font-size:11px;font-weight:900;color:#475569">
+            de ${disponivel} disponíveis
+          </span>
+        </div>
+      </div>`
+    : "";
+
+  const resumoSaldo = ehPatrimonio
+    ? `<div class="det-line"><b>Disponibilidade:</b> ${disponivel > 0 ? "1 disponível" : "Indisponível"}</div>`
+    : `
+      <div class="det-line"><b>Quantidade total:</b> ${total}</div>
+      <div class="det-line"><b>Reservado:</b> ${reservado}</div>
+      <div class="det-line"><b>Disponível:</b> ${disponivel}</div>`;
+
+  let acaoHtml = "";
+  if(jaNoCarrinho){
+    acaoHtml = `<button class="btn-ok" onclick="fecharModalDetalhe();abrirModalCarrinho()">Ver no carrinho</button>`;
+  }else if(semDisponibilidade){
+    acaoHtml = `<button class="btn-ok" style="background:#94a3b8;cursor:not-allowed" disabled>Indisponível</button>`;
+  }else if(normalStatus(i.status) === "ESTOQUE"){
+    acaoHtml = `<button class="btn-ok" onclick="adicionarDetalheAoCarrinhoAtlas('${i.origem_tabela}',${i.id})">Adicionar ao carrinho</button>`;
+  }else if(normalStatus(i.status) === "EM_USO"){
+    acaoHtml = `<button class="btn-ok" onclick="acaoItem('${i.origem_tabela}',${i.id});fecharModalDetalhe()">Registrar interesse</button>`;
+  }
+
+  document.getElementById("modalTitulo").innerText = i.nome;
+  document.getElementById("modalConteudo").innerHTML = `
+    <div class="modal-grid">
+      <div class="modal-img">
+        ${fotoItem(i)
+          ? `<img src="${esc(fotoItem(i))}">`
+          : `<div style="font-size:70px">${placeholderIcon(i)}</div>`
+        }
+      </div>
+
+      <div>
+        <div class="det-line"><b>Código:</b> ${esc(i.codigo||"-")}</div>
+        <div class="det-line"><b>Obra atual:</b> ${esc(nomeObra(i.obra_id))}</div>
+        <div class="det-line"><b>Status:</b> <span class="badge-status ${statusClass(normalStatus(i.status))}">${rotStatus(i.status)}</span></div>
+        ${resumoSaldo}
+        <div class="det-line"><b>Localização:</b> ${esc(i.localizacao||"-")}</div>
+        <div class="det-line"><b>Marca/Modelo:</b> ${esc(i.marca||"-")} / ${esc(i.modelo||"-")}</div>
+        <div class="det-line"><b>Estado:</b> ${esc(i.estado||"-")}</div>
+
+        ${seletorQtd}
+
+        <br>
+        ${acaoHtml}
+      </div>
+    </div>`;
+
+  document.getElementById("modalDetalhe").classList.add("ativo");
+}
 function fecharModalDetalhe(){ document.getElementById("modalDetalhe").classList.remove("ativo"); }
 
 
@@ -949,6 +1476,39 @@ document.addEventListener("keydown", function(e){
 });
 
 
+
+/* =========================================================
+   ATLAS 3.1.10.1 - QUANTIDADE GLOBAL ENTRE MÓDULOS
+   Corrige badgeQuantidadeAtlas indisponível no modal Separação.
+========================================================= */
+function quantidadeItemAtlasGlobal(i){
+  const qtd = Number(i?.quantidade || i?.quantidade_solicitada || 1);
+  return Number.isFinite(qtd) && qtd > 0 ? qtd : 1;
+}
+
+function badgeQuantidadeAtlasGlobal(i){
+  return `<span style="
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    margin-top:6px;
+    padding:5px 9px;
+    border-radius:999px;
+    background:#dbeafe;
+    color:#1d4ed8;
+    font-size:11px;
+    font-weight:950;
+    white-space:nowrap;
+  ">📦 Qtd solicitada: ${quantidadeItemAtlasGlobal(i)}</span>`;
+}
+
+window.quantidadeItemAtlasGlobal = quantidadeItemAtlasGlobal;
+window.badgeQuantidadeAtlasGlobal = badgeQuantidadeAtlasGlobal;
+
+window.badgeQuantidadeAtlas = window.badgeQuantidadeAtlas || badgeQuantidadeAtlasGlobal;
+window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGlobal;
+
+
 /* =========================================================
    ATLAS SPRINT 2.3 - APROVAÇÃO PARCIAL POR ITEM
    - Recusar todos
@@ -971,8 +1531,35 @@ document.addEventListener("keydown", function(e){
     return Array.isArray(p?.itens_retirada) ? p.itens_retirada : [];
   }
 
+  function quantidadeItemAtlas(i){
+    const qtd = Number(i?.quantidade || i?.quantidade_solicitada || 1);
+    return Number.isFinite(qtd) && qtd > 0 ? qtd : 1;
+  }
+
+  function badgeQuantidadeAtlas(i){
+    return `<span style="
+      display:inline-flex;
+      align-items:center;
+      gap:5px;
+      margin-top:6px;
+      padding:5px 9px;
+      border-radius:999px;
+      background:#dbeafe;
+      color:#1d4ed8;
+      font-size:11px;
+      font-weight:950;
+      white-space:nowrap;
+    ">📦 Qtd solicitada: ${quantidadeItemAtlas(i)}</span>`;
+  }
+
   function itemTituloAtlas(i){
-    return esc(i.patrimonio_codigo || i.patrimonio_nome || i.produto_id || ("ITEM-" + i.id));
+    return esc(
+      i.patrimonio_codigo ||
+      i.codigo ||
+      i.produto_codigo ||
+      (i.produto_id ? "EST-" + i.produto_id : "") ||
+      ("ITEM-" + i.id)
+    );
   }
 
   renderizarPedidos = function(){
@@ -1013,7 +1600,7 @@ document.addEventListener("keydown", function(e){
 
   pedidoHTML = function(p){
     const itens = itensDoPedidoLocal(p);
-    const resumoItens = itens.map(i => `${esc(i.patrimonio_codigo || i.patrimonio_nome || 'Item')} - ${esc(i.status || '-')}`).join('<br>');
+    const resumoItens = itens.map(i => `${esc(i.patrimonio_codigo || i.patrimonio_nome || 'Item')} • Qtd solicitada: ${quantidadeItemAtlas(i)} • ${esc(i.status || '-')}`).join('<br>');
     return `<div class="pedido-card">
       <div class="pedido-top">
         <div class="pedido-cod">${esc(p.codigo||"PED-"+p.id)}</div>
@@ -1082,6 +1669,21 @@ document.addEventListener("keydown", function(e){
     }
   };
 
+
+  window.atlasAlternarMotivoRecusa = function(selectEl, itemId){
+    const campo = document.getElementById("motivoItem_" + itemId);
+    if(!campo) return;
+
+    const recusando = String(selectEl?.value || "").toUpperCase() === "RECUSAR";
+    campo.style.display = recusando ? "block" : "none";
+    campo.required = recusando;
+    if(recusando){
+      setTimeout(() => campo.focus(), 30);
+    }else{
+      campo.value = "";
+    }
+  };
+
   window.abrirAprovacaoParcialAtlas = function(pedidoId){
     const p = pedidoLocal(pedidoId);
     if(!p){ alert("Pedido não encontrado na tela. Atualize a página."); return; }
@@ -1093,16 +1695,70 @@ document.addEventListener("keydown", function(e){
       <div class="info-box" style="margin-top:0">Escolha item por item. O Atlas vai definir o status geral automaticamente: APROVADO, RECUSADO ou APROVADO_PARCIAL.</div>
       <div style="display:grid;gap:10px;margin-top:12px">
         ${itens.map(i => `
-          <div class="cart-item" style="grid-template-columns:1fr 135px;align-items:center">
-            <div class="cart-info">
-              <strong>${itemTituloAtlas(i)}</strong>
-              <span>${esc(i.patrimonio_nome || '')}</span>
-              <input id="motivoItem_${i.id}" placeholder="Motivo se recusar" style="margin-top:7px;width:100%;height:36px;border:1px solid #d1d5db;border-radius:9px;padding:0 9px">
+          <div style="
+            display:grid;
+            grid-template-columns:1fr;
+            gap:10px;
+            padding:13px;
+            border:1px solid #e2e8f0;
+            border-radius:14px;
+            background:#fff;
+          ">
+            <div style="min-width:0">
+              <div style="
+                color:#0f172a;
+                font-size:14px;
+                font-weight:950;
+                line-height:1.35;
+                white-space:normal;
+                overflow-wrap:anywhere;
+              ">${esc(i.patrimonio_nome || i.produto_nome || i.descricao || itemTituloAtlas(i))}</div>
+
+              <div style="
+                margin-top:5px;
+                color:#64748b;
+                font-size:11px;
+                font-weight:850;
+                line-height:1.35;
+                overflow-wrap:anywhere;
+              ">Código: ${itemTituloAtlas(i)}</div>
+
+              ${badgeQuantidadeAtlasGlobal(i)}
             </div>
-            <select id="decisaoItem_${i.id}" style="height:38px;border:1px solid #d1d5db;border-radius:9px;padding:0 8px;font-weight:900">
-              <option value="APROVAR">Autorizar</option>
-              <option value="RECUSAR">Recusar</option>
+
+            <select
+              id="decisaoItem_${i.id}"
+              onchange="atlasAlternarMotivoRecusa(this,${i.id})"
+              style="
+                width:100%;
+                height:42px;
+                border:1px solid #cbd5e1;
+                border-radius:11px;
+                padding:0 10px;
+                background:#fff;
+                color:#0f172a;
+                font-weight:950;
+                font-size:14px;
+              ">
+              <option value="APROVAR">✅ Autorizar item</option>
+              <option value="RECUSAR">❌ Recusar item</option>
             </select>
+
+            <input
+              id="motivoItem_${i.id}"
+              placeholder="Informe o motivo da recusa"
+              style="
+                display:none;
+                width:100%;
+                min-height:42px;
+                border:1px solid #fca5a5;
+                border-radius:11px;
+                padding:0 10px;
+                background:#fff7f7;
+                color:#7f1d1d;
+                font-size:14px;
+                font-weight:750;
+              ">
           </div>`).join('')}
       </div>
       <br>
@@ -1119,6 +1775,17 @@ document.addEventListener("keydown", function(e){
       acao: document.getElementById("decisaoItem_" + i.id)?.value || "APROVAR",
       motivo: document.getElementById("motivoItem_" + i.id)?.value || ""
     }));
+
+    const recusaSemMotivo = decisoes.find(d =>
+      String(d.acao).toUpperCase() === "RECUSAR" &&
+      !String(d.motivo || "").trim()
+    );
+
+    if(recusaSemMotivo){
+      atlasToast("⚠ Informe o motivo do item recusado.");
+      document.getElementById("motivoItem_" + recusaSemMotivo.item_id)?.focus();
+      return;
+    }
 
     if(!window.AtlasWorkflow?.aprovarItensPedido){ alert("AtlasWorkflow Sprint 2.3 não carregado."); return; }
 
@@ -1145,7 +1812,7 @@ document.addEventListener("keydown", function(e){
       <div class="det-line"><b>Origem:</b> ${esc(nomeObra(p.obra_origem_id))}</div>
       <div class="det-line"><b>Destino:</b> ${esc(nomeObra(p.obra_destino_id || p.obra_id))}</div>
       <br>
-      ${itens.map(i => `<div class="cart-item"><div class="cart-info"><strong>${itemTituloAtlas(i)}</strong><span>Status: ${esc(i.status || '-')} ${i.motivo_recusa ? '• Motivo: '+esc(i.motivo_recusa) : ''}</span></div></div>`).join('')}
+      ${itens.map(i => `<div class="cart-item"><div class="cart-info"><strong>${itemTituloAtlas(i)}</strong>${badgeQuantidadeAtlasGlobal(i)}<span style="display:block;margin-top:5px">Status: ${esc(i.status || '-')} ${i.motivo_recusa ? '• Motivo: '+esc(i.motivo_recusa) : ''}</span></div></div>`).join('')}
     `;
     document.getElementById("modalDetalhe").classList.add("ativo");
   };
@@ -1429,7 +2096,7 @@ document.addEventListener("keydown", function(e){
         <button style="background:#e5e7eb;color:#0f172a" onclick="fecharModalDetalhe()">Fechar</button>`;
     }else if(podeConcluirSeparacao){
       botoes = `
-        <button style="background:#16a34a;color:#fff" onclick="reservar(${Number(p.id)})">Concluir separação</button>
+        <button style="background:#2563eb;color:#fff" onclick="AtlasSeparacaoQR.abrir(${Number(p.id)});fecharModalDetalhe()">📷 Iniciar separação guiada</button>
         <button style="background:#e5e7eb;color:#0f172a" onclick="fecharModalDetalhe()">Fechar</button>`;
     }else if(podeRetirar){
       botoes = `
@@ -1462,6 +2129,7 @@ document.addEventListener("keydown", function(e){
             <div>
               <div class="atlas-item-codigo">${esc(codigoItemAtlas(i))}</div>
               <div class="atlas-item-nome">${esc(nomeItemAtlas(i))}${i.motivo_recusa ? " • Motivo: " + esc(i.motivo_recusa) : ""}</div>
+              ${badgeQuantidadeAtlasGlobal(i)}
             </div>
             <span class="badge-status ${statusClass(i.status || 'PENDENTE')}">${esc(i.status || 'PENDENTE')}</span>
           </div>`).join("") : `<div class="cart-empty">Nenhum item carregado.</div>`}
@@ -1504,6 +2172,10 @@ document.addEventListener("keydown", function(e){
   function pedidoCurtoLog(p){ return "PED-" + (p?.id || "-"); }
 
   window.reservar = async function(id){
+    if(window.AtlasSeparacaoQR?.abrir){
+      window.AtlasSeparacaoQR.abrir(id);
+      return;
+    }
     try{
       document.querySelectorAll(`button[onclick*="${id}"]`).forEach(btn => { btn.disabled = true; btn.innerText = "Concluindo..."; });
       if(window.AtlasLogistica?.finalizarSeparacao){

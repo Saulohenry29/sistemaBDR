@@ -20,7 +20,7 @@
 
   const Gestor = {
     __loaded:true,
-    versao:"1.4-central-inteligente"
+    versao:"1.7-almoxarifado-por-etapa"
   };
 
   const PERFIS_OPERACIONAIS = ["MASTER", "ADMIN", "ALMOXARIFE", "ALMOXARIFADO", "SUPERVISOR", "GESTOR", "LOGISTICA", "LOGÍSTICA"];
@@ -103,6 +103,20 @@
     return PERFIS_OPERACIONAIS.includes(upper(u?.perfil)) || PERFIS_OPERACIONAIS.includes(upper(u?.cargo));
   }
 
+  function podeAprovarPedido(u){
+    if(!u || u.ativo === false || estaBloqueadoExpedicao(u)) return false;
+    const perfil = upper(u?.perfil || u?.cargo);
+    return ["MASTER","ADMIN","GESTOR","SUPERVISOR"].includes(perfil) ||
+      possuiAlgumaPermissao(u, ["EXPEDICAO_APROVAR","APROVAR_PEDIDO_ORIGEM"]);
+  }
+
+  function podeSepararPedido(u){
+    if(!u || u.ativo === false || estaBloqueadoExpedicao(u)) return false;
+    const perfil = upper(u?.perfil || u?.cargo);
+    return ["MASTER","ADMIN","ALMOXARIFE","ALMOXARIFADO","LOGISTICA","LOGÍSTICA"].includes(perfil) ||
+      possuiAlgumaPermissao(u, ["EXPEDICAO_SEPARAR"]);
+  }
+
   function podeReceberExpedicao(u){
     if(!u || u.ativo === false) return false;
     if(estaBloqueadoExpedicao(u)) return false;
@@ -126,6 +140,13 @@
     const perfil = upper(u?.perfil);
     const perms = permissoesUsuario(u);
     return perfil === "MASTER" || perms.includes("VER_TODAS_OBRAS") || perms.includes("NOTIFICACOES_GLOBAIS");
+  }
+
+  function usuarioPodeAtenderQualquerOrigem(u){
+    const perms = permissoesUsuario(u);
+    return usuarioGlobal(u) ||
+      perms.includes("VER_ESTOQUE_OUTRAS_OBRAS") ||
+      perms.includes("EXPEDICAO_SEPARAR_TODAS_OBRAS");
   }
 
   function mesmoSolicitante(u, pedido){
@@ -182,7 +203,7 @@
   function filtrarResponsaveisOrigem(usuarios, pedido, origemId){
     const base = (usuarios || [])
       .filter(u => u && u.ativo !== false)
-      .filter(podeReceberExpedicao)
+      .filter(podeAprovarPedido)
       .filter(u => !mesmoSolicitante(u, pedido));
 
     // Regra oficial Sprint 2.6.2:
@@ -222,9 +243,22 @@
     const lista = Array.isArray(itens) ? itens : [];
     if(!lista.length) return "Itens: não carregados.";
 
-    const nomes = lista.slice(0, 6).map(i =>
-      texto(i.patrimonio_codigo || i.patrimonio_nome || i.produto_nome || i.produto_id || i.patrimonio_id || i.id || "Item")
-    );
+    const nomes = lista.slice(0, 6).map(i => {
+      const nome = texto(
+        i.patrimonio_nome ||
+        i.produto_nome ||
+        i.descricao ||
+        i.nome ||
+        i.patrimonio_codigo ||
+        i.produto_id ||
+        i.patrimonio_id ||
+        i.id ||
+        "Item"
+      );
+      const codigo = texto(i.patrimonio_codigo || i.codigo || "");
+      const qtd = Math.max(1, Number(i.quantidade || i.quantidade_solicitada || 1));
+      return (codigo && codigo !== nome ? codigo + " — " : "") + nome + " • Qtd: " + qtd;
+    });
 
     let msg = "Itens: " + nomes.join("; ");
     if(lista.length > nomes.length){
@@ -313,7 +347,7 @@
 
     const total = await notificarLista(responsaveis, {
       empresa_id: empresaId,
-      tipo:"PEDIDO_AGUARDANDO_ANALISE",
+      tipo:"PEDIDO_CRIADO",
       titulo:"📋 Novo pedido recebido",
       mensagem:mensagemPedidoCriado(pedido, itens),
       link:"expedicao.html?aba=solicitacoes",
@@ -356,6 +390,88 @@
   }
 
 
+
+  async function notificarSeparacaoPedido(pedido, usuarioAprovador){
+    const empresaId = pedido?.empresa_id || empresaAtualId();
+    const origemId = pedido?.obra_origem_id || null;
+    const destinoId = pedido?.obra_destino_id || pedido?.obra_id || null;
+    const itens = Array.isArray(pedido?.itens_retirada) ? pedido.itens_retirada : [];
+
+    const usuarios = await buscarUsuariosEmpresa(empresaId);
+
+    /*
+      REGRA OFICIAL ATLAS:
+      - Pedido novo: somente quem aprova.
+      - Pedido autorizado: somente equipe operacional de separação.
+      - ALMOXARIFE/ALMOXARIFADO não depende da obra do pedido para receber,
+        pois pode separar itens de qualquer origem liberada no catálogo.
+      - MASTER/ADMIN não entram aqui automaticamente.
+    */
+    let separadores = unicoPorId(
+      (usuarios || [])
+        .filter(u => u && u.ativo !== false)
+        .filter(u => !estaBloqueadoExpedicao(u))
+        .filter(u => {
+          const perfil = upper(u?.perfil || u?.cargo);
+          const perfilAlmox = ["ALMOXARIFE","ALMOXARIFADO","LOGISTICA","LOGÍSTICA"].includes(perfil);
+          const permissaoSeparar = possuiAlgumaPermissao(u, ["EXPEDICAO_SEPARAR"]);
+          const recebeNotif = possuiAlgumaPermissao(u, [
+            "RECEBER_NOTIFICACOES",
+            "RECEBER_NOTIFICACOES_EXPEDICAO",
+            "RECEBER_NOTIFICACOES_MOVIMENTACOES"
+          ]);
+          return (perfilAlmox || permissaoSeparar) && recebeNotif;
+        })
+    );
+
+    // Fallback seguro: se ninguém tiver a permissão de notificação configurada,
+    // usa os perfis de almoxarifado/logística ativos.
+    if(!separadores.length){
+      separadores = unicoPorId(
+        (usuarios || [])
+          .filter(u => u && u.ativo !== false)
+          .filter(u => !estaBloqueadoExpedicao(u))
+          .filter(u => ["ALMOXARIFE","ALMOXARIFADO","LOGISTICA","LOGÍSTICA"]
+            .includes(upper(u?.perfil || u?.cargo)))
+      );
+    }
+
+    console.table(separadores.map(u => ({
+      id:u.id,
+      nome:u.nome,
+      perfil:u.perfil,
+      obra_id:u.obra_id,
+      permissoes:u.permissoes,
+      etapa:"SEPARACAO",
+      pedido:pedido?.codigo || pedido?.id
+    })));
+
+    const total = await notificarLista(separadores, {
+      empresa_id:empresaId,
+      tipo:"PEDIDO_AGUARDANDO_SEPARACAO",
+      titulo:"📦 Pedido aguardando separação",
+      mensagem:
+        "Pedido " + (pedido?.codigo || "#" + pedido?.id) +
+        " foi autorizado por " + (usuarioAprovador || "responsável") +
+        " e já pode ser separado. " + resumoItens(itens),
+      link:"expedicao.html?aba=separacao",
+      pedido_id:pedido?.id || null,
+      obra_origem_id:origemId,
+      obra_destino_id:destinoId
+    });
+
+    return {
+      ok:total > 0,
+      notificacoes:total,
+      destinatarios:separadores.map(u => ({
+        id:u.id,
+        nome:u.nome,
+        perfil:u.perfil,
+        obra_id:u.obra_id
+      }))
+    };
+  }
+
   async function diagnosticarPedidoCriado(pedido, itens){
     const empresaId = pedido?.empresa_id || empresaAtualId();
     const origemId = pedido?.obra_origem_id || null;
@@ -386,11 +502,13 @@
   Gestor.notificarLista = notificarLista;
   Gestor.notificarPedidoCriado = notificarPedidoCriado;
   Gestor.notificarDestinoPedido = notificarDestinoPedido;
+  Gestor.notificarSeparacaoPedido = notificarSeparacaoPedido;
+  Gestor.usuarioPodeAtenderQualquerOrigem = usuarioPodeAtenderQualquerOrigem;
   Gestor.podeReceberExpedicao = podeReceberExpedicao;
   Gestor.usuarioTemAcessoObra = usuarioTemAcessoObra;
   Gestor.diagnosticarPedidoCriado = diagnosticarPedidoCriado;
 
   window.AtlasGestorNotificacoes = Gestor;
 
-  console.log("✅ ATLAS GESTOR NOTIFICAÇÕES V1.4 carregado - central inteligente");
+  console.log("✅ ATLAS GESTOR NOTIFICAÇÕES V1.7 carregado - destinatários corretos por etapa");
 })();
