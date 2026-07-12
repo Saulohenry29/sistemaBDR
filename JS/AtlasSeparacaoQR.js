@@ -22,7 +22,7 @@
 
   const AtlasSeparacaoQR = {
     __loaded:true,
-    versao:"1.3-leitura-inteligente-esperado"
+    versao:"1.4-android-lock-ios-qr"
   };
 
   const estado = {
@@ -42,8 +42,19 @@
     erroCandidato:"",
     erroContagem:0,
     cameraAbertaEm:0,
+    leituraAceita:false,
     bloqueado:false
   };
+
+  function plataformaIOS(){
+    const ua = navigator.userAgent || "";
+    const touchMac = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+    return /iPhone|iPad|iPod/i.test(ua) || touchMac;
+  }
+
+  function plataformaAndroid(){
+    return /Android/i.test(navigator.userAgent || "");
+  }
 
   function db(){
     return window.client || window.supabaseClient || window.clientSupabase || globalThis.client;
@@ -839,6 +850,22 @@
     }
   }
 
+  function mostrarLeituraAceita(valor){
+    const detectado = document.getElementById("asqCameraDetectado");
+    const box = document.getElementById("asqCameraBox");
+
+    if(detectado){
+      detectado.textContent = "✅ Confirmado: " + String(valor || "");
+      detectado.classList.add("ativo");
+      detectado.style.background = "rgba(22,101,52,.96)";
+    }
+
+    if(box){
+      box.style.outline = "4px solid #22c55e";
+      box.style.outlineOffset = "-4px";
+    }
+  }
+
   function codigoEsperadoCamera(tipo){
     const i = itemAtual();
     if(!i) return [];
@@ -849,18 +876,41 @@
   }
 
   function tratarLeituraInteligente(tipo, valor){
-    if(!valor || estado.bloqueado) return;
-    if(Date.now() - Number(estado.cameraAbertaEm || 0) < 650) return;
+    if(!valor || estado.bloqueado || estado.leituraAceita) return;
+    if(Date.now() - Number(estado.cameraAbertaEm || 0) < 700) return;
 
     const lidoNormalizado = normalizarCodigo(valor);
     const esperados = codigoEsperadoCamera(tipo);
     if(!lidoNormalizado) return;
 
     if(esperados.includes(lidoNormalizado)){
+      estado.leituraAceita = true;
+      estado.bloqueado = true;
       estado.erroCandidato = "";
       estado.erroContagem = 0;
+
       atualizarCameraInfo(tipo,valor,"correto");
-      tratarLeituraCamera(tipo,valor);
+      mostrarLeituraAceita(valor);
+      somSucesso();
+      fecharCamera();
+
+      setTimeout(()=>{
+        try{
+          if(tipo === "ENDERECO"){
+            estado.enderecoLido = lidoNormalizado;
+            estado.etapa = "ITEM";
+            toast("Posição correta","ok");
+          }else{
+            estado.itemLido = lidoNormalizado;
+            estado.etapa = "QUANTIDADE";
+            toast("Item correto","ok");
+          }
+          render();
+        }finally{
+          estado.bloqueado = false;
+          estado.leituraAceita = false;
+        }
+      },420);
       return;
     }
 
@@ -901,33 +951,27 @@
     if(!box) return;
 
     fecharCamera();
+
     estado.cameraTipo = tipo;
     estado.ultimoDetectado = "";
     estado.erroCandidato = "";
     estado.erroContagem = 0;
     estado.cameraAbertaEm = Date.now();
+    estado.leituraAceita = false;
+    estado.bloqueado = false;
+
+    box.style.outline = "";
     box.classList.add("ativo");
     atualizarCameraInfo(tipo,"");
 
-    // Mantém a câmera visível imediatamente, sem precisar rolar.
-    setTimeout(()=>{
-      box.scrollIntoView({behavior:"smooth",block:"start"});
-    },80);
+    setTimeout(()=>box.scrollIntoView({behavior:"smooth",block:"start"}),80);
 
-    // 1) BarcodeDetector nativo: rápido em Android/Chrome.
-    if("BarcodeDetector" in window && video){
+    if(plataformaAndroid() && "BarcodeDetector" in window && video){
       try{
         if(html5Reader) html5Reader.style.display = "none";
         video.style.display = "block";
 
-        const formatos = await BarcodeDetector.getSupportedFormats();
-        const preferidos = ["qr_code","code_128","code_39","ean_13"]
-          .filter(x=>formatos.includes(x));
-
-        estado.detector = new BarcodeDetector({
-          formats:preferidos.length ? preferidos : ["qr_code"]
-        });
-
+        estado.detector = new BarcodeDetector({formats:["qr_code"]});
         estado.stream = await navigator.mediaDevices.getUserMedia({
           video:{
             facingMode:{ideal:"environment"},
@@ -942,28 +986,27 @@
         estado.cameraAtiva = true;
 
         const detectar = async ()=>{
-          if(!estado.cameraAtiva) return;
+          if(!estado.cameraAtiva || estado.leituraAceita) return;
           try{
             const codigos = await estado.detector.detect(video);
             const valor = codigos?.[0]?.rawValue || "";
-            if(valor){
-              tratarLeituraInteligente(tipo,valor);
-            }
+            if(valor) tratarLeituraInteligente(tipo,valor);
           }catch(e){}
-          estado.loopId = requestAnimationFrame(detectar);
+          if(estado.cameraAtiva && !estado.leituraAceita){
+            estado.loopId = requestAnimationFrame(detectar);
+          }
         };
 
         detectar();
         return;
       }catch(e){
-        console.warn("AtlasSeparacaoQR: detector nativo indisponível, usando fallback.",e);
+        console.warn("Atlas QR: detector Android falhou; usando scanner universal.",e);
         fecharCamera();
         box.classList.add("ativo");
         atualizarCameraInfo(tipo,"");
       }
     }
 
-    // 2) Fallback universal: iPhone/Safari e notebooks sem BarcodeDetector.
     if(window.Html5Qrcode && html5Reader){
       try{
         if(video) video.style.display = "none";
@@ -972,26 +1015,42 @@
 
         estado.html5Scanner = new Html5Qrcode("asqHtml5Reader",{
           verbose:false,
-          formatsToSupport:[
-            Html5QrcodeSupportedFormats.QR_CODE,
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.CODE_39,
-            Html5QrcodeSupportedFormats.EAN_13
-          ].filter(Boolean)
+          formatsToSupport:[Html5QrcodeSupportedFormats.QR_CODE]
         });
 
-        const config = {
-          fps:18,
-          qrbox:(viewWidth,viewHeight)=>{
-            const lado = Math.floor(Math.min(viewWidth,viewHeight)*0.64);
-            return {width:lado,height:lado};
-          },
-          aspectRatio:1.333334,
-          disableFlip:false
-        };
+        let cameraSelecionada = {facingMode:"environment"};
+
+        try{
+          const cameras = await Html5Qrcode.getCameras();
+          if(cameras?.length){
+            const traseira = cameras.find(c =>
+              /back|rear|environment|traseira|posterior/i.test(c.label || "")
+            );
+            cameraSelecionada = (traseira || cameras[cameras.length - 1] || cameras[0]).id;
+          }
+        }catch(e){}
+
+        const config = plataformaIOS()
+          ? {
+              fps:10,
+              qrbox:(w,h)=>{
+                const lado = Math.floor(Math.min(w,h)*0.84);
+                return {width:lado,height:lado};
+              },
+              aspectRatio:1.0,
+              disableFlip:false
+            }
+          : {
+              fps:14,
+              qrbox:(w,h)=>{
+                const lado = Math.floor(Math.min(w,h)*0.70);
+                return {width:lado,height:lado};
+              },
+              disableFlip:false
+            };
 
         await estado.html5Scanner.start(
-          {facingMode:"environment"},
+          cameraSelecionada,
           config,
           texto => tratarLeituraInteligente(tipo,texto),
           ()=>{}
@@ -1000,43 +1059,13 @@
         estado.cameraAtiva = true;
         return;
       }catch(e){
-        console.warn("AtlasSeparacaoQR fallback câmera traseira:",e);
-
-        // Notebook: tenta qualquer webcam disponível.
-        try{
-          await estado.html5Scanner?.clear?.();
-        }catch(_){}
-
-        try{
-          estado.html5Scanner = new Html5Qrcode("asqHtml5Reader");
-          const cameras = await Html5Qrcode.getCameras();
-          if(!cameras?.length) throw new Error("Nenhuma câmera encontrada.");
-
-          await estado.html5Scanner.start(
-            cameras[0].id,
-            {
-              fps:15,
-              qrbox:{width:250,height:250},
-              disableFlip:false
-            },
-            texto => tratarLeituraInteligente(tipo,texto),
-            ()=>{}
-          );
-
-          estado.cameraAtiva = true;
-          return;
-        }catch(e2){
-          console.warn("AtlasSeparacaoQR fallback webcam:",e2);
-        }
+        console.warn("Atlas QR: scanner universal não abriu.",e);
       }
     }
 
     fecharCamera();
     somErro();
-    toast(
-      "Não foi possível abrir a câmera. Confira a permissão do navegador ou use o leitor/campo digitável.",
-      "erro"
-    );
+    toast("Não foi possível iniciar o leitor. Confira a permissão da câmera ou use o campo digitável.","erro");
   }
 
   function fecharCamera(){
@@ -1083,6 +1112,7 @@
     estado.erroCandidato = "";
     estado.erroContagem = 0;
     estado.cameraAbertaEm = 0;
+    estado.leituraAceita = false;
   }
 
   document.addEventListener("keydown",e=>{
@@ -1119,5 +1149,5 @@
   AtlasSeparacaoQR.normalizarCodigo = normalizarCodigo;
 
   window.AtlasSeparacaoQR = AtlasSeparacaoQR;
-  console.log("✅ ATLAS SEPARAÇÃO QR V1.3 carregado - leitura inteligente pelo QR esperado");
+  console.log("✅ ATLAS SEPARAÇÃO QR V1.4 carregado - Android travado e iPhone otimizado");
 })();
