@@ -22,7 +22,7 @@
 
   const AtlasSeparacaoQR = {
     __loaded:true,
-    versao:"1.6-ios-turbo-leitura-ampla"
+    versao:"1.7-ios-estilo-samsung"
   };
 
   const estado = {
@@ -877,14 +877,15 @@
 
   function tratarLeituraInteligente(tipo, valor){
     if(!valor || estado.bloqueado || estado.leituraAceita) return;
-    if(
-  Date.now() - Number(estado.cameraAbertaEm || 0) < (plataformaIOS() ? 80 : 700)
-) return;
+
+    const esperaInicial = plataformaIOS() ? 180 : 700;
+    if(Date.now() - Number(estado.cameraAbertaEm || 0) < esperaInicial) return;
 
     const lidoNormalizado = normalizarCodigo(valor);
     const esperados = codigoEsperadoCamera(tipo);
     if(!lidoNormalizado) return;
 
+    // QR correto: aceita imediatamente, igual ao comportamento rápido do Samsung.
     if(esperados.includes(lidoNormalizado)){
       estado.leituraAceita = true;
       estado.bloqueado = true;
@@ -895,7 +896,7 @@
       mostrarLeituraAceita(valor);
       somSucesso();
 
-      // Para a câmera sem liberar outra leitura durante a troca de etapa.
+      // Para o scanner sem liberar outra leitura.
       fecharCamera(true);
 
       setTimeout(()=>{
@@ -911,15 +912,21 @@
 
         render();
 
-        // Só libera novas leituras depois que a próxima etapa já apareceu.
         setTimeout(()=>{
           estado.bloqueado = false;
           estado.leituraAceita = false;
-        },120);
-      },90);
+        },100);
+      },110);
+
       return;
     }
 
+    /*
+      QR errado:
+      - não interrompe na primeira leitura;
+      - precisa aparecer 4 vezes seguidas;
+      - isso evita pegar QR que esteja ao lado.
+    */
     if(lidoNormalizado === estado.erroCandidato){
       estado.erroContagem += 1;
     }else{
@@ -927,8 +934,13 @@
       estado.erroContagem = 1;
     }
 
-    atualizarCameraInfo(tipo,valor,estado.erroContagem >= 2 ? "errado" : "confirmando");
-    if(estado.erroContagem < 2) return;
+    atualizarCameraInfo(
+      tipo,
+      valor,
+      estado.erroContagem >= 4 ? "errado" : "confirmando"
+    );
+
+    if(estado.erroContagem < 4) return;
 
     estado.erroCandidato = "";
     estado.erroContagem = 0;
@@ -973,12 +985,15 @@
     if(plataformaIOS()){
       const alvo = document.getElementById("asqCameraTarget");
       if(alvo){
-        alvo.textContent += " • pode apontar de perto ou de longe";
+        alvo.textContent += " • leitura ampla: perto ou longe";
       }
     }
 
-    setTimeout(()=>box.scrollIntoView({behavior:"smooth",block:"start"}),80);
+    setTimeout(()=>{
+      box.scrollIntoView({behavior:"smooth",block:"start"});
+    },70);
 
+    // Android mantém BarcodeDetector nativo.
     if(plataformaAndroid() && "BarcodeDetector" in window && video){
       try{
         if(html5Reader) html5Reader.style.display = "none";
@@ -1000,11 +1015,13 @@
 
         const detectar = async ()=>{
           if(!estado.cameraAtiva || estado.leituraAceita) return;
+
           try{
             const codigos = await estado.detector.detect(video);
             const valor = codigos?.[0]?.rawValue || "";
             if(valor) tratarLeituraInteligente(tipo,valor);
           }catch(e){}
+
           if(estado.cameraAtiva && !estado.leituraAceita){
             estado.loopId = requestAnimationFrame(detectar);
           }
@@ -1020,6 +1037,7 @@
       }
     }
 
+    // iPhone/notebook: scanner universal, usando a imagem inteira.
     if(window.Html5Qrcode && html5Reader){
       try{
         if(video) video.style.display = "none";
@@ -1031,36 +1049,36 @@
           formatsToSupport:[Html5QrcodeSupportedFormats.QR_CODE]
         });
 
-        let cameraSelecionada = {facingMode:"environment"};
+        /*
+          No iPhone, usar facingMode diretamente costuma selecionar melhor
+          a câmera principal do que escolher o último ID da lista.
+        */
+        const cameraSelecionada = plataformaIOS()
+          ? { facingMode:"environment" }
+          : await (async ()=>{
+              try{
+                const cameras = await Html5Qrcode.getCameras();
+                if(cameras?.length){
+                  const traseira = cameras.find(c =>
+                    /back|rear|environment|traseira|posterior/i.test(c.label || "")
+                  );
+                  return (traseira || cameras[0]).id;
+                }
+              }catch(e){}
+              return { facingMode:"environment" };
+            })();
 
-        try{
-          const cameras = await Html5Qrcode.getCameras();
-          if(cameras?.length){
-            const traseira = cameras.find(c =>
-              /back|rear|environment|traseira|posterior/i.test(c.label || "")
-            );
-            cameraSelecionada = (traseira || cameras[cameras.length - 1] || cameras[0]).id;
-          }
-        }catch(e){}
-
-const config = plataformaIOS()
+        const config = plataformaIOS()
           ? {
-              // iPhone: leitura ampla para funcionar perto ou longe.
-              fps: 30,
-              aspectRatio: 1.333334,
-              disableFlip: false,
-              rememberLastUsedCamera: true,
-              videoConstraints: {
-                facingMode: { ideal:"environment" },
-                width: { ideal:1920 },
-                height: { ideal:1080 },
-                focusMode: "continuous"
-              }
+              fps:20,
+              // Sem qrbox: analisa a imagem inteira, como no Samsung.
+              aspectRatio:1.333334,
+              disableFlip:false
             }
           : {
-              fps: 14,
+              fps:15,
               qrbox:(w,h)=>{
-                const lado = Math.floor(Math.min(w,h)*0.70);
+                const lado = Math.floor(Math.min(w,h)*0.72);
                 return {width:lado,height:lado};
               },
               disableFlip:false
@@ -1082,7 +1100,10 @@ const config = plataformaIOS()
 
     fecharCamera();
     somErro();
-    toast("Não foi possível iniciar o leitor. Confira a permissão da câmera ou use o campo digitável.","erro");
+    toast(
+      "Não foi possível iniciar o leitor. Confira a permissão da câmera ou use o campo digitável.",
+      "erro"
+    );
   }
 
   function fecharCamera(preservarLeitura=false){
@@ -1170,5 +1191,5 @@ const config = plataformaIOS()
   AtlasSeparacaoQR.normalizarCodigo = normalizarCodigo;
 
   window.AtlasSeparacaoQR = AtlasSeparacaoQR;
-  console.log("✅ ATLAS SEPARAÇÃO QR V1.6 carregado - iPhone turbo e leitura ampla");
+  console.log("✅ ATLAS SEPARAÇÃO QR V1.7 carregado - iPhone estilo Samsung");
 })();
