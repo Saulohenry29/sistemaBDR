@@ -1,19 +1,34 @@
 /* =========================================================
-   ATLAS SEPARAÇÃO QR V1.0
+   ATLAS SEPARAÇÃO QR V1.8
    Arquivo: JS/AtlasSeparacaoQR.js
 
-   Fluxo operacional:
-   1. Ler QR da posição
-   2. Ler QR do item
-   3. Confirmar quantidade
-   4. Registrar operador/data
-   5. Avançar para o próximo item
-   6. Concluir pedido apenas quando tudo estiver conferido
+   OBJETIVO DESTE ARQUIVO
+   Controlar toda a Separação Guiada do Atlas:
+   • abrir a câmera;
+   • identificar a etapa atual;
+   • aceitar somente o tipo correto de QR;
+   • emitir som e vibração;
+   • confirmar endereço, item e quantidade;
+   • salvar a conferência no Supabase.
 
-   Compatível com:
-   - câmera traseira via BarcodeDetector;
-   - leitor USB/Bluetooth que digita como teclado;
-   - digitação manual.
+   REGRA DE LEITURA POR ETAPA
+   1. Etapa ENDEREÇO:
+      aceita apenas QR iniciado por END-.
+      QR EST- ou PAT- é ignorado silenciosamente.
+
+   2. Etapa ITEM:
+      aceita apenas QR iniciado por EST- ou PAT-.
+      QR END- é ignorado silenciosamente.
+
+   3. O QR correto fecha a câmera e avança.
+      Um QR do mesmo tipo, mas diferente do esperado,
+      gera alerta de erro.
+
+   COMPATIBILIDADE
+   • Android: BarcodeDetector nativo quando disponível.
+   • iPhone/notebook: Html5Qrcode.
+   • Leitor USB/Bluetooth.
+   • Digitação manual.
 ========================================================= */
 (function(){
   "use strict";
@@ -22,7 +37,7 @@
 
   const AtlasSeparacaoQR = {
     __loaded:true,
-    versao:"1.7-ios-estilo-samsung"
+    versao:"1.8-filtro-por-etapa-comentado"
   };
 
   const estado = {
@@ -204,8 +219,14 @@
         border-radius:10px;padding:7px 9px;font-size:11px;font-weight:950;
         backdrop-filter:blur(6px);max-width:72%;overflow-wrap:anywhere
       }
-      .asq-camera-detectado{background:rgba(22,101,52,.92);display:none}
+      .asq-camera-detectado{
+        display:none;
+        background:rgba(30,64,175,.94);
+      }
       .asq-camera-detectado.ativo{display:block}
+      .asq-camera-detectado.ok{background:rgba(22,101,52,.96)}
+      .asq-camera-detectado.aviso{background:rgba(180,83,9,.96)}
+      .asq-camera-detectado.erro{background:rgba(153,27,27,.96)}
       .asq-camera-fechar{
         position:absolute;right:10px;bottom:10px;z-index:9;
         border:0;border-radius:10px;padding:8px 10px;
@@ -829,6 +850,66 @@
     render();
   }
 
+  /*
+   * Retorna o tipo do código lido sem alterar o conteúdo.
+   *
+   * Exemplos:
+   * END-R1-F1-P01-C3-N2  -> ENDERECO
+   * EST-1781838706467-13 -> ESTOQUE
+   * PAT-100130001        -> PATRIMONIO
+   * Qualquer outro texto -> OUTRO
+   */
+  function identificarTipoCodigo(valor){
+    const codigo = String(valor || "")
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g,"");
+
+    if(codigo.startsWith("END-")) return "ENDERECO";
+    if(codigo.startsWith("EST-")) return "ESTOQUE";
+    if(codigo.startsWith("PAT-")) return "PATRIMONIO";
+    return "OUTRO";
+  }
+
+  /*
+   * Confere se o tipo do QR pertence à etapa atual.
+   *
+   * ENDERECO aceita somente END-.
+   * ITEM aceita somente EST- ou PAT-.
+   */
+  function tipoPermitidoNaEtapa(etapa, tipoCodigo){
+    if(etapa === "ENDERECO"){
+      return tipoCodigo === "ENDERECO";
+    }
+
+    if(etapa === "ITEM"){
+      return tipoCodigo === "ESTOQUE" || tipoCodigo === "PATRIMONIO";
+    }
+
+    return false;
+  }
+
+  /*
+   * Limpa o cartão colorido que mostra o código detectado.
+   *
+   * Isso impede que um QR antigo apareça assim que a câmera abrir.
+   */
+  function limparIndicadorCamera(){
+    const detectado = document.getElementById("asqCameraDetectado");
+    if(!detectado) return;
+
+    detectado.textContent = "";
+    detectado.className = "asq-camera-detectado";
+    detectado.style.background = "";
+  }
+
+  /*
+   * Atualiza os textos sobre a imagem da câmera.
+   *
+   * O cartão da esquerda mostra o QR esperado.
+   * O cartão da direita só aparece depois que um QR permitido
+   * para a etapa atual foi encontrado.
+   */
   function atualizarCameraInfo(tipo, valor, status=""){
     const alvo = document.getElementById("asqCameraTarget");
     const detectado = document.getElementById("asqCameraDetectado");
@@ -840,14 +921,26 @@
         : "Aponte para: " + codigoItem(i);
     }
 
-    if(detectado && valor){
-      estado.ultimoDetectado = String(valor);
-      detectado.textContent =
-        status === "confirmando" ? "Verificando: " + String(valor) :
-        status === "errado" ? "QR diferente: " + String(valor) :
-        "Lido: " + String(valor);
-      detectado.classList.add("ativo");
+    // Sem valor lido, o cartão da direita permanece escondido.
+    if(!detectado || !valor) return;
+
+    estado.ultimoDetectado = String(valor);
+    detectado.className = "asq-camera-detectado ativo";
+
+    if(status === "correto"){
+      detectado.textContent = "✅ Correto: " + String(valor);
+      detectado.classList.add("ok");
+      return;
     }
+
+    if(status === "errado"){
+      detectado.textContent = "❌ Diferente: " + String(valor);
+      detectado.classList.add("erro");
+      return;
+    }
+
+    detectado.textContent = "Verificando: " + String(valor);
+    detectado.classList.add("aviso");
   }
 
   function mostrarLeituraAceita(valor){
@@ -856,8 +949,7 @@
 
     if(detectado){
       detectado.textContent = "✅ Confirmado: " + String(valor || "");
-      detectado.classList.add("ativo");
-      detectado.style.background = "rgba(22,101,52,.96)";
+      detectado.className = "asq-camera-detectado ativo ok";
     }
 
     if(box){
@@ -875,17 +967,44 @@
     return Array.isArray(i.codigos_validos) ? i.codigos_validos : [];
   }
 
+  /*
+   * Recebe cada QR detectado pela câmera.
+   *
+   * Esta função é o filtro principal:
+   * • primeiro identifica o tipo do QR;
+   * • depois verifica se esse tipo pertence à etapa atual;
+   * • QR de outra etapa é ignorado sem aviso;
+   * • QR correto avança;
+   * • QR do tipo correto, mas com conteúdo diferente, gera erro.
+   */
   function tratarLeituraInteligente(tipo, valor){
     if(!valor || estado.bloqueado || estado.leituraAceita) return;
 
     const esperaInicial = plataformaIOS() ? 180 : 700;
     if(Date.now() - Number(estado.cameraAbertaEm || 0) < esperaInicial) return;
 
+    const tipoCodigo = identificarTipoCodigo(valor);
+
+    /*
+     * Exemplo:
+     * Estamos em ENDERECO e a câmera encontrou EST- ou PAT-.
+     * O Atlas simplesmente ignora e continua procurando END-.
+     *
+     * Por isso o cartão verde não aparece mais com um EST-
+     * enquanto a tela pede o endereço.
+     */
+    if(!tipoPermitidoNaEtapa(tipo, tipoCodigo)){
+      return;
+    }
+
     const lidoNormalizado = normalizarCodigo(valor);
     const esperados = codigoEsperadoCamera(tipo);
     if(!lidoNormalizado) return;
 
-    // QR correto: aceita imediatamente, igual ao comportamento rápido do Samsung.
+    /*
+     * O código é exatamente o esperado:
+     * trava a leitura, toca o som, fecha a câmera e avança.
+     */
     if(esperados.includes(lidoNormalizado)){
       estado.leituraAceita = true;
       estado.bloqueado = true;
@@ -896,7 +1015,7 @@
       mostrarLeituraAceita(valor);
       somSucesso();
 
-      // Para o scanner sem liberar outra leitura.
+      // Para o scanner sem permitir que o mesmo QR seja lido novamente.
       fecharCamera(true);
 
       setTimeout(()=>{
@@ -912,6 +1031,7 @@
 
         render();
 
+        // Libera o módulo somente depois da próxima etapa aparecer.
         setTimeout(()=>{
           estado.bloqueado = false;
           estado.leituraAceita = false;
@@ -922,11 +1042,15 @@
     }
 
     /*
-      QR errado:
-      - não interrompe na primeira leitura;
-      - precisa aparecer 4 vezes seguidas;
-      - isso evita pegar QR que esteja ao lado.
-    */
+     * O QR tem o tipo correto, mas não é o código esperado.
+     *
+     * Exemplo:
+     * etapa ENDERECO recebeu outro END-.
+     * etapa ITEM recebeu outro EST- ou PAT-.
+     *
+     * Exigimos 3 leituras consecutivas para evitar um erro
+     * causado por um QR que apareceu rapidamente ao lado.
+     */
     if(lidoNormalizado === estado.erroCandidato){
       estado.erroContagem += 1;
     }else{
@@ -937,10 +1061,10 @@
     atualizarCameraInfo(
       tipo,
       valor,
-      estado.erroContagem >= 4 ? "errado" : "confirmando"
+      estado.erroContagem >= 3 ? "errado" : "confirmando"
     );
 
-    if(estado.erroContagem < 4) return;
+    if(estado.erroContagem < 3) return;
 
     estado.erroCandidato = "";
     estado.erroContagem = 0;
@@ -980,6 +1104,9 @@
 
     box.style.outline = "";
     box.classList.add("ativo");
+
+    // Sempre começa sem mostrar um código antigo no cartão da direita.
+    limparIndicadorCamera();
     atualizarCameraInfo(tipo,"");
 
     if(plataformaIOS()){
@@ -1033,6 +1160,7 @@
         console.warn("Atlas QR: detector Android falhou; usando scanner universal.",e);
         fecharCamera();
         box.classList.add("ativo");
+        limparIndicadorCamera();
         atualizarCameraInfo(tipo,"");
       }
     }
@@ -1145,6 +1273,9 @@
     const box = document.getElementById("asqCameraBox");
     if(box) box.classList.remove("ativo");
 
+    // Remove qualquer código mostrado na leitura anterior.
+    limparIndicadorCamera();
+
     estado.cameraTipo = null;
     estado.ultimoDetectado = "";
     estado.erroCandidato = "";
@@ -1191,5 +1322,5 @@
   AtlasSeparacaoQR.normalizarCodigo = normalizarCodigo;
 
   window.AtlasSeparacaoQR = AtlasSeparacaoQR;
-  console.log("✅ ATLAS SEPARAÇÃO QR V1.7 carregado - iPhone estilo Samsung");
+  console.log("✅ ATLAS SEPARAÇÃO QR V1.8 carregado - filtro END / EST / PAT por etapa");
 })();
