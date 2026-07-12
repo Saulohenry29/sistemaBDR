@@ -22,7 +22,7 @@
 
   const AtlasSeparacaoQR = {
     __loaded:true,
-    versao:"1.5-ios-rapido-android-preservado"
+    versao:"1.6-ios-turbo-leitura-ampla"
   };
 
   const estado = {
@@ -877,7 +877,9 @@
 
   function tratarLeituraInteligente(tipo, valor){
     if(!valor || estado.bloqueado || estado.leituraAceita) return;
-    if(Date.now() - Number(estado.cameraAbertaEm || 0) < (plataformaIOS() ? 250 : 700)) return;
+    if(
+  Date.now() - Number(estado.cameraAbertaEm || 0) < (plataformaIOS() ? 80 : 700)
+) return;
 
     const lidoNormalizado = normalizarCodigo(valor);
     const esperados = codigoEsperadoCamera(tipo);
@@ -892,25 +894,29 @@
       atualizarCameraInfo(tipo,valor,"correto");
       mostrarLeituraAceita(valor);
       somSucesso();
-      fecharCamera();
+
+      // Para a câmera sem liberar outra leitura durante a troca de etapa.
+      fecharCamera(true);
 
       setTimeout(()=>{
-        try{
-          if(tipo === "ENDERECO"){
-            estado.enderecoLido = lidoNormalizado;
-            estado.etapa = "ITEM";
-            toast("Posição correta","ok");
-          }else{
-            estado.itemLido = lidoNormalizado;
-            estado.etapa = "QUANTIDADE";
-            toast("Item correto","ok");
-          }
-          render();
-        }finally{
+        if(tipo === "ENDERECO"){
+          estado.enderecoLido = lidoNormalizado;
+          estado.etapa = "ITEM";
+          toast("Posição correta","ok");
+        }else{
+          estado.itemLido = lidoNormalizado;
+          estado.etapa = "QUANTIDADE";
+          toast("Item correto","ok");
+        }
+
+        render();
+
+        // Só libera novas leituras depois que a próxima etapa já apareceu.
+        setTimeout(()=>{
           estado.bloqueado = false;
           estado.leituraAceita = false;
-        }
-      },420);
+        },120);
+      },90);
       return;
     }
 
@@ -967,7 +973,7 @@
     if(plataformaIOS()){
       const alvo = document.getElementById("asqCameraTarget");
       if(alvo){
-        alvo.textContent += " • aproxime até preencher o quadro";
+        alvo.textContent += " • pode apontar de perto ou de longe";
       }
     }
 
@@ -1037,19 +1043,22 @@
           }
         }catch(e){}
 
-        const config = plataformaIOS()
+const config = plataformaIOS()
           ? {
-              fps:18,
-              qrbox:(w,h)=>{
-                const lado = Math.floor(Math.min(w,h)*0.92);
-                return {width:lado,height:lado};
-              },
-              aspectRatio:1.333334,
-              disableFlip:false,
-              rememberLastUsedCamera:true
+              // iPhone: leitura ampla para funcionar perto ou longe.
+              fps: 30,
+              aspectRatio: 1.333334,
+              disableFlip: false,
+              rememberLastUsedCamera: true,
+              videoConstraints: {
+                facingMode: { ideal:"environment" },
+                width: { ideal:1920 },
+                height: { ideal:1080 },
+                focusMode: "continuous"
+              }
             }
           : {
-              fps:14,
+              fps: 14,
               qrbox:(w,h)=>{
                 const lado = Math.floor(Math.min(w,h)*0.70);
                 return {width:lado,height:lado};
@@ -1076,7 +1085,7 @@
     toast("Não foi possível iniciar o leitor. Confira a permissão da câmera ou use o campo digitável.","erro");
   }
 
-  function fecharCamera(){
+  function fecharCamera(preservarLeitura=false){
     estado.cameraAtiva = false;
 
     if(estado.loopId){
@@ -1120,7 +1129,11 @@
     estado.erroCandidato = "";
     estado.erroContagem = 0;
     estado.cameraAbertaEm = 0;
-    estado.leituraAceita = false;
+
+    if(!preservarLeitura){
+      estado.leituraAceita = false;
+      estado.bloqueado = false;
+    }
   }
 
   document.addEventListener("keydown",e=>{
@@ -1157,5 +1170,5 @@
   AtlasSeparacaoQR.normalizarCodigo = normalizarCodigo;
 
   window.AtlasSeparacaoQR = AtlasSeparacaoQR;
-  console.log("✅ ATLAS SEPARAÇÃO QR V1.5 carregado - iPhone rápido, Android preservado");
+  console.log("✅ ATLAS SEPARAÇÃO QR V1.6 carregado - iPhone turbo e leitura ampla");
 })();
