@@ -22,7 +22,7 @@
 
   const AtlasSeparacaoQR = {
     __loaded:true,
-    versao:"1.4-android-lock-ios-qr"
+    versao:"1.5-ios-rapido-android-preservado"
   };
 
   const estado = {
@@ -877,7 +877,7 @@
 
   function tratarLeituraInteligente(tipo, valor){
     if(!valor || estado.bloqueado || estado.leituraAceita) return;
-    if(Date.now() - Number(estado.cameraAbertaEm || 0) < 700) return;
+    if(Date.now() - Number(estado.cameraAbertaEm || 0) < (plataformaIOS() ? 250 : 700)) return;
 
     const lidoNormalizado = normalizarCodigo(valor);
     const esperados = codigoEsperadoCamera(tipo);
@@ -964,6 +964,13 @@
     box.classList.add("ativo");
     atualizarCameraInfo(tipo,"");
 
+    if(plataformaIOS()){
+      const alvo = document.getElementById("asqCameraTarget");
+      if(alvo){
+        alvo.textContent += " • aproxime até preencher o quadro";
+      }
+    }
+
     setTimeout(()=>box.scrollIntoView({behavior:"smooth",block:"start"}),80);
 
     if(plataformaAndroid() && "BarcodeDetector" in window && video){
@@ -1032,13 +1039,14 @@
 
         const config = plataformaIOS()
           ? {
-              fps:10,
+              fps:18,
               qrbox:(w,h)=>{
-                const lado = Math.floor(Math.min(w,h)*0.84);
+                const lado = Math.floor(Math.min(w,h)*0.92);
                 return {width:lado,height:lado};
               },
-              aspectRatio:1.0,
-              disableFlip:false
+              aspectRatio:1.333334,
+              disableFlip:false,
+              rememberLastUsedCamera:true
             }
           : {
               fps:14,
@@ -1149,5 +1157,5 @@
   AtlasSeparacaoQR.normalizarCodigo = normalizarCodigo;
 
   window.AtlasSeparacaoQR = AtlasSeparacaoQR;
-  console.log("✅ ATLAS SEPARAÇÃO QR V1.4 carregado - Android travado e iPhone otimizado");
+  console.log("✅ ATLAS SEPARAÇÃO QR V1.5 carregado - iPhone rápido, Android preservado");
 })();
