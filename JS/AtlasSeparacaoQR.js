@@ -37,7 +37,7 @@
 
   const AtlasSeparacaoQR = {
     __loaded:true,
-    versao:"1.8-filtro-por-etapa-comentado"
+    versao:"1.9-rota-inteligente-ios-ajuste"
   };
 
   const estado = {
@@ -171,6 +171,36 @@
       }
       .asq-title{font-size:19px;font-weight:950;color:#0f172a;line-height:1.25}
       .asq-code{font-size:12px;color:#64748b;font-weight:850;margin-top:4px;overflow-wrap:anywhere}
+      .asq-route{
+        margin-top:12px;
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:8px;
+      }
+      .asq-route-box{
+        border:1px solid #bfdbfe;
+        background:#eff6ff;
+        border-radius:14px;
+        padding:10px 11px;
+      }
+      .asq-route-box.proxima{
+        border-color:#ddd6fe;
+        background:#f5f3ff;
+      }
+      .asq-route-box small{
+        display:block;
+        color:#64748b;
+        font-size:10px;
+        font-weight:950;
+        text-transform:uppercase;
+      }
+      .asq-route-box b{
+        display:block;
+        margin-top:4px;
+        color:#0f172a;
+        font-size:13px;
+        overflow-wrap:anywhere;
+      }
       .asq-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
       .asq-mini{background:#f8fafc;border:1px solid #eef2f7;border-radius:13px;padding:10px}
       .asq-mini small{display:block;color:#64748b;font-size:10px;font-weight:900;text-transform:uppercase}
@@ -259,6 +289,7 @@
         .asq-overlay{padding:0}
         .asq-shell{width:100%;height:100%;max-height:none;border-radius:0}
         .asq-grid{grid-template-columns:1fr}
+        .asq-route{grid-template-columns:1fr}
         .asq-reader{grid-template-columns:1fr}
         .asq-camera video{height:270px}
         .asq-foot .asq-btn{flex:1}
@@ -339,6 +370,75 @@
     window.__asqToastTimer = setTimeout(()=>el.classList.remove("ativo"),1900);
   }
 
+
+  /*
+   * Converte um endereço do estoque em uma chave numérica de ordenação.
+   *
+   * Exemplo:
+   * R1-F2-P03-C1-N2 vira [1, 2, 3, 1, 2, 0].
+   *
+   * Isso permite que o Atlas organize o percurso do almoxarife
+   * seguindo Rua → Face → Prateleira → Coluna → Nível → Caixa.
+   */
+  function partesEnderecoRota(endereco){
+    const texto = String(endereco || "").toUpperCase();
+
+    function numeroDaParte(prefixo){
+      const achou = texto.match(new RegExp(prefixo + "\\\\s*0*(\\\\d+)"));
+      return achou ? Number(achou[1]) : 999999;
+    }
+
+    return [
+      numeroDaParte("R"),
+      numeroDaParte("F"),
+      numeroDaParte("P"),
+      numeroDaParte("C"),
+      numeroDaParte("N"),
+      numeroDaParte("CX")
+    ];
+  }
+
+  /*
+   * Compara dois itens pela localização física.
+   * Itens sem endereço ficam no final da rota.
+   */
+  function compararItensRota(a,b){
+    const pa = partesEnderecoRota(a?.endereco_esperado);
+    const pb = partesEnderecoRota(b?.endereco_esperado);
+
+    for(let indice=0; indice<pa.length; indice++){
+      if(pa[indice] !== pb[indice]){
+        return pa[indice] - pb[indice];
+      }
+    }
+
+    // Se os dois estiverem na mesma posição, mantém ordem estável pelo ID.
+    return Number(a?.id || 0) - Number(b?.id || 0);
+  }
+
+  /*
+   * Retorna a próxima posição diferente da posição atual.
+   * É usada somente para orientar visualmente o operador.
+   */
+  function proximaPosicaoDaRota(){
+    const atual = itemAtual();
+    if(!atual) return null;
+
+    const enderecoAtual = normalizarCodigo(atual.endereco_esperado);
+
+    for(let indice=estado.indice+1; indice<estado.itens.length; indice++){
+      const proximo = estado.itens[indice];
+      if(itemConferido(proximo)) continue;
+
+      const enderecoProximo = normalizarCodigo(proximo.endereco_esperado);
+      if(enderecoProximo && enderecoProximo !== enderecoAtual){
+        return proximo.endereco_esperado;
+      }
+    }
+
+    return null;
+  }
+
   async function carregarPedido(pedidoId){
     const banco = db();
     if(!banco) throw new Error("Supabase não carregado.");
@@ -390,35 +490,38 @@
     const mapaProd = new Map(produtos.map(p=>[String(p.id),p]));
     const mapaPat = new Map(patrimonios.map(p=>[String(p.id),p]));
 
-    const itens = itensBase.map(i => {
-      const produto = mapaProd.get(String(i.produto_id || ""));
-      const patrimonio = mapaPat.get(String(i.patrimonio_id || ""));
-      const enderecoEsperado =
-        i.endereco_codigo ||
-        produto?.localizacao_fisica ||
-        patrimonio?.endereco_codigo ||
-        patrimonio?.localizacao_fisica ||
-        patrimonio?.localizacao ||
-        "";
+    const itens = itensBase
+      .map(i => {
+        const produto = mapaProd.get(String(i.produto_id || ""));
+        const patrimonio = mapaPat.get(String(i.patrimonio_id || ""));
+        const enderecoEsperado =
+          i.endereco_codigo ||
+          produto?.localizacao_fisica ||
+          patrimonio?.endereco_codigo ||
+          patrimonio?.localizacao_fisica ||
+          patrimonio?.localizacao ||
+          "";
 
-      const codigosValidos = [
-        i.patrimonio_codigo,
-        produto?.codigo,
-        produto?.codigo_qr,
-        patrimonio?.codigo_qr,
-        patrimonio?.codigo_bem,
-        patrimonio?.etiqueta,
-        patrimonio?.codigo_antigo
-      ].filter(Boolean).map(normalizarCodigo);
+        const codigosValidos = [
+          i.patrimonio_codigo,
+          produto?.codigo,
+          produto?.codigo_qr,
+          patrimonio?.codigo_qr,
+          patrimonio?.codigo_bem,
+          patrimonio?.etiqueta,
+          patrimonio?.codigo_antigo
+        ].filter(Boolean).map(normalizarCodigo);
 
-      return {
-        ...i,
-        produto,
-        patrimonio,
-        endereco_esperado:enderecoEsperado,
-        codigos_validos:[...new Set(codigosValidos)]
-      };
-    });
+        return {
+          ...i,
+          produto,
+          patrimonio,
+          endereco_esperado:enderecoEsperado,
+          codigos_validos:[...new Set(codigosValidos)]
+        };
+      })
+      // Rota oficial: Rua → Face → Prateleira → Coluna → Nível → Caixa.
+      .sort(compararItensRota);
 
     estado.pedido = pedidoResp.data;
     estado.itens = itens;
@@ -576,6 +679,17 @@
             <div class="asq-item">
               <div class="asq-title">${esc(nomeItem(i))}</div>
               <div class="asq-code">${esc(codigoItem(i))}</div>
+
+              <div class="asq-route">
+                <div class="asq-route-box">
+                  <small>📍 Parada atual da rota</small>
+                  <b>${estado.indice+1} de ${estado.itens.length} • ${esc(i.endereco_esperado || "Sem endereço")}</b>
+                </div>
+                <div class="asq-route-box proxima">
+                  <small>➡ Próxima posição</small>
+                  <b>${esc(proximaPosicaoDaRota() || "Última posição da rota")}</b>
+                </div>
+              </div>
 
               <div class="asq-grid">
                 <div class="asq-mini"><small>Item</small><b>${estado.indice+1} de ${estado.itens.length}</b></div>
@@ -980,7 +1094,7 @@
   function tratarLeituraInteligente(tipo, valor){
     if(!valor || estado.bloqueado || estado.leituraAceita) return;
 
-    const esperaInicial = plataformaIOS() ? 180 : 700;
+    const esperaInicial = plataformaIOS() ? 120 : 700;
     if(Date.now() - Number(estado.cameraAbertaEm || 0) < esperaInicial) return;
 
     const tipoCodigo = identificarTipoCodigo(valor);
@@ -1198,7 +1312,7 @@
 
         const config = plataformaIOS()
           ? {
-              fps:20,
+              fps:24,
               // Sem qrbox: analisa a imagem inteira, como no Samsung.
               aspectRatio:1.333334,
               disableFlip:false
@@ -1322,5 +1436,5 @@
   AtlasSeparacaoQR.normalizarCodigo = normalizarCodigo;
 
   window.AtlasSeparacaoQR = AtlasSeparacaoQR;
-  console.log("✅ ATLAS SEPARAÇÃO QR V1.8 carregado - filtro END / EST / PAT por etapa");
+  console.log("✅ ATLAS SEPARAÇÃO QR V1.9 carregado - rota inteligente e iPhone ajustado");
 })();
