@@ -9,7 +9,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:,">
-<title>BDR Patrimônio - Mobile Fix 3.1.5</title>
+<title>BDR Patrimônio - Confirmação Atlas 3.3.1</title>
 
 <!-- CSS visual padrão do sistema -->
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
@@ -691,6 +691,58 @@ input, textarea{
   -webkit-user-select:text!important;
 }
 
+
+/* =========================================================
+   ATLAS PATRIMÔNIO - CONFIRMAÇÃO PADRÃO DO SISTEMA
+   Substitui o alert() do navegador depois do cadastro.
+========================================================= */
+.atlas-patrimonio-toast{
+  position:fixed;
+  top:16px;
+  left:50%;
+  transform:translate(-50%,-18px);
+  width:min(520px,calc(100vw - 24px));
+  z-index:2147483647;
+  background:linear-gradient(135deg,#15803d,#16a34a);
+  color:#fff;
+  border:1px solid rgba(255,255,255,.28);
+  border-radius:16px;
+  padding:13px 16px;
+  box-shadow:0 18px 45px rgba(22,163,74,.30);
+  opacity:0;
+  pointer-events:none;
+  transition:.22s ease;
+  font-size:13px;
+  font-weight:900;
+  line-height:1.4;
+}
+.atlas-patrimonio-toast.ativo{
+  opacity:1;
+  transform:translate(-50%,0);
+}
+.atlas-patrimonio-toast.offline{
+  background:linear-gradient(135deg,#b45309,#f59e0b);
+  box-shadow:0 18px 45px rgba(245,158,11,.30);
+}
+.atlas-patrimonio-toast .atlas-toast-titulo{
+  display:block;
+  font-size:14px;
+  margin-bottom:2px;
+}
+.atlas-patrimonio-toast .atlas-toast-texto{
+  display:block;
+  font-size:12px;
+  font-weight:800;
+  opacity:.96;
+}
+@media(max-width:640px){
+  .atlas-patrimonio-toast{
+    top:10px;
+    border-radius:14px;
+    padding:12px 14px;
+  }
+}
+
 </style>
 
 <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260709-obra-ativa-315">
@@ -1361,8 +1413,52 @@ async function bdrAtualizarPrimeiroNoTablet(tabela, match, payload, meta={}){
   return { offlineFirst:true, sincronizado:false, error:null };
 }
 
+/*
+ * Mostra uma confirmação interna do Atlas.
+ *
+ * tipo = "sucesso" -> mensagem verde
+ * tipo = "offline" -> mensagem laranja
+ *
+ * Não bloqueia a tela e não exige clicar em OK.
+ */
+function atlasAvisoPatrimonio(titulo, texto, tipo="sucesso"){
+  let aviso = document.getElementById("atlasPatrimonioToast");
+
+  if(!aviso){
+    aviso = document.createElement("div");
+    aviso.id = "atlasPatrimonioToast";
+    aviso.className = "atlas-patrimonio-toast";
+    aviso.setAttribute("role","status");
+    aviso.setAttribute("aria-live","polite");
+    document.body.appendChild(aviso);
+  }
+
+  aviso.className =
+    "atlas-patrimonio-toast" +
+    (tipo === "offline" ? " offline" : "");
+
+  aviso.innerHTML =
+    `<span class="atlas-toast-titulo">${String(titulo || "Concluído")}</span>` +
+    `<span class="atlas-toast-texto">${String(texto || "")}</span>`;
+
+  aviso.classList.add("ativo");
+
+  clearTimeout(window.__atlasPatrimonioToastTimer);
+  window.__atlasPatrimonioToastTimer = setTimeout(()=>{
+    aviso.classList.remove("ativo");
+  },4200);
+}
+
+/*
+ * Mantém compatibilidade com o fluxo offline antigo,
+ * mas agora usando a mensagem visual do Atlas.
+ */
 function bdrAvisoSalvoTablet(texto="Salvo no tablet. Está pendente de sincronização. Pode continuar trabalhando."){
-  alert("📦 " + texto);
+  atlasAvisoPatrimonio(
+    "📦 Patrimônio salvo offline",
+    texto,
+    "offline"
+  );
 }
 
 function usuarioAtual(){
@@ -2372,8 +2468,10 @@ usuario_cadastro:
       "\nSerá sincronizado automaticamente quando a internet voltar."
     );
   }else{
-    alert(`✅ Patrimônio cadastrado e sincronizado com sucesso.
-Código: ${codigo_qr}`);
+    atlasAvisoPatrimonio(
+      "✅ Patrimônio cadastrado",
+      `Código ${codigo_qr} salvo e sincronizado com sucesso.`
+    );
   }
   limparFormularioCadastro();
   renderizarPatrimonios();
