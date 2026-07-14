@@ -9,7 +9,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:,">
-<title>BDR Patrimônio - Confirmação Atlas 3.3.1</title>
+<title>BDR Patrimônio 3.4.4</title>
 
 <!-- CSS visual padrão do sistema -->
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
@@ -743,6 +743,718 @@ input, textarea{
   }
 }
 
+
+/* =========================================================
+   ATLAS PATRIMÔNIO 3.4.0
+   • formulário compacto
+   • selects claros e menores
+   • obra automática para usuário de uma única obra
+   • patrimônio antigo com área clicável correta
+   • autocomplete do nome
+========================================================= */
+
+#cardObraLancamento{
+  padding:9px 12px!important;
+  border-left:4px solid #60a5fa!important;
+  background:#eff6ff!important;
+}
+
+#cardObraLancamento h3{
+  margin:0 0 6px!important;
+  color:#1e3a8a!important;
+  font-size:13px!important;
+}
+
+#cardObraLancamento .obra-lock-helper{
+  display:none!important;
+}
+
+#cardObraLancamento .lock-row{
+  display:grid!important;
+  grid-template-columns:minmax(210px,390px) auto!important;
+  gap:8px!important;
+  align-items:center!important;
+}
+
+#obraSelect{
+  height:36px!important;
+  min-height:36px!important;
+  border:1px solid #bfdbfe!important;
+  border-radius:10px!important;
+  background:#fff!important;
+  font-size:12px!important;
+  font-weight:850!important;
+  padding:0 34px 0 10px!important;
+}
+
+#btnTravarObra{
+  height:34px!important;
+  min-height:34px!important;
+  padding:0 11px!important;
+  border-radius:10px!important;
+  font-size:11px!important;
+  box-shadow:none!important;
+}
+
+#cardObraLancamento.obra-unica{
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  min-height:40px!important;
+}
+
+#cardObraLancamento.obra-unica h3{
+  margin:0!important;
+  white-space:nowrap;
+}
+
+#cardObraLancamento.obra-unica .lock-row{
+  display:block!important;
+  flex:1;
+}
+
+#cardObraLancamento.obra-unica #obraSelect{
+  border:0!important;
+  background:transparent!important;
+  padding:0!important;
+  height:auto!important;
+  min-height:0!important;
+  appearance:none!important;
+  pointer-events:none!important;
+  color:#0f172a!important;
+}
+
+#cardObraLancamento.obra-unica #btnTravarObra{
+  display:none!important;
+}
+
+/* Grade principal mais compacta, sem desperdiçar largura. */
+#cardEntradaPatrimonio .grid{
+  grid-template-columns:
+    minmax(230px,1.55fr)
+    minmax(170px,.9fr)
+    minmax(155px,.78fr)
+    minmax(155px,.78fr)
+    minmax(170px,.85fr)!important;
+  gap:9px!important;
+}
+
+#cardEntradaPatrimonio input,
+#cardEntradaPatrimonio select,
+#cardEntradaPatrimonio textarea{
+  border:1px solid #dbe3ee!important;
+  background:#fff!important;
+  color:#172033!important;
+  border-radius:11px!important;
+  box-shadow:none!important;
+}
+
+#cardEntradaPatrimonio input,
+#cardEntradaPatrimonio select{
+  height:38px!important;
+  min-height:38px!important;
+  font-size:12px!important;
+  padding:0 10px!important;
+}
+
+#cardEntradaPatrimonio select{
+  max-width:230px;
+  background-color:#f8fbff!important;
+  border-color:#bfdbfe!important;
+  font-weight:850!important;
+}
+
+#tipo_item{max-width:215px!important}
+#status_inicial{max-width:190px!important}
+#estado_conservacao{max-width:180px!important}
+
+#cardEntradaPatrimonio select:focus,
+#cardEntradaPatrimonio input:focus,
+#cardEntradaPatrimonio textarea:focus{
+  outline:none!important;
+  border-color:#60a5fa!important;
+  box-shadow:0 0 0 3px rgba(96,165,250,.15)!important;
+}
+
+.check-line.atlas-legado{
+  display:inline-flex!important;
+  width:max-content!important;
+  max-width:100%!important;
+  align-items:center!important;
+  gap:8px!important;
+  padding:8px 11px!important;
+  margin:0!important;
+  border:1px solid #fde68a!important;
+  border-radius:11px!important;
+  background:#fffbeb!important;
+  color:#78350f!important;
+  font-size:12px!important;
+  font-weight:900!important;
+  cursor:pointer!important;
+}
+
+.check-line.atlas-legado input{
+  width:17px!important;
+  height:17px!important;
+  min-height:0!important;
+  margin:0!important;
+  accent-color:#f59e0b!important;
+}
+
+/* O clique fica restrito ao pequeno cartão, não à largura toda. */
+.atlas-legado-wrap{
+  display:flex;
+  align-items:center;
+  margin:9px 0 2px;
+}
+
+/* Autocomplete */
+.atlas-autocomplete-wrap{
+  position:relative;
+  min-width:0;
+}
+
+.atlas-autocomplete-wrap #nome_bem{
+  width:100%;
+}
+
+.atlas-sugestoes{
+  position:absolute;
+  top:calc(100% + 5px);
+  left:0;
+  right:0;
+  z-index:99999;
+  display:none;
+  max-height:245px;
+  overflow:auto;
+  background:#fff;
+  border:1px solid #bfdbfe;
+  border-radius:13px;
+  box-shadow:0 16px 38px rgba(15,23,42,.16);
+  padding:5px;
+}
+
+.atlas-sugestoes.ativo{display:block}
+
+.atlas-sugestao{
+  width:100%;
+  border:0!important;
+  background:#fff!important;
+  color:#172033!important;
+  text-align:left!important;
+  padding:9px 10px!important;
+  border-radius:9px!important;
+  font-size:12px!important;
+  font-weight:850!important;
+  cursor:pointer!important;
+}
+
+.atlas-sugestao:hover,
+.atlas-sugestao.selecionada{
+  background:#eff6ff!important;
+  color:#1d4ed8!important;
+}
+
+.atlas-sugestao small{
+  display:block;
+  margin-top:2px;
+  color:#64748b;
+  font-size:9px;
+  font-weight:800;
+}
+
+/* Campos dinâmicos */
+#camposExtras{
+  grid-template-columns:repeat(auto-fit,minmax(155px,210px))!important;
+  align-items:start;
+}
+
+/* Confirmação mais clara */
+.atlas-patrimonio-toast{
+  background:#f0fdf4!important;
+  color:#17211a!important;
+  border:1px solid #86efac!important;
+  border-left:5px solid #16a34a!important;
+  box-shadow:0 16px 38px rgba(22,163,74,.18)!important;
+}
+.atlas-patrimonio-toast.offline{
+  background:#fffbeb!important;
+  color:#422006!important;
+  border-color:#fde68a!important;
+  border-left-color:#f59e0b!important;
+  box-shadow:0 16px 38px rgba(245,158,11,.16)!important;
+}
+
+/* Um único aviso offline desta página: o aviso global permanece como fonte oficial. */
+#bdrOfflineBanner,
+.bdr-offline-banner,
+.bdr-status-offline-local,
+#avisoModoOfflinePatrimonio{
+  display:none!important;
+}
+
+@media(max-width:1200px){
+  #cardEntradaPatrimonio .grid{
+    grid-template-columns:1.4fr repeat(2,minmax(150px,.8fr))!important;
+  }
+}
+
+@media(max-width:900px){
+  #cardObraLancamento,
+  #cardObraLancamento.obra-unica{
+    display:block!important;
+  }
+
+  #cardObraLancamento .lock-row{
+    grid-template-columns:1fr!important;
+  }
+
+  #cardEntradaPatrimonio .grid,
+  #camposExtras{
+    grid-template-columns:1fr 1fr!important;
+  }
+
+  #cardEntradaPatrimonio select{
+    max-width:none!important;
+    width:100%!important;
+  }
+}
+
+@media(max-width:560px){
+  #cardEntradaPatrimonio .grid,
+  #camposExtras{
+    grid-template-columns:1fr!important;
+  }
+}
+
+
+/* =========================================================
+   ATLAS PATRIMÔNIO 3.4.1 — RETORNO AO LAYOUT ESTÁVEL
+   Base: 3.4.0
+   Ajustes:
+   • mantém o espaçamento antigo
+   • remove negrito dos campos
+   • evita quebra e desalinhamento
+========================================================= */
+
+/* Cadastro: volta ao padrão estável de cinco campos */
+#cardEntradaPatrimonio .grid{
+  grid-template-columns:1.15fr .9fr .9fr .9fr .9fr!important;
+  gap:10px!important;
+  align-items:center!important;
+}
+
+/* Todos os campos com o mesmo tamanho e sem negrito */
+#cardEntradaPatrimonio input,
+#cardEntradaPatrimonio select,
+#cardEntradaPatrimonio textarea,
+#cardEntradaPatrimonio select option{
+  font-weight:400!important;
+  font-size:12px!important;
+  color:#334155!important;
+}
+
+#cardEntradaPatrimonio input,
+#cardEntradaPatrimonio select{
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  min-height:42px!important;
+  height:42px!important;
+}
+
+#cardEntradaPatrimonio textarea{
+  width:100%!important;
+  min-height:64px!important;
+}
+
+/* Tipo longo cabe sem encolher demais */
+#tipo_item{
+  min-width:0!important;
+  text-overflow:ellipsis;
+}
+
+/* Placeholder e busca sem negrito */
+#cardEntradaPatrimonio input::placeholder,
+#cardEntradaPatrimonio textarea::placeholder,
+#busca,
+#busca::placeholder,
+#filtroObra,
+#filtroStatus,
+#filtroTipo,
+#filtroObra option,
+#filtroStatus option,
+#filtroTipo option{
+  font-weight:400!important;
+}
+
+#busca{
+  color:#334155!important;
+}
+
+#busca::placeholder{
+  color:#94a3b8!important;
+  opacity:1!important;
+}
+
+/* Patrimônio antigo volta ao formato simples */
+.atlas-legado-wrap{
+  display:flex!important;
+  align-items:center!important;
+  margin:8px 0 2px!important;
+}
+
+.check-line.atlas-legado{
+  display:inline-flex!important;
+  width:auto!important;
+  max-width:max-content!important;
+  align-items:center!important;
+  gap:7px!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  color:#475569!important;
+  font-size:12px!important;
+  font-weight:400!important;
+  cursor:pointer!important;
+}
+
+.check-line.atlas-legado input{
+  width:16px!important;
+  height:16px!important;
+  min-height:0!important;
+  margin:0!important;
+}
+
+/* Obra conserva o padrão antigo e o botão fica proporcional */
+#cardObraLancamento .lock-row{
+  max-width:720px!important;
+  grid-template-columns:minmax(260px,1fr) 120px!important;
+  gap:10px!important;
+}
+
+#obraSelect{
+  font-weight:400!important;
+}
+
+#btnTravarObra{
+  width:120px!important;
+  min-width:120px!important;
+  max-width:120px!important;
+  font-size:11px!important;
+}
+
+/* Consulta mantém uma linha alinhada */
+.card:has(#busca) .grid{
+  grid-template-columns:1.25fr .9fr .9fr .9fr!important;
+  gap:10px!important;
+}
+
+/* Celular/tablet: quebra controlada */
+@media(max-width:1200px){
+  #cardEntradaPatrimonio .grid{
+    grid-template-columns:1.2fr 1fr 1fr!important;
+  }
+}
+
+@media(max-width:820px){
+  #cardEntradaPatrimonio .grid,
+  .card:has(#busca) .grid{
+    grid-template-columns:1fr 1fr!important;
+  }
+
+  #cardObraLancamento .lock-row{
+    grid-template-columns:1fr 110px!important;
+  }
+}
+
+@media(max-width:520px){
+  #cardEntradaPatrimonio .grid,
+  .card:has(#busca) .grid,
+  #cardObraLancamento .lock-row{
+    grid-template-columns:1fr!important;
+  }
+
+  #btnTravarObra{
+    width:100%!important;
+    max-width:none!important;
+  }
+}
+
+
+/* =========================================================
+   ATLAS PATRIMÔNIO 3.4.2 — AJUSTE FINAL DE PROPORÇÕES
+
+   ALTERE AQUI, SE QUISER AJUSTAR DEPOIS:
+
+   1) Largura dos cinco campos:
+      grid-template-columns:
+        1.45fr  -> Nome do patrimônio
+        .90fr   -> Tipo
+        .78fr   -> Status
+        .58fr   -> Estado (Ótimo/Bom/Ruim)
+        .82fr   -> Valor
+
+      Para aumentar um campo, aumente o número.
+      Para diminuir um campo, diminua o número.
+
+   2) Espaço entre os campos:
+      gap:10px
+
+   3) Tamanho do checkbox:
+      width:15px
+      height:15px
+
+   4) Largura do botão Confirmar obra:
+      width:112px
+========================================================= */
+
+/* Nome maior e Estado menor */
+#cardEntradaPatrimonio .grid{
+  grid-template-columns:
+    1.45fr
+    .90fr
+    .78fr
+    .58fr
+    .82fr!important;
+  gap:10px!important;
+  align-items:center!important;
+}
+
+/* Estado de conservação mais compacto */
+#estado_conservacao{
+  min-width:0!important;
+  max-width:none!important;
+  width:100%!important;
+}
+
+/* Checkbox pequeno e texto alinhado */
+.check-line.atlas-legado{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  width:auto!important;
+  max-width:max-content!important;
+  padding:0!important;
+  margin:0!important;
+  border:0!important;
+  background:transparent!important;
+  font-weight:400!important;
+  line-height:1.2!important;
+}
+
+.check-line.atlas-legado input{
+  width:15px!important;
+  height:15px!important;
+  min-width:15px!important;
+  min-height:15px!important;
+  max-width:15px!important;
+  max-height:15px!important;
+  padding:0!important;
+  margin:0!important;
+  border-radius:3px!important;
+  box-shadow:none!important;
+  accent-color:#f59e0b!important;
+}
+
+.atlas-legado-wrap{
+  display:flex!important;
+  align-items:center!important;
+  min-height:22px!important;
+  margin:8px 0 4px!important;
+}
+
+/* Botão Confirmar obra: texto inteiro e tamanho proporcional */
+#btnTravarObra{
+  width:112px!important;
+  min-width:112px!important;
+  max-width:112px!important;
+  height:38px!important;
+  min-height:38px!important;
+  padding:0 10px!important;
+  font-size:11px!important;
+  font-weight:700!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+}
+
+#cardObraLancamento .lock-row{
+  grid-template-columns:minmax(260px,540px) 112px!important;
+  gap:10px!important;
+}
+
+/* Mantém campos sem negrito */
+#cardEntradaPatrimonio input,
+#cardEntradaPatrimonio select,
+#cardEntradaPatrimonio textarea,
+#cardEntradaPatrimonio select option,
+#obraSelect,
+#busca,
+#busca::placeholder,
+#filtroObra,
+#filtroStatus,
+#filtroTipo{
+  font-weight:400!important;
+}
+
+/* Responsividade controlada */
+@media(max-width:1200px){
+  #cardEntradaPatrimonio .grid{
+    grid-template-columns:1.45fr .90fr .78fr .58fr .82fr!important;
+  }
+}
+
+@media(max-width:900px){
+  #cardEntradaPatrimonio .grid{
+    grid-template-columns:1.3fr 1fr 1fr!important;
+  }
+
+  #cardObraLancamento .lock-row{
+    grid-template-columns:1fr 112px!important;
+  }
+}
+
+@media(max-width:620px){
+  #cardEntradaPatrimonio .grid{
+    grid-template-columns:1fr 1fr!important;
+  }
+}
+
+@media(max-width:460px){
+  #cardEntradaPatrimonio .grid,
+  #cardObraLancamento .lock-row{
+    grid-template-columns:1fr!important;
+  }
+
+  #btnTravarObra{
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+  }
+}
+
+
+/* =========================================================
+   ATLAS PATRIMÔNIO 3.4.3
+   PATRIMÔNIO ANTIGO SEM CHECKBOX VISÍVEL
+========================================================= */
+
+.atlas-legado-wrap{
+  display:block!important;
+  margin:10px 0 4px!important;
+  min-height:34px!important;
+}
+
+.atlas-legado-toggle{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  min-height:34px;
+  padding:7px 10px;
+  border:1px solid #dbe3ee;
+  border-radius:10px;
+  background:#f8fafc;
+  color:#475569;
+  font-size:12px;
+  font-weight:400;
+  cursor:pointer;
+  transition:.18s ease;
+  user-select:none;
+}
+
+.atlas-legado-toggle:hover{
+  background:#eff6ff;
+  border-color:#bfdbfe;
+  color:#1d4ed8;
+}
+
+.atlas-legado-toggle.ativo{
+  background:#f0fdf4;
+  border-color:#86efac;
+  color:#166534;
+}
+
+.atlas-legado-toggle .atlas-legado-icone{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:16px;
+  height:16px;
+  border:1.5px solid currentColor;
+  border-radius:50%;
+  font-size:10px;
+  line-height:1;
+}
+
+.atlas-legado-toggle.ativo .atlas-legado-icone{
+  border-radius:4px;
+}
+
+#checkLegado{
+  display:none!important;
+}
+
+#camposLegado{
+  display:none!important;
+  margin-top:8px!important;
+  grid-template-columns:minmax(250px,380px)!important;
+}
+
+#camposLegado.ativo{
+  display:grid!important;
+  animation:atlasAbrirLegado .18s ease;
+}
+
+#camposLegado input{
+  font-weight:400!important;
+  background:#fffbeb!important;
+  border-color:#fde68a!important;
+  color:#78350f!important;
+}
+
+@keyframes atlasAbrirLegado{
+  from{opacity:0;transform:translateY(-4px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+
+/* =========================================================
+   ATLAS PATRIMÔNIO 3.4.4
+   CORREÇÃO DO CAMPO DE PATRIMÔNIO ANTIGO
+
+   O erro era apenas o nome do ID:
+   HTML: camposLegado
+   JavaScript anterior: campoLegado
+========================================================= */
+
+#camposLegado{
+  display:none!important;
+  margin-top:8px!important;
+  grid-template-columns:minmax(260px,420px)!important;
+}
+
+#camposLegado.ativo{
+  display:grid!important;
+  animation:atlasAbrirLegado .18s ease;
+}
+
+#camposLegado input{
+  width:100%!important;
+  height:42px!important;
+  min-height:42px!important;
+  padding:0 11px!important;
+  border:1px solid #fde68a!important;
+  border-radius:11px!important;
+  background:#fffbeb!important;
+  color:#78350f!important;
+  font-weight:400!important;
+}
+
+#camposLegado input::placeholder{
+  color:#a16207!important;
+  font-weight:400!important;
+}
+
 </style>
 
 <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260709-obra-ativa-315">
@@ -916,34 +1628,46 @@ input, textarea{
   <h3>➕ Novo Patrimônio</h3>
 
   <div class="grid">
-    <input id="nome_bem" placeholder="Nome do item Ex: TV Samsung">
+    <div class="atlas-autocomplete-wrap">
+      <input id="nome_bem"
+             autocomplete="off"
+             placeholder="Nome do patrimônio. Ex.: Esmerilhadeira"
+             oninput="atlasAtualizarSugestoesPatrimonio()"
+             onkeydown="atlasTeclaSugestaoPatrimonio(event)"
+             onblur="setTimeout(atlasFecharSugestoesPatrimonio,160)">
+      <div id="atlasSugestoesPatrimonio" class="atlas-sugestoes"></div>
+    </div>
 
     <select id="tipo_item" onchange="mostrarCampos()">
-      <option value="">Tipo de ativo</option>
-      <option value="ELETRONICO">Eletrônico</option>
-      <option value="ELETRODOMESTICO">Eletrodoméstico</option>
-      <option value="VEICULO">Veículo</option>
-      <option value="FERRAMENTA">Ferramenta</option>
-      <option value="MAQUINA">Máquina</option>
-      <option value="MOBILIARIO">Mobiliário</option>
-      <option value="INFORMATICA">Informática</option>
-      <option value="EQUIPAMENTO">Equipamento</option>
-      <option value="MATERIAL_APOIO">Material de apoio</option>
-      <option value="OUTRO">Outro</option>
+      <option value="">Tipo do patrimônio</option>
+      <option value="FERRAMENTA">🔧 Ferramenta</option>
+      <option value="EQUIPAMENTO">⚙️ Equipamento</option>
+      <option value="MAQUINA_PESADA">🚜 Máquina pesada</option>
+      <option value="VEICULO">🚛 Veículo</option>
+      <option value="INFORMATICA">💻 Informática</option>
+      <option value="ELETRONICO">📺 Eletrônico</option>
+      <option value="ELETRODOMESTICO">🏠 Eletrodoméstico</option>
+      <option value="IMOBILIZADO">🪑 Imobilizado</option>
+      <option value="MATERIAL_APOIO">🧰 Material de apoio</option>
+      <option value="COMUNICACAO">📡 Equipamento de comunicação</option>
+      <option value="ELETRICO">🔋 Equipamento elétrico</option>
+      <option value="SEGURANCA">🦺 Equipamento de segurança</option>
+      <option value="OFICINA">🛠 Equipamento de oficina</option>
+      <option value="OUTRO">📦 Outro</option>
     </select>
 
     <select id="status_inicial">
-      <option value="ESTOQUE">Status inicial: Estoque</option>
-      <option value="EM_USO">Status inicial: Em uso</option>
-      <option value="MANUTENCAO">Status inicial: Manutenção</option>
-      <option value="BAIXADO">Status inicial: Baixado</option>
+      <option value="ESTOQUE">📦 Estoque</option>
+      <option value="EM_USO">👷 Em uso</option>
+      <option value="MANUTENCAO">🔧 Manutenção</option>
+      <option value="BAIXADO">⬇️ Baixado</option>
     </select>
 
     <select id="estado_conservacao">
-      <option value="OTIMO">Estado: Ótimo</option>
-      <option value="BOM" selected>Estado: Bom</option>
-      <option value="REGULAR">Estado: Regular</option>
-      <option value="RUIM">Estado: Ruim</option>
+      <option value="OTIMO">🟢 Ótimo</option>
+      <option value="BOM" selected>🔵 Bom</option>
+      <option value="REGULAR">🟡 Regular</option>
+      <option value="RUIM">🟠 Ruim</option>
     </select>
 
     <input id="valor_bem" type="text" placeholder="Valor do bem Ex: 1.350,00" oninput="mascaraMoeda(this)">
@@ -955,10 +1679,20 @@ input, textarea{
 
   <br>
 
-  <label class="check-line">
-    <input type="checkbox" id="checkLegado" onchange="mostrarCamposLegado()">
-    Patrimônio já existente / legado
-  </label>
+  <div class="atlas-legado-wrap">
+    <button type="button"
+            id="atlasLegadoToggle"
+            class="atlas-legado-toggle"
+            onclick="atlasAlternarPatrimonioAntigo()"
+            aria-pressed="false">
+      <span class="atlas-legado-icone">○</span>
+      <span>Patrimônio antigo</span>
+    </button>
+
+    <input type="checkbox"
+           id="checkLegado"
+           onchange="mostrarCamposLegado()">
+  </div>
 
 <div id="camposLegado" class="grid" style="display:none;margin-top:10px;grid-template-columns:minmax(220px,420px) !important;">
   <input id="codigo_antigo" placeholder="Código antigo / placa antiga / tag antiga" onblur="validarDuplicidadeCampoPatrimonio('codigo_antigo')">
@@ -994,16 +1728,20 @@ input, textarea{
 
     <select id="filtroTipo" onchange="bdrResetPaginaPatrimonio(); renderizarPatrimonios()">
       <option value="">Todos os tipos</option>
-      <option value="ELETRONICO">Eletrônico</option>
-      <option value="ELETRODOMESTICO">Eletrodoméstico</option>
-      <option value="VEICULO">Veículo</option>
-      <option value="FERRAMENTA">Ferramenta</option>
-      <option value="MAQUINA">Máquina</option>
-      <option value="MOBILIARIO">Mobiliário</option>
-      <option value="INFORMATICA">Informática</option>
-      <option value="EQUIPAMENTO">Equipamento</option>
-      <option value="MATERIAL_APOIO">Material de apoio</option>
-      <option value="OUTRO">Outro</option>
+      <option value="FERRAMENTA">🔧 Ferramenta</option>
+      <option value="EQUIPAMENTO">⚙️ Equipamento</option>
+      <option value="MAQUINA_PESADA">🚜 Máquina pesada</option>
+      <option value="VEICULO">🚛 Veículo</option>
+      <option value="INFORMATICA">💻 Informática</option>
+      <option value="ELETRONICO">📺 Eletrônico</option>
+      <option value="ELETRODOMESTICO">🏠 Eletrodoméstico</option>
+      <option value="IMOBILIZADO">🪑 Imobilizado</option>
+      <option value="MATERIAL_APOIO">🧰 Material de apoio</option>
+      <option value="COMUNICACAO">📡 Equipamento de comunicação</option>
+      <option value="ELETRICO">🔋 Equipamento elétrico</option>
+      <option value="SEGURANCA">🦺 Equipamento de segurança</option>
+      <option value="OFICINA">🛠 Equipamento de oficina</option>
+      <option value="OUTRO">📦 Outro</option>
     </select>
   </div>
 </div>
@@ -1068,24 +1806,28 @@ input, textarea{
       <input id="edit_nome_bem" placeholder="Nome do patrimônio">
 
       <select id="edit_tipo_item" onchange="montarCamposEdicaoPorTipo()">
-        <option value="">Tipo de ativo</option>
-        <option value="ELETRONICO">Eletrônico</option>
-        <option value="ELETRODOMESTICO">Eletrodoméstico</option>
-        <option value="VEICULO">Veículo</option>
-        <option value="FERRAMENTA">Ferramenta</option>
-        <option value="MAQUINA">Máquina</option>
-        <option value="MOBILIARIO">Mobiliário</option>
-        <option value="INFORMATICA">Informática</option>
-        <option value="EQUIPAMENTO">Equipamento</option>
-        <option value="MATERIAL_APOIO">Material de apoio</option>
-        <option value="OUTRO">Outro</option>
-      </select>
+      <option value="">Tipo do patrimônio</option>
+      <option value="FERRAMENTA">🔧 Ferramenta</option>
+      <option value="EQUIPAMENTO">⚙️ Equipamento</option>
+      <option value="MAQUINA_PESADA">🚜 Máquina pesada</option>
+      <option value="VEICULO">🚛 Veículo</option>
+      <option value="INFORMATICA">💻 Informática</option>
+      <option value="ELETRONICO">📺 Eletrônico</option>
+      <option value="ELETRODOMESTICO">🏠 Eletrodoméstico</option>
+      <option value="IMOBILIZADO">🪑 Imobilizado</option>
+      <option value="MATERIAL_APOIO">🧰 Material de apoio</option>
+      <option value="COMUNICACAO">📡 Equipamento de comunicação</option>
+      <option value="ELETRICO">🔋 Equipamento elétrico</option>
+      <option value="SEGURANCA">🦺 Equipamento de segurança</option>
+      <option value="OFICINA">🛠 Equipamento de oficina</option>
+      <option value="OUTRO">📦 Outro</option>
+    </select>
 
       <select id="edit_estado_conservacao">
-        <option value="OTIMO">Estado: Ótimo</option>
-        <option value="BOM">Estado: Bom</option>
-        <option value="REGULAR">Estado: Regular</option>
-        <option value="RUIM">Estado: Ruim</option>
+        <option value="OTIMO">🟢 Ótimo</option>
+        <option value="BOM">🔵 Bom</option>
+        <option value="REGULAR">🟡 Regular</option>
+        <option value="RUIM">🟠 Ruim</option>
       </select>
 
       <input id="edit_valor_bem" placeholder="Valor do bem Ex: 1.350,00" oninput="mascaraMoeda(this)">
@@ -1631,6 +2373,7 @@ function aplicarRegraObraLancamentoBDR(){
   }
 
   mostrarAvisoModoOffline();
+  setTimeout(atlasCompactarObraPatrimonio,0);
 }
 
 function bloquearPatrimonioSemPermissaoBDR(){
@@ -2032,71 +2775,352 @@ function obterObraParaLancamento(){
   return obraSelecionada || null;
 }
 
-function mostrarCamposLegado(){
 
+/* =========================================================
+   ATLAS AUTOCOMPLETE DE PATRIMÔNIO
+   Aprende com os nomes já cadastrados e soma um catálogo padrão.
+========================================================= */
+const ATLAS_NOMES_PATRIMONIO_PADRAO = [
+  "ESMERILHADEIRA",
+  "ESMERILHADEIRA ANGULAR",
+  "FURADEIRA",
+  "FURADEIRA DE IMPACTO",
+  "FURADEIRA DE BANCADA",
+  "PARAFUSADEIRA",
+  "PARAFUSADEIRA DE IMPACTO",
+  "MARTELETE",
+  "SERRA CIRCULAR",
+  "SERRA MÁRMORE",
+  "SERRA TICO-TICO",
+  "LIXADEIRA",
+  "POLITRIZ",
+  "COMPRESSOR DE AR",
+  "MÁQUINA DE SOLDA",
+  "GERADOR",
+  "BETONEIRA",
+  "LAVADORA DE ALTA PRESSÃO",
+  "MOTOBOMBA",
+  "TRATOR",
+  "COLHEITADEIRA",
+  "RETROESCAVADEIRA",
+  "PÁ-CARREGADEIRA",
+  "ESCAVADEIRA",
+  "MOTONIVELADORA",
+  "ROLO COMPACTADOR",
+  "EMPILHADEIRA",
+  "PLATAFORMA ELEVATÓRIA",
+  "CAMINHÃO",
+  "CAMINHONETE",
+  "AUTOMÓVEL",
+  "MOTOCICLETA",
+  "NOTEBOOK",
+  "COMPUTADOR",
+  "MONITOR",
+  "IMPRESSORA",
+  "TELEVISÃO",
+  "RÁDIO COMUNICADOR",
+  "ROTEADOR",
+  "NOBREAK",
+  "MULTÍMETRO",
+  "FONTE DE ALIMENTAÇÃO",
+  "BANCADA DE OFICINA",
+  "ARMÁRIO",
+  "MESA",
+  "CADEIRA"
+];
+
+let atlasIndiceSugestaoPatrimonio = -1;
+
+function atlasNormalizarTextoSugestao(texto){
+  return String(texto || "")
+    .trim()
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"");
+}
+
+function atlasCatalogoNomesPatrimonio(){
+  const nomesBanco = (window.patrimonios || patrimonios || [])
+    .map(p => String(p?.nome_bem || "").trim())
+    .filter(Boolean);
+
+  const mapa = new Map();
+
+  [...ATLAS_NOMES_PATRIMONIO_PADRAO,...nomesBanco].forEach(nome=>{
+    const chave = atlasNormalizarTextoSugestao(nome);
+    if(chave && !mapa.has(chave)){
+      mapa.set(chave,String(nome).toUpperCase());
+    }
+  });
+
+  return Array.from(mapa.values()).sort((a,b)=>a.localeCompare(b,"pt-BR"));
+}
+
+function atlasAtualizarSugestoesPatrimonio(){
+  const input = document.getElementById("nome_bem");
+  const lista = document.getElementById("atlasSugestoesPatrimonio");
+  if(!input || !lista) return;
+
+  const termo = atlasNormalizarTextoSugestao(input.value);
+  atlasIndiceSugestaoPatrimonio = -1;
+
+  if(termo.length < 2){
+    atlasFecharSugestoesPatrimonio();
+    return;
+  }
+
+  const sugestoes = atlasCatalogoNomesPatrimonio()
+    .filter(nome=>atlasNormalizarTextoSugestao(nome).includes(termo))
+    .slice(0,8);
+
+  if(!sugestoes.length){
+    atlasFecharSugestoesPatrimonio();
+    return;
+  }
+
+  lista.innerHTML = sugestoes.map((nome,indice)=>`
+    <button type="button"
+            class="atlas-sugestao"
+            data-indice="${indice}"
+            onmousedown="event.preventDefault(); atlasEscolherSugestaoPatrimonio('${nome.replaceAll("'","\\'")}')">
+      ${nome}
+      <small>Toque, pressione Enter ou Tab para usar</small>
+    </button>
+  `).join("");
+
+  lista.classList.add("ativo");
+}
+
+function atlasEscolherSugestaoPatrimonio(nome){
+  const input = document.getElementById("nome_bem");
+  if(input){
+    input.value = String(nome || "").toUpperCase();
+    input.focus();
+  }
+  atlasFecharSugestoesPatrimonio();
+}
+
+function atlasFecharSugestoesPatrimonio(){
+  const lista = document.getElementById("atlasSugestoesPatrimonio");
+  if(lista){
+    lista.classList.remove("ativo");
+    lista.innerHTML = "";
+  }
+  atlasIndiceSugestaoPatrimonio = -1;
+}
+
+function atlasTeclaSugestaoPatrimonio(event){
+  const lista = document.getElementById("atlasSugestoesPatrimonio");
+  if(!lista?.classList.contains("ativo")) return;
+
+  const botoes = Array.from(lista.querySelectorAll(".atlas-sugestao"));
+  if(!botoes.length) return;
+
+  if(event.key === "ArrowDown"){
+    event.preventDefault();
+    atlasIndiceSugestaoPatrimonio =
+      Math.min(atlasIndiceSugestaoPatrimonio + 1, botoes.length - 1);
+  }else if(event.key === "ArrowUp"){
+    event.preventDefault();
+    atlasIndiceSugestaoPatrimonio =
+      Math.max(atlasIndiceSugestaoPatrimonio - 1, 0);
+  }else if(event.key === "Enter" || event.key === "Tab"){
+    const indice = atlasIndiceSugestaoPatrimonio >= 0
+      ? atlasIndiceSugestaoPatrimonio
+      : 0;
+
+    const texto = botoes[indice]?.childNodes?.[0]?.textContent?.trim();
+    if(texto){
+      if(event.key === "Enter") event.preventDefault();
+      atlasEscolherSugestaoPatrimonio(texto);
+    }
+    return;
+  }else if(event.key === "Escape"){
+    atlasFecharSugestoesPatrimonio();
+    return;
+  }else{
+    return;
+  }
+
+  botoes.forEach((botao,indice)=>{
+    botao.classList.toggle("selecionada",indice === atlasIndiceSugestaoPatrimonio);
+  });
+}
+
+/*
+ * Deixa o bloco da obra pequeno.
+ *
+ * Usuário com uma única obra:
+ * - obra é selecionada automaticamente;
+ * - botão verde desaparece;
+ * - fica somente uma informação compacta.
+ *
+ * Usuário com várias obras:
+ * - seletor continua disponível;
+ * - botão permanece pequeno para preservar a lógica atual.
+ */
+function atlasCompactarObraPatrimonio(){
+  const card = document.getElementById("cardObraLancamento");
+  const select = document.getElementById("obraSelect");
+  const btn = document.getElementById("btnTravarObra");
+  const u = usuarioAtual();
+
+  if(!card || !select || !u) return;
+
+  const idsLiberados = String(u.obras_liberadas || "")
+    .split(/[;,|]/)
+    .map(x=>x.trim())
+    .filter(Boolean);
+
+  const ids = new Set(idsLiberados);
+  if(u.obra_id) ids.add(String(u.obra_id));
+
+  // MASTER/OWNER continuam vendo o seletor porque possuem acesso amplo.
+  const perfil = String(u.perfil || "").toUpperCase();
+  const acessoAmplo =
+    ["MASTER","OWNER"].includes(perfil) ||
+    usuarioTemPermissao("PATRIMONIO_LANCAR_QUALQUER_OBRA") ||
+    usuarioTemPermissao("TODAS_OBRAS_VER");
+
+  if(!acessoAmplo && ids.size === 1){
+    const obraId = Array.from(ids)[0];
+    const obra = (window.obras || obras || []).find(o=>String(o.id)===String(obraId));
+
+    if(obra){
+      select.value = String(obra.id);
+      select.disabled = true;
+      window.obraAtiva = obra;
+      window.obraTravada = true;
+      card.classList.add("obra-unica");
+
+      const titulo = card.querySelector("h3");
+      if(titulo) titulo.textContent = "🏗 Obra:";
+
+      if(btn) btn.style.display = "none";
+      return;
+    }
+  }
+
+  card.classList.remove("obra-unica");
+  if(btn) btn.style.display = "";
+}
+
+
+
+function atlasAlternarPatrimonioAntigo(){
   const check = document.getElementById("checkLegado");
-  const campos = document.getElementById("camposLegado");
+  if(!check) return;
 
-  if(!check || !campos) return;
+  check.checked = !check.checked;
+  mostrarCamposLegado();
 
-  campos.style.display = check.checked ? "grid" : "none";
+  if(check.checked){
+    setTimeout(()=>document.getElementById("codigo_antigo")?.focus(),120);
+  }
+}
+
+function mostrarCamposLegado(){
+  const check = document.getElementById("checkLegado");
+  const campo = document.getElementById("camposLegado");
+  const botao = document.getElementById("atlasLegadoToggle");
+  const icone = botao?.querySelector(".atlas-legado-icone");
+  const ativo = !!check?.checked;
+
+  if(campo) campo.classList.toggle("ativo",ativo);
+
+  if(botao){
+    botao.classList.toggle("ativo",ativo);
+    botao.setAttribute("aria-pressed",ativo ? "true" : "false");
+  }
+
+  if(icone) icone.textContent = ativo ? "✓" : "○";
+
+  if(!ativo){
+    const input = document.getElementById("codigo_antigo");
+    if(input) input.value = "";
+  }
 }
 
 function mostrarCampos(){
-
   const tipo = valor("tipo_item");
   const div = document.getElementById("camposExtras");
   const campoOutro = document.getElementById("campoOutroTipo");
 
+  if(!div || !campoOutro) return;
+
   div.innerHTML = "";
+  campoOutro.style.display = tipo === "OUTRO" ? "grid" : "none";
 
-  campoOutro.style.display =
-    tipo === "OUTRO" ? "grid" : "none";
+  /*
+   * Campos básicos usados por ferramentas e equipamentos.
+   */
+  const camposBasicos = `
+    <input id="marca" placeholder="Marca">
+    <input id="modelo" placeholder="Modelo">
+    <input id="numero_serie" placeholder="Número de série">
+  `;
 
-  if(
-    tipo === "ELETRONICO" ||
-    tipo === "FERRAMENTA" ||
-    tipo === "ELETRODOMESTICO" ||
-    tipo === "INFORMATICA" ||
-    tipo === "EQUIPAMENTO"
-  ){
+  if([
+    "FERRAMENTA",
+    "EQUIPAMENTO",
+    "ELETRONICO",
+    "ELETRODOMESTICO",
+    "COMUNICACAO",
+    "ELETRICO",
+    "SEGURANCA",
+    "OFICINA"
+  ].includes(tipo)){
+    div.innerHTML = camposBasicos;
+  }
+
+  if(tipo === "INFORMATICA"){
+    div.innerHTML = `
+      ${camposBasicos}
+      <input id="especificacoes" placeholder="Especificações. Ex.: i5, 8 GB, SSD 256 GB">
+    `;
+  }
+
+  if(tipo === "VEICULO"){
+    div.innerHTML = `
+      <input id="placa" placeholder="Placa" onblur="validarDuplicidadeCampoPatrimonio('placa')">
+      <input id="renavam" placeholder="RENAVAM" onblur="validarDuplicidadeCampoPatrimonio('renavam')">
+      <input id="chassi" placeholder="Chassi" onblur="validarDuplicidadeCampoPatrimonio('chassi')">
+      <input id="marca" placeholder="Marca">
+      <input id="modelo" placeholder="Modelo">
+      <input id="cor" placeholder="Cor">
+      <input id="combustivel" placeholder="Combustível">
+      <input id="ano_fabricacao" placeholder="Ano de fabricação" inputmode="numeric">
+      <input id="ano_modelo" placeholder="Ano do modelo" inputmode="numeric">
+      <input id="quilometragem" placeholder="KM atual" inputmode="decimal">
+    `;
+  }
+
+  if(tipo === "MAQUINA_PESADA"){
     div.innerHTML = `
       <input id="marca" placeholder="Marca">
       <input id="modelo" placeholder="Modelo">
       <input id="numero_serie" placeholder="Número de série">
+      <input id="potencia" placeholder="Potência">
+      <input id="horimetro" placeholder="Horímetro" inputmode="decimal">
+      <input id="combustivel" placeholder="Combustível">
+      <input id="ano_fabricacao" placeholder="Ano de fabricação" inputmode="numeric">
+      <input id="ano_modelo" placeholder="Ano do modelo" inputmode="numeric">
     `;
   }
 
-if(tipo === "VEICULO"){
-  div.innerHTML = `
-    <input id="placa" placeholder="Placa" onblur="validarDuplicidadeCampoPatrimonio('placa')">
-    <input id="renavam" placeholder="RENAVAM" onblur="validarDuplicidadeCampoPatrimonio('renavam')">
-    <input id="chassi" placeholder="Chassi" onblur="validarDuplicidadeCampoPatrimonio('chassi')">
-    <input id="marca" placeholder="Marca">
-    <input id="modelo" placeholder="Modelo">
-    <input id="cor" placeholder="Cor">
-    <input id="ano_fabricacao" placeholder="Ano fabricação">
-    <input id="ano_modelo" placeholder="Ano modelo">
-    <input id="combustivel" placeholder="Combustível">
-    <input id="horimetro" placeholder="KM / Horímetro">
-  `;
-}
-  if(tipo === "MAQUINA"){
-  div.innerHTML = `
-    <input id="marca" placeholder="Marca">
-    <input id="modelo" placeholder="Modelo">
-    <input id="potencia" placeholder="Potência">
-    <input id="horimetro" placeholder="KM / Horímetro">
-    <input id="combustivel" placeholder="Combustível">
-    <input id="ano_fabricacao" placeholder="Ano fabricação">
-    <input id="ano_modelo" placeholder="Ano modelo">
-  `;
-}
-
-  if(tipo === "MOBILIARIO" || tipo === "MATERIAL_APOIO"){
+  if(["IMOBILIZADO","MATERIAL_APOIO"].includes(tipo)){
     div.innerHTML = `
-      <input id="marca" placeholder="Marca/Fabricante">
-      <input id="modelo" placeholder="Modelo/Descrição">
+      <input id="marca" placeholder="Marca / fabricante">
+      <input id="modelo" placeholder="Modelo / descrição">
+      <input id="numero_serie" placeholder="Número de série, se houver">
+    `;
+  }
+
+  if(tipo === "OUTRO"){
+    div.innerHTML = `
+      <input id="marca" placeholder="Marca, se houver">
+      <input id="modelo" placeholder="Modelo, se houver">
+      <input id="numero_serie" placeholder="Número de série, se houver">
     `;
   }
 }
@@ -2425,7 +3449,10 @@ ano_modelo: valor("ano_modelo")
     valor_bem: moedaParaNumero(valor("valor_bem")),
     codigo_antigo: valor("codigo_antigo") || null,
     estado_conservacao: valor("estado_conservacao") || "BOM",
-    observacao: valor("observacao") || null,
+    observacao: [
+      valor("observacao"),
+      valor("especificacoes") ? "Especificações: " + valor("especificacoes") : ""
+    ].filter(Boolean).join(" | ") || null,
 
     origem_cadastro:
       document.getElementById("checkLegado").checked
@@ -2494,8 +3521,10 @@ function limparFormularioCadastro(){
   }
 
   document.getElementById("checkLegado").checked = false;
+  mostrarCamposLegado();
   document.getElementById("camposLegado").style.display = "none";
   document.getElementById("camposExtras").innerHTML = "";
+  atlasFecharSugestoesPatrimonio();
 }
 
 async function carregarPatrimonios(){
