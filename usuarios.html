@@ -218,6 +218,53 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active{outline:none
 .notif-dropdown{z-index:999999!important;}
 .notif-item{cursor:pointer!important;}
 
+
+/* =========================================================
+   ATLAS V3.3 - SININHO PADRÃO ÚNICO
+   Igual ao Patrimônio; lógica vem de JS/bdrNotificacoes.js.
+========================================================= */
+.notif-wrap{position:relative!important;z-index:999999!important}
+.notif-btn{
+  width:38px!important;
+  height:38px!important;
+  min-width:38px!important;
+  border:none!important;
+  border-radius:50%!important;
+  background:#fff!important;
+  color:#111827!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  cursor:pointer!important;
+  position:relative!important;
+  box-shadow:none!important;
+  outline:none!important;
+  padding:0!important;
+}
+.notif-btn:hover{background:#fff1f2!important;color:var(--usuarios-red,#a4161a)!important}
+.notif-badge{
+  position:absolute!important;
+  top:1px!important;
+  right:0!important;
+  min-width:17px!important;
+  height:17px!important;
+  padding:0 5px!important;
+  border-radius:999px!important;
+  background:#dc2626!important;
+  color:#fff!important;
+  font-size:10px!important;
+  font-weight:900!important;
+  display:none;
+  align-items:center!important;
+  justify-content:center!important;
+}
+.notif-dropdown{
+  top:48px!important;
+  right:0!important;
+  width:340px!important;
+  z-index:999999!important;
+}
+
 </style>
 <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260629-layout-limpo">
 </head>
@@ -599,13 +646,13 @@ if(typeof window.limparSelecaoPermissao !== "function"){
 }
 </script>
 
-<script src="./JS/usuarios-master-premium.js?v=20260629-final-v2"></script>
+<script src="./JS/usuarios-master-premium.js?v=20260714-etiquetas33"></script>
 <script src="./JS/bdr-usuarios-permissoes-reais.js?v=20260701"></script>
 <script src="./JS/offlineQueue.js"></script>
 <script src="./JS/bdr-owner-core.js"></script>
 
 
-<script src="./JS/bdrNotificacoes.js"></script>
+<script src="./JS/bdrNotificacoes.js?v=20260714-padrao-unico"></script>
 <script src="./JS/bdrMenuMobileAtivo.js?v=20260702-3"></script>
 </body>
 </html>

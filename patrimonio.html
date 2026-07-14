@@ -9,7 +9,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:,">
-<title>BDR Patrimônio 3.4.4</title>
+<title>BDR Patrimônio </title>
 
 <!-- CSS visual padrão do sistema -->
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
@@ -56,7 +56,7 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
 .lista-header,
 .linha-patrimonio{
   display:grid;
-  grid-template-columns:170px minmax(230px,1.4fr) minmax(190px,1fr) 150px 140px 130px;
+  grid-template-columns:38px 170px minmax(230px,1.4fr) minmax(190px,1fr) 150px 140px 130px;
   gap:12px;
   align-items:center;
 }
@@ -92,6 +92,32 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
   border:1px solid #f59e0b;
   font-size:10px;
   font-weight:900;
+}
+
+.bdr-check-etiqueta{display:flex;align-items:center;justify-content:center}
+.bdr-check-etiqueta input{width:18px;height:18px;accent-color:#b91c1c;cursor:pointer}
+.bdr-lote-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px}
+.bdr-lote-bar strong{color:#9a3412}.bdr-lote-acoes{display:flex;gap:8px;flex-wrap:wrap}
+.bdr-lote-acoes button{border:0;border-radius:10px;padding:9px 12px;font-weight:900;cursor:pointer}.bdr-lote-imprimir{background:#111827;color:#fff}.bdr-lote-limpar{background:#e5e7eb;color:#374151}
+
+/* Modo elegante de seleção de etiquetas: os checkboxes só aparecem quando o usuário pedir. */
+body:not(.bdr-modo-selecao-etiquetas) .bdr-check-etiqueta{display:none!important}
+body:not(.bdr-modo-selecao-etiquetas) .lista-header,
+body:not(.bdr-modo-selecao-etiquetas) .linha-patrimonio{
+  grid-template-columns:170px minmax(230px,1.4fr) minmax(190px,1fr) 150px 140px 130px;
+}
+.bdr-lote-bar{background:linear-gradient(135deg,#f8fafc,#fff)!important;border-color:#e2e8f0!important}
+.bdr-lote-resumo{display:none;color:#9a3412;font-weight:900}
+body.bdr-modo-selecao-etiquetas .bdr-lote-resumo{display:inline-flex;align-items:center;gap:7px}
+.bdr-lote-imprimir{background:#b91c1c!important;color:#fff!important}
+.bdr-lote-selecionar{background:#111827;color:#fff}
+.bdr-lote-configurar{background:#fff;color:#334155;border:1px solid #cbd5e1!important}.bdr-lote-cancelar{display:none;background:#e5e7eb;color:#374151}
+body.bdr-modo-selecao-etiquetas .bdr-lote-cancelar{display:inline-flex}
+body.bdr-modo-selecao-etiquetas .linha-patrimonio{background:#fffdfd}
+@media(max-width:900px){
+  body:not(.bdr-modo-selecao-etiquetas) .linha-patrimonio,
+  body.bdr-modo-selecao-etiquetas .linha-patrimonio{grid-template-columns:1fr}
+  body.bdr-modo-selecao-etiquetas .bdr-check-etiqueta{justify-content:flex-start;margin-bottom:4px}
 }
 @media(max-width:900px){
   .lista-header{display:none}
@@ -189,7 +215,8 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
 .bdr-etiqueta-frame{
   width:360px;
   max-width:100%;
-  height:235px;
+  aspect-ratio:55 / 35;
+  height:auto;
   border:1px solid #cbd5e1;
   border-radius:14px;
   background:#fff;
@@ -217,7 +244,7 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active,.user-menu:f
 
 @media(max-width:520px){
   .bdr-etiqueta-modal{width:94vw}
-  .bdr-etiqueta-frame{height:220px}
+  .bdr-etiqueta-frame{width:100%;height:auto}
 }
 
 
@@ -1761,6 +1788,15 @@ input, textarea{
 
 <div class="card">
   <h3>📋 Patrimônios cadastrados</h3>
+  <div class="bdr-lote-bar">
+    <span class="bdr-lote-resumo">🏷 <strong id="bdrQtdEtiquetasSelecionadas">0 etiqueta(s) selecionada(s)</strong></span>
+    <span id="bdrLoteAjuda" style="color:#64748b;font-size:12px;font-weight:800;">Imprima uma ou várias etiquetas sem poluir a lista.</span>
+    <div class="bdr-lote-acoes">
+      <button id="btnConfigurarEtiquetas" type="button" class="bdr-lote-configurar" onclick="window.open('etiqueta-config.html','_blank')" style="display:none">⚙ Configurar etiquetas</button>
+      <button id="bdrBotaoAcaoEtiquetas" type="button" class="bdr-lote-selecionar" onclick="bdrAcaoPrincipalEtiquetas()">☑ Selecionar etiquetas</button>
+      <button type="button" class="bdr-lote-cancelar" onclick="bdrCancelarSelecaoEtiquetas()">Cancelar</button>
+    </div>
+  </div>
   <div id="lista"></div>
 </div>
 
@@ -1930,6 +1966,7 @@ input, textarea{
 <script src="./JS/bdrSyncEngine.js"></script>
 <script src="./JS/bdrSyncCenter.js"></script>
 <script src="./JS/bdrNotificacoes.js"></script>
+<script src="./JS/atlasDialog.js?v=20260714-1"></script>
 <script>
 let obras = [];
 let patrimonios = [];
@@ -1937,6 +1974,8 @@ let bdrPatrimonioPaginaAtual = 1;
 const bdrPatrimonioPorPagina = 30;
 let bdrPatrimonioUltimaChaveFiltro = "";
 let patrimonioSelecionado = null;
+const bdrEtiquetasSelecionadas = new Set();
+let bdrModoSelecaoEtiquetas = false;
 let manutencoesPatrimonio = [];
 let statusDestinoDepoisManutencao = null;
 window.obraAtiva = null;
@@ -2615,7 +2654,7 @@ async function carregarObras(){
   }
 }
 
-function alternarTravaObra(){
+async function alternarTravaObra(){
 
   if(!usuarioTemPermissao("PATRIMONIO_CRIAR")){
     alert("Você não tem permissão para alterar obra de lançamento.");
@@ -2636,7 +2675,7 @@ function alternarTravaObra(){
       valor("tipo_item");
 
     if(temDados){
-      const ok = confirm(
+      const ok = await bdrConfirmarAtlas(
         "Você vai alterar a obra de lançamento.\n\n" +
         "Os dados preenchidos no formulário serão mantidos.\n\n" +
         "Deseja destravar para escolher outra obra?"
@@ -3281,7 +3320,7 @@ if(!tipoPodeRepetir && mesmaObra && nomeIgual && (marcaIgual || modeloIgual)){
       `⚠️ ${item.motivo}\n${bdrResumoPatrimonioDuplicado(item.patrimonio)}`
     ).join("\n\n");
 
-    return confirm(
+    return await bdrConfirmarAtlas(
       "Possível duplicidade encontrada:\n\n" +
       msg +
       "\n\nVocê está tentando lançar:\n" +
@@ -3734,6 +3773,7 @@ function renderizarPatrimonios(){
     </div>
 
     <div class="lista-header">
+      <div class="bdr-check-etiqueta"><input type="checkbox" aria-label="Selecionar itens desta página" title="Selecionar itens desta página" onchange="bdrSelecionarPaginaEtiquetas(this.checked)"></div>
       <div>Código</div>
       <div>Patrimônio</div>
       <div>Obra / Setor</div>
@@ -3761,6 +3801,10 @@ function renderizarPatrimonios(){
 
     lista.innerHTML += `
       <div class="linha-patrimonio" onclick="abrirModal('${p.id}')">
+
+        <div class="bdr-check-etiqueta" onclick="event.stopPropagation()">
+          <input type="checkbox" class="bdr-etiqueta-check" data-codigo="${p.codigo_qr || ''}" ${bdrEtiquetasSelecionadas.has(String(p.codigo_qr || '')) ? 'checked' : ''} onchange="bdrAlternarSelecaoEtiqueta(this.dataset.codigo,this.checked)" aria-label="Selecionar etiqueta ${p.codigo_qr || ''}">
+        </div>
 
         <div class="pat-codigo" title="${p.codigo_qr || "-"}">
           ${p.codigo_qr || "-"} ${p.__offline_pendente ? '<span class="bdr-pendente-offline">OFFLINE</span>' : ''}
@@ -3798,6 +3842,86 @@ function renderizarPatrimonios(){
       <button type="button" onclick="bdrPatrimonioProximaPagina(${totalPaginas})" ${bdrPatrimonioPaginaAtual >= totalPaginas ? "disabled" : ""}>Próxima ▶</button>
     </div>
   `;
+  bdrAtualizarContadorEtiquetas();
+}
+
+function bdrAlternarSelecaoEtiqueta(codigo, marcado){
+  codigo = String(codigo || "").trim();
+  if(!codigo) return;
+  if(marcado) bdrEtiquetasSelecionadas.add(codigo); else bdrEtiquetasSelecionadas.delete(codigo);
+  bdrAtualizarContadorEtiquetas();
+}
+
+function bdrSelecionarPaginaEtiquetas(marcado){
+  document.querySelectorAll(".bdr-etiqueta-check").forEach(check => {
+    check.checked = marcado;
+    bdrAlternarSelecaoEtiqueta(check.dataset.codigo, marcado);
+  });
+}
+
+function bdrAtualizarContadorEtiquetas(){
+  const quantidade = bdrEtiquetasSelecionadas.size;
+  const el = document.getElementById("bdrQtdEtiquetasSelecionadas");
+  const botao = document.getElementById("bdrBotaoAcaoEtiquetas");
+  const ajuda = document.getElementById("bdrLoteAjuda");
+
+  if(el) el.textContent = `${quantidade} etiqueta(s) selecionada(s)`;
+
+  if(botao){
+    if(bdrModoSelecaoEtiquetas){
+      botao.className = "bdr-lote-imprimir";
+      botao.textContent = quantidade ? `🖨 Imprimir ${quantidade} etiqueta(s)` : "🖨 Imprimir selecionadas";
+      botao.disabled = quantidade === 0;
+    }else{
+      botao.className = "bdr-lote-selecionar";
+      botao.textContent = "☑ Selecionar etiquetas";
+      botao.disabled = false;
+    }
+  }
+
+  if(ajuda){
+    ajuda.textContent = bdrModoSelecaoEtiquetas
+      ? "Marque os patrimônios desejados na lista."
+      : "Imprima uma ou várias etiquetas sem poluir a lista.";
+  }
+}
+
+function bdrEntrarModoSelecaoEtiquetas(){
+  bdrModoSelecaoEtiquetas = true;
+  document.body.classList.add("bdr-modo-selecao-etiquetas");
+  bdrAtualizarContadorEtiquetas();
+}
+
+function bdrCancelarSelecaoEtiquetas(){
+  bdrEtiquetasSelecionadas.clear();
+  document.querySelectorAll(".bdr-etiqueta-check").forEach(c => c.checked=false);
+  const checkPagina = document.querySelector('.lista-header .bdr-check-etiqueta input');
+  if(checkPagina) checkPagina.checked = false;
+  bdrModoSelecaoEtiquetas = false;
+  document.body.classList.remove("bdr-modo-selecao-etiquetas");
+  bdrAtualizarContadorEtiquetas();
+}
+
+function bdrLimparSelecaoEtiquetas(){
+  bdrEtiquetasSelecionadas.clear();
+  document.querySelectorAll(".bdr-etiqueta-check").forEach(c => c.checked=false);
+  bdrAtualizarContadorEtiquetas();
+}
+
+function bdrAcaoPrincipalEtiquetas(){
+  if(!bdrModoSelecaoEtiquetas){
+    bdrEntrarModoSelecaoEtiquetas();
+    return;
+  }
+  bdrImprimirEtiquetasSelecionadas();
+}
+
+function bdrImprimirEtiquetasSelecionadas(){
+  if(!usuarioTemPermissao("PATRIMONIO_IMPRIMIR")){ alert("Você não tem permissão para imprimir etiquetas."); return; }
+  const codigos = Array.from(bdrEtiquetasSelecionadas);
+  if(!codigos.length){ alert("Selecione pelo menos um patrimônio na lista."); return; }
+  const url = "etiqueta-lote.html?auto=1&codigos=" + encodeURIComponent(codigos.join(","));
+  window.open(url, "_blank", "noopener");
 }
 
 function bdrLabelTipo(tipo, tipoOutro=""){
@@ -4512,7 +4636,7 @@ async function excluirPatrimonio(){
     return;
   }
 
-  const confirma = confirm(`Confirma inativar/excluir o patrimônio ${patrimonioSelecionado.codigo_qr || "-"}?
+  const confirma = await bdrConfirmarAtlas(`Confirma inativar/excluir o patrimônio ${patrimonioSelecionado.codigo_qr || "-"}?
 
 Ele sairá das consultas normais, mas o histórico fica preservado.`);
   if(!confirma) return;
@@ -5069,5 +5193,51 @@ setTimeout(() => {
 }, 1200);
 </script>
 <script src="./JS/bdrMenuMobileAtivo.js?v=20260702-3"></script>
+
+<script>
+/* =========================================================
+   ATLAS ETIQUETAS V3.3
+   Exibe o editor somente para:
+   - OWNER ROOT;
+   - perfil MASTER;
+   - usuário com CONFIGURAR_ETIQUETAS.
+========================================================= */
+function aplicarPermissaoConfigurarEtiquetas(){
+  const botao = document.getElementById("btnConfigurarEtiquetas");
+  if(!botao) return;
+
+  let usuario = null;
+  try{
+    usuario = typeof usuarioAtual === "function"
+      ? usuarioAtual()
+      : JSON.parse(
+          localStorage.getItem("usuario_logado") ||
+          localStorage.getItem("usuarioLogado") ||
+          "null"
+        );
+  }catch(error){
+    usuario = null;
+  }
+
+  const perfil = String(usuario?.perfil || "").trim().toUpperCase();
+  const ehOwner = typeof usuarioOwnerBDR === "function"
+    ? usuarioOwnerBDR(usuario)
+    : Number(usuario?.id) === 1;
+
+  const temPermissao = typeof usuarioTemPermissao === "function"
+    ? usuarioTemPermissao("CONFIGURAR_ETIQUETAS")
+    : String(usuario?.permissoes || "")
+        .split(",")
+        .map(item => item.trim().toUpperCase())
+        .includes("CONFIGURAR_ETIQUETAS");
+
+  const autorizado = ehOwner || perfil === "MASTER" || temPermissao;
+  botao.style.display = autorizado ? "inline-flex" : "none";
+  botao.hidden = !autorizado;
+}
+window.addEventListener("DOMContentLoaded", aplicarPermissaoConfigurarEtiquetas);
+window.addEventListener("load", aplicarPermissaoConfigurarEtiquetas);
+</script>
+
 </body>
 </html>

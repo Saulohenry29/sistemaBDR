@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Etiqueta Patrimônio BDR</title>
+<title>Etiquetas em lote - Atlas/BDR</title>
 <script src="./JS/atlasEtiquetaConfig.js"></script>
 <style>
 @page{size:55mm 35mm;margin:0}
@@ -15,13 +15,13 @@
   --etq-conteudo-x:0mm;--etq-conteudo-y:0mm;--etq-engrenagem-x:0mm;--etq-engrenagem-y:0mm;--etq-bdr-x:0mm;--etq-bdr-y:0mm;--etq-sub-x:0mm;--etq-sub-y:0mm;--etq-qr-x:0mm;--etq-qr-y:0mm;--etq-info-x:0mm;--etq-info-y:0mm;--etq-codigo-x:0mm;--etq-codigo-y:0mm
 }
 html,body{margin:0;padding:0;background:#fff;font-family:Arial,sans-serif}
-body{width:100%;min-height:100vh;display:flex;align-items:center;justify-content:center}
 .etiqueta{
   width:var(--etq-largura);height:var(--etq-altura);padding:var(--etq-padding);
   border:var(--etq-borda) solid #000;border-radius:var(--etq-raio);background:#fff;
   display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;
-  transform:translate(var(--etq-conteudo-x),var(--etq-conteudo-y));
+  page-break-after:always;break-after:page;transform:translate(var(--etq-conteudo-x),var(--etq-conteudo-y));
 }
+.etiqueta:last-child{page-break-after:auto;break-after:auto}
 .topo{height:var(--etq-topo-altura);display:flex;justify-content:space-between;align-items:flex-start;min-width:0}
 .logo-bloco{min-width:0;max-width:calc(100% - var(--etq-qr) - 1.5mm)}
 .logo{display:flex;align-items:center;line-height:1;white-space:nowrap}
@@ -32,68 +32,65 @@ body{width:100%;min-height:100vh;display:flex;align-items:center;justify-content
 .meio{font-size:var(--etq-info);font-weight:800;line-height:var(--etq-line-height);min-width:0;overflow:hidden;transform:translate(var(--etq-info-x),var(--etq-info-y))}
 .linha{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .codigo{font-size:var(--etq-codigo);font-weight:900;line-height:1;text-align:right;white-space:nowrap;transform:translate(var(--etq-codigo-x),var(--etq-codigo-y))}
-@media print{
-  html,body{width:55mm;height:35mm;min-height:35mm;margin:0!important;padding:0!important;overflow:hidden;background:#fff}
-  body{display:block}
-  .etiqueta{box-shadow:none}
-}
+.estado{padding:12px;font-weight:800;color:#334155}
+@media screen{body{display:grid;gap:10px;justify-content:center;padding:14px;background:#e5e7eb}.etiqueta{box-shadow:0 5px 18px rgba(15,23,42,.18)}}
+@media print{html,body{width:55mm;margin:0!important;padding:0!important;background:#fff}.etiqueta{box-shadow:none}}
 </style>
 </head>
 <body>
-<script src="JS/auth.js"></script>
-<script src="./JS/bdrSessaoRealtime.js"></script>
-<script>if(typeof verificarLogin === 'function') verificarLogin();</script>
-
-<section class="etiqueta" aria-label="Etiqueta patrimonial">
-  <div class="topo">
-    <div class="logo-bloco">
-      <div class="logo">
-        <img src="./imagens/engrenagem.png" class="engrenagem" alt="">
-        <span class="bdr">BDR</span>
-      </div>
-      <div class="sub">Construart</div>
-    </div>
-    <img class="qr" id="qr" alt="QR Code do patrimônio">
-  </div>
-
-  <div class="meio">
-    <div class="linha"><span>Local:</span> <span id="obra">OBRA / SETOR</span></div>
-    <div class="linha"><span>Item:</span> <span id="item">ITEM PATRIMÔNIO</span></div>
-  </div>
-
-  <div class="codigo" id="codigo">PAT-000000000</div>
-</section>
-
+<div id="etiquetas"><div class="estado">Carregando etiquetas...</div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="./JS/supabaseClient.js"></script>
 <script>
-const configEtiqueta = AtlasEtiquetaConfig.aplicar();
+AtlasEtiquetaConfig.aplicar();
 window.addEventListener('atlas:etiqueta-config-alterada', event => AtlasEtiquetaConfig.aplicar(event.detail));
 
 const params = new URLSearchParams(location.search);
-const codigo = params.get('codigo') || params.get('id') || 'PAT-000000000';
+const codigos = (params.get('codigos') || '').split(',').map(v => v.trim()).filter(Boolean).slice(0,200);
+const container = document.getElementById('etiquetas');
 const db = () => window.client || window.supabaseClient;
+const esc = valor => String(valor ?? '-').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const cortarTexto = (texto, limite) => {
   const valor = String(texto || '-');
   return valor.length > limite ? `${valor.substring(0, limite)}...` : valor;
 };
+const qrUrl = codigo => `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`https://saulohenry29.github.io/sistemaBDR/etiqueta.html?id=${codigo}`)}`;
 
-document.getElementById('codigo').textContent = codigo;
-const linkQr = `https://saulohenry29.github.io/sistemaBDR/etiqueta.html?id=${encodeURIComponent(codigo)}`;
-document.getElementById('qr').src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(linkQr)}`;
-
-async function carregarDados(){
-  if(!db()) return;
-  const {data,error} = await db().from('patrimonio').select('*').eq('codigo_qr',codigo).single();
-  if(error || !data){
-    console.error('Não foi possível carregar a etiqueta:', error);
-    return;
-  }
-  const atual = AtlasEtiquetaConfig.carregar();
-  document.getElementById('obra').textContent = cortarTexto(data.localizacao || 'SEM OBRA', atual.limiteLocal);
-  document.getElementById('item').textContent = cortarTexto(data.nome_bem || 'ITEM', atual.limiteItem);
+function modelo(p){
+  const config = AtlasEtiquetaConfig.carregar();
+  const codigo = p.codigo_qr || p.codigo_antigo || 'SEM-CODIGO';
+  const local = cortarTexto(p.localizacao || p.obra_nome || 'SEM OBRA', config.limiteLocal);
+  const item = cortarTexto(p.nome_bem || 'ITEM', config.limiteItem);
+  return `<section class="etiqueta">
+    <div class="topo">
+      <div class="logo-bloco">
+        <div class="logo"><img src="./imagens/engrenagem.png" class="engrenagem" alt=""><span class="bdr">BDR</span></div>
+        <div class="sub">Construart</div>
+      </div>
+      <img class="qr" src="${qrUrl(codigo)}" alt="QR ${esc(codigo)}">
+    </div>
+    <div class="meio">
+      <div class="linha">Local: ${esc(local)}</div>
+      <div class="linha">Item: ${esc(item)}</div>
+    </div>
+    <div class="codigo">${esc(codigo)}</div>
+  </section>`;
 }
-carregarDados();
+
+async function carregar(){
+  if(!codigos.length){container.innerHTML='<div class="estado">Nenhuma etiqueta selecionada.</div>';return}
+  let dados=[];
+  if(db()){
+    const resposta = await db().from('patrimonio').select('codigo_qr,codigo_antigo,nome_bem,localizacao').in('codigo_qr',codigos);
+    if(!resposta.error) dados = resposta.data || [];
+    else console.error('Erro ao carregar etiquetas em lote:', resposta.error);
+  }
+  const mapa = new Map(dados.map(p => [String(p.codigo_qr),p]));
+  container.innerHTML = codigos.map(c => modelo(mapa.get(c) || {codigo_qr:c})).join('');
+  await Promise.all(Array.from(container.querySelectorAll('img')).map(img => img.complete ? Promise.resolve() : new Promise(resolve => {img.onload=resolve;img.onerror=resolve})));
+  if(params.get('auto') === '1') setTimeout(() => window.print(),250);
+}
+carregar();
 </script>
 </body>
 </html>
