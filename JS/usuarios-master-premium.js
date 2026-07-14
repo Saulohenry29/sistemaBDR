@@ -25,6 +25,35 @@ let obras = [];
 let usuarioSelecionado = null;
 let TABELA_USUARIOS = "usuarios_sistema";
 
+/* =========================================================
+   ATLAS USUÁRIOS V5.1 - SELEÇÃO INTELIGENTE
+   Mantém o usuário selecionado durante a sessão e permite
+   seleção automática pela busca sem mexer em outros módulos.
+========================================================= */
+const ATLAS_USUARIO_SELECIONADO_KEY = "atlas_usuario_selecionado_id";
+let atlasAutoSelecionandoUsuario = false;
+let atlasTimerSelecaoBusca = null;
+
+function salvarUsuarioSelecionadoNaSessao(id){
+  try{
+    if(id === null || id === undefined || id === ""){
+      sessionStorage.removeItem(ATLAS_USUARIO_SELECIONADO_KEY);
+      return;
+    }
+    sessionStorage.setItem(ATLAS_USUARIO_SELECIONADO_KEY, String(id));
+  }catch(error){
+    console.warn("Atlas Usuários: não foi possível salvar a seleção da sessão.", error);
+  }
+}
+
+function lerUsuarioSelecionadoDaSessao(){
+  try{
+    return sessionStorage.getItem(ATLAS_USUARIO_SELECIONADO_KEY);
+  }catch(error){
+    return null;
+  }
+}
+
 
 /* =========================================================
    2) PERMISSÕES POR GRUPO
@@ -453,9 +482,21 @@ async function carregarTudo(){
   renderizarUsuarios();
   renderizarObrasLiberadas();
 
-  if(usuarioSelecionado){
-    const aindaExiste = usuarios.find(u => Number(u.id) === Number(usuarioSelecionado.id));
-    if(aindaExiste) selecionarUsuario(aindaExiste.id);
+  const idSelecionadoSessao = lerUsuarioSelecionadoDaSessao();
+  const idParaRestaurar = usuarioSelecionado?.id || idSelecionadoSessao;
+
+  if(idParaRestaurar){
+    const aindaExiste = usuarios.find(u => Number(u.id) === Number(idParaRestaurar));
+
+    if(aindaExiste){
+      selecionarUsuario(aindaExiste.id, {
+        naoRenderizarLista: false,
+        rolarParaPermissoes: false,
+        origem: "RESTAURACAO_SESSAO"
+      });
+    }else{
+      salvarUsuarioSelecionadoNaSessao(null);
+    }
   }
 
   if(!usuarios.length){
@@ -558,6 +599,59 @@ function filtrarUsuarios(){
   });
 }
 
+function encontrarUsuarioExatoNaBusca(dados, termoBusca){
+  const termo = normalizar(termoBusca);
+  if(!termo) return null;
+
+  return (dados || []).find(u => {
+    const nome = normalizar(u.nome);
+    const login = normalizar(u.usuario);
+    const email = normalizar(u.email);
+
+    return nome === termo || login === termo || email === termo;
+  }) || null;
+}
+
+function agendarSelecaoAutomaticaUsuario(dados){
+  clearTimeout(atlasTimerSelecaoBusca);
+
+  const campoBusca = document.getElementById("buscaUsuario");
+  const termoOriginal = String(campoBusca?.value || "").trim();
+
+  if(termoOriginal.length < 2) return;
+
+  const exato = encontrarUsuarioExatoNaBusca(dados, termoOriginal);
+  const alvo = exato || (dados.length === 1 ? dados[0] : null);
+
+  if(!alvo) return;
+  if(Number(usuarioSelecionado?.id) === Number(alvo.id)) return;
+  if(atlasAutoSelecionandoUsuario) return;
+
+  atlasTimerSelecaoBusca = setTimeout(() => {
+    atlasAutoSelecionandoUsuario = true;
+
+    try{
+      selecionarUsuario(alvo.id, {
+        naoRenderizarLista: true,
+        rolarParaPermissoes: true,
+        origem: "BUSCA_AUTOMATICA"
+      });
+
+      // Reaplica a linha ativa sem recriar toda a tela várias vezes.
+      document.querySelectorAll("#listaUsuarios .tr").forEach(linha => {
+        linha.classList.remove("usuario-ativo");
+      });
+
+      const linhaAtiva = [...document.querySelectorAll("#listaUsuarios .tr")]
+        .find(linha => linha.getAttribute("onclick")?.includes(`selecionarUsuario(${alvo.id})`));
+
+      linhaAtiva?.classList.add("usuario-ativo");
+    }finally{
+      atlasAutoSelecionandoUsuario = false;
+    }
+  }, 220);
+}
+
 function renderizarUsuarios(){
   const box = document.getElementById("listaUsuarios");
   if(!box) return;
@@ -568,13 +662,14 @@ function renderizarUsuarios(){
     box.innerHTML = `
       <div style="padding:28px;text-align:center;color:#667085;">
         Nenhum usuário encontrado.<br>
-        <small>Confira se a tabela correta é usuarios_sistema ou usuarios.</small>
+        <small>Confira os filtros ou o nome pesquisado.</small>
       </div>
     `;
     return;
   }
 
   box.innerHTML = dados.map(u => criarLinhaUsuario(u)).join("");
+  agendarSelecaoAutomaticaUsuario(dados);
 }
 window.renderizarUsuarios = renderizarUsuarios;
 
@@ -671,11 +766,13 @@ function atualizarUsuarioSelecionadoCard(){
    11) SELECIONAR USUÁRIO
 ========================================================= */
 
-function selecionarUsuario(id){
+function selecionarUsuario(id, opcoes = {}){
   const alvo = usuarios.find(u => Number(u.id) === Number(id));
-  if(!alvo) return;
-  if(bloquearAcaoNoOwner(alvo, "alterar")) return;
+  if(!alvo) return false;
+  if(bloquearAcaoNoOwner(alvo, "alterar")) return false;
+
   usuarioSelecionado = alvo;
+  salvarUsuarioSelecionadoNaSessao(alvo.id);
 
   marcarPermissoes(usuarioSelecionado.permissoes || "");
   aplicarPerfilVisual(usuarioSelecionado.perfil_rapido || usuarioSelecionado.perfil || "");
@@ -683,7 +780,24 @@ function selecionarUsuario(id){
   renderizarObrasLiberadas();
   renderizarPerfisRapidos();
   atualizarResumo();
-  renderizarUsuarios();
+
+  if(!opcoes.naoRenderizarLista){
+    renderizarUsuarios();
+  }
+
+  if(opcoes.rolarParaPermissoes){
+    requestAnimationFrame(() => {
+      const card = document.getElementById("usuarioSelecionadoCard");
+      if(card){
+        card.scrollIntoView({
+          behavior: "smooth",
+          block: "start"
+        });
+      }
+    });
+  }
+
+  return true;
 }
 window.selecionarUsuario = selecionarUsuario;
 
@@ -1380,6 +1494,25 @@ window.BDRUsuarios.bloquearAcaoNoOwner = bloquearAcaoNoOwner;
 window.BDRUsuarios.renderizarPerfisRapidos = renderizarPerfisRapidos;
 window.BDRUsuarios.selecionarUsuario = selecionarUsuario;
 window.BDRUsuarios.aplicarPerfilRapido = aplicarPerfilRapido;
+
+window.limparSelecaoPermissao = function(){
+  usuarioSelecionado = null;
+  salvarUsuarioSelecionadoNaSessao(null);
+
+  document.querySelectorAll("input.perm[type='checkbox']").forEach(chk => {
+    chk.checked = false;
+  });
+
+  document.querySelectorAll("#listaObrasLiberadas input[type='checkbox']").forEach(chk => {
+    chk.checked = false;
+  });
+
+  atualizarUsuarioSelecionadoCard();
+  atualizarResumo();
+  renderizarObrasLiberadas();
+  renderizarPerfisRapidos();
+  renderizarUsuarios();
+};
 
 
 /* =========================================================

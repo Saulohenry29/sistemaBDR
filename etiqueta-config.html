@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Configuração de etiquetas - Atlas/BDR</title>
+<script src="./JS/atlasEtiquetaConfig.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#eef2f7;font-family:Arial,sans-serif;color:#172033}
+.pagina{max-width:1240px;margin:0 auto;padding:22px}
+.topo{display:flex;gap:16px;justify-content:space-between;align-items:center;margin-bottom:16px}
+.topo h1{margin:0;font-size:24px}
+.acoes{display:flex;gap:10px;flex-wrap:wrap}
+.btn{border:0;border-radius:10px;padding:11px 16px;font-weight:800;cursor:pointer}
+.primario{background:#b31820;color:#fff}
+.secundario{background:#fff;color:#243047;border:1px solid #cbd5e1}
+.grade{display:grid;grid-template-columns:minmax(390px,1.08fr) minmax(430px,.92fr);gap:18px;align-items:start}
+.card{background:#fff;border-radius:16px;box-shadow:0 8px 28px rgba(15,23,42,.08);padding:18px}
+.preview{min-height:430px;display:flex;align-items:center;justify-content:center;background:#f8fafc;border:1px solid #dbe3ee;border-radius:14px;position:sticky;top:16px}
+.preview iframe{width:72mm;height:50mm;border:0;background:#fff;box-shadow:0 6px 22px rgba(15,23,42,.12);transform:scale(1.55)}
+.grupo{border:1px solid #dbe3ee;border-radius:13px;margin-bottom:10px;overflow:hidden}
+.grupo summary{cursor:pointer;list-style:none;padding:13px 14px;font-weight:900;background:#f8fafc;display:flex;justify-content:space-between;align-items:center}
+.grupo summary::-webkit-details-marker{display:none}
+.grupo summary:after{content:'▾';color:#64748b}
+.grupo[open] summary:after{content:'▴'}
+.grupo-conteudo{padding:13px}
+.linha-ajuste{display:grid;grid-template-columns:1fr 170px;gap:14px;align-items:center}
+.campo{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.campo label{font-size:12px;font-weight:900}
+.campo input{width:100%;border:1px solid #cbd5e1;border-radius:9px;padding:9px;font-size:14px}
+.dpad-wrap{text-align:center}
+.dpad-titulo{font-size:11px;font-weight:900;color:#64748b;margin-bottom:6px}
+.dpad{display:grid;grid-template-columns:42px 42px 42px;grid-template-rows:42px 42px 42px;gap:4px;justify-content:center}
+.seta{border:1px solid #cbd5e1;background:#fff;border-radius:9px;font-size:19px;font-weight:900;cursor:pointer;color:#172033}
+.seta:hover{background:#fee2e2;color:#b31820;border-color:#fecaca}
+.seta:active,.seta.segurando{transform:scale(.96);background:#fee2e2;color:#b31820;border-color:#fecaca;box-shadow:0 0 0 3px rgba(179,24,32,.10)}
+.cima{grid-column:2}
+.esquerda{grid-column:1;grid-row:2}
+.centro{grid-column:2;grid-row:2;background:#f1f5f9;font-size:11px;display:flex;align-items:center;justify-content:center;border-radius:9px;border:1px solid #dbe3ee;color:#475569}
+.direita{grid-column:3;grid-row:2}
+.baixo{grid-column:2;grid-row:3}
+.valores-posicao{font-size:11px;color:#64748b;margin-top:7px;line-height:1.45}
+.duas-colunas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dica{margin-top:14px;background:#eff6ff;border:1px solid #bfdbfe;padding:12px;border-radius:10px;color:#1e3a8a;font-size:13px;line-height:1.4}
+.status{min-height:22px;margin-top:10px;font-weight:800;color:#16794c}
+@media(max-width:920px){
+  .grade{grid-template-columns:1fr}
+  .preview{position:static;min-height:350px}
+  .preview iframe{transform:scale(1.25)}
+}
+@media(max-width:560px){
+  .pagina{padding:12px}
+  .topo{align-items:flex-start;flex-direction:column}
+  .linha-ajuste{grid-template-columns:1fr}
+  .duas-colunas{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="pagina">
+  <div class="topo">
+    <div>
+      <h1>Configuração de etiquetas</h1>
+      <div>Ajuste por elemento e acompanhe a prévia em tempo real.</div>
+    </div>
+    <div class="acoes">
+      <button class="btn secundario" id="restaurar">Restaurar padrão Atlas</button>
+      <button class="btn secundario" id="teste">Imprimir teste</button>
+      <button class="btn primario" id="salvar">Salvar neste computador</button>
+    </div>
+  </div>
+
+  <div class="grade">
+    <div class="card">
+      <div class="preview">
+        <iframe id="preview" src="etiqueta-impressao.html?codigo=PAT-9990004"></iframe>
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="grupos"></div>
+
+      <div class="dica">
+        <b>Como usar as setas:</b> cada clique movimenta 0,1 mm.
+        Clique uma vez para ajuste fino. Clique e segure para movimentação contínua; solte para parar. O grupo permanece aberto.
+      </div>
+
+      <div class="status" id="status"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const gruposDef = [
+  {titulo:'⚙ 1. Engrenagem', chaveTamanho:'logoEngrenagemMm', labelTamanho:'Tamanho da engrenagem (mm)', min:5,max:14,step:.1,x:'moverEngrenagemXmm',y:'moverEngrenagemYmm'},
+  {titulo:'🔤 2. Nome BDR', chaveTamanho:'logoBdrMm', labelTamanho:'Tamanho do nome BDR (mm)', min:7,max:16,step:.1,x:'moverBdrXmm',y:'moverBdrYmm'},
+  {titulo:'✒ 3. Construart', chaveTamanho:'logoSubMm', labelTamanho:'Tamanho do Construart (mm)', min:1.5,max:5,step:.05,x:'moverSubXmm',y:'moverSubYmm'},
+  {titulo:'▦ 4. QR Code', chaveTamanho:'qrMm', labelTamanho:'Tamanho do QR Code (mm)', min:8,max:18,step:.1,x:'moverQrXmm',y:'moverQrYmm'},
+  {titulo:'📝 5. Descrição — Local e Item', chaveTamanho:'fonteInfoMm', labelTamanho:'Tamanho da fonte Local/Item (mm)', min:1.5,max:4,step:.05,x:'moverInfoXmm',y:'moverInfoYmm',extras:[['limiteLocal','Máx. caracteres Local',10,60,1],['limiteItem','Máx. caracteres Item',10,60,1]]},
+  {titulo:'🏷 6. Patrimônio / PAT', chaveTamanho:'fonteCodigoMm', labelTamanho:'Tamanho da fonte PAT (mm)', min:2,max:7,step:.05,x:'moverCodigoXmm',y:'moverCodigoYmm'},
+  {titulo:'▣ 7. Estrutura geral', chaveTamanho:'paddingMm', labelTamanho:'Margem interna (mm)', min:.3,max:5,step:.1,x:'moverConteudoXmm',y:'moverConteudoYmm',extras:[['bordaMm','Espessura da borda (mm)',.1,1.5,.05],['raioMm','Arredondamento (mm)',0,7,.1],['larguraMm','Largura da etiqueta (mm)',30,100,.5],['alturaMm','Altura da etiqueta (mm)',20,70,.5]]}
+];
+
+let config = AtlasEtiquetaConfig.carregar();
+let grupoAberto = 0;
+
+const grupos = document.getElementById('grupos');
+const status = document.getElementById('status');
+const preview = document.getElementById('preview');
+
+const idSeguro = valor => String(valor).replace(/[^a-z0-9]/gi,'');
+
+function campoNumero(chave,label,min,max,step){
+  return `
+    <div class="campo">
+      <label for="${chave}">${label}</label>
+      <input
+        id="${chave}"
+        data-chave="${chave}"
+        type="number"
+        min="${min}"
+        max="${max}"
+        step="${step}"
+        value="${config[chave]}"
+      >
+    </div>
+  `;
+}
+
+function valorPosicao(x,y){
+  return `
+    Horizontal: ${Number(config[x] || 0).toFixed(1)} mm<br>
+    Vertical: ${Number(config[y] || 0).toFixed(1)} mm
+  `;
+}
+
+function render(){
+  grupos.innerHTML = gruposDef.map((g,i) => `
+    <details class="grupo" data-grupo="${i}" ${i === grupoAberto ? 'open' : ''}>
+      <summary>${g.titulo}</summary>
+
+      <div class="grupo-conteudo">
+        <div class="linha-ajuste">
+          <div>
+            ${campoNumero(g.chaveTamanho,g.labelTamanho,g.min,g.max,g.step)}
+            ${g.extras ? `<div class="duas-colunas">${g.extras.map(e => campoNumero(...e)).join('')}</div>` : ''}
+          </div>
+
+          <div class="dpad-wrap">
+            <div class="dpad-titulo">Mover este elemento</div>
+
+            <div class="dpad">
+              <button class="seta cima" type="button" data-move="${g.y},-0.1" title="Para cima">↑</button>
+              <button class="seta esquerda" type="button" data-move="${g.x},-0.1" title="Para esquerda">←</button>
+              <div class="centro">0,1 mm</div>
+              <button class="seta direita" type="button" data-move="${g.x},0.1" title="Para direita">→</button>
+              <button class="seta baixo" type="button" data-move="${g.y},0.1" title="Para baixo">↓</button>
+            </div>
+
+            <div class="valores-posicao" id="pos-${idSeguro(g.x)}">
+              ${valorPosicao(g.x,g.y)}
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+  `).join('');
+
+  grupos.querySelectorAll('.grupo').forEach(details => {
+    details.addEventListener('toggle', () => {
+      if(details.open){
+        grupoAberto = Number(details.dataset.grupo);
+
+        // Mantém somente um grupo aberto, sem reconstruir toda a tela.
+        grupos.querySelectorAll('.grupo').forEach(outro => {
+          if(outro !== details) outro.open = false;
+        });
+      }
+    });
+  });
+
+  grupos.querySelectorAll('input').forEach(el => {
+    el.addEventListener('input', () => {
+      config[el.dataset.chave] = Number(el.value);
+      atualizarPreviewSemRender();
+    });
+  });
+
+  grupos.querySelectorAll('[data-move]').forEach(btn => {
+    let timerInicio = null;
+    let timerRepeticao = null;
+    let movimentoExecutadoNoPress = false;
+
+    function moverUmaVez(){
+      const details = btn.closest('.grupo');
+      if(details){
+        grupoAberto = Number(details.dataset.grupo);
+      }
+
+      const [chave,delta] = btn.dataset.move.split(',');
+      config[chave] = Math.round((Number(config[chave] || 0) + Number(delta)) * 10) / 10;
+
+      atualizarValorPosicaoDoGrupo(details);
+      atualizarPreviewSemRender();
+    }
+
+    function pararMovimento(){
+      clearTimeout(timerInicio);
+      clearInterval(timerRepeticao);
+      timerInicio = null;
+      timerRepeticao = null;
+      btn.classList.remove('segurando');
+    }
+
+    btn.addEventListener('pointerdown', event => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      movimentoExecutadoNoPress = true;
+      btn.setPointerCapture?.(event.pointerId);
+      btn.classList.add('segurando');
+
+      // Primeiro movimento imediato.
+      moverUmaVez();
+
+      // Depois de 350 ms segurando, começa a repetir.
+      timerInicio = setTimeout(() => {
+        timerRepeticao = setInterval(moverUmaVez, 75);
+      }, 350);
+    });
+
+    btn.addEventListener('pointerup', pararMovimento);
+    btn.addEventListener('pointercancel', pararMovimento);
+    btn.addEventListener('lostpointercapture', pararMovimento);
+    btn.addEventListener('pointerleave', event => {
+      if(event.buttons === 0) pararMovimento();
+    });
+
+    // Evita executar um segundo movimento no "click" após o pointerdown.
+    btn.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if(movimentoExecutadoNoPress){
+        movimentoExecutadoNoPress = false;
+        return;
+      }
+
+      moverUmaVez();
+    });
+  });
+}
+
+function atualizarValorPosicaoDoGrupo(details){
+  if(!details) return;
+
+  const indice = Number(details.dataset.grupo);
+  const grupo = gruposDef[indice];
+  const box = details.querySelector('.valores-posicao');
+
+  if(box){
+    box.innerHTML = valorPosicao(grupo.x, grupo.y);
+  }
+}
+
+function lerInputsVisiveis(){
+  const nova = {...config};
+
+  grupos.querySelectorAll('input').forEach(el => {
+    nova[el.dataset.chave] = Number(el.value);
+  });
+
+  return AtlasEtiquetaConfig.normalizar(nova);
+}
+
+function atualizarPreviewSemRender(){
+  config = lerInputsVisiveis();
+
+  try{
+    preview.contentWindow.AtlasEtiquetaConfig.aplicar(config);
+  }catch(error){
+    // O iframe pode ainda estar carregando.
+  }
+}
+
+preview.addEventListener('load', atualizarPreviewSemRender);
+
+document.getElementById('salvar').onclick = () => {
+  const botao = document.getElementById('salvar');
+
+  try{
+    config = AtlasEtiquetaConfig.salvar(lerInputsVisiveis());
+
+    const salvo = localStorage.getItem(AtlasEtiquetaConfig.STORAGE_KEY);
+    if(!salvo) throw new Error('Armazenamento não confirmado');
+
+    const horario = new Date().toLocaleTimeString('pt-BR',{
+      hour:'2-digit',
+      minute:'2-digit'
+    });
+
+    status.textContent = `✓ Configuração salva neste computador às ${horario}.`;
+    botao.textContent = '✓ Salvo';
+    atualizarPreviewSemRender();
+
+    setTimeout(() => {
+      botao.textContent = 'Salvar neste computador';
+    }, 1800);
+  }catch(error){
+    console.error(error);
+    status.textContent = 'Não foi possível salvar. Verifique o armazenamento local do navegador.';
+  }
+};
+
+document.getElementById('restaurar').onclick = () => {
+  config = AtlasEtiquetaConfig.restaurar();
+  grupoAberto = 0;
+  render();
+  atualizarPreviewSemRender();
+  status.textContent = 'Padrão Atlas restaurado. Clique em salvar para mantê-lo neste computador.';
+};
+
+document.getElementById('teste').onclick = () => {
+  window.open('etiqueta-impressao.html?codigo=PAT-9990004&auto=1','_blank');
+};
+
+render();
+
+status.textContent = localStorage.getItem(AtlasEtiquetaConfig.STORAGE_KEY)
+  ? '✓ Existe uma configuração salva neste navegador.'
+  : 'Usando o padrão Atlas. Faça os ajustes e clique em salvar.';
+</script>
+</body>
+</html>
