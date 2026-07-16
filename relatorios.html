@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BDR - Relatórios</title>
+<title>BDR Relatórios </title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -358,6 +358,385 @@ button{padding:9px;border:none;border-radius:5px;cursor:pointer;background:#a416
 .sienge-motor-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}.sienge-motor-stat{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:8px;text-align:center}.sienge-motor-stat strong{display:block;color:#111827;font-size:18px}.sienge-motor-stat span{font-size:10px;color:#6b7280;font-weight:900}
 .sienge-motor-result{margin-top:8px;background:#f8fafc;border-left:4px solid #2563eb;border-radius:10px;padding:9px;font-size:12px;color:#374151;line-height:1.4;max-height:240px;overflow:auto}.sienge-confidence{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-weight:900;font-size:11px;color:#fff}.sienge-confidence.alta{background:#16a34a}.sienge-confidence.media{background:#f59e0b}.sienge-confidence.baixa{background:#dc2626}
 @media(max-width:900px){.sienge-motor-grid{grid-template-columns:1fr}.sienge-motor-stats{grid-template-columns:1fr}}
+
+
+/* =========================================================
+   ATLAS RELATÓRIOS 3.5.0
+   RELATÓRIO DE ATIVIDADES PATRIMONIAIS
+========================================================= */
+
+.cabecalho-relatorio-impressao{
+  display:none;
+}
+
+#cardRelatorioPatrimonios .tabela th:nth-child(9),
+#cardRelatorioPatrimonios .tabela td:nth-child(9){
+  min-width:135px;
+  white-space:nowrap;
+}
+
+#cardRelatorioPatrimonios .tabela th:nth-child(10),
+#cardRelatorioPatrimonios .tabela td:nth-child(10){
+  min-width:120px;
+}
+
+@media print{
+  @page{
+    size:A4 landscape;
+    margin:10mm;
+  }
+
+  html,body{
+    background:#fff!important;
+    color:#111!important;
+    font-family:Arial,sans-serif!important;
+  }
+
+  /* Esconde completamente o sistema. */
+  .bdr-sidebar,
+  header,
+  .relatorio-topbar,
+  .kpi-relatorio-grid,
+  .filtros,
+  .botoes,
+  .card-movimentacoes,
+  .content > .card[data-permissao="SIENGE_EXPORTAR"],
+  #modalSiengeCodigos,
+  .notif-dropdown,
+  .dropdown-user{
+    display:none!important;
+  }
+
+  .layout,
+  .content{
+    display:block!important;
+    margin:0!important;
+    width:100%!important;
+    padding:0!important;
+  }
+
+  /* Mostra somente o cabeçalho do arquivo e o relatório. */
+  #cabecalhoRelatorioImpressao{
+    display:block!important;
+    margin:0 0 8mm!important;
+  }
+
+  #cardRelatorioPatrimonios{
+    display:block!important;
+    box-shadow:none!important;
+    border:0!important;
+    padding:0!important;
+    margin:0!important;
+  }
+
+  #cardRelatorioPatrimonios > h3,
+  #cardRelatorioPatrimonios > #resumo{
+    display:none!important;
+  }
+
+  .relatorio-doc-topo{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    border-bottom:2px solid #a4161a;
+    padding-bottom:8px;
+    margin-bottom:8px;
+  }
+
+  .relatorio-doc-empresa{
+    color:#a4161a;
+    font-size:15px;
+    font-weight:900;
+  }
+
+  .relatorio-doc-titulo{
+    color:#111827;
+    font-size:18px;
+    font-weight:900;
+    margin-top:3px;
+  }
+
+  .relatorio-doc-data{
+    color:#475569;
+    font-size:10px;
+    text-align:right;
+  }
+
+  .relatorio-doc-meta{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:5px 14px;
+    font-size:10px;
+    line-height:1.35;
+    margin-bottom:7px;
+  }
+
+  .relatorio-doc-declaracao{
+    padding:6px 8px;
+    background:#f8fafc!important;
+    border-left:3px solid #a4161a;
+    font-size:9px;
+    color:#334155;
+    margin-bottom:8px;
+  }
+
+  #cardRelatorioPatrimonios .tabela{
+    width:100%!important;
+    table-layout:fixed!important;
+    border-collapse:collapse!important;
+    font-size:7.4px!important;
+  }
+
+  #cardRelatorioPatrimonios .tabela th{
+    position:static!important;
+    background:#e5e7eb!important;
+    color:#111!important;
+    border:1px solid #9ca3af!important;
+    padding:4px!important;
+    font-size:7px!important;
+  }
+
+  #cardRelatorioPatrimonios .tabela td{
+    border:1px solid #d1d5db!important;
+    padding:4px!important;
+    overflow-wrap:anywhere;
+    vertical-align:top;
+  }
+
+  #cardRelatorioPatrimonios .tabela tr{
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+
+  #cardRelatorioPatrimonios .status{
+    color:#111!important;
+    background:transparent!important;
+    border:0!important;
+    padding:0!important;
+    font-size:7px!important;
+  }
+}
+
+
+/* =========================================================
+   ATLAS RELATÓRIOS 3.5.1 — CORREÇÕES FINAIS
+========================================================= */
+
+.relatorio-numero-linha{text-align:center;font-weight:700}
+.relatorio-total-final td{
+  text-align:right;
+  padding:9px!important;
+  background:#f8fafc;
+  border-top:2px solid #a4161a!important;
+}
+
+@media print{
+  @page{size:A4 landscape;margin:8mm}
+
+  body > aside,
+  .bdr-sidebar,
+  .bdr-menu,
+  .bdr-menu-btn,
+  .bdr-brand,
+  .bdr-brand-icon,
+  .sidebar,
+  .menu-btn,
+  header,
+  .relatorio-topbar,
+  .kpi-relatorio-grid,
+  .filtros,
+  .botoes,
+  .card-movimentacoes,
+  .content > .card[data-permissao="SIENGE_EXPORTAR"],
+  #modalSiengeCodigos,
+  .notif-wrap,
+  .notif-dropdown,
+  .user-menu,
+  .dropdown-user{
+    display:none!important;
+    visibility:hidden!important;
+  }
+
+  body,.layout,.content{
+    margin:0!important;
+    padding:0!important;
+    width:100%!important;
+    display:block!important;
+    overflow:visible!important;
+  }
+
+  #cabecalhoRelatorioImpressao,
+  #cardRelatorioPatrimonios{
+    display:block!important;
+    visibility:visible!important;
+  }
+
+  #cardRelatorioPatrimonios .tabela{
+    width:100%!important;
+    table-layout:fixed!important;
+    font-size:7px!important;
+  }
+
+  #cardRelatorioPatrimonios .tabela th:nth-child(1){width:3%!important}
+  #cardRelatorioPatrimonios .tabela th:nth-child(2){width:8%!important}
+  #cardRelatorioPatrimonios .tabela th:nth-child(3){width:17%!important}
+  #cardRelatorioPatrimonios .tabela th:nth-child(4){width:7%!important}
+  #cardRelatorioPatrimonios .tabela th:nth-child(5){width:7%!important}
+  #cardRelatorioPatrimonios .tabela th:nth-child(6){width:13%!important}
+  #cardRelatorioPatrimonios .tabela th:nth-child(7){width:8%!important}
+  #cardRelatorioPatrimonios .tabela th:nth-child(8){width:8%!important}
+  #cardRelatorioPatrimonios .tabela th:nth-child(9){width:9%!important}
+  #cardRelatorioPatrimonios .tabela th:nth-child(10){width:12%!important}
+  #cardRelatorioPatrimonios .tabela th:nth-child(11){width:8%!important}
+
+  #cardRelatorioPatrimonios thead{display:table-header-group!important}
+  #cardRelatorioPatrimonios tfoot{display:table-footer-group!important}
+
+  #cardRelatorioPatrimonios tr{
+    break-inside:auto!important;
+    page-break-inside:auto!important;
+  }
+
+  #cardRelatorioPatrimonios td,
+  #cardRelatorioPatrimonios th{
+    overflow-wrap:anywhere!important;
+    white-space:normal!important;
+    line-height:1.22!important;
+  }
+}
+
+
+/* =========================================================
+   ATLAS RELATÓRIOS 3.5.2 — SELEÇÃO DE OBRAS
+========================================================= */
+
+.obra-check:has(.obra-sienge-check:checked){
+  background:#eff6ff!important;
+  border-color:#60a5fa!important;
+  color:#1e3a8a!important;
+  box-shadow:0 0 0 2px rgba(96,165,250,.12);
+}
+
+.obra-check .obra-sienge-check{
+  width:16px!important;
+  height:16px!important;
+  min-width:16px!important;
+  accent-color:#2563eb;
+}
+
+
+/* =========================================================
+   ATLAS RELATÓRIOS 3.5.3 — PAGINAÇÃO E DESEMPENHO
+
+   Tela:
+   • renderiza somente 30 linhas;
+   • filtros e KPIs usam o total completo;
+   • impressão e CSV continuam usando todos os filtrados.
+========================================================= */
+
+.relatorio-paginacao-topo{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin:8px 0 10px;
+  padding:9px 11px;
+  border:1px solid #e2e8f0;
+  border-radius:12px;
+  background:#f8fafc;
+  color:#475569;
+  font-size:12px;
+  font-weight:700;
+}
+
+.relatorio-paginacao-acoes{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.relatorio-paginacao-acoes button{
+  min-height:34px;
+  padding:7px 11px;
+  border:1px solid #fecaca;
+  border-radius:9px;
+  background:#fff;
+  color:#a4161a;
+  font-size:11px;
+  font-weight:800;
+}
+
+.relatorio-paginacao-acoes button:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+  border-color:#e5e7eb;
+  color:#9ca3af;
+  background:#f9fafb;
+}
+
+#relatorioPaginaInfo{
+  padding:7px 10px;
+  border-radius:9px;
+  background:#111827;
+  color:#fff;
+  font-size:11px;
+  font-weight:800;
+}
+
+@media(max-width:720px){
+  .relatorio-paginacao-topo{
+    flex-direction:column;
+    align-items:stretch;
+    text-align:center;
+  }
+}
+
+@media print{
+  .relatorio-paginacao-topo{
+    display:none!important;
+  }
+}
+
+
+/* =========================================================
+   ATLAS RELATÓRIOS 3.6.1 — CONFERÊNCIA COM PERMISSÃO
+
+   Permissão necessária:
+   PATRIMONIO_CONFERIR_RELATORIO
+========================================================= */
+.btn-assinar{background:#7c3aed!important}
+.atlas-conf-modal-bg{position:fixed;inset:0;z-index:2147483600;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(15,23,42,.70)}
+.atlas-conf-modal-bg.ativo{display:flex}
+.atlas-conf-modal{width:min(760px,96vw);max-height:94vh;overflow:auto;background:#fff;border-radius:20px;border-left:5px solid #7c3aed;box-shadow:0 28px 80px rgba(15,23,42,.35)}
+.atlas-conf-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:15px 17px;border-bottom:1px solid #e5e7eb;background:linear-gradient(135deg,#fff,#faf5ff)}
+.atlas-conf-modal-head h2{margin:0;color:#5b21b6;font-size:19px}.atlas-conf-modal-head p{margin:4px 0 0;color:#64748b;font-size:12px}
+.atlas-conf-fechar{width:38px;height:38px;border:0;border-radius:12px;background:#f3e8ff;color:#6b21a8;font-size:24px;font-weight:900}
+.atlas-conf-resumo{display:grid;grid-template-columns:1.4fr .6fr;gap:10px;padding:14px 17px 4px}
+.atlas-conf-resumo>div{padding:10px 12px;border:1px solid #e9d5ff;border-radius:12px;background:#faf5ff}
+.atlas-conf-resumo span{display:block;color:#64748b;font-size:10px;font-weight:800;text-transform:uppercase}
+.atlas-conf-resumo strong{display:block;margin-top:4px;color:#1e293b;font-size:13px}
+.atlas-conf-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 17px}
+.atlas-conf-form label{color:#334155;font-size:11px;font-weight:800}
+.atlas-conf-form input,.atlas-conf-form textarea{width:100%;margin-top:5px;border:1px solid #d8b4fe!important;border-radius:11px!important;background:#fff!important;color:#172033!important;font-size:14px!important;font-weight:400!important}
+.atlas-conf-form input{min-height:42px}.atlas-conf-wide{grid-column:1/-1}
+.atlas-conf-texto{margin:0 17px 12px;padding:9px 11px;border-left:4px solid #7c3aed;border-radius:10px;background:#faf5ff;color:#4c1d95;font-size:12px;line-height:1.45}
+.atlas-conf-assinatura-box{margin:0 17px;padding:10px;border:1px solid #d8b4fe;border-radius:14px;background:#fafafa}
+.atlas-conf-assinatura-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.atlas-conf-assinatura-head strong{color:#334155;font-size:12px}.atlas-conf-assinatura-head button{border:0;border-radius:9px;padding:7px 10px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:800}
+#canvasAssinaturaConferencia{display:block;width:100%;height:210px;border:2px dashed #c4b5fd;border-radius:12px;background:#fff;touch-action:none;cursor:crosshair}
+#confAssinaturaAjuda{margin-top:6px;color:#64748b;font-size:10px;text-align:center}
+.atlas-conf-acoes{display:flex;justify-content:flex-end;gap:9px;padding:14px 17px 17px}.atlas-conf-acoes button{min-height:40px;border:0;border-radius:11px;padding:9px 14px;font-size:12px;font-weight:900}
+.atlas-conf-cancelar{background:#e5e7eb;color:#374151}.atlas-conf-salvar{background:#7c3aed;color:#fff}.atlas-conf-salvar:disabled{opacity:.6;cursor:wait}
+.relatorio-conferencia-impressao{display:none;margin-top:7mm;padding-top:4mm;border-top:1px solid #94a3b8}
+.relatorio-conferencia-titulo{color:#5b21b6;font-size:11px;font-weight:900;margin-bottom:5px}
+.relatorio-conferencia-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:9px}
+.relatorio-conferencia-assinatura{width:260px;margin:8px auto 0;text-align:center}.relatorio-conferencia-assinatura img{display:block;width:230px;height:80px;margin:0 auto;object-fit:contain}
+.relatorio-conferencia-linha{border-top:1px solid #111}#relatorioAssinaturaLegenda{margin-top:3px;font-size:8px;color:#334155}
+@media(max-width:650px){.atlas-conf-modal-bg{padding:7px;align-items:flex-start;overflow:auto}.atlas-conf-modal{width:100%;max-height:none;margin:4px 0 90px}.atlas-conf-resumo,.atlas-conf-form{grid-template-columns:1fr}.atlas-conf-wide{grid-column:auto}#canvasAssinaturaConferencia{height:240px}.atlas-conf-acoes{position:sticky;bottom:0;background:#fff;border-top:1px solid #e5e7eb}}
+@media print{#modalConferenciaPatrimonial{display:none!important}.relatorio-conferencia-impressao.ativo{display:block!important}}
 
 </style>
 
@@ -1009,17 +1388,17 @@ button,
   <h3>🔎 Filtros do Relatório</h3>
 
   <div class="grid">
-    <input id="busca" placeholder="Buscar por nome, código, obra..." oninput="renderizarRelatorio()">
+    <input id="busca" placeholder="Buscar por nome, código, obra..." oninput="resetarPaginaRelatorio(); renderizarRelatorio()">
 
-    <input type="date" id="dataInicio" title="Data inicial" onchange="renderizarRelatorio()">
+    <input type="date" id="dataInicio" title="Data inicial" onchange="resetarPaginaRelatorio(); renderizarRelatorio()">
 
-    <input type="date" id="dataFim" title="Data final" onchange="renderizarRelatorio()">
+    <input type="date" id="dataFim" title="Data final" onchange="resetarPaginaRelatorio(); renderizarRelatorio()">
 
-    <select id="filtroObra" onchange="renderizarRelatorio()">
+    <select id="filtroObra" onchange="resetarPaginaRelatorio(); renderizarRelatorio()">
       <option value="">Todas as obras/setores</option>
     </select>
 
-    <select id="filtroOrigem" onchange="renderizarRelatorio()">
+    <select id="filtroOrigem" onchange="resetarPaginaRelatorio(); renderizarRelatorio()">
       <option value="">Todos os cadastros</option>
       <option value="NOVO">Somente novos do sistema</option>
       <option value="LEGADO">Somente patrimônio antigo/legado</option>
@@ -1027,7 +1406,7 @@ button,
       <option value="ANTIGO">Somente códigos antigos</option>
     </select>
 
-    <select id="filtroStatus" onchange="renderizarRelatorio()">
+    <select id="filtroStatus" onchange="resetarPaginaRelatorio(); renderizarRelatorio()">
       <option value="">Todos os status</option>
       <option value="ESTOQUE">Estoque</option>
       <option value="EM_USO">Em uso</option>
@@ -1035,7 +1414,7 @@ button,
       <option value="BAIXADO">Baixado</option>
     </select>
 
-    <select id="filtroTipo" onchange="renderizarRelatorio()">
+    <select id="filtroTipo" onchange="resetarPaginaRelatorio(); renderizarRelatorio()">
       <option value="">Todos os tipos</option>
       <option value="ELETRONICO">Eletrônico</option>
       <option value="VEICULO">Veículo</option>
@@ -1057,8 +1436,12 @@ button,
   </div>
 
   <div class="botoes relatorio-actions">
-    <button class="btn-relatorio btn-limpar" onclick="limparFiltros()">🧹 Limpar filtros</button>
     <button class="btn-relatorio btn-print" data-permissao="RELATORIOS_EXPORTAR" onclick="imprimirRelatorio()">🖨 Imprimir</button>
+    <button class="btn-relatorio btn-assinar"
+            data-permissao="PATRIMONIO_CONFERIR_RELATORIO"
+            onclick="abrirConferenciaPatrimonial()">
+      ✍ Registrar conferência
+    </button>
     <button class="btn-relatorio btn-excel" data-permissao="RELATORIOS_EXPORTAR" onclick="exportarCSV()">📊 Exportar Excel/CSV</button>
     <button class="btn-relatorio btn-blue" data-permissao="SIENGE_EXPORTAR" onclick="exportarSiengeCSV()">🏗 Exportar CSV Sienge</button>
     <button class="btn-relatorio btn-print" data-permissao="SIENGE_EXPORTAR" onclick="abrirModalSienge()">⚙️ Códigos Sienge</button>
@@ -1090,14 +1473,74 @@ button,
   </div>
 </div>
 
-<div class="card">
+
+<div id="cabecalhoRelatorioImpressao" class="cabecalho-relatorio-impressao">
+  <div class="relatorio-doc-topo">
+    <div>
+      <div class="relatorio-doc-empresa">BDR CONSTRUART</div>
+      <div class="relatorio-doc-titulo">RELATÓRIO DE ATIVIDADES PATRIMONIAIS</div>
+    </div>
+    <div class="relatorio-doc-data" id="relatorioDocEmissao"></div>
+  </div>
+
+  <div class="relatorio-doc-meta">
+    <div><b>Obra(s)/setor(es):</b> <span id="relatorioDocObras">Todas</span></div>
+    <div><b>Período filtrado:</b> <span id="relatorioDocPeriodo">Todos os registros</span></div>
+    <div><b>Período efetivo dos lançamentos:</b> <span id="relatorioDocPeriodoEfetivo">-</span></div>
+    <div><b>Relatório emitido por:</b> <span id="relatorioDocUsuario">-</span></div>
+    <div><b>Total de patrimônios:</b> <span id="relatorioDocTotal">0</span></div>
+  </div>
+
+  <div class="relatorio-doc-declaracao">
+    Relação dos patrimônios cadastrados no Atlas/BDR, contendo data, hora,
+    usuário responsável e obra/setor de lançamento.
+  </div>
+
+  <div id="relatorioConferenciaImpressao" class="relatorio-conferencia-impressao">
+    <div class="relatorio-conferencia-titulo">CONFERÊNCIA REGISTRADA</div>
+    <div class="relatorio-conferencia-grid">
+      <div><b>Responsável:</b> <span id="relatorioAssinaturaNome">-</span></div>
+      <div><b>Função:</b> <span id="relatorioAssinaturaFuncao">-</span></div>
+      <div><b>Data e hora:</b> <span id="relatorioAssinaturaData">-</span></div>
+      <div><b>Código:</b> <span id="relatorioAssinaturaCodigo">-</span></div>
+    </div>
+    <div class="relatorio-conferencia-assinatura">
+      <img id="relatorioAssinaturaImagem" alt="Assinatura da conferência">
+      <div class="relatorio-conferencia-linha"></div>
+      <div id="relatorioAssinaturaLegenda">Assinatura do responsável</div>
+    </div>
+  </div>
+</div>
+
+<div class="card" id="cardRelatorioPatrimonios">
   <h3>📦 Relatório de Patrimônios</h3>
   <p id="resumo"></p>
+
+  <div class="relatorio-paginacao-topo">
+    <span id="relatorioFaixaExibida">Exibindo 0 de 0</span>
+
+    <div class="relatorio-paginacao-acoes">
+      <button type="button"
+              id="btnRelatorioAnterior"
+              onclick="paginaRelatorioAnterior()">
+        ← Anterior
+      </button>
+
+      <span id="relatorioPaginaInfo">Página 1 de 1</span>
+
+      <button type="button"
+              id="btnRelatorioProxima"
+              onclick="paginaRelatorioProxima()">
+        Próxima →
+      </button>
+    </div>
+  </div>
 
   <div style="overflow:auto">
     <table class="tabela">
       <thead>
         <tr>
+          <th>Nº</th>
           <th>Código</th>
           <th>Patrimônio</th>
           <th>Tipo</th>
@@ -1106,9 +1549,16 @@ button,
           <th>Marca</th>
           <th>Modelo</th>
           <th>Série/Placa</th>
+          <th>Data/Hora do cadastro</th>
+          <th>Cadastrado por</th>
         </tr>
       </thead>
       <tbody id="corpoTabela"></tbody>
+      <tfoot>
+        <tr class="relatorio-total-final">
+          <td colspan="11">TOTAL CONFERIDO: <strong id="totalTabelaRelatorio">0 patrimônio(s)</strong></td>
+        </tr>
+      </tfoot>
     </table>
   </div>
 </div>
@@ -1284,6 +1734,54 @@ Importar Excel/CSV</h3>
 <script src="./JS/bdrMenuPermissoes.js"></script>
 <script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260629-2"></script>
 
+
+<div id="modalConferenciaPatrimonial" class="atlas-conf-modal-bg" aria-hidden="true">
+  <div class="atlas-conf-modal">
+    <div class="atlas-conf-modal-head">
+      <div>
+        <h2>✍ Conferência de patrimônios</h2>
+        <p>O responsável confere a relação e assina diretamente na tela.</p>
+      </div>
+      <button type="button" class="atlas-conf-fechar" onclick="fecharConferenciaPatrimonial()">×</button>
+    </div>
+
+    <div class="atlas-conf-resumo">
+      <div><span>Obra/setor</span><strong id="confObraNome">-</strong></div>
+      <div><span>Patrimônios conferidos</span><strong id="confQuantidade">0</strong></div>
+    </div>
+
+    <div class="atlas-conf-form">
+      <label>Nome do responsável
+        <input id="confResponsavelNome" type="text" autocomplete="name" placeholder="Nome completo">
+      </label>
+      <label>Função
+        <input id="confResponsavelFuncao" type="text" placeholder="Ex.: Encarregado, Engenheiro">
+      </label>
+      <label class="atlas-conf-wide">Observação opcional
+        <textarea id="confObservacao" rows="2" placeholder="Alguma observação da conferência"></textarea>
+      </label>
+    </div>
+
+    <div class="atlas-conf-texto">
+      Confirmo que conferi a relação de patrimônios apresentada para esta obra/setor na data indicada.
+    </div>
+
+    <div class="atlas-conf-assinatura-box">
+      <div class="atlas-conf-assinatura-head">
+        <strong>Assine com o dedo, caneta ou mouse</strong>
+        <button type="button" onclick="limparAssinaturaConferencia()">Limpar assinatura</button>
+      </div>
+      <canvas id="canvasAssinaturaConferencia"></canvas>
+      <div id="confAssinaturaAjuda">Assine dentro da área acima.</div>
+    </div>
+
+    <div class="atlas-conf-acoes">
+      <button type="button" class="atlas-conf-cancelar" onclick="fecharConferenciaPatrimonial()">Cancelar</button>
+      <button type="button" id="btnSalvarConferencia" class="atlas-conf-salvar" onclick="salvarConferenciaPatrimonial()">✓ Confirmar conferência</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let patrimonios = [];
 let obras = [];
@@ -1292,6 +1790,9 @@ let siengeCodigos = [];
 let siengeInsumos = [];
 let movimentacoes = [];
 let filtradosAtuais = [];
+let paginaAtualRelatorio = 1;
+const ITENS_POR_PAGINA_RELATORIO = 30;
+
 
 /* =========================================================
    BDR RELATÓRIOS - PERMISSÕES NOVAS
@@ -1404,10 +1905,31 @@ async function carregarDados(){
     return;
   }
 
-  const patResp = await db()
-    .from("patrimonio")
-    .select("*")
-    .order("id", { ascending:false });
+  async function carregarTodosPatrimoniosRelatorio(){
+    const todos = [];
+    const tamanhoPagina = 1000;
+    let inicio = 0;
+
+    while(true){
+      const resposta = await db()
+        .from("patrimonio")
+        .select("*")
+        .order("id", { ascending:false })
+        .range(inicio, inicio + tamanhoPagina - 1);
+
+      if(resposta.error) return { data:todos, error:resposta.error };
+
+      const lote = Array.isArray(resposta.data) ? resposta.data : [];
+      todos.push(...lote);
+
+      if(lote.length < tamanhoPagina) break;
+      inicio += tamanhoPagina;
+    }
+
+    return { data:todos, error:null };
+  }
+
+  const patResp = await carregarTodosPatrimoniosRelatorio();
 
   const obrasResp = await db()
     .from("obras")
@@ -1564,26 +2086,83 @@ function carregarChecksObrasSienge(){
 
     box.innerHTML += `
       <label class="obra-check">
-        <input type="checkbox" class="obra-sienge-check" value="${o.id}" onchange="renderizarRelatorio()">
+        <input type="checkbox" class="obra-sienge-check" value="${o.id}" onchange="alternarObraRelatorio(this)">
         <span>${o.codigo_sienge || o.codigo_obra || "-"} - ${o.nome || "-"} (${qtd})</span>
       </label>
     `;
   });
 }
 
-function marcarTodasObrasSienge(){
-  document.querySelectorAll(".obra-sienge-check").forEach(c => c.checked = true);
+/*
+ * Alterna uma obra sem recriar a lista.
+ * Ajuda principalmente em celular e tablet.
+ */
+function alternarObraRelatorio(checkbox){
+  if(!checkbox) return;
+  checkbox.checked = !!checkbox.checked;
+  resetarPaginaRelatorio();
   renderizarRelatorio();
 }
 
+function marcarTodasObrasSienge(){
+  document.querySelectorAll(".obra-sienge-check").forEach(c => c.checked = true);
+  resetarPaginaRelatorio();
+  renderizarRelatorio();
+}
+
+/*
+ * Limpa toda seleção de obra do relatório.
+ *
+ * Antes, esta função desmarcava apenas os checkboxes da área Sienge.
+ * Se uma obra ainda estivesse escolhida no filtro superior,
+ * o relatório continuava filtrado e parecia que a seleção não tinha saído.
+ */
 function limparObrasSienge(){
-  document.querySelectorAll(".obra-sienge-check").forEach(c => c.checked = false);
+  document.querySelectorAll(".obra-sienge-check").forEach(c => {
+    c.checked = false;
+  });
+
+  const filtroObra = document.getElementById("filtroObra");
+  if(filtroObra){
+    filtroObra.value = "";
+  }
+
+  resetarPaginaRelatorio();
   renderizarRelatorio();
 }
 
 
 function dataBasePatrimonio(p){
-  return p.created_at || p.data_cadastro || p.data_aquisicao || p.data_compra || p.data_entrada || null;
+  return p?.created_at ||
+         p?.data_cadastro ||
+         p?.data_aquisicao ||
+         p?.data_compra ||
+         p?.data_entrada ||
+         null;
+}
+
+function converterDataAtlasRelatorio(valorData){
+  if(!valorData) return null;
+
+  let texto = String(valorData).trim().replace(" ", "T");
+  const possuiFuso = /Z$/i.test(texto) || /[+-]\d{2}:\d{2}$/.test(texto);
+
+  if(!possuiFuso) texto += "Z";
+
+  const data = new Date(texto);
+  return isNaN(data.getTime()) ? null : data;
+}
+
+function dataLocalISOAtlas(data){
+  const partes = new Intl.DateTimeFormat("en-CA", {
+    timeZone:"America/Cuiaba",
+    year:"numeric",
+    month:"2-digit",
+    day:"2-digit"
+  }).formatToParts(data);
+
+  const mapa = Object.fromEntries(partes.map(p => [p.type, p.value]));
+  return `${mapa.year}-${mapa.month}-${mapa.day}`;
 }
 
 function dentroPeriodoRelatorio(p){
@@ -1592,46 +2171,26 @@ function dentroPeriodoRelatorio(p){
 
   if(!inicio && !fim) return true;
 
-  const base = dataBasePatrimonio(p);
-  if(!base) return false;
+  const data = converterDataAtlasRelatorio(dataBasePatrimonio(p));
+  if(!data) return false;
 
-  const d = new Date(String(base).replace(" ", "T"));
-  if(isNaN(d.getTime())) return false;
+  const localISO = dataLocalISOAtlas(data);
 
-  const dia = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-
-  if(inicio){
-    const di = new Date(inicio + "T00:00:00");
-    if(dia < di) return false;
-  }
-
-  if(fim){
-    const df = new Date(fim + "T00:00:00");
-    if(dia > df) return false;
-  }
-
+  if(inicio && localISO < inicio) return false;
+  if(fim && localISO > fim) return false;
   return true;
 }
 
 function periodoRelatorio(tipo){
-  const hoje = new Date();
-  const fim = hoje.toISOString().slice(0,10);
-  const inicio = new Date(hoje);
+  const agora = new Date();
+  const inicio = new Date(agora);
 
-  if(tipo === "HOJE"){
-    // mantém hoje
-  }
+  if(tipo === "7DIAS") inicio.setDate(inicio.getDate() - 6);
+  if(tipo === "30DIAS") inicio.setDate(inicio.getDate() - 29);
 
-  if(tipo === "7DIAS"){
-    inicio.setDate(inicio.getDate() - 6);
-  }
-
-  if(tipo === "30DIAS"){
-    inicio.setDate(inicio.getDate() - 29);
-  }
-
-  document.getElementById("dataInicio").value = inicio.toISOString().slice(0,10);
-  document.getElementById("dataFim").value = fim;
+  document.getElementById("dataInicio").value = dataLocalISOAtlas(inicio);
+  document.getElementById("dataFim").value = dataLocalISOAtlas(agora);
+  resetarPaginaRelatorio();
   renderizarRelatorio();
 }
 
@@ -1641,6 +2200,252 @@ function limparPeriodoRelatorio(){
   renderizarRelatorio();
 }
 
+function dataHoraCadastroPatrimonio(p){
+  return dataBasePatrimonio(p);
+}
+
+function formatarDataHoraCadastroPatrimonio(p){
+  const data = converterDataAtlasRelatorio(dataHoraCadastroPatrimonio(p));
+  if(!data) return "-";
+
+  return data.toLocaleString("pt-BR", {
+    timeZone:"America/Cuiaba",
+    day:"2-digit",
+    month:"2-digit",
+    year:"numeric",
+    hour:"2-digit",
+    minute:"2-digit",
+    second:"2-digit"
+  });
+}
+
+function nomesObrasRelatorioAtual(){
+  const marcadas = obrasSelecionadasSienge();
+
+  if(marcadas.length){
+    return obras
+      .filter(o => marcadas.includes(String(o.id)))
+      .map(o => `${o.codigo_obra || o.codigo_sienge || "-"} - ${o.nome || "-"}`)
+      .join("; ");
+  }
+
+  const obraId = valor("filtroObra");
+  if(obraId){
+    const obra = obras.find(o => String(o.id) === String(obraId));
+    return obra ? `${obra.codigo_obra || obra.codigo_sienge || "-"} - ${obra.nome || "-"}` : "-";
+  }
+
+  const nomesFiltrados = [...new Set(
+    filtradosAtuais.map(p => {
+      const obra = obras.find(o => String(o.id) === String(p.obra_id));
+      return obra ? `${obra.codigo_obra || obra.codigo_sienge || "-"} - ${obra.nome || "-"}` : (p.localizacao || "-");
+    })
+  )].filter(Boolean);
+
+  return nomesFiltrados.length ? nomesFiltrados.join("; ") : "Todas";
+}
+
+function periodoFiltroRelatorioTexto(){
+  const inicio = valor("dataInicio");
+  const fim = valor("dataFim");
+
+  const br = iso => {
+    if(!iso) return "";
+    const [a,m,d] = iso.split("-");
+    return `${d}/${m}/${a}`;
+  };
+
+  if(inicio && fim) return `${br(inicio)} até ${br(fim)}`;
+  if(inicio) return `A partir de ${br(inicio)}`;
+  if(fim) return `Até ${br(fim)}`;
+  return "Todos os registros";
+}
+
+function periodoEfetivoLancamentos(){
+  const datas = filtradosAtuais
+    .map(dataHoraCadastroPatrimonio)
+    .filter(Boolean)
+    .map(converterDataAtlasRelatorio)
+    .filter(Boolean)
+    .sort((a,b) => a - b);
+
+  if(!datas.length) return "-";
+
+  const formato = d => d.toLocaleString("pt-BR", {
+    timeZone:"America/Cuiaba",
+    day:"2-digit",
+    month:"2-digit",
+    year:"numeric",
+    hour:"2-digit",
+    minute:"2-digit",
+    second:"2-digit"
+  });
+
+  if(datas.length === 1) return formato(datas[0]);
+  return `${formato(datas[0])} até ${formato(datas[datas.length - 1])}`;
+}
+
+function atualizarCabecalhoDocumentoRelatorio(){
+  const usuario = JSON.parse(
+    localStorage.getItem("usuario_logado") ||
+    localStorage.getItem("usuarioLogado") ||
+    "null"
+  );
+
+  const setTexto = (id, texto) => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = texto;
+  };
+
+  setTexto(
+    "relatorioDocEmissao",
+    `Emitido em ${new Date().toLocaleString("pt-BR", { timeZone:"America/Cuiaba" })}`
+  );
+  setTexto("relatorioDocObras", nomesObrasRelatorioAtual());
+  setTexto("relatorioDocPeriodo", periodoFiltroRelatorioTexto());
+  setTexto("relatorioDocPeriodoEfetivo", periodoEfetivoLancamentos());
+  setTexto("relatorioDocUsuario", usuario?.nome || usuario?.usuario || "Usuário não identificado");
+  setTexto("relatorioDocTotal", String(filtradosAtuais.length));
+}
+
+
+function resetarPaginaRelatorio(){
+  paginaAtualRelatorio = 1;
+}
+
+function totalPaginasRelatorio(){
+  return Math.max(
+    1,
+    Math.ceil(filtradosAtuais.length / ITENS_POR_PAGINA_RELATORIO)
+  );
+}
+
+function itensPaginaAtualRelatorio(){
+  const totalPaginas = totalPaginasRelatorio();
+
+  if(paginaAtualRelatorio > totalPaginas){
+    paginaAtualRelatorio = totalPaginas;
+  }
+
+  const inicio = (paginaAtualRelatorio - 1) * ITENS_POR_PAGINA_RELATORIO;
+  const fim = inicio + ITENS_POR_PAGINA_RELATORIO;
+
+  return filtradosAtuais.slice(inicio, fim);
+}
+
+function atualizarPaginacaoRelatorio(){
+  const total = filtradosAtuais.length;
+  const totalPaginas = totalPaginasRelatorio();
+  const inicio = total === 0
+    ? 0
+    : ((paginaAtualRelatorio - 1) * ITENS_POR_PAGINA_RELATORIO) + 1;
+  const fim = Math.min(
+    paginaAtualRelatorio * ITENS_POR_PAGINA_RELATORIO,
+    total
+  );
+
+  const faixa = document.getElementById("relatorioFaixaExibida");
+  const info = document.getElementById("relatorioPaginaInfo");
+  const anterior = document.getElementById("btnRelatorioAnterior");
+  const proxima = document.getElementById("btnRelatorioProxima");
+
+  if(faixa){
+    faixa.textContent = `Exibindo ${inicio}–${fim} de ${total}`;
+  }
+
+  if(info){
+    info.textContent = `Página ${paginaAtualRelatorio} de ${totalPaginas}`;
+  }
+
+  if(anterior){
+    anterior.disabled = paginaAtualRelatorio <= 1;
+  }
+
+  if(proxima){
+    proxima.disabled =
+      paginaAtualRelatorio >= totalPaginas ||
+      total === 0;
+  }
+}
+
+function paginaRelatorioAnterior(){
+  if(paginaAtualRelatorio <= 1) return;
+
+  paginaAtualRelatorio--;
+  renderizarTabelaPaginaRelatorio();
+  document.getElementById("cardRelatorioPatrimonios")
+    ?.scrollIntoView({ behavior:"smooth", block:"start" });
+}
+
+function paginaRelatorioProxima(){
+  if(paginaAtualRelatorio >= totalPaginasRelatorio()) return;
+
+  paginaAtualRelatorio++;
+  renderizarTabelaPaginaRelatorio();
+  document.getElementById("cardRelatorioPatrimonios")
+    ?.scrollIntoView({ behavior:"smooth", block:"start" });
+}
+
+function renderizarTabelaPaginaRelatorio(){
+  const corpo = document.getElementById("corpoTabela");
+  if(!corpo) return;
+
+  corpo.innerHTML = "";
+
+  const itensPagina = itensPaginaAtualRelatorio();
+  const indiceInicial =
+    (paginaAtualRelatorio - 1) * ITENS_POR_PAGINA_RELATORIO;
+
+  if(itensPagina.length === 0){
+    corpo.innerHTML =
+      '<tr><td colspan="11">Nenhum patrimônio encontrado.</td></tr>';
+
+    atualizarPaginacaoRelatorio();
+    return;
+  }
+
+  itensPagina.forEach((p, indicePagina) => {
+    const obraObj = obras.find(
+      o => String(o.id) === String(p.obra_id)
+    );
+
+    const tipo = String(p.tipo_item || "OUTRO").toUpperCase();
+    const tipoExibicao =
+      tipo === "MAQUINA"
+        ? "MÁQUINA PESADA"
+        : tipo.replaceAll("_", " ");
+
+    corpo.innerHTML += `
+      <tr>
+        <td class="relatorio-numero-linha">
+          ${indiceInicial + indicePagina + 1}
+        </td>
+        <td>${p.codigo_qr || p.codigo_bem || p.etiqueta || "-"}</td>
+        <td>${p.nome_bem || "-"}</td>
+        <td>${tipoExibicao}</td>
+        <td>
+          <span class="status ${p.status || ""}">
+            ${String(p.status || "-").replaceAll("_", " ")}
+          </span>
+        </td>
+        <td>
+          ${
+            obraObj
+              ? `${obraObj.codigo_obra || obraObj.codigo_sienge || "-"} - ${obraObj.nome || "-"}`
+              : (p.localizacao || "-")
+          }
+        </td>
+        <td>${p.marca || "-"}</td>
+        <td>${p.modelo || "-"}</td>
+        <td>${p.numero_serie || p.placa || "-"}</td>
+        <td>${formatarDataHoraCadastroPatrimonio(p)}</td>
+        <td>${p.usuario_cadastro || p.cadastrado_por || "-"}</td>
+      </tr>
+    `;
+  });
+
+  atualizarPaginacaoRelatorio();
+}
 
 function renderizarRelatorio(){
 
@@ -1705,36 +2510,15 @@ function renderizarRelatorio(){
   document.getElementById("resumo").innerText =
     `Total encontrado: ${filtradosAtuais.length} patrimônio(s)`;
 
+  atualizarCabecalhoDocumentoRelatorio();
   atualizarKPIsRelatorio();
 
-  const corpo = document.getElementById("corpoTabela");
-  corpo.innerHTML = "";
+  const totalTabela = document.getElementById("totalTabelaRelatorio");
+  if(totalTabela) totalTabela.textContent = `${filtradosAtuais.length} patrimônio(s)`;
 
-  if(filtradosAtuais.length === 0){
-    corpo.innerHTML = `
-      <tr>
-        <td colspan="8">Nenhum patrimônio encontrado.</td>
-      </tr>
-    `;
-    return;
-  }
-
-  filtradosAtuais.forEach(p => {
-    const obraObj = obras.find(o => String(o.id) === String(p.obra_id));
-
-    corpo.innerHTML += `
-      <tr>
-        <td>${p.codigo_qr || "-"}</td>
-        <td>${p.nome_bem || "-"}</td>
-        <td>${p.tipo_item || "-"}</td>
-        <td><span class="status ${p.status}">${p.status || "-"}</span></td>
-        <td>${obraObj ? `${obraObj.codigo_obra || obraObj.codigo_sienge || "-"} - ${obraObj.nome || "-"}` : (p.localizacao || "-")}</td>
-        <td>${p.marca || "-"}</td>
-        <td>${p.modelo || "-"}</td>
-        <td>${p.numero_serie || p.placa || "-"}</td>
-      </tr>
-    `;
-  });
+  renderizarTabelaPaginaRelatorio();
+  clearTimeout(window.__atlasTimerConferencia);
+  window.__atlasTimerConferencia=setTimeout(carregarConferenciaCompativel,250);
 }
 
 function renderizarMovimentacoes(){
@@ -1777,9 +2561,249 @@ function limparFiltros(){
   renderizarRelatorio();
 }
 
+
+let conferenciaAtualRelatorio = null;
+let assinaturaCanvasVazia = true;
+let assinaturaDesenhando = false;
+let assinaturaUltimoPonto = null;
+
+function usuarioAtualRelatorio(){
+  try{
+    return JSON.parse(localStorage.getItem("usuario_logado") || localStorage.getItem("usuarioLogado") || localStorage.getItem("usuarioAtual") || "null");
+  }catch(e){ return null; }
+}
+
+function obraUnicaSelecionadaRelatorio(){
+  const marcadas = obrasSelecionadasSienge();
+  if(marcadas.length > 1) return null;
+  const obraId = marcadas.length === 1 ? marcadas[0] : valor("filtroObra");
+  if(!obraId) return null;
+  return obras.find(o => String(o.id) === String(obraId)) || null;
+}
+
+function codigoPatrimonioConferencia(p){
+  return String(p?.codigo_qr || p?.codigo_bem || p?.etiqueta || p?.id || "");
+}
+
+function snapshotPatrimoniosConferencia(){
+  return filtradosAtuais.map(p => {
+    const obra = obras.find(o => String(o.id) === String(p.obra_id));
+    return {
+      id:p.id || null,
+      codigo:codigoPatrimonioConferencia(p),
+      nome:p.nome_bem || null,
+      tipo:p.tipo_item || null,
+      status:p.status || null,
+      obra_id:p.obra_id || null,
+      obra:obra ? `${obra.codigo_obra || obra.codigo_sienge || "-"} - ${obra.nome || "-"}` : (p.localizacao || null)
+    };
+  });
+}
+
+function assinaturaCorrespondeAoRelatorio(c){
+  const itens = Array.isArray(c?.patrimonios_json) ? c.patrimonios_json : [];
+  if(itens.length !== filtradosAtuais.length) return false;
+  const atuais = filtradosAtuais.map(codigoPatrimonioConferencia).sort();
+  const assinados = itens.map(i => String(i?.codigo || i?.id || "")).sort();
+  return atuais.every((codigo, indice) => codigo === assinados[indice]);
+}
+
+function redimensionarCanvasAssinatura(){
+  const canvas = document.getElementById("canvasAssinaturaConferencia");
+  if(!canvas) return;
+  const ret = canvas.getBoundingClientRect();
+  const escala = Math.max(1, window.devicePixelRatio || 1);
+  canvas.width = Math.round(ret.width * escala);
+  canvas.height = Math.round(ret.height * escala);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(escala,0,0,escala,0,0);
+  ctx.lineWidth = 2.2; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#111827";
+  assinaturaCanvasVazia = true; assinaturaUltimoPonto = null;
+}
+
+function pontoCanvasAssinatura(e){
+  const canvas = document.getElementById("canvasAssinaturaConferencia");
+  const ret = canvas.getBoundingClientRect();
+  return {x:e.clientX-ret.left,y:e.clientY-ret.top};
+}
+function iniciarAssinaturaConferencia(e){e.preventDefault();assinaturaDesenhando=true;assinaturaUltimoPonto=pontoCanvasAssinatura(e);try{e.currentTarget.setPointerCapture(e.pointerId)}catch(_){}}
+function desenharAssinaturaConferencia(e){
+  if(!assinaturaDesenhando || !assinaturaUltimoPonto) return;
+  e.preventDefault();
+  const ctx=document.getElementById("canvasAssinaturaConferencia").getContext("2d");
+  const atual=pontoCanvasAssinatura(e);
+  ctx.beginPath();ctx.moveTo(assinaturaUltimoPonto.x,assinaturaUltimoPonto.y);ctx.lineTo(atual.x,atual.y);ctx.stroke();
+  assinaturaUltimoPonto=atual;assinaturaCanvasVazia=false;
+}
+function finalizarAssinaturaConferencia(e){if(e)e.preventDefault();assinaturaDesenhando=false;assinaturaUltimoPonto=null}
+function limparAssinaturaConferencia(){
+  const canvas=document.getElementById("canvasAssinaturaConferencia");
+  if(!canvas)return;
+  canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);
+  assinaturaCanvasVazia=true;assinaturaUltimoPonto=null;
+}
+function prepararEventosCanvasAssinatura(){
+  const canvas=document.getElementById("canvasAssinaturaConferencia");
+  if(!canvas || canvas.dataset.pronto==="SIM")return;
+  canvas.addEventListener("pointerdown",iniciarAssinaturaConferencia);
+  canvas.addEventListener("pointermove",desenharAssinaturaConferencia);
+  canvas.addEventListener("pointerup",finalizarAssinaturaConferencia);
+  canvas.addEventListener("pointercancel",finalizarAssinaturaConferencia);
+  canvas.addEventListener("pointerleave",finalizarAssinaturaConferencia);
+  canvas.dataset.pronto="SIM";
+}
+
+function abrirConferenciaPatrimonial(){
+  /*
+   * Segurança em duas camadas:
+   * 1. o botão fica oculto sem a permissão;
+   * 2. esta função também bloqueia chamadas manuais pelo console.
+   */
+  if(!exigirPermissaoRelatoriosBDR(
+    "PATRIMONIO_CONFERIR_RELATORIO",
+    "Você não tem permissão para registrar conferência patrimonial."
+  )) return;
+
+  if(filtradosAtuais.length===0){alert("Nenhum patrimônio encontrado para conferir.");return}
+  const obra=obraUnicaSelecionadaRelatorio();
+  if(!obra){alert("Selecione apenas uma obra/setor antes de registrar a conferência.");return}
+  document.getElementById("confObraNome").textContent=`${obra.codigo_obra || obra.codigo_sienge || "-"} - ${obra.nome || "-"}`;
+  document.getElementById("confQuantidade").textContent=`${filtradosAtuais.length} patrimônio(s)`;
+  document.getElementById("confResponsavelNome").value="";
+  document.getElementById("confResponsavelFuncao").value="";
+  document.getElementById("confObservacao").value="";
+  const modal=document.getElementById("modalConferenciaPatrimonial");
+  modal.classList.add("ativo");modal.setAttribute("aria-hidden","false");
+  setTimeout(()=>{prepararEventosCanvasAssinatura();redimensionarCanvasAssinatura();document.getElementById("confResponsavelNome")?.focus()},80);
+}
+function fecharConferenciaPatrimonial(){
+  const modal=document.getElementById("modalConferenciaPatrimonial");
+  if(!modal)return;modal.classList.remove("ativo");modal.setAttribute("aria-hidden","true");finalizarAssinaturaConferencia();
+}
+
+function dataBRCompacta(d){return d.toLocaleDateString("pt-BR",{timeZone:"America/Cuiaba",day:"2-digit",month:"2-digit",year:"numeric"}).replaceAll("/","")}
+async function gerarCodigoConferencia(obra){
+  const codigoObra=String(obra.codigo_obra || obra.codigo_sienge || obra.id).replace(/\D+/g,"") || String(obra.id);
+  const prefixo=`CONF-${codigoObra}-${dataBRCompacta(new Date())}-`;
+  const {data,error}=await db().from("conferencias_patrimoniais").select("codigo_conferencia").like("codigo_conferencia",`${prefixo}%`).order("codigo_conferencia",{ascending:false}).limit(1);
+  if(error)throw error;
+  let proximo=1;
+  if(data?.length){const atual=Number(String(data[0].codigo_conferencia||"").split("-").pop());if(Number.isFinite(atual))proximo=atual+1}
+  return `${prefixo}${String(proximo).padStart(4,"0")}`;
+}
+
+async function salvarConferenciaPatrimonial(){
+  if(!exigirPermissaoRelatoriosBDR(
+    "PATRIMONIO_CONFERIR_RELATORIO",
+    "Você não tem permissão para salvar esta conferência."
+  )) return;
+
+  const obra=obraUnicaSelecionadaRelatorio();
+  const nome=valor("confResponsavelNome");
+  const funcao=valor("confResponsavelFuncao");
+  const observacao=valor("confObservacao");
+  const usuario=usuarioAtualRelatorio()||{};
+  const botao=document.getElementById("btnSalvarConferencia");
+  if(!obra){alert("Selecione apenas uma obra/setor.");return}
+  if(!nome){alert("Informe o nome do responsável.");return}
+  if(assinaturaCanvasVazia){alert("Peça ao responsável para assinar.");return}
+  const snapshot=snapshotPatrimoniosConferencia();
+  botao.disabled=true;botao.textContent="Salvando...";
+  try{
+    let resultado=null;
+    for(let tentativa=0;tentativa<3;tentativa++){
+      const codigo=await gerarCodigoConferencia(obra);
+      resultado=await db().from("conferencias_patrimoniais").insert([{
+        empresa_id:usuario.empresa_id || obra.empresa_id || null,
+        obra_id:Number(obra.id),
+        codigo_conferencia:codigo,
+        periodo_inicio:valor("dataInicio") || null,
+        periodo_fim:valor("dataFim") || null,
+        quantidade_patrimonios:snapshot.length,
+        responsavel_nome:nome,
+        responsavel_funcao:funcao || null,
+        assinatura_base64:document.getElementById("canvasAssinaturaConferencia").toDataURL("image/png"),
+        criado_por_usuario_id:usuario.id || usuario.usuario_id || null,
+        criado_por_nome:usuario.nome || usuario.usuario || "SISTEMA",
+        patrimonios_json:snapshot,
+        observacao:observacao || null,
+        status:"CONFERIDO"
+      }]).select("*").single();
+      if(!resultado.error)break;
+      if(String(resultado.error.code)!=="23505")throw resultado.error;
+    }
+    if(resultado?.error)throw resultado.error;
+    conferenciaAtualRelatorio=resultado.data;
+    aplicarConferenciaNaImpressao(conferenciaAtualRelatorio);
+    fecharConferenciaPatrimonial();
+    alert(`Conferência registrada!\n\n${resultado.data.codigo_conferencia}\n${snapshot.length} patrimônio(s).`);
+  }catch(error){
+    console.error(error);alert("Não foi possível registrar: "+(error?.message || error));
+  }finally{
+    botao.disabled=false;botao.textContent="✓ Confirmar conferência";
+  }
+}
+
+function formatarDataConferencia(v){
+  if(!v)return "-";const d=new Date(v);if(isNaN(d.getTime()))return "-";
+  return d.toLocaleString("pt-BR",{timeZone:"America/Cuiaba",day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+}
+function aplicarConferenciaNaImpressao(c){
+  const bloco=document.getElementById("relatorioConferenciaImpressao");
+  const imagem=document.getElementById("relatorioAssinaturaImagem");
+  if(!c || !assinaturaCorrespondeAoRelatorio(c)){bloco?.classList.remove("ativo");if(imagem)imagem.removeAttribute("src");return false}
+  document.getElementById("relatorioAssinaturaNome").textContent=c.responsavel_nome || "-";
+  document.getElementById("relatorioAssinaturaFuncao").textContent=c.responsavel_funcao || "-";
+  document.getElementById("relatorioAssinaturaData").textContent=formatarDataConferencia(c.conferido_em || c.created_at);
+  document.getElementById("relatorioAssinaturaCodigo").textContent=c.codigo_conferencia || "-";
+  document.getElementById("relatorioAssinaturaLegenda").textContent=`${c.responsavel_nome || "Responsável"} — ${c.responsavel_funcao || "Conferência de patrimônios"}`;
+  if(imagem)imagem.src=c.assinatura_base64 || "";
+  bloco?.classList.add("ativo");return true;
+}
+async function carregarConferenciaCompativel(){
+  conferenciaAtualRelatorio=null;aplicarConferenciaNaImpressao(null);
+  const obra=obraUnicaSelecionadaRelatorio();
+  if(!obra || filtradosAtuais.length===0)return;
+  try{
+    const {data,error}=await db().from("conferencias_patrimoniais").select("*").eq("obra_id",obra.id).eq("status","CONFERIDO").order("conferido_em",{ascending:false}).limit(20);
+    if(error)throw error;
+    const c=(data||[]).find(assinaturaCorrespondeAoRelatorio);
+    if(c){conferenciaAtualRelatorio=c;aplicarConferenciaNaImpressao(c)}
+  }catch(error){console.warn("Conferência não carregada:",error?.message || error)}
+}
+
+function renderizarTodosItensParaImpressao(){
+  const corpo=document.getElementById("corpoTabela");if(!corpo)return;corpo.innerHTML="";
+  filtradosAtuais.forEach((p,indice)=>{
+    const obraObj=obras.find(o=>String(o.id)===String(p.obra_id));
+    const tipo=String(p.tipo_item||"OUTRO").toUpperCase();
+    corpo.innerHTML+=`<tr>
+      <td class="relatorio-numero-linha">${indice+1}</td>
+      <td>${p.codigo_qr || p.codigo_bem || p.etiqueta || "-"}</td>
+      <td>${p.nome_bem || "-"}</td>
+      <td>${tipo==="MAQUINA" ? "MÁQUINA PESADA" : tipo.replaceAll("_"," ")}</td>
+      <td><span class="status ${p.status || ""}">${String(p.status || "-").replaceAll("_"," ")}</span></td>
+      <td>${obraObj ? `${obraObj.codigo_obra || obraObj.codigo_sienge || "-"} - ${obraObj.nome || "-"}` : (p.localizacao || "-")}</td>
+      <td>${p.marca || "-"}</td><td>${p.modelo || "-"}</td><td>${p.numero_serie || p.placa || "-"}</td>
+      <td>${formatarDataHoraCadastroPatrimonio(p)}</td><td>${p.usuario_cadastro || p.cadastrado_por || "-"}</td>
+    </tr>`;
+  });
+}
+
 function imprimirRelatorio(){
-  if(!exigirPermissaoRelatoriosBDR("RELATORIOS_EXPORTAR", "Você não tem permissão para imprimir/exportar relatórios.")) return;
+  if(!exigirPermissaoRelatoriosBDR("RELATORIOS_EXPORTAR","Você não tem permissão para imprimir/exportar relatórios.")) return;
+  if(filtradosAtuais.length===0){alert("Nenhum patrimônio encontrado para imprimir.");return}
+  atualizarCabecalhoDocumentoRelatorio();
+  aplicarConferenciaNaImpressao(conferenciaAtualRelatorio);
+  const tituloAnterior=document.title;
+  const obraArquivo=nomesObrasRelatorioAtual().replace(/[^a-zA-Z0-9À-ÿ]+/g,"_").replace(/^_+|_+$/g,"").slice(0,60);
+  renderizarTodosItensParaImpressao();
+  document.title=`Relatorio_Atividades_Patrimoniais_${obraArquivo || "BDR"}`;
+  let restaurado=false;
+  const restaurar=()=>{if(restaurado)return;restaurado=true;document.title=tituloAnterior;renderizarTabelaPaginaRelatorio();window.removeEventListener("afterprint",restaurar)};
+  window.addEventListener("afterprint",restaurar);
   window.print();
+  setTimeout(restaurar,1800);
 }
 
 function atualizarKPIsRelatorio(){
@@ -1818,7 +2842,9 @@ function exportarCSV(){
     "Obra_Setor",
     "Marca",
     "Modelo",
-    "Serie_Placa"
+    "Serie_Placa",
+    "Data_Hora_Cadastro",
+    "Cadastrado_Por"
   ]);
 
   filtradosAtuais.forEach(p => {
@@ -1830,7 +2856,9 @@ function exportarCSV(){
       p.localizacao || "",
       p.marca || "",
       p.modelo || "",
-      p.numero_serie || p.placa || ""
+      p.numero_serie || p.placa || "",
+      formatarDataHoraCadastroPatrimonio(p),
+      p.usuario_cadastro || p.cadastrado_por || ""
     ]);
   });
 
@@ -3390,6 +4418,9 @@ carregarDados();
 <script>
 window.addEventListener("load", () => {
   aplicarPermissoesRelatoriosBDR();
+});
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape") fecharConferenciaPatrimonial();
 });
 </script>
 <script src="./JS/bdrMenuMobileAtivo.js?v=20260702-3"></script>

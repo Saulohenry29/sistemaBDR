@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:,">
-<title>BDR ERP - Movimentações</title>
+<title>BDR ERP - Movimentações </title>
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
@@ -136,6 +136,60 @@ button{-webkit-tap-highlight-color:transparent;}
   .mov-obs{
     display:block!important;
     grid-column:auto!important;
+  }
+}
+
+
+/* =========================================================
+   ATLAS MOVIMENTAÇÕES 3.1 — TIPO SEM QUEBRA
+
+   O nome completo continua disponível ao passar o mouse.
+   Na linha, o texto permanece em uma única linha.
+========================================================= */
+
+.mov-header,
+.mov-linha{
+  grid-template-columns:
+    minmax(205px, .95fr)
+    minmax(300px, 1.8fr)
+    minmax(105px, .62fr)
+    minmax(115px, .68fr)
+    minmax(145px, .8fr)
+    minmax(145px, .76fr)!important;
+  column-gap:10px!important;
+}
+
+.mov-tipo{
+  min-width:0!important;
+  display:block!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  overflow-wrap:normal!important;
+  word-break:normal!important;
+  font-size:12px!important;
+  line-height:1.2!important;
+  letter-spacing:-.01em!important;
+}
+
+.mov-linha{
+  font-size:13px!important;
+}
+
+.mov-patrimonio{
+  font-size:13px!important;
+}
+
+.mov-info{
+  font-size:12px!important;
+}
+
+@media(max-width:1200px){
+  .mov-tipo{
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:unset!important;
+    font-size:12px!important;
   }
 }
 
@@ -454,7 +508,10 @@ function renderizarMovimentacoes(){
 
     lista.innerHTML += `
       <div class="mov-linha" id="mov-${m.id}" onclick="abrirLinhaMovimentacao(${m.id})">
-        <div class="mov-tipo">${m.tipo || "-"}</div>
+        <div class="mov-tipo"
+             title="${String(m.tipo || "-").replaceAll("_", " ")}">
+          ${String(m.tipo || "-").replaceAll("_", " ")}
+        </div>
 
         <div class="mov-patrimonio" title="${nomePatrimonio(m.patrimonio_id)}">
           ${nomePatrimonio(m.patrimonio_id)}

@@ -1482,6 +1482,97 @@ input, textarea{
   font-weight:400!important;
 }
 
+
+/* =========================================================
+   ATLAS PATRIMÔNIO 3.4.5 — MÁQUINA PESADA
+
+   Os campos técnicos usam a grade responsiva já existente.
+   Em telas grandes aparecem vários campos por linha.
+   No celular quebram automaticamente.
+========================================================= */
+
+#camposExtras{
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr))!important;
+  gap:9px!important;
+}
+
+#editCamposExtras{
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr))!important;
+  gap:9px!important;
+}
+
+#camposExtras input,
+#editCamposExtras input{
+  width:100%!important;
+  max-width:none!important;
+  font-weight:400!important;
+}
+
+
+/* =========================================================
+   ATLAS PATRIMÔNIO 3.4.6 — MÁQUINA PESADA COMPACTA
+
+   Ajuste manual:
+   span 4 = campo maior
+   span 3 = campo médio
+   span 2 = campo menor
+========================================================= */
+
+#camposExtras:has(.maq-campo),
+#editCamposExtras:has(.maq-campo){
+  display:grid!important;
+  grid-template-columns:repeat(12,minmax(0,1fr))!important;
+  gap:8px!important;
+}
+
+/* Primeira linha */
+.maq-identificacao{grid-column:span 4!important}
+.maq-renavam{grid-column:span 2!important}
+.maq-chassi{grid-column:span 2!important}
+.maq-serie{grid-column:span 2!important}
+.maq-marca{grid-column:span 2!important}
+
+/* Segunda linha */
+.maq-modelo{grid-column:span 3!important}
+.maq-cor{grid-column:span 2!important}
+.maq-combustivel{grid-column:span 2!important}
+.maq-potencia{grid-column:span 2!important}
+.maq-ano-fabricacao{grid-column:span 3!important}
+
+/* Terceira linha */
+.maq-ano-modelo{grid-column:span 3!important}
+.maq-horimetro{grid-column:span 3!important}
+.maq-km{grid-column:span 3!important}
+
+#camposExtras .maq-campo,
+#editCamposExtras .maq-campo{
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  height:38px!important;
+  min-height:38px!important;
+  font-weight:400!important;
+}
+
+@media(max-width:980px){
+  #camposExtras:has(.maq-campo),
+  #editCamposExtras:has(.maq-campo){
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+
+  #camposExtras .maq-campo,
+  #editCamposExtras .maq-campo{
+    grid-column:span 1!important;
+  }
+}
+
+@media(max-width:560px){
+  #camposExtras:has(.maq-campo),
+  #editCamposExtras:has(.maq-campo){
+    grid-template-columns:1fr!important;
+  }
+}
+
 </style>
 
 <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260709-obra-ativa-315">
@@ -1635,7 +1726,7 @@ input, textarea{
   </div>
 </div>
 <div class="card" id="cardObraLancamento">
-  <h3>🏗 Obra de lançamento</h3>
+  <h2>🏗 Obra de lançamento</h2>
   <div id="obraLockHelper" class="obra-lock-helper">
     🔓 Escolha a obra e confirme para lançar patrimônios nela.
   </div>
@@ -1675,7 +1766,7 @@ input, textarea{
     <option value="INFORMATICA">💻 Informática</option>
     <option value="ELETRONICO">📺 Eletrônico</option>
     <option value="ELETRODOMESTICO">🏠 Eletrodoméstico</option>
-    <option value="MOBILIARIO">🪑 Imobilizado</option>
+    <option value="IMOBILIZADO">🪑 Imobilizado</option>
     <option value="MATERIAL_APOIO">🧰 Material de apoio</option>
     <option value="OUTRO">📦 Outro</option>
 </select>
@@ -1754,7 +1845,7 @@ input, textarea{
       <option value="">Todos os tipos</option>
       <option value="FERRAMENTA">🔧 Ferramenta</option>
       <option value="EQUIPAMENTO">⚙️ Equipamento</option>
-      <option value="MAQUINA_PESADA">🚜 Máquina pesada</option>
+      <option value="MAQUINA">🚜 Máquina pesada</option>
       <option value="VEICULO">🚛 Veículo</option>
       <option value="INFORMATICA">💻 Informática</option>
       <option value="ELETRONICO">📺 Eletrônico</option>
@@ -1842,7 +1933,7 @@ input, textarea{
       <option value="">Tipo do patrimônio</option>
       <option value="FERRAMENTA">🔧 Ferramenta</option>
       <option value="EQUIPAMENTO">⚙️ Equipamento</option>
-      <option value="MAQUINA_PESADA">🚜 Máquina pesada</option>
+      <option value="MAQUINA">🚜 Máquina pesada</option>
       <option value="VEICULO">🚛 Veículo</option>
       <option value="INFORMATICA">💻 Informática</option>
       <option value="ELETRONICO">📺 Eletrônico</option>
@@ -3131,20 +3222,51 @@ function mostrarCampos(){
     `;
   }
 
-  if(tipo === "MAQUINA_PESADA"){
+  /*
+   * MÁQUINA PESADA
+   *
+   * Usa praticamente a mesma identificação de Veículo,
+   * mas com foco em número de série, horímetro e potência.
+   *
+   * Placa e RENAVAM são opcionais, pois algumas máquinas
+   * possuem registro para circulação e outras não.
+   */
+  if(tipo === "MAQUINA" || tipo === "MAQUINA_PESADA"){
     div.innerHTML = `
-      <input id="marca" placeholder="Marca">
-      <input id="modelo" placeholder="Modelo">
-      <input id="numero_serie" placeholder="Número de série">
-      <input id="potencia" placeholder="Potência">
-      <input id="horimetro" placeholder="Horímetro" inputmode="decimal">
-      <input id="combustivel" placeholder="Combustível">
-      <input id="ano_fabricacao" placeholder="Ano de fabricação" inputmode="numeric">
-      <input id="ano_modelo" placeholder="Ano do modelo" inputmode="numeric">
-    `;
+      <input class="maq-campo maq-identificacao" id="placa"
+             placeholder=" Identificação, se houver"
+             onblur="validarDuplicidadeCampoPatrimonio('placa')">
+
+      <input class="maq-campo maq-renavam" id="renavam"
+             placeholder="RENAVAM"
+             onblur="validarDuplicidadeCampoPatrimonio('renavam')">
+
+      <input class="maq-campo maq-chassi" id="chassi"
+             placeholder="Chassi"
+             onblur="validarDuplicidadeCampoPatrimonio('chassi')">
+
+      <input class="maq-campo maq-serie" id="numero_serie" placeholder="Número de série">
+      <input class="maq-campo maq-marca" id="marca" placeholder="Marca">
+      <input class="maq-campo maq-modelo" id="modelo" placeholder="Modelo">
+      <input class="maq-campo maq-cor" id="cor" placeholder="Cor">
+      <input class="maq-campo maq-combustivel" id="combustivel" placeholder="Combustível">
+      <input class="maq-campo maq-potencia" id="potencia" placeholder="Potência">
+      <input class="maq-campo maq-ano-fabricacao" id="ano_fabricacao" placeholder="Ano de fabricação" inputmode="numeric">
+      <input class="maq-campo maq-ano-modelo" id="ano_modelo" placeholder="Ano do modelo" inputmode="numeric">
+      <input class="maq-campo maq-horimetro" id="horimetro" placeholder="Horímetro atual" inputmode="decimal">
+          `;
   }
 
-  if(["IMOBILIZADO","MATERIAL_APOIO"].includes(tipo)){
+  if(tipo === "IMOBILIZADO"){
+    div.innerHTML = `
+      <input id="marca" placeholder="Marca / fabricante">
+      <input id="modelo" placeholder="Modelo, se houver">
+      <input id="numero_serie" placeholder="Número de série, se houver">
+      <input id="local_instalacao" placeholder="Local de instalação. Ex.: Sala administrativa">
+      `;
+  }
+
+  if(tipo === "MATERIAL_APOIO"){
     div.innerHTML = `
       <input id="marca" placeholder="Marca / fabricante">
       <input id="modelo" placeholder="Modelo / descrição">
@@ -3487,6 +3609,12 @@ ano_modelo: valor("ano_modelo")
     estado_conservacao: valor("estado_conservacao") || "BOM",
     observacao: [
       valor("observacao"),
+      valor("descricao_imobilizado")
+        ? "Descrição do imobilizado: " + valor("descricao_imobilizado")
+        : "",
+      valor("local_instalacao")
+        ? "Local de instalação: " + valor("local_instalacao")
+        : "",
       valor("especificacoes") ? "Especificações: " + valor("especificacoes") : ""
     ].filter(Boolean).join(" | ") || null,
 
@@ -3990,13 +4118,18 @@ function bdrLinhasTipoPatrimonio(p){
     return html;
   }
 
-  if(tipo === "MAQUINA"){
-    html += bdrLinhaInfo("Potência", p.potencia);
+  if(tipo === "MAQUINA" || tipo === "MAQUINA_PESADA"){
+    html += bdrLinhaInfo("Placa", p.placa);
+    html += bdrLinhaInfo("RENAVAM", p.renavam);
+    html += bdrLinhaInfo("Chassi", p.chassi);
+    html += bdrLinhaInfo("Nº Série", p.numero_serie);
+    html += bdrLinhaInfo("Cor", p.cor);
     html += bdrLinhaInfo("Combustível", p.combustivel);
+    html += bdrLinhaInfo("Potência", p.potencia);
     html += bdrLinhaInfo("Ano fabricação", p.ano_fabricacao);
     html += bdrLinhaInfo("Ano modelo", p.ano_modelo);
-    html += bdrLinhaInfo("Horímetro", p.horimetro || p.quilometragem);
-    html += bdrLinhaInfo("Nº Série", p.numero_serie);
+    html += bdrLinhaInfo("Horímetro", p.horimetro);
+    html += bdrLinhaInfo("KM", p.quilometragem);
     return html;
   }
 
@@ -4828,16 +4961,25 @@ function montarCamposEdicaoPorTipo(){
     `;
   }
 
-  if(tipo === "MAQUINA"){
+  /*
+   * Edição de Máquina Pesada.
+   * Mantém os mesmos campos apresentados no cadastro.
+   */
+  if(tipo === "MAQUINA" || tipo === "MAQUINA_PESADA"){
     box.innerHTML = `
-      <input id="edit_marca" placeholder="Marca">
-      <input id="edit_modelo" placeholder="Modelo">
-      <input id="edit_numero_serie" placeholder="Número de série">
-      <input id="edit_potencia" placeholder="Potência">
-      <input id="edit_horimetro" placeholder="Horímetro">
-      <input id="edit_combustivel" placeholder="Combustível">
-      <input id="edit_ano_fabricacao" placeholder="Ano fabricação">
-      <input id="edit_ano_modelo" placeholder="Ano modelo">
+      <input class="maq-campo maq-identificacao" id="edit_placa" placeholder="Placa, se houver">
+      <input class="maq-campo maq-renavam" id="edit_renavam" placeholder="RENAVAM, se houver">
+      <input class="maq-campo maq-chassi" id="edit_chassi" placeholder="Chassi">
+      <input class="maq-campo maq-serie" id="edit_numero_serie" placeholder="Número de série">
+      <input class="maq-campo maq-marca" id="edit_marca" placeholder="Marca">
+      <input class="maq-campo maq-modelo" id="edit_modelo" placeholder="Modelo">
+      <input class="maq-campo maq-cor" id="edit_cor" placeholder="Cor">
+      <input class="maq-campo maq-combustivel" id="edit_combustivel" placeholder="Combustível">
+      <input class="maq-campo maq-potencia" id="edit_potencia" placeholder="Potência">
+      <input class="maq-campo maq-ano-fabricacao" id="edit_ano_fabricacao" placeholder="Ano de fabricação">
+      <input class="maq-campo maq-ano-modelo" id="edit_ano_modelo" placeholder="Ano do modelo">
+      <input class="maq-campo maq-horimetro" id="edit_horimetro" placeholder="Horímetro atual">
+      <input class="maq-campo maq-km" id="edit_quilometragem" placeholder="KM atual, se houver">
     `;
   }
 
@@ -4914,7 +5056,8 @@ function abrirEdicao(){
   bdrSetValorCampo("edit_potencia", patrimonioSelecionado.potencia || "");
   bdrSetValorCampo("edit_ano_fabricacao", patrimonioSelecionado.ano_fabricacao || "");
   bdrSetValorCampo("edit_ano_modelo", patrimonioSelecionado.ano_modelo || "");
-  bdrSetValorCampo("edit_horimetro", patrimonioSelecionado.horimetro || patrimonioSelecionado.quilometragem || "");
+  bdrSetValorCampo("edit_horimetro", patrimonioSelecionado.horimetro || "");
+  bdrSetValorCampo("edit_quilometragem", patrimonioSelecionado.quilometragem || "");
 
   document.getElementById("modalEdicaoBg").style.display = "flex";
 }
@@ -4962,7 +5105,7 @@ async function salvarEdicaoPatrimonio(){
     ano_fabricacao: valor("edit_ano_fabricacao") ? parseInt(valor("edit_ano_fabricacao")) : null,
     ano_modelo: valor("edit_ano_modelo") ? parseInt(valor("edit_ano_modelo")) : null,
     horimetro: moedaParaNumero(valor("edit_horimetro")),
-    quilometragem: moedaParaNumero(valor("edit_horimetro")),
+    quilometragem: moedaParaNumero(valor("edit_quilometragem")),
     codigo_antigo: valor("edit_codigo_antigo") || null,
     observacao: valor("edit_observacao") || null
   };

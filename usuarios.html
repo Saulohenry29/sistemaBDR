@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
 <link rel="stylesheet" href="./CSS/bdr-owner-core.css">
 <link rel="stylesheet" href="./CSS/bdr-usuarios-compacto.css?v=20260701">
-<title>BDR - Usuários</title>
+<title>BDR - Usuários </title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
@@ -265,6 +265,12 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active{outline:none
   z-index:999999!important;
 }
 
+
+/* Permissão de assinatura no card Relatórios / Exportação */
+input.perm[value="PATRIMONIO_CONFERIR_RELATORIO"] + .slider{
+  box-shadow:0 0 0 1px rgba(124,58,237,.16);
+}
+
 </style>
 <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260629-layout-limpo">
 </head>
@@ -486,7 +492,7 @@ if(typeof verificarLogin === "function"){ verificarLogin(); }
           <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico green"><i class="fa-solid fa-boxes-stacked"></i></div><div class="perm-text"><b>Menu Estoque</b><span>Mostrar botão e liberar tela de estoque.</span></div><label class="switch"><input type="checkbox" class="perm" value="ESTOQUE_VER"><span class="slider"></span></label></div>
           <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico"><i class="fa-solid fa-tags"></i></div><div class="perm-text"><b>Menu Patrimônio</b><span>Mostrar botão e liberar tela de patrimônio.</span></div><label class="switch"><input type="checkbox" class="perm" value="PATRIMONIO_VER"><span class="slider"></span></label></div>
           <div class="perm-row" style="background:#fff7ed;border-color:#fed7aa;"><div class="perm-ico orange"><i class="fa-solid fa-map-location-dot"></i></div><div class="perm-text"><b>Lançar patrimônio em qualquer obra</b><span>Se desligado, o usuário lança somente na obra vinculada ao cadastro.</span></div><label class="switch"><input type="checkbox" class="perm" value="PATRIMONIO_LANCAR_QUALQUER_OBRA"><span class="slider"></span></label></div>
-          <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico blue"><i class="fa-solid fa-truck-fast"></i></div><div class="perm-text"><b>Menu Expedição</b><span>Mostrar botão e liberar tela de expedição.</span></div><label class="switch"><input type="checkbox" class="perm" value="EXPEDICAO_VER"><span class="slider"></span></label></div>
+<div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico blue"><i class="fa-solid fa-truck-fast"></i></div><div class="perm-text"><b>Menu Expedição</b><span>Mostrar botão e liberar tela de expedição.</span></div><label class="switch"><input type="checkbox" class="perm" value="EXPEDICAO_VER"><span class="slider"></span></label></div>
           <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico orange"><i class="fa-regular fa-file-lines"></i></div><div class="perm-text"><b>Menu Relatórios</b><span>Mostrar botão e liberar tela de relatórios.</span></div><label class="switch"><input type="checkbox" class="perm" value="RELATORIOS_VER"><span class="slider"></span></label></div>
           <div class="perm-row" style="background:#f8fafc;border-color:#dbeafe;"><div class="perm-ico gray"><i class="fa-solid fa-building"></i></div><div class="perm-text"><b>Menu Empresas</b><span>Mostrar botão e liberar tela de empresas/obras.</span></div><label class="switch"><input type="checkbox" class="perm" value="EMPRESAS_VER"><span class="slider"></span></label></div>
           <div class="perm-row" style="background:#fff1f2;border-color:#fecaca;"><div class="perm-ico"><i class="fa-solid fa-users"></i></div><div class="perm-text"><b>Menu Usuários</b><span>Mostrar botão e liberar tela de usuários.</span></div><label class="switch"><input type="checkbox" class="perm" value="USUARIOS_VER"><span class="slider"></span></label></div>
@@ -654,5 +660,109 @@ if(typeof window.limparSelecaoPermissao !== "function"){
 
 <script src="./JS/bdrNotificacoes.js?v=20260714-padrao-unico"></script>
 <script src="./JS/bdrMenuMobileAtivo.js?v=20260702-3"></script>
+
+<script>
+/* =========================================================
+   ATLAS USUÁRIOS — PERMISSÃO DE CONFERÊNCIA
+
+   Coloca a opção dentro do card "Relatórios / Exportação".
+   A tela atual já salva automaticamente todos os checkboxes
+   que possuem class="perm".
+========================================================= */
+(function(){
+  "use strict";
+
+  const PERMISSAO = "PATRIMONIO_CONFERIR_RELATORIO";
+
+  function criarLinhaPermissaoConferencia(){
+    if(document.querySelector(`input.perm[value="${PERMISSAO}"]`)){
+      return;
+    }
+
+    const titulos = Array.from(document.querySelectorAll(
+      ".panel-head, .red-head, .user-table-head, .alert-title, h2, h3"
+    ));
+
+    const tituloRelatorios = titulos.find(el => {
+      const texto = String(el.textContent || "")
+        .trim()
+        .toUpperCase();
+
+      return texto.includes("RELATÓRIOS") &&
+             texto.includes("EXPORTAÇÃO");
+    });
+
+    if(!tituloRelatorios){
+      console.warn(
+        "Atlas Usuários: card Relatórios / Exportação ainda não encontrado."
+      );
+      return;
+    }
+
+    const painel = tituloRelatorios.closest(
+      ".panel, .card, .users-panel, section, div"
+    );
+
+    if(!painel) return;
+
+    const corpo = painel.querySelector(
+      ".panel-body, .modal-body, .permissions-list, .perm-list"
+    ) || tituloRelatorios.nextElementSibling || painel;
+
+    const linha = document.createElement("div");
+    linha.className = "perm-row";
+    linha.style.background = "#faf5ff";
+    linha.style.borderColor = "#d8b4fe";
+    linha.innerHTML = `
+      <div class="perm-ico"
+           style="background:#f3e8ff;color:#7c3aed;">
+        <i class="fa-solid fa-file-signature"></i>
+      </div>
+
+      <div class="perm-text">
+        <b>Registrar conferência patrimonial</b>
+        <span>
+          Mostra o botão de assinatura no relatório patrimonial.
+        </span>
+      </div>
+
+      <label class="switch">
+        <input type="checkbox"
+               class="perm"
+               value="${PERMISSAO}">
+        <span class="slider"></span>
+      </label>
+    `;
+
+    corpo.appendChild(linha);
+
+    /*
+     * Reaplica as permissões do usuário selecionado,
+     * caso a tela já tenha carregado antes da nova linha.
+     */
+    try{
+      if(typeof carregarPermissoesUsuarioSelecionado === "function"){
+        carregarPermissoesUsuarioSelecionado();
+      }else if(typeof marcarPermissoesDoUsuario === "function"){
+        marcarPermissoesDoUsuario();
+      }else if(typeof atualizarTelaPermissoes === "function"){
+        atualizarTelaPermissoes();
+      }
+    }catch(e){
+      console.warn(
+        "Atlas Usuários: permissão adicionada, mas foi necessário aguardar nova seleção do usuário.",
+        e
+      );
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    criarLinhaPermissaoConferencia();
+    setTimeout(criarLinhaPermissaoConferencia, 300);
+    setTimeout(criarLinhaPermissaoConferencia, 900);
+  });
+})();
+</script>
+
 </body>
 </html>
