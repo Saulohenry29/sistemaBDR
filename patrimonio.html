@@ -9,7 +9,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:,">
-<title>BDR Patrimônio </title>
+<title>BDR Patrimônio</title>
 
 <!-- CSS visual padrão do sistema -->
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
@@ -1483,99 +1483,369 @@ input, textarea{
 }
 
 
+
 /* =========================================================
-   ATLAS PATRIMÔNIO 3.4.5 — MÁQUINA PESADA
-
-   Os campos técnicos usam a grade responsiva já existente.
-   Em telas grandes aparecem vários campos por linha.
-   No celular quebram automaticamente.
+   ATLAS PATRIMÔNIO 3.5 — DADOS FISCAIS
+   NCM e número da NF-e no mesmo padrão de Patrimônio antigo.
 ========================================================= */
-
-#camposExtras{
-  grid-template-columns:repeat(auto-fit,minmax(180px,1fr))!important;
+.atlas-opcoes-cadastro{
+  display:flex!important;
+  align-items:flex-start!important;
   gap:9px!important;
+  flex-wrap:wrap!important;
+  margin:10px 0 4px!important;
 }
-
-#editCamposExtras{
-  grid-template-columns:repeat(auto-fit,minmax(180px,1fr))!important;
-  gap:9px!important;
+.atlas-opcoes-cadastro .atlas-legado-wrap,
+.atlas-opcoes-cadastro .atlas-fiscal-wrap{
+  display:block!important;
+  margin:0!important;
+  min-height:34px!important;
 }
-
-#camposExtras input,
-#editCamposExtras input{
+.atlas-fiscal-toggle{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  min-height:34px;
+  padding:7px 10px;
+  border:1px solid #dbe3ee;
+  border-radius:10px;
+  background:#f8fafc;
+  color:#475569;
+  font-size:12px;
+  font-weight:400;
+  cursor:pointer;
+  transition:.18s ease;
+  user-select:none;
+}
+.atlas-fiscal-toggle:hover{
+  background:#eff6ff;
+  border-color:#bfdbfe;
+  color:#1d4ed8;
+}
+.atlas-fiscal-toggle.ativo{
+  background:#eff6ff;
+  border-color:#93c5fd;
+  color:#1d4ed8;
+}
+.atlas-fiscal-toggle .atlas-fiscal-icone{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:16px;
+  height:16px;
+  border:1.5px solid currentColor;
+  border-radius:50%;
+  font-size:10px;
+  line-height:1;
+}
+.atlas-fiscal-toggle.ativo .atlas-fiscal-icone{border-radius:4px}
+#camposFiscais{
+  display:none!important;
+  margin-top:8px!important;
+  grid-template-columns:minmax(180px,260px) minmax(220px,340px)!important;
+  gap:10px!important;
+}
+#camposFiscais.ativo{
+  display:grid!important;
+  animation:atlasAbrirLegado .18s ease;
+}
+#camposFiscais input{
   width:100%!important;
-  max-width:none!important;
+  height:42px!important;
+  min-height:42px!important;
+  border:1px solid #bfdbfe!important;
+  background:#f8fbff!important;
+  color:#1e3a8a!important;
   font-weight:400!important;
 }
+#camposFiscais input::placeholder{color:#64748b!important}
+.atlas-edicao-fiscal-titulo{
+  grid-column:1/-1;
+  margin:4px 0 -2px;
+  color:#1e3a8a;
+  font-size:12px;
+  font-weight:900;
+}
+@media(max-width:620px){
+  #camposFiscais{grid-template-columns:1fr!important}
+}
 
 
 /* =========================================================
-   ATLAS PATRIMÔNIO 3.4.6 — MÁQUINA PESADA COMPACTA
-
-   Ajuste manual:
-   span 4 = campo maior
-   span 3 = campo médio
-   span 2 = campo menor
+   ATLAS PATRIMÔNIO — OBRA PESQUISÁVEL
+   Mantém #obraSelect internamente para preservar o fluxo atual.
 ========================================================= */
-
-#camposExtras:has(.maq-campo),
-#editCamposExtras:has(.maq-campo){
-  display:grid!important;
-  grid-template-columns:repeat(12,minmax(0,1fr))!important;
-  gap:8px!important;
+.atlas-obra-combo{
+  position:relative;
+  width:100%;
+  min-width:0;
 }
 
-/* Primeira linha */
-.maq-identificacao{grid-column:span 4!important}
-.maq-renavam{grid-column:span 2!important}
-.maq-chassi{grid-column:span 2!important}
-.maq-serie{grid-column:span 2!important}
-.maq-marca{grid-column:span 2!important}
+#obraSelect{
+  display:none!important;
+}
 
-/* Segunda linha */
-.maq-modelo{grid-column:span 3!important}
-.maq-cor{grid-column:span 2!important}
-.maq-combustivel{grid-column:span 2!important}
-.maq-potencia{grid-column:span 2!important}
-.maq-ano-fabricacao{grid-column:span 3!important}
-
-/* Terceira linha */
-.maq-ano-modelo{grid-column:span 3!important}
-.maq-horimetro{grid-column:span 3!important}
-.maq-km{grid-column:span 3!important}
-
-#camposExtras .maq-campo,
-#editCamposExtras .maq-campo{
+#obraBusca{
   width:100%!important;
-  max-width:none!important;
-  min-width:0!important;
   height:38px!important;
   min-height:38px!important;
+  padding:0 42px 0 11px!important;
+  border:1px solid #bfdbfe!important;
+  border-radius:10px!important;
+  background:#fff!important;
+  color:#0f172a!important;
+  font-size:12px!important;
   font-weight:400!important;
+  outline:none!important;
+  box-sizing:border-box!important;
 }
 
-@media(max-width:980px){
-  #camposExtras:has(.maq-campo),
-  #editCamposExtras:has(.maq-campo){
-    grid-template-columns:repeat(2,minmax(0,1fr))!important;
-  }
+#obraBusca:focus{
+  border-color:#60a5fa!important;
+  box-shadow:0 0 0 3px rgba(96,165,250,.16)!important;
+}
 
-  #camposExtras .maq-campo,
-  #editCamposExtras .maq-campo{
-    grid-column:span 1!important;
+#obraBusca:disabled{
+  opacity:1!important;
+  color:#0f172a!important;
+  background:#f8fffb!important;
+  border-color:#86efac!important;
+  cursor:not-allowed!important;
+}
+
+.atlas-obra-combo-seta{
+  position:absolute;
+  right:4px;
+  top:4px;
+  width:31px!important;
+  height:30px!important;
+  min-height:30px!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:8px!important;
+  background:transparent!important;
+  color:#475569!important;
+  font-size:11px!important;
+  cursor:pointer!important;
+  box-shadow:none!important;
+}
+
+.atlas-obra-combo-seta:hover{
+  background:#eff6ff!important;
+  color:#1d4ed8!important;
+}
+
+.atlas-obra-combo-seta:disabled{
+  cursor:not-allowed!important;
+  opacity:.5!important;
+}
+
+.atlas-obra-sugestoes{
+  position:absolute;
+  top:calc(100% + 5px);
+  left:0;
+  right:0;
+  z-index:100000;
+  display:none;
+  max-height:260px;
+  overflow:auto;
+  padding:5px;
+  border:1px solid #bfdbfe;
+  border-radius:12px;
+  background:#fff;
+  box-shadow:0 16px 38px rgba(15,23,42,.18);
+}
+
+.atlas-obra-sugestoes.ativo{
+  display:block;
+}
+
+.atlas-obra-opcao{
+  display:block;
+  width:100%;
+  border:0!important;
+  border-radius:8px!important;
+  background:#fff!important;
+  color:#172033!important;
+  text-align:left!important;
+  padding:9px 10px!important;
+  font-size:12px!important;
+  font-weight:400!important;
+  cursor:pointer!important;
+  box-shadow:none!important;
+}
+
+.atlas-obra-opcao:hover,
+.atlas-obra-opcao.selecionada{
+  background:#eff6ff!important;
+  color:#1d4ed8!important;
+}
+
+.atlas-obra-vazio{
+  padding:10px;
+  color:#64748b;
+  font-size:12px;
+}
+
+@media(max-width:460px){
+  #obraBusca{
+    height:40px!important;
+    min-height:40px!important;
   }
 }
 
-@media(max-width:560px){
-  #camposExtras:has(.maq-campo),
-  #editCamposExtras:has(.maq-campo){
-    grid-template-columns:1fr!important;
-  }
+
+/* =========================================================
+   FIX — LISTA DE OBRAS SEMPRE NA FRENTE
+========================================================= */
+#cardObraLancamento,
+#cardObraLancamento .lock-row,
+.atlas-obra-combo{
+  overflow:visible!important;
+}
+
+#cardObraLancamento{
+  position:relative!important;
+  z-index:5000!important;
+}
+
+.atlas-obra-combo{
+  position:relative!important;
+  z-index:6000!important;
+}
+
+.atlas-obra-sugestoes{
+  z-index:2147483000!important;
+  position:absolute!important;
+  isolation:isolate;
+}
+
+#cardEntradaPatrimonio,
+.card{
+  position:relative;
+}
+
+#cardEntradaPatrimonio{
+  z-index:1!important;
+}
+
+
+/* =========================================================
+   MODAL DE CONFIGURAÇÃO DE ETIQUETAS
+========================================================= */
+.atlas-config-etiqueta-modal-bg{
+  position:fixed;
+  inset:0;
+  z-index:2147483600;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  background:rgba(15,23,42,.72);
+}
+.atlas-config-etiqueta-modal-bg.ativo{display:flex}
+.atlas-config-etiqueta-modal{
+  width:min(1180px,96vw);
+  height:min(820px,94vh);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  background:#fff;
+  border-radius:18px;
+  border-left:5px solid var(--bdr-red,#d71920);
+  box-shadow:0 28px 80px rgba(15,23,42,.38);
+}
+.atlas-config-etiqueta-modal-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:12px 14px;
+  border-bottom:1px solid #e5e7eb;
+  color:var(--bdr-red,#d71920);
+  background:#fff;
+}
+.atlas-config-etiqueta-modal-head button{
+  width:34px;
+  height:34px;
+  border:0;
+  border-radius:10px;
+  background:#fee2e2;
+  color:#991b1b;
+  font-weight:900;
+  cursor:pointer;
+}
+#atlasConfigEtiquetaFrame{
+  width:100%;
+  height:100%;
+  border:0;
+  background:#eef2f7;
+}
+@media(max-width:720px){
+  .atlas-config-etiqueta-modal-bg{padding:6px}
+  .atlas-config-etiqueta-modal{width:100%;height:98vh;border-radius:14px}
+}
+
+
+/* =========================================================
+   ATLAS PATRIMÔNIO 4.0.1 — ESTABILIZAÇÃO FINAL
+   • busca neutra fora de foco
+   • obra só ativa pelo botão
+========================================================= */
+#busca{
+  border:1px solid #dbe3ee!important;
+  background:#fff!important;
+  box-shadow:none!important;
+  color:#334155!important;
+}
+#busca::placeholder{
+  color:#94a3b8!important;
+  opacity:1!important;
+}
+#busca:focus{
+  outline:none!important;
+  border-color:#60a5fa!important;
+  box-shadow:0 0 0 3px rgba(96,165,250,.15)!important;
+}
+#obraBusca:disabled{
+  opacity:1!important;
+  cursor:not-allowed!important;
+  background:#f0fdf4!important;
+  border-color:#86efac!important;
+  color:#166534!important;
+}
+#obraComboSeta:disabled{
+  cursor:not-allowed!important;
+  opacity:.55!important;
 }
 
 </style>
 
 <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260709-obra-ativa-315">
+
+
+<style>
+/* =========================================================
+   ATLAS PATRIMÔNIO 4.1 — MENU DO USUÁRIO SEM RECORTE
+
+   Corrige o menu "Meu perfil / usuários" e "Sair do sistema"
+   para que fique acima do cartão de obra e de outros elementos.
+========================================================= */
+.bdr-topbar{
+  position:relative!important;
+  z-index:2147482000!important;
+  overflow:visible!important;
+}
+.bdr-top-actions,
+.user-menu{
+  position:relative!important;
+  overflow:visible!important;
+}
+.dropdown-user{
+  z-index:2147483000!important;
+}
+</style>
+
 </head>
 
 <body>
@@ -1732,9 +2002,26 @@ input, textarea{
   </div>
 
   <div class="lock-row">
-    <select id="obraSelect">
-      <option value="">Selecione a obra/setor</option>
-    </select>
+    <div class="atlas-obra-combo" id="atlasObraCombo">
+      <input id="obraBusca"
+             type="text"
+             autocomplete="off"
+             placeholder="Digite o código ou nome da obra..."
+             aria-label="Pesquisar obra ou setor">
+      <button type="button"
+              id="obraComboSeta"
+              class="atlas-obra-combo-seta"
+              title="Abrir lista de obras"
+              aria-label="Abrir lista de obras">▼</button>
+      <div id="obraSugestoes"
+           class="atlas-obra-sugestoes"
+           role="listbox"></div>
+
+      <!-- Mantido internamente para preservar toda a lógica atual do sistema. -->
+      <select id="obraSelect" tabindex="-1" aria-hidden="true">
+        <option value="">Selecione a obra/setor</option>
+      </select>
+    </div>
 
     <button id="btnTravarObra" class="lock-btn lock-off" onclick="alternarTravaObra()">
       ✅ Confirmar obra
@@ -1766,7 +2053,7 @@ input, textarea{
     <option value="INFORMATICA">💻 Informática</option>
     <option value="ELETRONICO">📺 Eletrônico</option>
     <option value="ELETRODOMESTICO">🏠 Eletrodoméstico</option>
-    <option value="IMOBILIZADO">🪑 Imobilizado</option>
+    <option value="MOBILIARIO">🪑 Imobilizado</option>
     <option value="MATERIAL_APOIO">🧰 Material de apoio</option>
     <option value="OUTRO">📦 Outro</option>
 </select>
@@ -1794,23 +2081,47 @@ input, textarea{
 
   <br>
 
-  <div class="atlas-legado-wrap">
-    <button type="button"
-            id="atlasLegadoToggle"
-            class="atlas-legado-toggle"
-            onclick="atlasAlternarPatrimonioAntigo()"
-            aria-pressed="false">
-      <span class="atlas-legado-icone">○</span>
-      <span>Patrimônio antigo</span>
-    </button>
+  <div class="atlas-opcoes-cadastro">
+    <div class="atlas-legado-wrap">
+      <button type="button"
+              id="atlasLegadoToggle"
+              class="atlas-legado-toggle"
+              onclick="atlasAlternarPatrimonioAntigo()"
+              aria-pressed="false">
+        <span class="atlas-legado-icone">○</span>
+        <span>Patrimônio antigo</span>
+      </button>
 
-    <input type="checkbox"
-           id="checkLegado"
-           onchange="mostrarCamposLegado()">
+      <input type="checkbox"
+             id="checkLegado"
+             onchange="mostrarCamposLegado()">
+    </div>
+
+    <div class="atlas-fiscal-wrap">
+      <button type="button"
+              id="atlasFiscalToggle"
+              class="atlas-fiscal-toggle"
+              onclick="atlasAlternarDadosFiscais()"
+              aria-pressed="false">
+        <span class="atlas-fiscal-icone">○</span>
+        <span>Dados fiscais</span>
+      </button>
+    </div>
   </div>
 
 <div id="camposLegado" class="grid" style="display:none;margin-top:10px;grid-template-columns:minmax(220px,420px) !important;">
   <input id="codigo_antigo" placeholder="Código antigo / placa antiga / tag antiga" onblur="validarDuplicidadeCampoPatrimonio('codigo_antigo')">
+</div>
+
+<div id="camposFiscais" class="grid" aria-hidden="true">
+  <input id="ncm"
+         inputmode="numeric"
+         maxlength="10"
+         placeholder="NCM. Ex.: 84672999"
+         oninput="atlasMascaraNCM(this)">
+  <input id="numero_nfe"
+         maxlength="30"
+         placeholder="Número da NF-e. Ex.: 123456">
 </div>
   <br>
 
@@ -1845,7 +2156,7 @@ input, textarea{
       <option value="">Todos os tipos</option>
       <option value="FERRAMENTA">🔧 Ferramenta</option>
       <option value="EQUIPAMENTO">⚙️ Equipamento</option>
-      <option value="MAQUINA">🚜 Máquina pesada</option>
+      <option value="MAQUINA_PESADA">🚜 Máquina pesada</option>
       <option value="VEICULO">🚛 Veículo</option>
       <option value="INFORMATICA">💻 Informática</option>
       <option value="ELETRONICO">📺 Eletrônico</option>
@@ -1880,7 +2191,7 @@ input, textarea{
     <span class="bdr-lote-resumo">🏷 <strong id="bdrQtdEtiquetasSelecionadas">0 etiqueta(s) selecionada(s)</strong></span>
     <span id="bdrLoteAjuda" style="color:#64748b;font-size:12px;font-weight:800;">Imprima uma ou várias etiquetas sem poluir a lista.</span>
     <div class="bdr-lote-acoes">
-      <button id="btnConfigurarEtiquetas" type="button" class="bdr-lote-configurar" onclick="window.open('etiqueta-config.html','_blank')" style="display:none">⚙ Configurar etiquetas</button>
+      <button id="btnConfigurarEtiquetas" type="button" class="bdr-lote-configurar atlas-owner-inline" data-owner-only hidden onclick="abrirModalConfiguracaoEtiqueta()" style="display:none">⚙ Configurar etiquetas</button>
       <button id="bdrBotaoAcaoEtiquetas" type="button" class="bdr-lote-selecionar" onclick="bdrAcaoPrincipalEtiquetas()">☑ Selecionar etiquetas</button>
       <button type="button" class="bdr-lote-cancelar" onclick="bdrCancelarSelecaoEtiquetas()">Cancelar</button>
     </div>
@@ -1933,7 +2244,7 @@ input, textarea{
       <option value="">Tipo do patrimônio</option>
       <option value="FERRAMENTA">🔧 Ferramenta</option>
       <option value="EQUIPAMENTO">⚙️ Equipamento</option>
-      <option value="MAQUINA">🚜 Máquina pesada</option>
+      <option value="MAQUINA_PESADA">🚜 Máquina pesada</option>
       <option value="VEICULO">🚛 Veículo</option>
       <option value="INFORMATICA">💻 Informática</option>
       <option value="ELETRONICO">📺 Eletrônico</option>
@@ -1956,6 +2267,16 @@ input, textarea{
 
       <input id="edit_valor_bem" placeholder="Valor do bem Ex: 1.350,00" oninput="mascaraMoeda(this)">
       <input id="edit_codigo_antigo" placeholder="Código antigo">
+
+      <div class="atlas-edicao-fiscal-titulo">Dados fiscais</div>
+      <input id="edit_ncm"
+             inputmode="numeric"
+             maxlength="10"
+             placeholder="NCM. Ex.: 84672999"
+             oninput="atlasMascaraNCM(this)">
+      <input id="edit_numero_nfe"
+             maxlength="30"
+             placeholder="Número da NF-e">
     </div>
 
     <div id="editCamposExtras" class="grid" style="margin-top:8px;"></div>
@@ -2492,6 +2813,7 @@ function aplicarRegraObraLancamentoBDR(){
   window.obraTravada = true;
   select.value = String(obraUsuario.id);
   select.disabled = true;
+  atlasSincronizarCampoObra();
 
   if(btn){
     btn.disabled = true;
@@ -2683,6 +3005,256 @@ function mascaraMoeda(input){
   });
 }
 
+
+/* =========================================================
+   ATLAS — COMBO PESQUISÁVEL DE OBRAS
+========================================================= */
+let atlasObraIndice = -1;
+let atlasObraResultados = [];
+let atlasObraComboIniciado = false;
+
+function atlasNormalizarBuscaObra(valor){
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .trim();
+}
+
+function atlasTextoObra(obra){
+  return `${obra?.codigo_obra || "-"} - ${obra?.nome || "-"}`;
+}
+
+function atlasObraSelecionadaAtual(){
+  const select = document.getElementById("obraSelect");
+  if(!select?.value) return null;
+  return (obras || []).find(o => String(o.id) === String(select.value)) || null;
+}
+
+function atlasFecharSugestoesObra(){
+  document.getElementById("obraSugestoes")?.classList.remove("ativo");
+  atlasObraIndice = -1;
+}
+
+function atlasSincronizarCampoObra(){
+  const select = document.getElementById("obraSelect");
+  const input = document.getElementById("obraBusca");
+  const seta = document.getElementById("obraComboSeta");
+
+  if(!select || !input) return;
+
+  const obra = atlasObraSelecionadaAtual();
+  input.value = obra ? atlasTextoObra(obra) : "";
+
+  const bloqueado = Boolean(select.disabled);
+  input.disabled = bloqueado;
+  if(seta) seta.disabled = bloqueado;
+}
+
+function atlasFiltrarObras(termo, abrirTudo = false){
+  const normalizado = atlasNormalizarBuscaObra(termo);
+
+  atlasObraResultados = (obras || []).filter(obra => {
+    if(abrirTudo || !normalizado) return true;
+
+    const codigo = atlasNormalizarBuscaObra(obra.codigo_obra);
+    const nome = atlasNormalizarBuscaObra(obra.nome);
+    const completo = atlasNormalizarBuscaObra(atlasTextoObra(obra));
+
+    return codigo.includes(normalizado)
+      || nome.includes(normalizado)
+      || completo.includes(normalizado);
+  }).slice(0, 80);
+
+  atlasObraIndice = atlasObraResultados.length ? 0 : -1;
+  atlasRenderizarSugestoesObra();
+}
+
+function atlasRenderizarSugestoesObra(){
+  const lista = document.getElementById("obraSugestoes");
+  if(!lista) return;
+
+  if(!atlasObraResultados.length){
+    lista.innerHTML = `<div class="atlas-obra-vazio">Nenhuma obra encontrada.</div>`;
+    lista.classList.add("ativo");
+    return;
+  }
+
+  lista.innerHTML = atlasObraResultados.map((obra, indice) => `
+    <button type="button"
+            class="atlas-obra-opcao ${indice === atlasObraIndice ? "selecionada" : ""}"
+            data-obra-id="${obra.id}">
+      ${atlasTextoObra(obra)}
+    </button>
+  `).join("");
+
+  lista.classList.add("ativo");
+
+  lista.querySelectorAll(".atlas-obra-opcao").forEach(botao => {
+    botao.addEventListener("mousedown", evento => evento.preventDefault());
+    botao.addEventListener("click", () => {
+      atlasSelecionarObraCombo(botao.dataset.obraId, false);
+    });
+  });
+}
+
+async function atlasSelecionarObraCombo(obraId, confirmarAutomaticamente = false){
+  const select = document.getElementById("obraSelect");
+  const input = document.getElementById("obraBusca");
+  if(!select || !input) return false;
+
+  const obra = (obras || []).find(o => String(o.id) === String(obraId));
+  if(!obra) return false;
+
+  select.value = String(obra.id);
+  input.value = atlasTextoObra(obra);
+  atlasFecharSugestoesObra();
+
+  if(confirmarAutomaticamente && !window.obraTravada){
+    await alternarTravaObra();
+  }
+
+  if(window.obraTravada){
+    setTimeout(() => document.getElementById("nome_bem")?.focus(), 30);
+  }
+
+  return true;
+}
+
+async function atlasConfirmarObraDigitada(){
+  const input = document.getElementById("obraBusca");
+  if(!input || input.disabled) return false;
+
+  const termo = atlasNormalizarBuscaObra(input.value);
+  if(!termo) return false;
+
+  const exata = (obras || []).find(obra =>
+    atlasNormalizarBuscaObra(obra.codigo_obra) === termo ||
+    atlasNormalizarBuscaObra(atlasTextoObra(obra)) === termo
+  );
+
+  const candidatas = exata
+    ? [exata]
+    : (atlasObraResultados.length
+        ? atlasObraResultados
+        : (obras || []).filter(obra =>
+            atlasNormalizarBuscaObra(atlasTextoObra(obra)).includes(termo)
+          ));
+
+  if(candidatas.length === 1){
+    return atlasSelecionarObraCombo(candidatas[0].id, false);
+  }
+
+  if(atlasObraIndice >= 0 && candidatas[atlasObraIndice]){
+    return atlasSelecionarObraCombo(candidatas[atlasObraIndice].id, false);
+  }
+
+  atlasFiltrarObras(input.value);
+  return false;
+}
+
+function atlasAtualizarComboObras(){
+  atlasSincronizarCampoObra();
+
+  const input = document.getElementById("obraBusca");
+  if(input && !input.disabled && document.activeElement === input){
+    atlasFiltrarObras(input.value);
+  }
+}
+
+function atlasIniciarComboObras(){
+  if(atlasObraComboIniciado) return;
+
+  const input = document.getElementById("obraBusca");
+  const seta = document.getElementById("obraComboSeta");
+  const lista = document.getElementById("obraSugestoes");
+  const select = document.getElementById("obraSelect");
+
+  if(!input || !seta || !lista || !select) return;
+  atlasObraComboIniciado = true;
+
+  input.addEventListener("focus", () => {
+    if(!input.disabled) atlasFiltrarObras(input.value);
+  });
+
+  input.addEventListener("input", () => {
+    select.value = "";
+    atlasFiltrarObras(input.value);
+  });
+
+  input.addEventListener("keydown", async evento => {
+    if(evento.key === "ArrowDown"){
+      evento.preventDefault();
+      if(!lista.classList.contains("ativo")) atlasFiltrarObras(input.value);
+      if(atlasObraResultados.length){
+        atlasObraIndice = Math.min(atlasObraIndice + 1, atlasObraResultados.length - 1);
+        atlasRenderizarSugestoesObra();
+      }
+      return;
+    }
+
+    if(evento.key === "ArrowUp"){
+      evento.preventDefault();
+      if(atlasObraResultados.length){
+        atlasObraIndice = Math.max(atlasObraIndice - 1, 0);
+        atlasRenderizarSugestoesObra();
+      }
+      return;
+    }
+
+    if(evento.key === "Enter"){
+      evento.preventDefault();
+      await atlasConfirmarObraDigitada();
+      return;
+    }
+
+    if(evento.key === "Tab"){
+      /*
+       * TAB apenas confirma a opção digitada no campo interno.
+       * O lançamento só fica travado quando o usuário aciona
+       * explicitamente o botão "Confirmar obra".
+       */
+      await atlasConfirmarObraDigitada();
+      return;
+    }
+
+    if(evento.key === "Escape"){
+      atlasFecharSugestoesObra();
+    }
+  });
+
+  input.addEventListener("blur", () => {
+    setTimeout(() => {
+      atlasFecharSugestoesObra();
+      const selecionada = atlasObraSelecionadaAtual();
+      if(selecionada){
+        input.value = atlasTextoObra(selecionada);
+      }
+    }, 140);
+  });
+
+  seta.addEventListener("click", () => {
+    if(input.disabled) return;
+
+    if(lista.classList.contains("ativo")){
+      atlasFecharSugestoesObra();
+    }else{
+      input.focus();
+      atlasFiltrarObras("", true);
+    }
+  });
+
+  document.addEventListener("click", evento => {
+    if(!document.getElementById("atlasObraCombo")?.contains(evento.target)){
+      atlasFecharSugestoesObra();
+    }
+  });
+
+  select.addEventListener("change", atlasSincronizarCampoObra);
+  atlasSincronizarCampoObra();
+}
+
+
 async function carregarObras(){
 
   const preencherSelectObras = () => {
@@ -2701,6 +3273,9 @@ async function carregarObras(){
     });
 
     preencherFiltroObraPatrimonio();
+
+    atlasIniciarComboObras();
+    atlasAtualizarComboObras();
 
     // Cadastro novo respeita a obra vinculada do usuário.
     // O select de movimentação (novaObraSelect) continua livre para enviar para outra obra.
@@ -2775,7 +3350,13 @@ async function alternarTravaObra(){
     return;
   }
 
-  const obra_id = document.getElementById("obraSelect").value;
+  let obra_id = document.getElementById("obraSelect").value;
+
+  if(!obra_id && document.getElementById("obraBusca")?.value){
+    const selecionouDigitacao = await atlasConfirmarObraDigitada();
+    if(!selecionouDigitacao) return;
+    obra_id = document.getElementById("obraSelect").value;
+  }
 
   if(!obra_id){
     alert("Selecione uma obra/setor para travar.");
@@ -2871,6 +3452,12 @@ function atualizarVisualTrava(){
       textoTopo.innerText = "🔓 Escolha uma obra de lançamento";
     }
   }
+
+  /*
+   * O select real fica oculto. Esta sincronização é indispensável
+   * para bloquear/desbloquear também o campo visível "obraBusca".
+   */
+  atlasSincronizarCampoObra();
 }
 
 function obterObraParaLancamento(){
@@ -3074,6 +3661,8 @@ function atlasTeclaSugestaoPatrimonio(event){
   });
 }
 
+atlasSincronizarCampoObra();
+
 /*
  * Deixa o bloco da obra pequeno.
  *
@@ -3222,51 +3811,20 @@ function mostrarCampos(){
     `;
   }
 
-  /*
-   * MÁQUINA PESADA
-   *
-   * Usa praticamente a mesma identificação de Veículo,
-   * mas com foco em número de série, horímetro e potência.
-   *
-   * Placa e RENAVAM são opcionais, pois algumas máquinas
-   * possuem registro para circulação e outras não.
-   */
-  if(tipo === "MAQUINA" || tipo === "MAQUINA_PESADA"){
+  if(tipo === "MAQUINA_PESADA"){
     div.innerHTML = `
-      <input class="maq-campo maq-identificacao" id="placa"
-             placeholder=" Identificação, se houver"
-             onblur="validarDuplicidadeCampoPatrimonio('placa')">
-
-      <input class="maq-campo maq-renavam" id="renavam"
-             placeholder="RENAVAM"
-             onblur="validarDuplicidadeCampoPatrimonio('renavam')">
-
-      <input class="maq-campo maq-chassi" id="chassi"
-             placeholder="Chassi"
-             onblur="validarDuplicidadeCampoPatrimonio('chassi')">
-
-      <input class="maq-campo maq-serie" id="numero_serie" placeholder="Número de série">
-      <input class="maq-campo maq-marca" id="marca" placeholder="Marca">
-      <input class="maq-campo maq-modelo" id="modelo" placeholder="Modelo">
-      <input class="maq-campo maq-cor" id="cor" placeholder="Cor">
-      <input class="maq-campo maq-combustivel" id="combustivel" placeholder="Combustível">
-      <input class="maq-campo maq-potencia" id="potencia" placeholder="Potência">
-      <input class="maq-campo maq-ano-fabricacao" id="ano_fabricacao" placeholder="Ano de fabricação" inputmode="numeric">
-      <input class="maq-campo maq-ano-modelo" id="ano_modelo" placeholder="Ano do modelo" inputmode="numeric">
-      <input class="maq-campo maq-horimetro" id="horimetro" placeholder="Horímetro atual" inputmode="decimal">
-          `;
+      <input id="marca" placeholder="Marca">
+      <input id="modelo" placeholder="Modelo">
+      <input id="numero_serie" placeholder="Número de série">
+      <input id="potencia" placeholder="Potência">
+      <input id="horimetro" placeholder="Horímetro" inputmode="decimal">
+      <input id="combustivel" placeholder="Combustível">
+      <input id="ano_fabricacao" placeholder="Ano de fabricação" inputmode="numeric">
+      <input id="ano_modelo" placeholder="Ano do modelo" inputmode="numeric">
+    `;
   }
 
-  if(tipo === "IMOBILIZADO"){
-    div.innerHTML = `
-      <input id="marca" placeholder="Marca / fabricante">
-      <input id="modelo" placeholder="Modelo, se houver">
-      <input id="numero_serie" placeholder="Número de série, se houver">
-      <input id="local_instalacao" placeholder="Local de instalação. Ex.: Sala administrativa">
-      `;
-  }
-
-  if(tipo === "MATERIAL_APOIO"){
+  if(["IMOBILIZADO","MATERIAL_APOIO"].includes(tipo)){
     div.innerHTML = `
       <input id="marca" placeholder="Marca / fabricante">
       <input id="modelo" placeholder="Modelo / descrição">
@@ -3489,6 +4047,36 @@ async function validarDuplicidadeCampoPatrimonio(campo){
   return true;
 }
 
+
+/* =========================================================
+   ATLAS PATRIMÔNIO 3.5 — CONTROLE DOS DADOS FISCAIS
+========================================================= */
+function atlasMascaraNCM(input){
+  if(!input) return;
+  input.value = String(input.value || "").replace(/\D/g, "").slice(0, 8);
+}
+
+function atlasAlternarDadosFiscais(forcarEstado){
+  const botao = document.getElementById("atlasFiscalToggle");
+  const campos = document.getElementById("camposFiscais");
+  if(!botao || !campos) return;
+
+  const ativoAtual = botao.classList.contains("ativo");
+  const ativo = typeof forcarEstado === "boolean" ? forcarEstado : !ativoAtual;
+
+  botao.classList.toggle("ativo", ativo);
+  botao.setAttribute("aria-pressed", String(ativo));
+  campos.classList.toggle("ativo", ativo);
+  campos.setAttribute("aria-hidden", String(!ativo));
+
+  const icone = botao.querySelector(".atlas-fiscal-icone");
+  if(icone) icone.textContent = ativo ? "✓" : "○";
+
+  if(ativo && typeof forcarEstado !== "boolean"){
+    setTimeout(() => document.getElementById("ncm")?.focus(), 120);
+  }
+}
+
 async function gerarPatrimonio(){
 
   if(window.__BDR_PATRIMONIO_SALVANDO__){
@@ -3606,15 +4194,11 @@ ano_modelo: valor("ano_modelo")
 
     valor_bem: moedaParaNumero(valor("valor_bem")),
     codigo_antigo: valor("codigo_antigo") || null,
+    ncm: valor("ncm") || null,
+    numero_nfe: valor("numero_nfe") || null,
     estado_conservacao: valor("estado_conservacao") || "BOM",
     observacao: [
       valor("observacao"),
-      valor("descricao_imobilizado")
-        ? "Descrição do imobilizado: " + valor("descricao_imobilizado")
-        : "",
-      valor("local_instalacao")
-        ? "Local de instalação: " + valor("local_instalacao")
-        : "",
       valor("especificacoes") ? "Especificações: " + valor("especificacoes") : ""
     ].filter(Boolean).join(" | ") || null,
 
@@ -3678,6 +4262,9 @@ function limparFormularioCadastro(){
   document.getElementById("campoOutroTipo").style.display = "none";
   document.getElementById("observacao").value = "";
   document.getElementById("codigo_antigo").value = "";
+  document.getElementById("ncm").value = "";
+  document.getElementById("numero_nfe").value = "";
+  atlasAlternarDadosFiscais(false);
 
   const campoEstado = document.getElementById("estado_conservacao");
   if(campoEstado){
@@ -4118,18 +4705,13 @@ function bdrLinhasTipoPatrimonio(p){
     return html;
   }
 
-  if(tipo === "MAQUINA" || tipo === "MAQUINA_PESADA"){
-    html += bdrLinhaInfo("Placa", p.placa);
-    html += bdrLinhaInfo("RENAVAM", p.renavam);
-    html += bdrLinhaInfo("Chassi", p.chassi);
-    html += bdrLinhaInfo("Nº Série", p.numero_serie);
-    html += bdrLinhaInfo("Cor", p.cor);
-    html += bdrLinhaInfo("Combustível", p.combustivel);
+  if(tipo === "MAQUINA"){
     html += bdrLinhaInfo("Potência", p.potencia);
+    html += bdrLinhaInfo("Combustível", p.combustivel);
     html += bdrLinhaInfo("Ano fabricação", p.ano_fabricacao);
     html += bdrLinhaInfo("Ano modelo", p.ano_modelo);
-    html += bdrLinhaInfo("Horímetro", p.horimetro);
-    html += bdrLinhaInfo("KM", p.quilometragem);
+    html += bdrLinhaInfo("Horímetro", p.horimetro || p.quilometragem);
+    html += bdrLinhaInfo("Nº Série", p.numero_serie);
     return html;
   }
 
@@ -4165,6 +4747,8 @@ function abrirModal(id){
   document.getElementById("modalInfo").innerHTML = `
     ${bdrLinhaInfo("Código", p.codigo_qr)}
     ${bdrLinhaInfo("Código antigo", p.codigo_antigo)}
+    ${bdrLinhaInfo("NCM", p.ncm)}
+    ${bdrLinhaInfo("Número da NF-e", p.numero_nfe)}
     ${bdrLinhaInfo("Origem", p.origem_cadastro)}
     ${bdrLinhaInfo("Cadastrado por", p.usuario_cadastro)}
     ${bdrLinhaInfo("Status", p.status)}
@@ -4961,25 +5545,16 @@ function montarCamposEdicaoPorTipo(){
     `;
   }
 
-  /*
-   * Edição de Máquina Pesada.
-   * Mantém os mesmos campos apresentados no cadastro.
-   */
-  if(tipo === "MAQUINA" || tipo === "MAQUINA_PESADA"){
+  if(tipo === "MAQUINA"){
     box.innerHTML = `
-      <input class="maq-campo maq-identificacao" id="edit_placa" placeholder="Placa, se houver">
-      <input class="maq-campo maq-renavam" id="edit_renavam" placeholder="RENAVAM, se houver">
-      <input class="maq-campo maq-chassi" id="edit_chassi" placeholder="Chassi">
-      <input class="maq-campo maq-serie" id="edit_numero_serie" placeholder="Número de série">
-      <input class="maq-campo maq-marca" id="edit_marca" placeholder="Marca">
-      <input class="maq-campo maq-modelo" id="edit_modelo" placeholder="Modelo">
-      <input class="maq-campo maq-cor" id="edit_cor" placeholder="Cor">
-      <input class="maq-campo maq-combustivel" id="edit_combustivel" placeholder="Combustível">
-      <input class="maq-campo maq-potencia" id="edit_potencia" placeholder="Potência">
-      <input class="maq-campo maq-ano-fabricacao" id="edit_ano_fabricacao" placeholder="Ano de fabricação">
-      <input class="maq-campo maq-ano-modelo" id="edit_ano_modelo" placeholder="Ano do modelo">
-      <input class="maq-campo maq-horimetro" id="edit_horimetro" placeholder="Horímetro atual">
-      <input class="maq-campo maq-km" id="edit_quilometragem" placeholder="KM atual, se houver">
+      <input id="edit_marca" placeholder="Marca">
+      <input id="edit_modelo" placeholder="Modelo">
+      <input id="edit_numero_serie" placeholder="Número de série">
+      <input id="edit_potencia" placeholder="Potência">
+      <input id="edit_horimetro" placeholder="Horímetro">
+      <input id="edit_combustivel" placeholder="Combustível">
+      <input id="edit_ano_fabricacao" placeholder="Ano fabricação">
+      <input id="edit_ano_modelo" placeholder="Ano modelo">
     `;
   }
 
@@ -5039,6 +5614,8 @@ function abrirEdicao(){
   );
 
   bdrSetValorCampo("edit_codigo_antigo", patrimonioSelecionado.codigo_antigo || "");
+  bdrSetValorCampo("edit_ncm", patrimonioSelecionado.ncm || "");
+  bdrSetValorCampo("edit_numero_nfe", patrimonioSelecionado.numero_nfe || "");
   bdrSetValorCampo("edit_observacao", patrimonioSelecionado.observacao || "");
   bdrSetValorCampo("motivo_correcao", "");
 
@@ -5056,8 +5633,7 @@ function abrirEdicao(){
   bdrSetValorCampo("edit_potencia", patrimonioSelecionado.potencia || "");
   bdrSetValorCampo("edit_ano_fabricacao", patrimonioSelecionado.ano_fabricacao || "");
   bdrSetValorCampo("edit_ano_modelo", patrimonioSelecionado.ano_modelo || "");
-  bdrSetValorCampo("edit_horimetro", patrimonioSelecionado.horimetro || "");
-  bdrSetValorCampo("edit_quilometragem", patrimonioSelecionado.quilometragem || "");
+  bdrSetValorCampo("edit_horimetro", patrimonioSelecionado.horimetro || patrimonioSelecionado.quilometragem || "");
 
   document.getElementById("modalEdicaoBg").style.display = "flex";
 }
@@ -5105,8 +5681,10 @@ async function salvarEdicaoPatrimonio(){
     ano_fabricacao: valor("edit_ano_fabricacao") ? parseInt(valor("edit_ano_fabricacao")) : null,
     ano_modelo: valor("edit_ano_modelo") ? parseInt(valor("edit_ano_modelo")) : null,
     horimetro: moedaParaNumero(valor("edit_horimetro")),
-    quilometragem: moedaParaNumero(valor("edit_quilometragem")),
+    quilometragem: moedaParaNumero(valor("edit_horimetro")),
     codigo_antigo: valor("edit_codigo_antigo") || null,
+    ncm: valor("edit_ncm") || null,
+    numero_nfe: valor("edit_numero_nfe") || null,
     observacao: valor("edit_observacao") || null
   };
 
@@ -5343,41 +5921,86 @@ setTimeout(() => {
    - usuário com CONFIGURAR_ETIQUETAS.
 ========================================================= */
 function aplicarPermissaoConfigurarEtiquetas(){
-  const botao = document.getElementById("btnConfigurarEtiquetas");
-  if(!botao) return;
-
-  let usuario = null;
-  try{
-    usuario = typeof usuarioAtual === "function"
-      ? usuarioAtual()
-      : JSON.parse(
-          localStorage.getItem("usuario_logado") ||
-          localStorage.getItem("usuarioLogado") ||
-          "null"
-        );
-  }catch(error){
-    usuario = null;
-  }
-
-  const perfil = String(usuario?.perfil || "").trim().toUpperCase();
-  const ehOwner = typeof usuarioOwnerBDR === "function"
-    ? usuarioOwnerBDR(usuario)
-    : Number(usuario?.id) === 1;
-
-  const temPermissao = typeof usuarioTemPermissao === "function"
-    ? usuarioTemPermissao("CONFIGURAR_ETIQUETAS")
-    : String(usuario?.permissoes || "")
-        .split(",")
-        .map(item => item.trim().toUpperCase())
-        .includes("CONFIGURAR_ETIQUETAS");
-
-  const autorizado = ehOwner || perfil === "MASTER" || temPermissao;
-  botao.style.display = autorizado ? "inline-flex" : "none";
-  botao.hidden = !autorizado;
+  const botao=document.getElementById("btnConfigurarEtiquetas");
+  if(!botao)return;
+  const autorizado=Boolean(window.AtlasOwnerMode?.ativo());
+  botao.hidden=!autorizado;
+  botao.style.display=autorizado?"inline-flex":"none";
 }
 window.addEventListener("DOMContentLoaded", aplicarPermissaoConfigurarEtiquetas);
 window.addEventListener("load", aplicarPermissaoConfigurarEtiquetas);
+window.addEventListener("atlas:owner-mode-changed", aplicarPermissaoConfigurarEtiquetas);
+
+
+function abrirModalConfiguracaoEtiqueta(){
+  if(!window.AtlasOwnerMode?.ativo()){
+    window.AtlasOwnerMode?.mensagem("amarelo","Área protegida","Ative o modo OWNER para editar etiquetas.");
+    return;
+  }
+  const modal = document.getElementById('atlasConfigEtiquetaModal');
+  const frame = document.getElementById('atlasConfigEtiquetaFrame');
+  if(!modal || !frame) return;
+
+  if(!frame.src){
+    frame.src = frame.dataset.src;
+  }else{
+    frame.contentWindow?.location.reload();
+  }
+
+  modal.classList.add('ativo');
+  modal.setAttribute('aria-hidden','false');
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharModalConfiguracaoEtiqueta(){
+  const modal = document.getElementById('atlasConfigEtiquetaModal');
+  if(!modal) return;
+  modal.classList.remove('ativo');
+  modal.setAttribute('aria-hidden','true');
+  document.body.style.overflow = '';
+}
+
+window.addEventListener('message', event => {
+  if(event.data?.tipo === 'atlas:fechar-config-etiqueta' || event.data?.tipo === 'ATLAS_FECHAR_ETIQUETA_CONFIG'){
+    fecharModalConfiguracaoEtiqueta();
+  }
+
+  if(event.data?.tipo === 'atlas:etiqueta-config-salva'){
+    document.querySelectorAll('.bdr-etiqueta-frame').forEach(frame => {
+      try{
+        frame.contentWindow?.AtlasEtiquetaConfig?.aplicar(event.data.config);
+      }catch(error){}
+    });
+  }
+});
+
+window.addEventListener('keydown', event => {
+  if(event.key === 'Escape'){
+    fecharModalConfiguracaoEtiqueta();
+  }
+});
+
+document.getElementById('atlasConfigEtiquetaModal')?.addEventListener('click', event => {
+  if(event.target.id === 'atlasConfigEtiquetaModal'){
+    fecharModalConfiguracaoEtiqueta();
+  }
+});
+
 </script>
 
+
+<div id="atlasConfigEtiquetaModal" class="atlas-config-etiqueta-modal-bg" aria-hidden="true">
+  <div class="atlas-config-etiqueta-modal">
+    <div class="atlas-config-etiqueta-modal-head">
+      <strong>⚙ Configuração de etiquetas</strong>
+      <button type="button" onclick="fecharModalConfiguracaoEtiqueta()" title="Fechar">✕</button>
+    </div>
+    <iframe id="atlasConfigEtiquetaFrame"
+            title="Configuração de etiquetas"
+            data-src="etiqueta-config.html?modal=1"></iframe>
+  </div>
+</div>
+
+<script src="./JS/atlasOwnerMode.js"></script>
 </body>
 </html>
