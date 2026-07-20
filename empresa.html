@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css">
+<link rel="stylesheet" href="./CSS/atlasMensagens.css">
 
 <style>
 /* =========================================================
@@ -34,7 +35,7 @@
 
 .empresa-header{
   display:grid;
-  grid-template-columns:2fr 110px 1.5fr 1.2fr 90px 270px;
+  grid-template-columns:minmax(180px,1.5fr) 90px minmax(240px,1.6fr) minmax(190px,1.15fr) 80px 350px;
   gap:10px;
   padding:10px 14px;
   margin-bottom:8px;
@@ -45,9 +46,16 @@
   letter-spacing:.03em;
 }
 
+/* Alinha o título AÇÕES sobre o conjunto de botões */
+.empresa-header > div:last-child{
+    display:flex;
+    justify-content:flex-end;
+    padding-right:92px;
+}
+
 .empresa-linha{
   display:grid;
-  grid-template-columns:2fr 110px 1.5fr 1.2fr 90px 270px;
+  grid-template-columns:minmax(180px,1.5fr) 90px minmax(240px,1.6fr) minmax(190px,1.15fr) 80px 350px;
   gap:10px;
   align-items:center;
   background:white;
@@ -106,19 +114,25 @@
 
 .empresa-acoes{
   display:flex;
+  justify-content:flex-end;
+  align-items:center;
   gap:6px;
-  flex-wrap:wrap;
+  flex-wrap:nowrap;
+  white-space:nowrap;
+  min-width:0;
 }
 
 .btn-mini{
   border:none;
   border-radius:8px;
-  padding:6px 9px;
-  font-size:11px;
+  padding:6px 8px;
+  font-size:10px;
   font-weight:800;
   background:#111827;
   color:white;
   cursor:pointer;
+  white-space:nowrap;
+  flex:0 0 auto;
 }
 
 .btn-mini:hover{
@@ -151,9 +165,27 @@
 .btn-salvar{background:#2a9d8f}
 .btn-limpar{background:#6b7280}
 
-.btn-mini.btn-editar{background:#2563eb}
-.btn-mini.btn-status{background:#6b7280}
-.btn-mini.btn-status-danger{background:#dc2626}
+/* Detalhes */
+.btn-mini{
+    background:#111827;
+}
+
+/* Editar */
+.btn-mini.btn-editar{
+    background:#2563eb;
+}
+
+/* Inativar: ação de atenção */
+.btn-mini.btn-status-warning{
+    background:#f59e0b;
+    color:#fff;
+}
+
+/* Reativar: ação positiva */
+.btn-mini.btn-status-success{
+    background:#16a34a;
+    color:#fff;
+}
 
 .edicao-card{
   display:none;
@@ -215,6 +247,9 @@
 
   .empresa-acoes{
     margin-top:6px;
+    justify-content:flex-start;
+    flex-wrap:wrap;
+    white-space:normal;
   }
 }
 
@@ -501,6 +536,7 @@ button,
 
 <script src="JS/auth.js"></script>
 <script src="./JS/bdrSessaoRealtime.js"></script>
+<script src="./JS/atlasMensagens.js"></script>
 <script>
   verificarLogin();
 </script>
@@ -912,32 +948,12 @@ async function buscarEmpresaPadraoBDR(){
   return data;
 }
 
-async function atualizarEmpresaPadraoBDR(dados){
-  const payload = {
-    nome: EMPRESA_PADRAO_BDR.nome,
-    codigo_empresa: EMPRESA_PADRAO_BDR.codigo_empresa,
-    cnpj: EMPRESA_PADRAO_BDR.cnpj,
-    cidade: EMPRESA_PADRAO_BDR.cidade,
-    estado: EMPRESA_PADRAO_BDR.estado,
-    endereco: EMPRESA_PADRAO_BDR.endereco,
-    cep: EMPRESA_PADRAO_BDR.cep,
-    observacao: dados.observacao || null,
-    ativa: true
-  };
-
-  const { data, error } = await db()
-    .from("empresas")
-    .update(payload)
-    .eq("id", EMPRESA_PADRAO_BDR.id)
-    .select()
-    .single();
-
-  if(error) throw error;
-  return data;
-}
+// A empresa padrão BDR não é atualizada durante o cadastro de obras.
+// Isso evita gravações desnecessárias e respostas 406 do PostgREST.
 
 async function salvarOuAtualizarObraDaEmpresa(empresaId, dados){
-  const nomeObra = String(dados.setor_obra || "").trim();
+  const nomeObra = String(dados.setor_obra || "").trim().toUpperCase();
+  const codigoObra = String(dados.codigo_sienge_obra || dados.codigo_empresa || "").trim();
 
   if(!empresaId){
     throw new Error("Empresa não identificada para vincular a obra.");
@@ -947,61 +963,51 @@ async function salvarOuAtualizarObraDaEmpresa(empresaId, dados){
     throw new Error("Informe o nome da obra/setor.");
   }
 
-  const codigoObra = String(dados.codigo_sienge_obra || dados.codigo_empresa || "").trim();
-
-  /*
-    NÃO usar .single() ou .maybeSingle() aqui.
-    Quando existem obras parecidas, o Supabase pode retornar mais de uma linha e dar:
-    Cannot coerce the result to a single JSON object.
-  */
-  let query = db()
-    .from("obras")
-    .select("*")
-    .eq("empresa_id", empresaId)
-    .limit(1);
-
-  if(codigoObra){
-    query = query.eq("codigo_obra", codigoObra);
-  }else{
-    query = query.ilike("nome", nomeObra);
+  if(!codigoObra){
+    throw new Error("Informe o código Sienge da obra.");
   }
 
-  const { data: obrasEncontradas, error: erroBusca } = await query;
+  // Cadastro deve ser previsível: nunca sobrescrever uma obra existente.
+  const { data: obrasEncontradas, error: erroBusca } = await db()
+    .from("obras")
+    .select("id,codigo_obra,nome,empresa_id")
+    .eq("empresa_id", Number(empresaId))
+    .eq("codigo_obra", codigoObra)
+    .limit(2);
 
   if(erroBusca) throw erroBusca;
 
-  const obraAtual = Array.isArray(obrasEncontradas) && obrasEncontradas.length
-    ? obrasEncontradas[0]
-    : null;
+  if(Array.isArray(obrasEncontradas) && obrasEncontradas.length > 0){
+    const existente = obrasEncontradas[0];
+    throw new Error(
+      `Já existe uma obra com o código ${codigoObra} nesta empresa: ${existente.nome || "-"}. Nada foi alterado.`
+    );
+  }
 
   const payloadObra = {
     empresa_id: Number(empresaId),
     nome: nomeObra,
-    codigo_obra: codigoObra || null,
-    codigo_sienge: String(dados.codigo_sienge_obra || "").trim() || null,
+    codigo_obra: codigoObra,
+    codigo_sienge: codigoObra,
     tabela_insumo: Number(dados.tabela_insumo || EMPRESA_PADRAO_BDR.tabela_insumo || 2),
     ativa: true,
     ativo: true
   };
 
-  if(obraAtual?.id){
-    const { error } = await db()
-      .from("obras")
-      .update(payloadObra)
-      .eq("id", obraAtual.id);
-
-    if(error) throw error;
-    return obraAtual.id;
-  }
-
   const { data: obraNova, error } = await db()
     .from("obras")
     .insert([payloadObra])
-    .select()
+    .select("id,codigo_obra,nome,empresa_id")
     .limit(1);
 
   if(error) throw error;
-  return Array.isArray(obraNova) && obraNova[0] ? obraNova[0].id : null;
+
+  const novaObra = Array.isArray(obraNova) ? obraNova[0] : null;
+  if(!novaObra?.id){
+    throw new Error("A obra não retornou confirmação após o cadastro. Confira o banco antes de tentar novamente.");
+  }
+
+  return novaObra;
 }
 
 function ir(pagina){
@@ -1129,17 +1135,17 @@ async function salvarEmpresa(){
         return;
       }
 
-      const empresaFinal = await atualizarEmpresaPadraoBDR(empresa);
-
-      await salvarOuAtualizarObraDaEmpresa(EMPRESA_PADRAO_BDR.id, empresa);
+      // Ao cadastrar uma obra da BDR, não atualizar a empresa 17.
+      // A empresa já existe e seus dados não devem ser regravados a cada nova obra.
+      const obraCriada = await salvarOuAtualizarObraDaEmpresa(EMPRESA_PADRAO_BDR.id, empresa);
 
       await registrarMovimentacaoEmpresa(
         "CADASTRO_OBRA_SETOR",
-        empresaFinal,
-        `Obra/setor vinculado à BDR oficial ID ${EMPRESA_PADRAO_BDR.id}: ${empresa.setor_obra || "-"} | Código da obra: ${empresa.codigo_sienge_obra || "-"} | Tabela: ${empresa.tabela_insumo || "2"}`
+        existeBDR,
+        `Obra/setor vinculado à BDR oficial ID ${EMPRESA_PADRAO_BDR.id}: ${obraCriada.nome || "-"} | Código da obra: ${obraCriada.codigo_obra || "-"} | Tabela: ${empresa.tabela_insumo || "2"}`
       );
 
-      alert("Obra/setor cadastrado na empresa padrão BDR CONSTRUART.");
+      alert(`Obra cadastrada com sucesso: ${obraCriada.codigo_obra} - ${obraCriada.nome}`);
     }else{
       const { data: empresaCriada, error } = await db()
         .from("empresas")
@@ -1155,16 +1161,21 @@ async function salvarEmpresa(){
           observacao: empresa.observacao,
           ativa: true
         }])
-        .select()
-        .single();
+        .select("id,nome,codigo_empresa,setor_obra")
+        .limit(1);
 
       if(error) throw error;
 
-      await salvarOuAtualizarObraDaEmpresa(empresaCriada.id, empresa);
+      const novaEmpresa = Array.isArray(empresaCriada) ? empresaCriada[0] : null;
+      if(!novaEmpresa?.id){
+        throw new Error("A empresa não retornou confirmação após o cadastro. Confira o banco antes de tentar novamente.");
+      }
+
+      await salvarOuAtualizarObraDaEmpresa(novaEmpresa.id, empresa);
 
       await registrarMovimentacaoEmpresa(
         "CADASTRO_EMPRESA",
-        empresaCriada,
+        novaEmpresa,
         `Empresa cadastrada: ${empresa.nome || "-"} | Código: ${empresa.codigo_empresa || "-"} | Setor/Obra: ${empresa.setor_obra || "-"}`
       );
 
@@ -1172,7 +1183,7 @@ async function salvarEmpresa(){
     }
 
     limparFormulario();
-    carregarEmpresas();
+    await carregarEmpresas();
 
   }catch(e){
     console.error(e);
@@ -1302,15 +1313,11 @@ function renderizarEmpresas(){
           ` : ``}
 
           ${usuarioTemPermissaoEmpresaBDR("EMPRESAS_INATIVAR") ? `
-            <button class="btn-mini ${e.ativa === false ? "btn-status" : "btn-status-danger"}"
+            <button class="btn-mini ${e.ativa === false ? "btn-status-success" : "btn-status-warning"}"
               title="${e.ativa === false ? "Reativar empresa" : "Inativar empresa"}"
               onclick="alterarStatusEmpresa(${e.id}, ${e.ativa === false ? "true" : "false"})">
               ${e.ativa === false ? "✅ Reativar" : "🚫 Inativar"}
             </button>
-          ` : ``}
-
-          ${usuarioTemPermissaoEmpresaBDR("EMPRESAS_EXCLUIR") ? `
-            <button class="btn-mini btn-status-danger" title="Excluir definitivamente" onclick="excluirEmpresa(${e.id})">🗑 Excluir</button>
           ` : ``}
         </div>
 

@@ -3,333 +3,351 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Configuração de etiquetas - Atlas/BDR</title>
-<script src="./JS/atlasEtiquetaConfig.js"></script>
+<title>Atlas Label Studio</title>
+<script src="./JS/atlasOwnerMode.js?v=2.0.0"></script>
+<script src="./JS/atlasEtiquetaConfig.js?v=7.0.0"></script>
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:#eef2f7;font-family:Arial,sans-serif;color:#172033}
-.pagina{max-width:1240px;margin:0 auto;padding:22px}
-.topo{display:flex;gap:16px;justify-content:space-between;align-items:center;margin-bottom:16px}
-.topo h1{margin:0;font-size:24px}
-.acoes{display:flex;gap:10px;flex-wrap:wrap}
-.btn{border:0;border-radius:10px;padding:11px 16px;font-weight:800;cursor:pointer}
-.primario{background:#b31820;color:#fff}
-.secundario{background:#fff;color:#243047;border:1px solid #cbd5e1}
-.grade{display:grid;grid-template-columns:minmax(390px,1.08fr) minmax(430px,.92fr);gap:18px;align-items:start}
-.card{background:#fff;border-radius:16px;box-shadow:0 8px 28px rgba(15,23,42,.08);padding:18px}
-.preview{min-height:430px;display:flex;align-items:center;justify-content:center;background:#f8fafc;border:1px solid #dbe3ee;border-radius:14px;position:sticky;top:16px}
-.preview iframe{width:72mm;height:50mm;border:0;background:#fff;box-shadow:0 6px 22px rgba(15,23,42,.12);transform:scale(1.55)}
-.grupo{border:1px solid #dbe3ee;border-radius:13px;margin-bottom:10px;overflow:hidden}
-.grupo summary{cursor:pointer;list-style:none;padding:13px 14px;font-weight:900;background:#f8fafc;display:flex;justify-content:space-between;align-items:center}
-.grupo summary::-webkit-details-marker{display:none}
-.grupo summary:after{content:'▾';color:#64748b}
-.grupo[open] summary:after{content:'▴'}
-.grupo-conteudo{padding:13px}
-.linha-ajuste{display:grid;grid-template-columns:1fr 170px;gap:14px;align-items:center}
-.campo{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
-.campo label{font-size:12px;font-weight:900}
-.campo input{width:100%;border:1px solid #cbd5e1;border-radius:9px;padding:9px;font-size:14px}
-.dpad-wrap{text-align:center}
-.dpad-titulo{font-size:11px;font-weight:900;color:#64748b;margin-bottom:6px}
-.dpad{display:grid;grid-template-columns:42px 42px 42px;grid-template-rows:42px 42px 42px;gap:4px;justify-content:center}
-.seta{border:1px solid #cbd5e1;background:#fff;border-radius:9px;font-size:19px;font-weight:900;cursor:pointer;color:#172033}
-.seta:hover{background:#fee2e2;color:#b31820;border-color:#fecaca}
-.seta:active,.seta.segurando{transform:scale(.96);background:#fee2e2;color:#b31820;border-color:#fecaca;box-shadow:0 0 0 3px rgba(179,24,32,.10)}
-.cima{grid-column:2}
-.esquerda{grid-column:1;grid-row:2}
-.centro{grid-column:2;grid-row:2;background:#f1f5f9;font-size:11px;display:flex;align-items:center;justify-content:center;border-radius:9px;border:1px solid #dbe3ee;color:#475569}
-.direita{grid-column:3;grid-row:2}
-.baixo{grid-column:2;grid-row:3}
-.valores-posicao{font-size:11px;color:#64748b;margin-top:7px;line-height:1.45}
-.duas-colunas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.dica{margin-top:14px;background:#eff6ff;border:1px solid #bfdbfe;padding:12px;border-radius:10px;color:#1e3a8a;font-size:13px;line-height:1.4}
-.status{min-height:22px;margin-top:10px;font-weight:800;color:#16794c}
-@media(max-width:920px){
-  .grade{grid-template-columns:1fr}
-  .preview{position:static;min-height:350px}
-  .preview iframe{transform:scale(1.25)}
+:root{--atlas:#2563eb;--atlas-dark:#172033;--danger:#b31820;--line:#dbe3ee;--muted:#64748b;--panel:#fff;--bg:#eef2f7}
+*{box-sizing:border-box}html,body{height:100%}body{margin:0;background:var(--bg);font-family:Arial,sans-serif;color:var(--atlas-dark);overflow:hidden}
+button,input,select{font:inherit}.app{height:100vh;display:grid;grid-template-rows:auto 1fr}.topbar{height:64px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:10px 18px;gap:14px}.brand h1{font-size:20px;margin:0}.brand small{color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.btn{border:1px solid #cbd5e1;background:#fff;color:#243047;border-radius:9px;padding:9px 13px;font-weight:800;cursor:pointer}.btn:hover{background:#f8fafc}.btn.primary{background:var(--danger);border-color:var(--danger);color:#fff}.btn:disabled{opacity:.5;cursor:not-allowed}
+.workspace{min-height:0;display:grid;grid-template-columns:230px minmax(430px,1fr) 310px;gap:12px;padding:12px}.panel{min-height:0;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 24px rgba(15,23,42,.06);overflow:hidden}.panel-title{height:50px;border-bottom:1px solid var(--line);padding:0 14px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:900}.elements{padding:8px;overflow:auto;height:calc(100% - 50px);scrollbar-gutter:stable}.element{width:100%;display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid transparent;background:#fff;border-radius:10px;cursor:pointer;text-align:left;font-weight:800;color:#334155;margin-bottom:2px}.element:hover{background:#f8fafc}.element.active{background:#eff6ff;color:#1d4ed8;border-color:#93c5fd}.element .icon{width:24px;text-align:center;font-size:17px}.element .eye{margin-left:auto;color:#94a3b8;font-size:12px}
+.stage-panel{display:flex;flex-direction:column}.stage-head{height:50px;border-bottom:1px solid var(--line);padding:0 14px;display:flex;align-items:center;justify-content:space-between}.zoom{display:flex;gap:6px;align-items:center;color:var(--muted);font-size:12px}.zoom button{width:30px;height:30px;border:1px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:900}.stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:auto;background-image:linear-gradient(45deg,#f8fafc 25%,transparent 25%),linear-gradient(-45deg,#f8fafc 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#f8fafc 75%),linear-gradient(-45deg,transparent 75%,#f8fafc 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0}.preview-shell{position:relative;width:55mm;height:35mm;transform:scale(1.75);transform-origin:center;box-shadow:0 8px 28px rgba(15,23,42,.22);background:white}.preview-shell iframe{display:block;width:55mm;height:35mm;border:0;background:#fff;pointer-events:auto}.stage-tip{position:absolute;bottom:15px;background:#172033;color:#fff;padding:7px 11px;border-radius:20px;font-size:11px;opacity:.85}
+.properties{height:calc(100% - 50px);overflow:auto;padding:14px}.empty{color:var(--muted);font-size:13px;line-height:1.5;background:#f8fafc;padding:14px;border-radius:10px}.section{margin-bottom:16px}.section h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 9px}.field{margin-bottom:10px}.field label{display:block;font-size:12px;font-weight:800;margin-bottom:5px}.field input,.field select{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px;background:#fff}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.toggle{display:flex;align-items:center;justify-content:space-between;border:1px solid #cbd5e1;border-radius:9px;padding:9px 10px;font-size:12px;font-weight:800}.toggle input{width:17px;height:17px}.dpad{display:grid;grid-template-columns:38px 38px 38px;grid-template-rows:38px 38px 38px;gap:5px;justify-content:center}.arrow{border:1px solid #cbd5e1;background:#fff;border-radius:8px;font-size:18px;font-weight:900;cursor:pointer}.arrow:hover{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}.up{grid-column:2}.left{grid-column:1;grid-row:2}.center{grid-column:2;grid-row:2;display:grid;place-items:center;background:#f1f5f9;border-radius:8px;font-size:10px;color:var(--muted)}.right{grid-column:3;grid-row:2}.down{grid-column:2;grid-row:3}.position-readout{text-align:center;color:var(--muted);font-size:11px;margin-top:7px}.note{font-size:11px;line-height:1.4;color:#1e3a8a;background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:9px}.owner-note{display:none;background:#fffbeb;border-bottom:1px solid #fde68a;color:#78350f;padding:8px 18px;font-size:12px;font-weight:800}.status{position:fixed;left:50%;bottom:18px;transform:translateX(-50%) translateY(20px);background:#166534;color:#fff;border-radius:24px;padding:9px 16px;font-size:12px;font-weight:800;opacity:0;pointer-events:none;transition:.2s;z-index:20}.status.show{opacity:1;transform:translateX(-50%) translateY(0)}body.owner-bloqueado .owner-note{display:block}body.owner-bloqueado .app{height:calc(100vh - 34px)}body.owner-bloqueado .properties input,body.owner-bloqueado .properties select,body.owner-bloqueado .properties button,body.owner-bloqueado #salvar,body.owner-bloqueado #salvarBanco,body.owner-bloqueado #restaurar{pointer-events:none;opacity:.55}
+@media(max-width:1050px){body{overflow:auto}.app{height:auto;min-height:100vh}.workspace{grid-template-columns:190px minmax(410px,1fr);grid-template-rows:620px auto}.properties-panel{grid-column:1/-1;min-height:480px}.properties{height:auto}.preview-shell{transform:scale(1.8)}}
+@media(max-width:720px){.topbar{height:auto;align-items:flex-start;flex-direction:column}.workspace{display:block}.panel{margin-bottom:12px;min-height:0}.elements{height:auto;max-height:230px}.stage-panel{height:470px}.properties-panel{min-height:500px}.preview-shell{transform:scale(1.25)}body{overflow:auto}}
+
+/* =========================================================
+   ATLAS PRINT CENTER V4 — PAINEL RESPONSIVO
+   Objetivo:
+   - caber dentro do modal do patrimônio;
+   - evitar rolagem horizontal;
+   - manter as três áreas proporcionais;
+   - preservar rolagem apenas onde ela é necessária.
+========================================================= */
+.pc-overlay{
+  position:fixed;
+  inset:0;
+  z-index:2147483000;
+  display:none;
+  align-items:stretch;
+  justify-content:center;
+  padding:8px;
+  background:rgba(15,23,42,.72);
 }
-@media(max-width:560px){
-  .pagina{padding:12px}
-  .topo{align-items:flex-start;flex-direction:column}
-  .linha-ajuste{grid-template-columns:1fr}
-  .duas-colunas{grid-template-columns:1fr}
+.pc-overlay.open{display:flex}
+.pc-modal{
+  width:100%;
+  max-width:1380px;
+  height:100%;
+  min-height:0;
+  display:grid;
+  grid-template-rows:58px minmax(0,1fr);
+  overflow:hidden;
+  background:#eef2f7;
+  border-radius:16px;
+  box-shadow:0 28px 90px rgba(0,0,0,.35);
+}
+.pc-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-width:0;
+  padding:10px 16px;
+  color:#fff;
+  background:#101c36;
+  border-bottom:3px solid #e5a900;
+}
+.pc-head h2{font-size:17px;margin:0}
+.pc-head small{display:block;color:#cbd5e1;margin-top:2px}
+.pc-close{flex:0 0 auto;border:1px solid #64748b;background:#fff;color:#172033;border-radius:8px;padding:8px 12px;font-weight:900;cursor:pointer}
+.pc-wrap{
+  min-width:0;
+  min-height:0;
+  overflow:hidden;
+  padding:10px;
+  display:grid;
+  grid-template-columns:minmax(250px,.86fr) minmax(300px,1fr) minmax(360px,1.22fr);
+  gap:10px;
+}
+.pc-card{min-width:0;min-height:0;display:flex;flex-direction:column;background:#fff;border:1px solid #d9e0ea;border-radius:13px;overflow:hidden}
+.pc-card h3{flex:0 0 auto;font-size:14px;margin:0;padding:11px 12px;border-bottom:1px solid #e4e9f0}
+.pc-body{min-width:0;min-height:0;overflow:auto;padding:11px}
+.pc-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.pc-full{grid-column:1/-1}
+.pc-body label{display:block;font-size:11px;font-weight:800;color:#5b6880;margin-bottom:4px}
+.pc-body input,.pc-body select,.pc-body textarea{width:100%;min-width:0;padding:8px;border:1px solid #ccd5e2;border-radius:8px;background:#fff}
+.pc-body textarea{min-height:54px;resize:vertical}
+.pc-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.pc-list{max-height:180px;overflow:auto;margin-top:10px}
+.pc-item{border:1px solid #dbe2ec;border-radius:8px;padding:9px;margin-bottom:6px;cursor:pointer}
+.pc-item:hover{border-color:#2563eb;background:#eff6ff}
+.pc-muted{font-size:11px;color:#68758b;margin-top:3px}
+.pc-badge{font-size:9px;font-weight:900;padding:3px 6px;border-radius:99px;background:#dcfce7;color:#166534;margin-left:5px}
+.pc-note{font-size:11px;line-height:1.45;color:#1e3a8a;background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:8px;margin-bottom:9px}
+.pc-obras{min-height:0;overflow:auto}
+.pc-obra{border-bottom:1px solid #edf0f5;padding:9px 0}
+.pc-obra strong{display:block;font-size:12px;margin-bottom:6px;overflow-wrap:anywhere}
+.pc-obra-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 74px;gap:6px;align-items:center}
+.pc-obra-grid select{min-width:0}
+.pc-status{font-size:12px;font-weight:800;min-height:18px;margin-top:8px}
+.pc-btn{border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:8px 9px;font-weight:800;cursor:pointer;white-space:nowrap}
+.pc-primary{background:#b91c1c;color:#fff;border-color:#b91c1c}
+.pc-dark{background:#172033;color:#fff}
+.pc-danger{color:#b91c1c}
+.pc-loading,.pc-empty{padding:16px 10px;text-align:center;color:#64748b;font-size:12px;font-weight:700}
+
+@media(max-width:1100px){
+  .pc-wrap{overflow:auto;grid-template-columns:minmax(280px,1fr) minmax(320px,1fr)}
+  .pc-obras-card{grid-column:1/-1;min-height:420px}
+}
+@media(max-width:720px){
+  .pc-overlay{padding:0}
+  .pc-modal{width:100vw;height:100vh;border-radius:0}
+  .pc-head small{display:none}
+  .pc-wrap{overflow:auto;grid-template-columns:1fr}
+  .pc-obras-card{grid-column:auto;min-height:500px}
+  .pc-obra-grid{grid-template-columns:1fr}
+  .pc-btn{width:100%}
 }
 </style>
 </head>
 <body>
-<div class="pagina">
-  <div class="topo">
-    <div>
-      <h1>Configuração de etiquetas</h1>
-      <div>Ajuste por elemento e acompanhe a prévia em tempo real.</div>
-    </div>
-    <div class="acoes">
-      <button class="btn secundario" id="restaurar">Restaurar padrão Atlas</button>
-      <button class="btn secundario" id="teste">Imprimir teste</button>
-      <button class="btn primario" id="salvar">Salvar neste computador</button>
-    </div>
+<div class="owner-note">🔒 Modo somente leitura. Ative o OWNER MODE para alterar e salvar a configuração.</div>
+<div class="app">
+<header class="topbar">
+  <div class="brand"><h1>Atlas Label Studio</h1><small>Editor visual de etiqueta patrimonial · 55 × 35 mm</small></div>
+  <div class="actions">
+    <button class="btn" id="fecharModal" style="display:none">Fechar</button>
+    <button class="btn" id="restaurar">Restaurar padrão</button>
+    <button class="btn" id="teste">Imprimir teste</button>
+    <button class="btn" type="button" id="abrirPrintCenter">Impressoras e obras</button><button class="btn" id="salvar">Salvar neste computador</button><button class="btn primary" id="salvarBanco">Salvar padrão para todos</button>
   </div>
-
-  <div class="grade">
-    <div class="card">
-      <div class="preview">
-        <iframe id="preview" src="etiqueta-impressao.html?codigo=PAT-9990004"></iframe>
-      </div>
-    </div>
-
-    <div class="card">
-      <div id="grupos"></div>
-
-      <div class="dica">
-        <b>Como usar as setas:</b> cada clique movimenta 0,1 mm.
-        Clique uma vez para ajuste fino. Clique e segure para movimentação contínua; solte para parar. O grupo permanece aberto.
-      </div>
-
-      <div class="status" id="status"></div>
-    </div>
-  </div>
+</header>
+<main class="workspace">
+  <aside class="panel">
+    <div class="panel-title"><span>ELEMENTOS</span><span>☷</span></div>
+    <div class="elements" id="elements"></div>
+  </aside>
+  <section class="panel stage-panel">
+    <div class="stage-head"><strong>Prévia da etiqueta</strong><div class="zoom"><button id="zoomOut">−</button><span id="zoomValue">220%</span><button id="zoomIn">+</button></div></div>
+    <div class="stage" id="stage"><div class="preview-shell" id="previewShell"><iframe id="preview" src="etiqueta-impressao.html?codigo=PAT-9990004&teste=1"></iframe></div><div class="stage-tip">Clique em um elemento da etiqueta para editar</div></div>
+  </section>
+  <aside class="panel properties-panel">
+    <div class="panel-title"><span>PROPRIEDADES</span><span id="selectedName">Nenhum</span></div>
+    <div class="properties" id="properties"></div>
+  </aside>
+</main>
 </div>
 
-<script>
-const gruposDef = [
-  {titulo:'⚙ 1. Engrenagem', chaveTamanho:'logoEngrenagemMm', labelTamanho:'Tamanho da engrenagem (mm)', min:5,max:14,step:.1,x:'moverEngrenagemXmm',y:'moverEngrenagemYmm'},
-  {titulo:'🔤 2. Nome BDR', chaveTamanho:'logoBdrMm', labelTamanho:'Tamanho do nome BDR (mm)', min:7,max:16,step:.1,x:'moverBdrXmm',y:'moverBdrYmm'},
-  {titulo:'✒ 3. Construart', chaveTamanho:'logoSubMm', labelTamanho:'Tamanho do Construart (mm)', min:1.5,max:5,step:.05,x:'moverSubXmm',y:'moverSubYmm'},
-  {titulo:'▦ 4. QR Code', chaveTamanho:'qrMm', labelTamanho:'Tamanho do QR Code (mm)', min:8,max:18,step:.1,x:'moverQrXmm',y:'moverQrYmm'},
-  {titulo:'📝 5. Descrição — Local e Item', chaveTamanho:'fonteInfoMm', labelTamanho:'Tamanho da fonte Local/Item (mm)', min:1.5,max:4,step:.05,x:'moverInfoXmm',y:'moverInfoYmm',extras:[['limiteLocal','Máx. caracteres Local',10,60,1],['limiteItem','Máx. caracteres Item',10,60,1]]},
-  {titulo:'🏷 6. Patrimônio / PAT', chaveTamanho:'fonteCodigoMm', labelTamanho:'Tamanho da fonte PAT (mm)', min:2,max:7,step:.05,x:'moverCodigoXmm',y:'moverCodigoYmm'},
-  {titulo:'▣ 7. Estrutura geral', chaveTamanho:'paddingMm', labelTamanho:'Margem interna (mm)', min:.3,max:5,step:.1,x:'moverConteudoXmm',y:'moverConteudoYmm',extras:[['bordaMm','Espessura da borda (mm)',.1,1.5,.05],['raioMm','Arredondamento (mm)',0,7,.1],['larguraMm','Largura da etiqueta (mm)',30,100,.5],['alturaMm','Altura da etiqueta (mm)',20,70,.5]]}
-];
-
-let config = AtlasEtiquetaConfig.carregar();
-let grupoAberto = 0;
-
-const grupos = document.getElementById('grupos');
-const status = document.getElementById('status');
-const preview = document.getElementById('preview');
-
-const idSeguro = valor => String(valor).replace(/[^a-z0-9]/gi,'');
-
-function campoNumero(chave,label,min,max,step){
-  return `
-    <div class="campo">
-      <label for="${chave}">${label}</label>
-      <input
-        id="${chave}"
-        data-chave="${chave}"
-        type="number"
-        min="${min}"
-        max="${max}"
-        step="${step}"
-        value="${config[chave]}"
-      >
+<div class="pc-overlay" id="pcOverlay" aria-hidden="true">
+  <section class="pc-modal" role="dialog" aria-modal="true" aria-label="Impressoras e perfis por obra">
+    <header class="pc-head"><div><h2>🖨️ Impressoras e perfis por obra</h2><small>Configuração de impressão integrada ao Atlas Label Studio</small></div><button class="pc-close" id="pcFechar">Fechar</button></header>
+    <div class="pc-wrap">
+      <section class="pc-card"><h3>1. Impressora</h3><div class="pc-body"><input id="pcImpId" type="hidden"><div class="pc-grid"><div class="pc-full"><label>Nome interno</label><input id="pcImpNome" value="Elgin L42 Pro Full — CD"></div><div><label>Fabricante</label><input id="pcImpFabricante" value="Elgin"></div><div><label>Modelo</label><input id="pcImpModelo" value="L42 Pro Full"></div><div><label>Tipo</label><select id="pcImpTipo"><option>ETIQUETA</option><option>LASER</option><option>JATO_TINTA</option><option>PDF</option></select></div><div><label><input id="pcImpAtiva" type="checkbox" checked style="width:auto"> Ativa</label></div><div class="pc-full"><label>Observação</label><textarea id="pcImpObs"></textarea></div></div><div class="pc-actions"><button class="pc-btn pc-primary" id="pcSalvarImp">Salvar</button><button class="pc-btn" id="pcNovaImp">Nova</button><button class="pc-btn pc-danger" id="pcExcluirImp">Excluir</button></div><div class="pc-list" id="pcListaImp"></div></div></section>
+      <section class="pc-card"><h3>2. Perfil e calibração</h3><div class="pc-body"><input id="pcPerfilId" type="hidden"><div class="pc-grid"><div class="pc-full"><label>Impressora</label><select id="pcPerfilImp"></select></div><div class="pc-full"><label>Nome do perfil</label><input id="pcPerfilNome" value="Etiqueta 55x35 — padrão"></div><div><label>Papel largura</label><input id="pcLargura" type="number" step="0.1" value="55"></div><div><label>Papel altura</label><input id="pcAltura" type="number" step="0.1" value="35"></div><div><label>Arte largura</label><input id="pcArteW" type="number" step="0.1" value="50"></div><div><label>Arte altura</label><input id="pcArteH" type="number" step="0.1" value="31"></div><div><label>Deslocamento X</label><input id="pcX" type="number" step="0.1" value="0"></div><div><label>Deslocamento Y</label><input id="pcY" type="number" step="0.1" value="0"></div><div><label>Escala</label><input id="pcEscala" type="number" step="0.01" value="1"></div><div><label>Orientação</label><select id="pcOrientacao"><option>RETRATO</option><option>PAISAGEM</option></select></div><div><label><input id="pcPerfilAtivo" type="checkbox" checked style="width:auto"> Ativo</label></div><div><label><input id="pcPerfilPadrao" type="checkbox" checked style="width:auto"> Padrão</label></div><div class="pc-full"><label>Observação</label><textarea id="pcPerfilObs"></textarea></div></div><div class="pc-actions"><button class="pc-btn pc-primary" id="pcSalvarPerfil">Salvar</button><button class="pc-btn" id="pcNovoPerfil">Novo</button><button class="pc-btn pc-danger" id="pcExcluirPerfil">Excluir</button><button class="pc-btn pc-dark" id="pcTeste">Imprimir teste</button></div><div class="pc-list" id="pcListaPerfis"></div><div class="pc-status" id="pcStatus"></div></div></section>
+      <section class="pc-card pc-obras-card"><h3>3. Perfil padrão por obra</h3><div class="pc-body"><div class="pc-note">O patrimônio informa a obra. O Atlas aplica automaticamente o perfil vinculado. Na janela do Chrome, escolha a impressora física com o mesmo nome.</div><div class="pc-obras" id="pcObras"></div></div></section>
     </div>
-  `;
+  </section>
+</div>
+<div class="status" id="status"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./JS/supabaseClient.js"></script>
+<script src="./JS/atlasPrintCenter.js?v=4.0.0"></script>
+<script>
+(() => {
+'use strict';
+const A=window.AtlasEtiquetaConfig||window.AtlasEtiquetaV6;
+if(!A){alert('Não foi possível carregar AtlasEtiquetaConfig.');return;}
+let config=A.carregar();
+let selected='qr';
+let zoom=1.75;
+let statusTimer;
+const $=s=>document.querySelector(s);
+const elementsBox=$('#elements'),properties=$('#properties'),preview=$('#preview'),shell=$('#previewShell');
+const defs={
+ engrenagem:{label:'Engrenagem',icon:'⚙',dataEl:'engrenagem',size:'logoEngrenagemMm',sizeLabel:'Tamanho',x:'moverEngrenagemXmm',y:'moverEngrenagemYmm',show:'mostrarEngrenagem',min:2,max:18},
+ bdr:{label:'BDR',icon:'B',dataEl:'bdr',size:'logoBdrMm',sizeLabel:'Tamanho da fonte',x:'moverBdrXmm',y:'moverBdrYmm',show:'mostrarBdr',font:'fonteBdr',weight:'pesoBdr',italic:'italicoBdr',upper:'maiusculoBdr',spacing:'espacoBdrMm',align:'alinharBdr',min:3,max:16},
+ sub:{label:'Construart',icon:'A',dataEl:'sub',size:'logoSubMm',sizeLabel:'Tamanho da fonte',x:'moverSubXmm',y:'moverSubYmm',show:'mostrarSub',font:'fonteSub',weight:'pesoSub',italic:'italicoSub',upper:'maiusculoSub',spacing:'espacoSubMm',align:'alinharSub',min:1,max:8},
+ qr:{label:'QR Code',icon:'▦',dataEl:'qr',size:'qrMm',sizeLabel:'Largura e altura',x:'moverQrXmm',y:'moverQrYmm',show:'mostrarQr',min:5,max:25},
+ local:{label:'Local',icon:'⌖',dataEl:'local',size:'fonteLocalMm',sizeLabel:'Tamanho da fonte',x:'moverLocalXmm',y:'moverLocalYmm',show:'mostrarLocal',font:'fonteLocal',weight:'pesoLocal',italic:'italicoLocal',upper:'maiusculoLocal',spacing:'espacoLocalMm',align:'alinharLocal',min:1,max:6},
+ item:{label:'Item',icon:'▤',dataEl:'item',size:'fonteItemMm',sizeLabel:'Tamanho da fonte',x:'moverItemXmm',y:'moverItemYmm',show:'mostrarItem',font:'fonteItem',weight:'pesoItem',italic:'italicoItem',upper:'maiusculoItem',spacing:'espacoItemMm',align:'alinharItem',min:1,max:6},
+ codigo:{label:'Código PAT',icon:'🏷',dataEl:'codigo',size:'fonteCodigoMm',sizeLabel:'Tamanho da fonte',x:'moverCodigoXmm',y:'moverCodigoYmm',show:'mostrarCodigo',font:'fonteCodigo',weight:'pesoCodigo',italic:'italicoCodigo',upper:'maiusculoCodigo',spacing:'espacoCodigoMm',align:'alinharCodigo',min:1.5,max:9},
+ estrutura:{label:'Borda e papel',icon:'▣',dataEl:null,structure:true},
+ calibracao:{label:'Calibração',icon:'🖨',dataEl:null,calibration:true}
+};
+const fonts=['Arial','Verdana','Tahoma','Trebuchet MS','Georgia','Times New Roman','Courier New','Montserrat','Poppins','Roboto'];
+const weights=[400,500,600,700,800,900];
+function ownerLiberado(){try{if(window.AtlasOwnerMode&&typeof window.AtlasOwnerMode.ativo==='function')return window.AtlasOwnerMode.ativo();if(typeof window.bdrOwnerModoAtivo==='function')return window.bdrOwnerModoAtivo();return false}catch{return false}}
+function notify(text,error=false){const el=$('#status');el.textContent=text;el.style.background=error?'#991b1b':'#166534';el.classList.add('show');clearTimeout(statusTimer);statusTimer=setTimeout(()=>el.classList.remove('show'),2200)}
+function sendPreview(){A.salvarTeste(config);try{preview.contentWindow.AtlasEtiquetaConfig.aplicar(config)}catch{preview.src='etiqueta-impressao.html?codigo=PAT-9990004&teste=1&t='+Date.now()}setTimeout(bindPreview,50)}
+function renderElements(){elementsBox.innerHTML=Object.entries(defs).map(([key,d])=>`<button class="element ${selected===key?'active':''}" data-select="${key}"><span class="icon">${d.icon}</span><span>${d.label}</span>${d.show?`<span class="eye">${config[d.show]?'●':'○'}</span>`:''}</button>`).join('');elementsBox.querySelectorAll('[data-select]').forEach(b=>b.onclick=()=>select(b.dataset.select));}
+function input(chave,label,opts={}){return `<div class="field"><label>${label}</label><input data-key="${chave}" type="${opts.type||'number'}" ${opts.type==='text'?'':`min="${opts.min??-50}" max="${opts.max??50}" step="${opts.step??.1}"`} value="${config[chave]}"></div>`}
+function selectField(chave,label,values){return `<div class="field"><label>${label}</label><select data-key="${chave}">${values.map(v=>{const val=Array.isArray(v)?v[0]:v,lab=Array.isArray(v)?v[1]:v;return `<option value="${val}" ${String(config[chave])===String(val)?'selected':''}>${lab}</option>`}).join('')}</select></div>`}
+function toggle(chave,label){return `<label class="toggle"><span>${label}</span><input data-key="${chave}" type="checkbox" ${config[chave]?'checked':''}></label>`}
+function dpad(d){return `<div class="section"><h3>Posição · passos de 0,1 mm</h3><div class="dpad"><button class="arrow up" data-move="up">↑</button><button class="arrow left" data-move="left">←</button><div class="center">0,1</div><button class="arrow right" data-move="right">→</button><button class="arrow down" data-move="down">↓</button></div><div class="position-readout">X: ${Number(config[d.x]||0).toFixed(1)} mm · Y: ${Number(config[d.y]||0).toFixed(1)} mm</div></div>`}
+function renderProperties(){const d=defs[selected];$('#selectedName').textContent=d.label;if(d.structure){properties.innerHTML=`<div class="section"><h3>Papel e arte</h3><div class="grid2">${input('larguraPapelMm','Papel largura',{min:30,max:100,step:.5})}${input('alturaPapelMm','Papel altura',{min:20,max:70,step:.5})}${input('larguraMm','Arte largura',{min:20,max:100,step:.5})}${input('alturaMm','Arte altura',{min:15,max:70,step:.5})}</div></div><div class="section"><h3>Estrutura</h3><div class="grid2">${input('paddingMm','Margem interna',{min:.2,max:6})}${input('bordaMm','Borda',{min:.1,max:2,step:.05})}${input('raioMm','Arredondamento',{min:0,max:8})}${input('topoAlturaMm','Altura do topo',{min:5,max:25})}</div></div><div class="note">O tamanho físico padrão permanece 55 × 35 mm. Alterar o papel pode exigir nova calibração da impressora.</div>`;bindProperties();return}
+if(d.calibration){properties.innerHTML=`<div class="section"><h3>Correção física da Elgin</h3><div class="grid2">${input('calibracaoXmm','Mover arte horizontal',{min:-10,max:10})}${input('calibracaoYmm','Mover arte vertical',{min:-10,max:10})}</div>${input('escalaImpressao','Escala segura',{min:.75,max:1.25,step:.01})}</div><div class="note"><b>Se a impressão sai para a direita, use valor negativo.</b><br>Exemplo: saiu 3 mm à direita → coloque <b>-3 mm</b>. O Atlas reduz a escala automaticamente quando necessário para não cortar a etiqueta.</div>`;bindProperties();return}
+let html=`<div class="section"><h3>Visibilidade</h3>${toggle(d.show,'Mostrar elemento')}</div><div class="section"><h3>Tamanho</h3>${input(d.size,d.sizeLabel+' (mm)',{min:d.min,max:d.max,step:.05})}</div>${dpad(d)}`;
+if(d.font){html+=`<div class="section"><h3>Tipografia</h3>${selectField(d.font,'Fonte',fonts)}<div class="grid2">${selectField(d.weight,'Peso',weights)}${selectField(d.align,'Alinhamento',[['left','Esquerda'],['center','Centro'],['right','Direita']])}</div>${input(d.spacing,'Espaço entre letras (mm)',{min:-1,max:2,step:.05})}<div class="grid2">${toggle(d.italic,'Itálico')}${toggle(d.upper,'Maiúsculo')}</div></div>`}
+properties.innerHTML=html;bindProperties();}
+function bindProperties(){properties.querySelectorAll('[data-key]').forEach(el=>{el.oninput=()=>{const k=el.dataset.key,base=A.PADRAO[k];config[k]=el.type==='checkbox'?el.checked:(typeof base==='number'?Number(el.value):el.value);config=A.normalizar(config);if(['calibracaoXmm','calibracaoYmm','escalaImpressao'].includes(k))config=A.ajustarDentroDoPapel(config);sendPreview();renderElements();if(['larguraPapelMm','alturaPapelMm','calibracaoXmm','calibracaoYmm'].includes(k))renderProperties()}});properties.querySelectorAll('[data-move]').forEach(btn=>{btn.onclick=()=>{const d=defs[selected],step=.1;if(btn.dataset.move==='left')config[d.x]-=step;if(btn.dataset.move==='right')config[d.x]+=step;if(btn.dataset.move==='up')config[d.y]-=step;if(btn.dataset.move==='down')config[d.y]+=step;config=A.normalizar(config);sendPreview();renderProperties()}})}
+function select(key){selected=key;renderElements();renderProperties();highlightPreview()}
+function bindPreview(){try{const doc=preview.contentDocument;if(!doc)return;doc.querySelectorAll('[data-el]').forEach(el=>{el.style.cursor='pointer';el.onclick=e=>{e.preventDefault();e.stopPropagation();const key=Object.keys(defs).find(k=>defs[k].dataEl===el.dataset.el);if(key)select(key)}});const label=doc.querySelector('.label');if(label){label.style.cursor='pointer';label.onclick=e=>{if(e.target===label)select('estrutura')}}highlightPreview()}catch(e){console.warn('Preview ainda não disponível',e)}}
+function highlightPreview(){try{const doc=preview.contentDocument;doc.querySelectorAll('[data-atlas-selected]').forEach(el=>{el.style.outline='';el.style.outlineOffset='';el.removeAttribute('data-atlas-selected')});const d=defs[selected];if(d&&d.dataEl){const el=doc.querySelector(`[data-el="${d.dataEl}"]`);if(el){el.style.outline='1px solid #2563eb';el.style.outlineOffset='1px';el.setAttribute('data-atlas-selected','1')}}else if(d&&d.structure){const el=doc.querySelector('.label');if(el){el.style.outline='1px solid #2563eb';el.style.outlineOffset='1px';el.setAttribute('data-atlas-selected','1')}}}catch{}}
+function setZoom(v){zoom=Math.max(1,Math.min(3.2,v));shell.style.transform=`scale(${zoom})`;$('#zoomValue').textContent=Math.round(zoom*100)+'%'}
+$('#zoomOut').onclick=()=>setZoom(zoom-.15);$('#zoomIn').onclick=()=>setZoom(zoom+.15);
+$('#salvar').onclick=()=>{if(!ownerLiberado()){notify('Ative o OWNER MODE para salvar.',true);return}config=A.salvar(config);A.salvarTeste(config);notify('Configuração salva neste computador.')};
+$('#salvarBanco').onclick=async()=>{if(!ownerLiberado()){notify('Ative o OWNER MODE para salvar.',true);return}const b=$('#salvarBanco');b.disabled=true;b.textContent='Salvando...';try{config=A.ajustarDentroDoPapel(config);await A.salvarBanco(config,A.usuarioAtualSeguro());A.salvarTeste(config);notify('Padrão global salvo. Todos usarão esta configuração.')}catch(e){console.error(e);notify('Falha ao salvar: '+(e?.message||'verifique o banco e o console.'),true)}finally{b.disabled=false;b.textContent='Salvar padrão para todos'}};
+$('#restaurar').onclick=()=>{if(!ownerLiberado()){notify('Ative o OWNER MODE para restaurar.',true);return}if(!confirm('Restaurar o padrão Atlas 55 × 35 mm?'))return;config=A.normalizar(A.PADRAO);sendPreview();renderElements();renderProperties();notify('Padrão restaurado. Clique em Salvar para confirmar.')};
+$('#teste').onclick=()=>{A.salvarTeste(config);window.open('etiqueta-impressao.html?codigo=PAT-9990004&teste=1&auto=1','_blank')};
+const qs=new URLSearchParams(location.search);if(qs.get('modal')==='1'){document.body.classList.add('modo-modal');$('#fecharModal').style.display='inline-block';$('#fecharModal').onclick=()=>window.parent!==window?window.parent.postMessage({tipo:'ATLAS_FECHAR_ETIQUETA_CONFIG'},'*'):window.close()}
+if(!ownerLiberado())document.body.classList.add('owner-bloqueado');
+preview.addEventListener('load',()=>{try{preview.contentWindow.AtlasEtiquetaConfig.aplicar(config)}catch{}bindPreview()});
+A.salvarTeste(config);renderElements();renderProperties();setZoom(zoom);sendPreview();A.carregarBanco().then(cfg=>{if(cfg){config=cfg;sendPreview();renderElements();renderProperties();notify('Padrão global carregado do banco.')}});
+})();
+</script>
+
+<script>
+(() => {
+'use strict';
+const q=s=>document.querySelector(s), PC=window.AtlasPrintCenter;
+let pcs={impressoras:[],perfis:[],vinculos:[],carregado:false};
+const val=id=>q(id)?.value??'';
+function pcMsg(t,e=false){const el=q('#pcStatus');if(!el)return;el.textContent=t;el.style.color=e?'#b91c1c':'#166534';}
+function impForm(){return{id:val('#pcImpId')||null,nome:val('#pcImpNome'),fabricante:val('#pcImpFabricante'),modelo:val('#pcImpModelo'),tipo:val('#pcImpTipo'),ativa:q('#pcImpAtiva').checked,observacao:val('#pcImpObs')}}
+function perfilForm(){return{id:val('#pcPerfilId')||null,impressora_id:val('#pcPerfilImp'),nome:val('#pcPerfilNome'),largura_mm:val('#pcLargura'),altura_mm:val('#pcAltura'),arte_largura_mm:val('#pcArteW'),arte_altura_mm:val('#pcArteH'),deslocamento_x_mm:val('#pcX'),deslocamento_y_mm:val('#pcY'),escala:val('#pcEscala'),orientacao:val('#pcOrientacao'),ativo:q('#pcPerfilAtivo').checked,padrao_impressora:q('#pcPerfilPadrao').checked,observacao:val('#pcPerfilObs')}}
+function preencherImp(p){q('#pcImpId').value=p.id;q('#pcImpNome').value=p.nome;q('#pcImpFabricante').value=p.fabricante;q('#pcImpModelo').value=p.modelo;q('#pcImpTipo').value=p.tipo;q('#pcImpAtiva').checked=p.ativa;q('#pcImpObs').value=p.observacao||''}
+function preencherPerfil(p){q('#pcPerfilId').value=p.id;q('#pcPerfilImp').value=p.impressora_id;q('#pcPerfilNome').value=p.nome;q('#pcLargura').value=p.largura_mm;q('#pcAltura').value=p.altura_mm;q('#pcArteW').value=p.arte_largura_mm;q('#pcArteH').value=p.arte_altura_mm;q('#pcX').value=p.deslocamento_x_mm;q('#pcY').value=p.deslocamento_y_mm;q('#pcEscala').value=p.escala;q('#pcOrientacao').value=p.orientacao;q('#pcPerfilAtivo').checked=p.ativo;q('#pcPerfilPadrao').checked=p.padrao_impressora;q('#pcPerfilObs').value=p.observacao||''}
+function novaImp(){q('#pcImpId').value='';q('#pcImpNome').value='Nova impressora';q('#pcImpFabricante').value='';q('#pcImpModelo').value='';q('#pcImpTipo').value='ETIQUETA';q('#pcImpAtiva').checked=true;q('#pcImpObs').value=''}
+function novoPerfil(){q('#pcPerfilId').value='';q('#pcPerfilNome').value='Novo perfil';q('#pcLargura').value=55;q('#pcAltura').value=35;q('#pcArteW').value=50;q('#pcArteH').value=31;q('#pcX').value=0;q('#pcY').value=0;q('#pcEscala').value=1;q('#pcPerfilAtivo').checked=true;q('#pcPerfilPadrao').checked=false;q('#pcPerfilObs').value=''}
+function renderPc(){
+ q('#pcPerfilImp').innerHTML=pcs.impressoras.filter(x=>x.ativa).map(x=>`<option value="${x.id}">${x.nome}</option>`).join('');
+ q('#pcListaImp').innerHTML=pcs.impressoras.map(p=>`<div class="pc-item" data-pc-imp="${p.id}"><strong>${p.nome}</strong><div class="pc-muted">${p.fabricante||''} ${p.modelo||''} • ${p.tipo}</div></div>`).join('')||'<p class="pc-muted">Nenhuma impressora cadastrada.</p>';
+ document.querySelectorAll('[data-pc-imp]').forEach(el=>el.onclick=()=>preencherImp(pcs.impressoras.find(p=>String(p.id)===el.dataset.pcImp)));
+ q('#pcListaPerfis').innerHTML=pcs.perfis.map(p=>`<div class="pc-item" data-pc-perfil="${p.id}"><strong>${p.nome}${p.padrao_impressora?'<span class="pc-badge">PADRÃO</span>':''}</strong><div class="pc-muted">${p.impressora?.nome||''} • ${p.largura_mm}×${p.altura_mm} • X ${p.deslocamento_x_mm} / Y ${p.deslocamento_y_mm}</div></div>`).join('')||'<p class="pc-muted">Nenhum perfil cadastrado.</p>';
+ document.querySelectorAll('[data-pc-perfil]').forEach(el=>el.onclick=()=>preencherPerfil(pcs.perfis.find(p=>String(p.id)===el.dataset.pcPerfil)));
 }
+/* =========================================================
+   3. CARREGAR E EXIBIR AS OBRAS
 
-function valorPosicao(x,y){
-  return `
-    Horizontal: ${Number(config[x] || 0).toFixed(1)} mm<br>
-    Vertical: ${Number(config[y] || 0).toFixed(1)} mm
-  `;
-}
+   Por que usamos select("*")?
+   A tabela "obras" mudou ao longo do projeto. Alguns bancos
+   possuem codigo_obra; outros usam codigo_empresa ou codigo_sienge.
+   Pedir uma coluna inexistente faria o Supabase cancelar toda a
+   consulta. Com select("*"), o Atlas fica compatível com as versões.
+========================================================= */
+async function renderObrasPc(){
+  const c=window.client||window.supabaseClient||window.clientSupabase;
+  const container=q('#pcObras');
 
-function render(){
-  grupos.innerHTML = gruposDef.map((g,i) => `
-    <details class="grupo" data-grupo="${i}" ${i === grupoAberto ? 'open' : ''}>
-      <summary>${g.titulo}</summary>
+  if(!c) throw new Error('Supabase indisponível. Verifique JS/supabaseClient.js.');
 
-      <div class="grupo-conteudo">
-        <div class="linha-ajuste">
-          <div>
-            ${campoNumero(g.chaveTamanho,g.labelTamanho,g.min,g.max,g.step)}
-            ${g.extras ? `<div class="duas-colunas">${g.extras.map(e => campoNumero(...e)).join('')}</div>` : ''}
-          </div>
+  container.innerHTML='<div class="pc-loading">Carregando obras...</div>';
 
-          <div class="dpad-wrap">
-            <div class="dpad-titulo">Mover este elemento</div>
+  const {data,error}=await c
+    .from('obras')
+    .select('*')
+    .order('nome');
 
-            <div class="dpad">
-              <button class="seta cima" type="button" data-move="${g.y},-0.1" title="Para cima">↑</button>
-              <button class="seta esquerda" type="button" data-move="${g.x},-0.1" title="Para esquerda">←</button>
-              <div class="centro">0,1 mm</div>
-              <button class="seta direita" type="button" data-move="${g.x},0.1" title="Para direita">→</button>
-              <button class="seta baixo" type="button" data-move="${g.y},0.1" title="Para baixo">↓</button>
-            </div>
+  if(error) throw error;
 
-            <div class="valores-posicao" id="pos-${idSeguro(g.x)}">
-              ${valorPosicao(g.x,g.y)}
-            </div>
-          </div>
+  const obrasAtivas=(data||[]).filter(obra=>{
+    // Compatível com bancos que usam "ativa", "ativo" ou os dois.
+    return obra.ativa!==false && obra.ativo!==false;
+  });
+
+  const vinculoPorObra=new Map(
+    pcs.vinculos.map(vinculo=>[String(vinculo.obra_id),vinculo])
+  );
+
+  if(!obrasAtivas.length){
+    container.innerHTML='<div class="pc-empty">Nenhuma obra ativa encontrada.</div>';
+    return;
+  }
+
+  container.innerHTML=obrasAtivas.map(obra=>{
+    const vinculo=vinculoPorObra.get(String(obra.id));
+    const codigo=
+      obra.codigo_obra ||
+      obra.codigo_empresa ||
+      obra.codigo_sienge ||
+      '';
+
+    const opcoesImpressoras=pcs.impressoras
+      .filter(impressora=>impressora.ativa)
+      .map(impressora=>`<option value="${impressora.id}" ${String(vinculo?.impressora_id||'')===String(impressora.id)?'selected':''}>${impressora.nome}</option>`)
+      .join('');
+
+    const opcoesPerfis=pcs.perfis
+      .filter(perfil=>perfil.ativo)
+      .map(perfil=>`<option value="${perfil.id}" ${String(vinculo?.perfil_impressao_id||'')===String(perfil.id)?'selected':''}>${perfil.nome}</option>`)
+      .join('');
+
+    return `
+      <div class="pc-obra">
+        <strong>${codigo?codigo+' — ':''}${obra.nome||'Obra sem nome'}</strong>
+        <div class="pc-obra-grid">
+          <select data-pc-obra-imp="${obra.id}" aria-label="Impressora da obra">
+            <option value="">Selecione a impressora</option>
+            ${opcoesImpressoras}
+          </select>
+          <select data-pc-obra-perfil="${obra.id}" aria-label="Perfil da obra">
+            <option value="">Selecione o perfil</option>
+            ${opcoesPerfis}
+          </select>
+          <button class="pc-btn" data-pc-save="${obra.id}">Salvar</button>
         </div>
-      </div>
-    </details>
-  `).join('');
+      </div>`;
+  }).join('');
 
-  grupos.querySelectorAll('.grupo').forEach(details => {
-    details.addEventListener('toggle', () => {
-      if(details.open){
-        grupoAberto = Number(details.dataset.grupo);
+  document.querySelectorAll('[data-pc-save]').forEach(botao=>{
+    botao.onclick=async()=>{
+      const obraId=botao.dataset.pcSave;
+      const selectImpressora=q(`[data-pc-obra-imp="${obraId}"]`);
+      const selectPerfil=q(`[data-pc-obra-perfil="${obraId}"]`);
 
-        // Mantém somente um grupo aberto, sem reconstruir toda a tela.
-        grupos.querySelectorAll('.grupo').forEach(outro => {
-          if(outro !== details) outro.open = false;
-        });
+      try{
+        botao.disabled=true;
+        botao.textContent='...';
+
+        if(!selectImpressora.value||!selectPerfil.value){
+          await PC.desvincularObra(obraId);
+          pcMsg('Vínculo removido.');
+        }else{
+          const perfil=pcs.perfis.find(item=>String(item.id)===selectPerfil.value);
+
+          if(String(perfil?.impressora_id)!==selectImpressora.value){
+            throw new Error('O perfil selecionado pertence a outra impressora.');
+          }
+
+          await PC.vincularObra({
+            obra_id:obraId,
+            impressora_id:selectImpressora.value,
+            perfil_impressao_id:selectPerfil.value
+          });
+
+          pcMsg('Impressora e perfil vinculados à obra.');
+        }
+
+        await carregarPc();
+      }catch(erro){
+        console.error('Atlas Print Center: falha ao vincular obra:',erro);
+        pcMsg(erro.message||'Não foi possível salvar o vínculo.',true);
+      }finally{
+        botao.disabled=false;
+        botao.textContent='Salvar';
       }
-    });
-  });
-
-  grupos.querySelectorAll('input').forEach(el => {
-    el.addEventListener('input', () => {
-      config[el.dataset.chave] = Number(el.value);
-      atualizarPreviewSemRender();
-    });
-  });
-
-  grupos.querySelectorAll('[data-move]').forEach(btn => {
-    let timerInicio = null;
-    let timerRepeticao = null;
-    let movimentoExecutadoNoPress = false;
-
-    function moverUmaVez(){
-      const details = btn.closest('.grupo');
-      if(details){
-        grupoAberto = Number(details.dataset.grupo);
-      }
-
-      const [chave,delta] = btn.dataset.move.split(',');
-      config[chave] = Math.round((Number(config[chave] || 0) + Number(delta)) * 10) / 10;
-
-      atualizarValorPosicaoDoGrupo(details);
-      atualizarPreviewSemRender();
-    }
-
-    function pararMovimento(){
-      clearTimeout(timerInicio);
-      clearInterval(timerRepeticao);
-      timerInicio = null;
-      timerRepeticao = null;
-      btn.classList.remove('segurando');
-    }
-
-    btn.addEventListener('pointerdown', event => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      movimentoExecutadoNoPress = true;
-      btn.setPointerCapture?.(event.pointerId);
-      btn.classList.add('segurando');
-
-      // Primeiro movimento imediato.
-      moverUmaVez();
-
-      // Depois de 350 ms segurando, começa a repetir.
-      timerInicio = setTimeout(() => {
-        timerRepeticao = setInterval(moverUmaVez, 75);
-      }, 350);
-    });
-
-    btn.addEventListener('pointerup', pararMovimento);
-    btn.addEventListener('pointercancel', pararMovimento);
-    btn.addEventListener('lostpointercapture', pararMovimento);
-    btn.addEventListener('pointerleave', event => {
-      if(event.buttons === 0) pararMovimento();
-    });
-
-    // Evita executar um segundo movimento no "click" após o pointerdown.
-    btn.addEventListener('click', event => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      if(movimentoExecutadoNoPress){
-        movimentoExecutadoNoPress = false;
-        return;
-      }
-
-      moverUmaVez();
-    });
+    };
   });
 }
 
-function atualizarValorPosicaoDoGrupo(details){
-  if(!details) return;
-
-  const indice = Number(details.dataset.grupo);
-  const grupo = gruposDef[indice];
-  const box = details.querySelector('.valores-posicao');
-
-  if(box){
-    box.innerHTML = valorPosicao(grupo.x, grupo.y);
-  }
-}
-
-function lerInputsVisiveis(){
-  const nova = {...config};
-
-  grupos.querySelectorAll('input').forEach(el => {
-    nova[el.dataset.chave] = Number(el.value);
-  });
-
-  return AtlasEtiquetaConfig.normalizar(nova);
-}
-
-function atualizarPreviewSemRender(){
-  config = lerInputsVisiveis();
-
-  try{
-    preview.contentWindow.AtlasEtiquetaConfig.aplicar(config);
-  }catch(error){
-    // O iframe pode ainda estar carregando.
-  }
-}
-
-preview.addEventListener('load', atualizarPreviewSemRender);
-
-document.getElementById('salvar').onclick = () => {
-  const botao = document.getElementById('salvar');
-
-  try{
-    config = AtlasEtiquetaConfig.salvar(lerInputsVisiveis());
-
-    const salvo = localStorage.getItem(AtlasEtiquetaConfig.STORAGE_KEY);
-    if(!salvo) throw new Error('Armazenamento não confirmado');
-
-    const horario = new Date().toLocaleTimeString('pt-BR',{
-      hour:'2-digit',
-      minute:'2-digit'
-    });
-
-    status.textContent = `✓ Configuração salva neste computador às ${horario}.`;
-    botao.textContent = '✓ Salvo';
-    atualizarPreviewSemRender();
-
-    setTimeout(() => {
-      botao.textContent = 'Salvar neste computador';
-    }, 1800);
-  }catch(error){
-    console.error(error);
-    status.textContent = 'Não foi possível salvar. Verifique o armazenamento local do navegador.';
-  }
-};
-
-document.getElementById('restaurar').onclick = () => {
-  config = AtlasEtiquetaConfig.restaurar();
-  grupoAberto = 0;
-  render();
-  atualizarPreviewSemRender();
-  status.textContent = 'Padrão Atlas restaurado. Clique em salvar para mantê-lo neste computador.';
-};
-
-document.getElementById('teste').onclick = () => {
-  window.open('etiqueta-impressao.html?codigo=PAT-9990004&auto=1','_blank');
-};
-
-render();
-
-status.textContent = localStorage.getItem(AtlasEtiquetaConfig.STORAGE_KEY)
-  ? '✓ Existe uma configuração salva neste navegador.'
-  : 'Usando o padrão Atlas. Faça os ajustes e clique em salvar.';
+async function carregarPc(){if(!PC)throw new Error('atlasPrintCenter.js não carregou.');pcs.impressoras=await PC.listarImpressoras();pcs.perfis=await PC.listarPerfis();pcs.vinculos=await PC.listarVinculos();renderPc();await renderObrasPc();pcs.carregado=true}
+q('#abrirPrintCenter').onclick=async()=>{q('#pcOverlay').classList.add('open');q('#pcOverlay').setAttribute('aria-hidden','false');try{await carregarPc();pcMsg('Configurações carregadas.')}catch(e){console.error(e);pcMsg('Banco não preparado: '+e.message,true)}};
+q('#pcFechar').onclick=()=>{q('#pcOverlay').classList.remove('open');q('#pcOverlay').setAttribute('aria-hidden','true')};q('#pcOverlay').onclick=e=>{if(e.target===q('#pcOverlay'))q('#pcFechar').click()};
+q('#pcSalvarImp').onclick=async()=>{try{await PC.salvarImpressora(impForm());await carregarPc();pcMsg('Impressora salva.')}catch(e){pcMsg(e.message,true)}};q('#pcNovaImp').onclick=novaImp;q('#pcExcluirImp').onclick=async()=>{const id=val('#pcImpId');if(!id)return pcMsg('Selecione uma impressora.',true);if(!confirm('Excluir a impressora e seus perfis?'))return;try{await PC.excluirImpressora(id);novaImp();await carregarPc();pcMsg('Impressora excluída.')}catch(e){pcMsg(e.message,true)}};
+q('#pcSalvarPerfil').onclick=async()=>{try{await PC.salvarPerfil(perfilForm());await carregarPc();pcMsg('Perfil salvo.')}catch(e){pcMsg(e.message,true)}};q('#pcNovoPerfil').onclick=novoPerfil;q('#pcExcluirPerfil').onclick=async()=>{const id=val('#pcPerfilId');if(!id)return pcMsg('Selecione um perfil.',true);if(!confirm('Excluir este perfil?'))return;try{await PC.excluirPerfil(id);novoPerfil();await carregarPc();pcMsg('Perfil excluído.')}catch(e){pcMsg(e.message,true)}};q('#pcTeste').onclick=()=>{const id=val('#pcPerfilId');if(!id)return pcMsg('Salve ou selecione um perfil.',true);window.open(`etiqueta-impressao.html?codigo=PAT-9990004&perfil_id=${id}&auto=1`,'_blank')};
+})();
 </script>
 </body>
 </html>
