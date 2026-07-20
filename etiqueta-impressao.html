@@ -1,11 +1,17 @@
-<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Etiqueta Patrimônio Atlas</title><script src="./JS/atlasEtiquetaConfig.js?v=7.0.0"></script><script src="./JS/atlasPrintCenter.js?v=2.0.0"></script>
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Etiqueta Patrimônio Atlas</title>
+<script src="./JS/atlasEtiquetaConfig.js?v=8.1.0"></script>
+<script src="./JS/atlasPrintCenter.js?v=2.0.0"></script>
 <style>
 *{box-sizing:border-box}
 :root{
---papel-w:55mm;--papel-h:35mm;--arte-w:50mm;--arte-h:31mm;--padding:1.5mm;--borda:.35mm;--raio:1.6mm;
---topo-h:12.3mm;--gear-size:7.2mm;--bdr-size:9.1mm;--sub-size:2.2mm;--qr-size:11.3mm;
---local-size:2.45mm;--item-size:2.45mm;--codigo-size:3.55mm;
+--papel-w:55mm;--papel-h:35mm;--arte-w:53mm;--arte-h:33mm;--padding:1.7mm;--borda:.45mm;--raio:1.8mm;
+--topo-h:13.5mm;--gear-size:8mm;--bdr-size:10.2mm;--sub-size:2.5mm;--qr-size:12.5mm;
+--local-size:2.65mm;--item-size:2.65mm;--codigo-size:4mm;
 --gear-x:0mm;--gear-y:0mm;--bdr-x:0mm;--bdr-y:0mm;--sub-x:0mm;--sub-y:0mm;--qr-x:0mm;--qr-y:0mm;
 --local-x:0mm;--local-y:0mm;--item-x:0mm;--item-y:0mm;--codigo-x:0mm;--codigo-y:0mm;
 --font-bdr:Arial,sans-serif;--weight-bdr:900;--style-bdr:normal;--transform-bdr:uppercase;--letter-bdr:-.65mm;--align-bdr:left;
@@ -13,51 +19,121 @@
 --font-local:Arial,sans-serif;--weight-local:800;--style-local:normal;--transform-local:none;--letter-local:0mm;--align-local:left;
 --font-item:Arial,sans-serif;--weight-item:800;--style-item:normal;--transform-item:none;--letter-item:0mm;--align-item:left;
 --font-codigo:Arial,sans-serif;--weight-codigo:900;--style-codigo:normal;--transform-codigo:uppercase;--letter-codigo:0mm;--align-codigo:right;
---print-x:0mm;--print-y:0mm;--print-scale:1
+--print-x:-1mm;--print-y:0mm;--print-scale:1
 }
-.paper{width:var(--papel-w);height:var(--papel-h);background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none}
-.label{width:var(--arte-w);height:var(--arte-h);padding:var(--padding);border:var(--borda) solid #111;border-radius:var(--raio);display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;background:#fff}
+html,body{margin:0;padding:0;width:var(--papel-w);height:var(--papel-h);overflow:hidden;background:#fff}
+.paper{position:relative;width:var(--papel-w);height:var(--papel-h);background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none}
+.label{position:relative;width:var(--arte-w);height:var(--arte-h);padding:var(--padding);border:0;border-radius:var(--raio);display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;background:#fff;transform:translate(var(--print-x),var(--print-y)) scale(var(--print-scale));transform-origin:center center;isolation:isolate}
+/* Borda desenhada separadamente para permanecer contínua mesmo com escala e deslocamento. */
+.label::after{content:"";position:absolute;inset:0;border:var(--borda) solid #111;border-radius:inherit;pointer-events:none;z-index:10}
 .label-top{height:var(--topo-h);display:flex;justify-content:space-between;align-items:flex-start;min-width:0}
 .brand{min-width:0;max-width:calc(100% - var(--qr-size) - 1.5mm)}
 .brand-row{display:flex;align-items:center;white-space:nowrap;line-height:1}
 .gear{width:var(--gear-size);height:var(--gear-size);object-fit:contain;flex:none;transform:translate(var(--gear-x),var(--gear-y))}
 .bdr{font-family:var(--font-bdr);font-size:var(--bdr-size);font-weight:var(--weight-bdr);font-style:var(--style-bdr);text-transform:var(--transform-bdr);letter-spacing:var(--letter-bdr);text-align:var(--align-bdr);color:#4b4b4b;line-height:.85;transform:translate(var(--bdr-x),var(--bdr-y))}
 .sub{font-family:var(--font-sub);font-size:var(--sub-size);font-weight:var(--weight-sub);font-style:var(--style-sub);text-transform:var(--transform-sub);letter-spacing:var(--letter-sub);text-align:var(--align-sub);color:#555;margin-top:-.7mm;transform:translate(var(--sub-x),var(--sub-y))}
-.qr{width:var(--qr-size);height:var(--qr-size);object-fit:contain;flex:none;transform:translate(var(--qr-x),var(--qr-y))}
+.qr{width:var(--qr-size);height:var(--qr-size);object-fit:contain;flex:none;transform:translate(var(--qr-x),var(--qr-y));background:#fff}
 .info{min-width:0;overflow:hidden;line-height:1.15}
 .local,.item{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .local{font-family:var(--font-local);font-size:var(--local-size);font-weight:var(--weight-local);font-style:var(--style-local);text-transform:var(--transform-local);letter-spacing:var(--letter-local);text-align:var(--align-local);transform:translate(var(--local-x),var(--local-y))}
 .item{font-family:var(--font-item);font-size:var(--item-size);font-weight:var(--weight-item);font-style:var(--style-item);text-transform:var(--transform-item);letter-spacing:var(--letter-item);text-align:var(--align-item);transform:translate(var(--item-x),var(--item-y))}
 .codigo{font-family:var(--font-codigo);font-size:var(--codigo-size);font-weight:var(--weight-codigo);font-style:var(--style-codigo);text-transform:var(--transform-codigo);letter-spacing:var(--letter-codigo);text-align:var(--align-codigo);white-space:nowrap;line-height:1;transform:translate(var(--codigo-x),var(--codigo-y))}
-
+.loading{position:absolute;inset:0;display:grid;place-items:center;font:700 10px Arial;color:#475569;background:#fff;z-index:50}
+.ready .loading{display:none}
+.calibration{display:none;position:absolute;inset:1mm;transform:translate(var(--print-x),var(--print-y)) scale(var(--print-scale));transform-origin:center center;font-family:Arial,sans-serif;color:#000}
+.calibration.active{display:block}
+.calibration::before{content:"";position:absolute;inset:0;border:.45mm solid #000}
+.calibration .hline{position:absolute;left:2mm;right:2mm;top:50%;border-top:.3mm solid #000}
+.calibration .vline{position:absolute;top:2mm;bottom:2mm;left:50%;border-left:.3mm solid #000}
+.calibration .center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:3mm;height:3mm;border:.3mm solid #000;border-radius:50%;background:#fff}
+.calibration .ticks-x,.calibration .ticks-y{position:absolute;font-size:1.7mm;font-weight:700}
+.calibration .ticks-x{left:3mm;right:3mm;top:2mm;display:flex;justify-content:space-between}
+.calibration .ticks-y{top:4mm;bottom:4mm;left:2mm;display:flex;flex-direction:column;justify-content:space-between}
+.calibration .caption{position:absolute;left:0;right:0;bottom:2mm;text-align:center;font-size:1.8mm;font-weight:700}
 @page{size:var(--papel-w) var(--papel-h);margin:0}
-html,body{margin:0;padding:0;width:var(--papel-w);height:var(--papel-h);overflow:hidden;background:#fff}
-.label{transform:translate(var(--print-x),var(--print-y)) scale(var(--print-scale));transform-origin:center center}
-@media screen{body{display:grid;place-items:center;min-width:100vw;min-height:100vh;background:#e9eef5}.paper{box-shadow:0 8px 25px rgba(15,23,42,.2);outline:1px dashed #64748b;outline-offset:-1px}}
-@media print{html,body{width:var(--papel-w);height:var(--papel-h)}}
-</style></head><body><div class="paper"><div class="label">
-<div class="label-top"><div class="brand"><div class="brand-row"><img src="./imagens/engrenagem.png" class="gear" data-el="engrenagem"><span class="bdr" data-el="bdr">BDR</span></div><div class="sub" data-el="sub">Construart</div></div><img class="qr" data-el="qr" id="qr" alt="QR"></div>
-<div class="info"><div class="local" data-el="local" id="local">Local: CD CENTRO DE DISTRIBUIÇÃO</div><div class="item" data-el="item" id="item">Item: FURADEIRA DE IMPACTO</div></div><div class="codigo" data-el="codigo" id="codigo">PAT-9990004</div>
-</div></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./JS/supabaseClient.js"></script>
+@media screen{
+ body{display:grid;place-items:center;min-width:100vw;min-height:100vh;background:#e9eef5}
+ .paper{box-shadow:0 8px 25px rgba(15,23,42,.2);outline:1px dashed #64748b;outline-offset:-1px}
+ /* Em qualquer prévia incorporada, a etiqueta aparece sempre centralizada.
+    O deslocamento de calibração fica reservado para a impressão real. */
+ body.preview-centralizado{--print-x:0mm!important;--print-y:0mm!important}
+}
+@media print{html,body{width:var(--papel-w);height:var(--papel-h)}.loading{display:none!important}}
+</style>
+</head>
+<body>
+<div class="paper" id="paper">
+  <div class="loading">Preparando etiqueta...</div>
+  <div class="label" id="label">
+    <div class="label-top">
+      <div class="brand">
+        <div class="brand-row"><img src="./imagens/engrenagem.png" class="gear" data-el="engrenagem"><span class="bdr" data-el="bdr">BDR</span></div>
+        <div class="sub" data-el="sub">Construart</div>
+      </div>
+      <img class="qr" data-el="qr" id="qr" alt="QR">
+    </div>
+    <div class="info"><div class="local" data-el="local" id="local">Local: CD CENTRO DE DISTRIBUIÇÃO</div><div class="item" data-el="item" id="item">Item: FURADEIRA DE IMPACTO</div></div>
+    <div class="codigo" data-el="codigo" id="codigo">PAT-9990004</div>
+  </div>
+  <div class="calibration" id="calibration">
+    <div class="ticks-x"><span>0</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span></div>
+    <div class="ticks-y"><span>0</span><span>10</span><span>20</span><span>30</span></div>
+    <div class="hline"></div><div class="vline"></div><div class="center"></div>
+    <div class="caption">ATLAS — TESTE 55 × 35 mm</div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./JS/supabaseClient.js"></script>
 <script>
-const A=window.AtlasEtiquetaConfig||window.AtlasEtiquetaV6,params=new URLSearchParams(location.search),db=()=>window.client||window.supabaseClient;
+const A=window.AtlasEtiquetaConfig,params=new URLSearchParams(location.search),db=()=>window.client||window.supabaseClient;
 const codigo=params.get("codigo")||params.get("id")||"PAT-9990004";
+const isCalibration=params.get("calibracao")==="1";
+const isPreview=params.get("preview")==="1" || window.self!==window.top;
+
 async function start(){
  let cfg=params.get("teste")==="1"?A.carregarTeste():null;
- if(!cfg) cfg=await A.carregarBanco();
- cfg=cfg||A.carregar();
+ if(!cfg){
+   // Espera o banco por no máximo 700 ms. Se a rede estiver lenta, usa a configuração local
+   // e não troca o modelo depois que a etiqueta já apareceu.
+   const local=A.carregar();
+   cfg=await Promise.race([
+     A.carregarBanco().then(v=>v||local),
+     new Promise(resolve=>setTimeout(()=>resolve(local),700))
+   ]);
+ }
+
  document.getElementById("codigo").textContent=codigo;
  const link=`https://saulohenry29.github.io/sistemaBDR/etiqueta.html?id=${encodeURIComponent(codigo)}`;
  document.getElementById("qr").src=`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(link)}`;
+
  let patrimonio=null;
- if(db()){const {data}=await db().from("patrimonio").select("*").or(`codigo_qr.eq.${codigo},codigo_bem.eq.${codigo},etiqueta.eq.${codigo}`).maybeSingle();patrimonio=data||null;if(data){document.getElementById("local").textContent="Local: "+(data.localizacao||data.obra_nome||"SEM OBRA");document.getElementById("item").textContent="Item: "+(data.nome_bem||"ITEM")}}
+ if(!isCalibration&&db()){
+   try{
+     const {data}=await db().from("patrimonio").select("*").or(`codigo_qr.eq.${codigo},codigo_bem.eq.${codigo},etiqueta.eq.${codigo}`).maybeSingle();
+     patrimonio=data||null;
+     if(data){
+       document.getElementById("local").textContent="Local: "+(data.localizacao||data.obra_nome||"SEM OBRA");
+       document.getElementById("item").textContent="Item: "+(data.nome_bem||"ITEM");
+     }
+   }catch(e){console.warn("Patrimônio não carregado; usando dados de teste.",e)}
+ }
+
  try{
-  const PC=window.AtlasPrintCenter;let perfil=null;
-  if(PC){perfil=params.get("perfil_id")?await PC.buscarPerfil(params.get("perfil_id")):await PC.perfilDaObra(patrimonio?.obra_id||params.get("obra_id"));cfg=PC.aplicarPerfilAoLayout(cfg,perfil);if(perfil)document.title+=` — ${perfil.nome}`;}
+   const PC=window.AtlasPrintCenter;
+   if(PC){
+     const perfil=params.get("perfil_id")?await PC.buscarPerfil(params.get("perfil_id")):await PC.perfilDaObra(patrimonio?.obra_id||params.get("obra_id"));
+     cfg=PC.aplicarPerfilAoLayout(cfg,perfil);
+     if(perfil)document.title+=` — ${perfil.nome}`;
+   }
  }catch(e){console.warn("Atlas Print Center: usando configuração padrão.",e)}
- A.aplicar(A.ajustarDentroDoPapel(cfg));
- if(params.get("auto")==="1")setTimeout(()=>window.print(),500);
+
+ A.aplicar(cfg);
+ if(isPreview)document.body.classList.add("preview-centralizado");
+ if(isCalibration){document.getElementById("label").style.display="none";document.getElementById("calibration").classList.add("active")}
+ document.body.classList.add("ready");
+ if(params.get("auto")==="1")setTimeout(()=>window.print(),350);
 }
 start();
-</script></body></html>
+</script>
+</body>
+</html>

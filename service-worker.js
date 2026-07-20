@@ -1,5 +1,5 @@
 /* BDR ERP - Service Worker V4 SAFE OFFLINE */
-const BDR_CACHE_VERSION = "bdr-erp-v4.0.2-sininho-global-20260702";
+const BDR_CACHE_VERSION = "bdr-erp-v4.0.3-label-studio-v8-1-20260720";
 
 const BDR_ASSETS = [
   "./",
