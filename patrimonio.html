@@ -2202,7 +2202,7 @@ input, textarea{
 </main>
 </div>
 
-<div class="modal-bg" id="modalBg" aria-hidden="true">
+<div class="modal-bg" id="modalBg">
   <div class="modal">
     <button class="fechar" onclick="fecharModal()">X</button>
 
@@ -2341,7 +2341,7 @@ input, textarea{
 <!-- BDR PATRIMÔNIO - MODAL FINAL DE ETIQUETA
      Usa o arquivo antigo etiqueta-impressao.html dentro de um iframe.
      Mantém exatamente o padrão visual da etiqueta antiga. -->
-<div class="bdr-etiqueta-modal-bg" id="modalEtiquetaBg" aria-hidden="true">
+<div class="bdr-etiqueta-modal-bg" id="modalEtiquetaBg">
   <div class="bdr-etiqueta-modal">
     <div class="bdr-etiqueta-modal-head">
       <h2>🏷 Etiqueta <small style="font-size:11px;color:#64748b;font-weight:800;">ENTER imprime • ESC fecha</small></h2>
@@ -2383,12 +2383,6 @@ let bdrPatrimonioPaginaAtual = 1;
 const bdrPatrimonioPorPagina = 30;
 let bdrPatrimonioUltimaChaveFiltro = "";
 let patrimonioSelecionado = null;
-
-/*
- * Controla somente a navegação entre os dois modais.
- * Não cria um novo "patch" visual e não altera os dados do patrimônio.
- */
-let modalPatrimonioSuspensoParaEtiqueta = false;
 const bdrEtiquetasSelecionadas = new Set();
 let bdrModoSelecaoEtiquetas = false;
 let manutencoesPatrimonio = [];
@@ -4772,14 +4766,10 @@ function abrirModal(id){
   aplicarPermissoesTela();
 
   document.getElementById("modalBg").style.display = "flex";
-  document.getElementById("modalBg").setAttribute("aria-hidden", "false");
 }
 
 function fecharModal(){
-  const modalPatrimonio = document.getElementById("modalBg");
-  modalPatrimonio.style.display = "none";
-  modalPatrimonio.setAttribute("aria-hidden", "true");
-  modalPatrimonioSuspensoParaEtiqueta = false;
+  document.getElementById("modalBg").style.display = "none";
   patrimonioSelecionado = null;
 }
 
@@ -5445,47 +5435,16 @@ function abrirModalEtiquetaBDR(){
     return;
   }
 
-  const modalPatrimonio = document.getElementById("modalBg");
-  const modalEtiqueta = document.getElementById("modalEtiquetaBg");
   const frame = document.getElementById("bdrEtiquetaFrame");
-
-  if(!modalEtiqueta || !frame){
-    alert("O módulo de impressão da etiqueta não foi carregado corretamente.");
-    return;
+  if(frame){
+    frame.src = bdrUrlEtiquetaAtual() + "&preview=" + Date.now();
   }
 
-  /*
-   * O modal do patrimônio é apenas suspenso, não fechado.
-   * Assim a seleção continua disponível e não existem dois fundos sobrepostos.
-   */
-  modalPatrimonioSuspensoParaEtiqueta = Boolean(
-    modalPatrimonio && modalPatrimonio.style.display !== "none"
-  );
-
-  if(modalPatrimonioSuspensoParaEtiqueta){
-    modalPatrimonio.style.display = "none";
-    modalPatrimonio.setAttribute("aria-hidden", "true");
-  }
-
-  frame.src = bdrUrlEtiquetaAtual() + "&preview=" + Date.now();
-  modalEtiqueta.classList.add("ativo");
-  modalEtiqueta.setAttribute("aria-hidden", "false");
+  document.getElementById("modalEtiquetaBg")?.classList.add("ativo");
 }
 
 function fecharModalEtiqueta(){
-  const modalEtiqueta = document.getElementById("modalEtiquetaBg");
-  const modalPatrimonio = document.getElementById("modalBg");
-
-  modalEtiqueta?.classList.remove("ativo");
-  modalEtiqueta?.setAttribute("aria-hidden", "true");
-
-  /* Retorna ao patrimônio somente quando a etiqueta foi aberta a partir dele. */
-  if(modalPatrimonioSuspensoParaEtiqueta && patrimonioSelecionado && modalPatrimonio){
-    modalPatrimonio.style.display = "flex";
-    modalPatrimonio.setAttribute("aria-hidden", "false");
-  }
-
-  modalPatrimonioSuspensoParaEtiqueta = false;
+  document.getElementById("modalEtiquetaBg")?.classList.remove("ativo");
 }
 
 function imprimirEtiquetaModalBDR(){
@@ -5512,21 +5471,13 @@ function imprimirEtiquetaModalBDR(){
   }
 }
 
-// ESC fecha somente o modal da etiqueta e retorna ao patrimônio selecionado.
+// ESC fecha somente o modal da etiqueta, sem mexer nos outros modais.
 document.addEventListener("keydown", function(event){
   if(event.key === "Escape"){
     const modal = document.getElementById("modalEtiquetaBg");
     if(modal && modal.classList.contains("ativo")){
-      event.preventDefault();
       fecharModalEtiqueta();
     }
-  }
-});
-
-// Clique no fundo externo fecha a etiqueta; clique dentro do cartão não fecha.
-document.getElementById("modalEtiquetaBg")?.addEventListener("click", function(event){
-  if(event.target === this){
-    fecharModalEtiqueta();
   }
 });
 

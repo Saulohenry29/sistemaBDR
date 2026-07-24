@@ -1665,3 +1665,72 @@ main,
     grid-template-columns:1fr !important;
   }
 }
+
+/* =========================================================
+   CORREÇÃO DEFINITIVA — NOMES DO MENU ACIMA DO CABEÇALHO
+========================================================= */
+
+@media (min-width: 1201px){
+
+  /* Menu lateral sempre acima do conteúdo da página */
+  .bdr-sidebar{
+    z-index:2147483000 !important;
+    overflow:visible !important;
+  }
+
+  .bdr-menu,
+  .bdr-menu-btn,
+  .bdr-menu-icon{
+    overflow:visible !important;
+  }
+
+  /* Cabeçalho e conteúdo ficam abaixo do menu */
+  .bdr-main,
+  .bdr-topbar,
+  .hero,
+  .card{
+    z-index:1 !important;
+  }
+
+  /* Nome exibido ao passar o mouse */
+  .bdr-menu-btn::after{
+    content:attr(data-tip) !important;
+
+    display:block !important;
+    position:absolute !important;
+
+    left:58px !important;
+    top:50% !important;
+
+    transform:translate(8px,-50%) !important;
+
+    min-width:max-content !important;
+    width:max-content !important;
+
+    padding:7px 11px !important;
+
+    background:#111827 !important;
+    color:#ffffff !important;
+
+    border-radius:8px !important;
+
+    font-family:Arial,sans-serif !important;
+    font-size:12px !important;
+    font-weight:900 !important;
+    line-height:1.2 !important;
+    white-space:nowrap !important;
+
+    opacity:0 !important;
+    visibility:hidden !important;
+    pointer-events:none !important;
+
+    box-shadow:0 8px 20px rgba(0,0,0,.35) !important;
+
+    z-index:2147483647 !important;
+  }
+
+  .bdr-menu-btn:hover::after{
+    opacity:1 !important;
+    visibility:visible !important;
+  }
+}

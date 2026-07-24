@@ -1,95 +1,479 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-br">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Etiquetas em lote - Atlas/BDR</title>
-<script src="./JS/atlasEtiquetaConfig.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Etiquetas em lote — Atlas/BDR</title>
+
+<!-- Usa a MESMA configuração estável da impressão individual. -->
+<script src="./JS/atlasEtiquetaConfig.js?v=8.1.1"></script>
+
 <style>
-@page{size:55mm 35mm;margin:0}
 *{box-sizing:border-box}
+
 :root{
-  --etq-largura:55mm;--etq-altura:35mm;--etq-padding:2mm;--etq-borda:.45mm;--etq-raio:2mm;
-  --etq-engrenagem:8mm;--etq-bdr:10.2mm;--etq-sub:2.5mm;--etq-qr:12.5mm;--etq-topo-altura:13.5mm;
-  --etq-info:2.75mm;--etq-codigo:4mm;--etq-line-height:1.18;
-  --etq-conteudo-x:0mm;--etq-conteudo-y:0mm;--etq-engrenagem-x:0mm;--etq-engrenagem-y:0mm;--etq-bdr-x:0mm;--etq-bdr-y:0mm;--etq-sub-x:0mm;--etq-sub-y:0mm;--etq-qr-x:0mm;--etq-qr-y:0mm;--etq-info-x:0mm;--etq-info-y:0mm;--etq-codigo-x:0mm;--etq-codigo-y:0mm
+  --papel-w:55mm;--papel-h:35mm;--arte-w:53mm;--arte-h:33mm;
+  --padding:1.7mm;--borda:.45mm;--raio:1.8mm;
+  --topo-h:13.5mm;--gear-size:8mm;--bdr-size:10.2mm;
+  --sub-size:2.5mm;--qr-size:12.5mm;
+  --local-size:2.65mm;--item-size:2.65mm;--codigo-size:4mm;
+
+  --gear-x:0mm;--gear-y:0mm;--bdr-x:0mm;--bdr-y:0mm;
+  --sub-x:0mm;--sub-y:0mm;--qr-x:0mm;--qr-y:0mm;
+  --local-x:0mm;--local-y:0mm;--item-x:0mm;--item-y:0mm;
+  --codigo-x:0mm;--codigo-y:0mm;
+
+  --font-bdr:Arial,sans-serif;--weight-bdr:900;--style-bdr:normal;
+  --transform-bdr:uppercase;--letter-bdr:-.65mm;--align-bdr:left;
+
+  --font-sub:Arial,sans-serif;--weight-sub:700;--style-sub:italic;
+  --transform-sub:none;--letter-sub:0mm;--align-sub:right;
+
+  --font-local:Arial,sans-serif;--weight-local:800;--style-local:normal;
+  --transform-local:none;--letter-local:0mm;--align-local:left;
+
+  --font-item:Arial,sans-serif;--weight-item:800;--style-item:normal;
+  --transform-item:none;--letter-item:0mm;--align-item:left;
+
+  --font-codigo:Arial,sans-serif;--weight-codigo:900;--style-codigo:normal;
+  --transform-codigo:uppercase;--letter-codigo:0mm;--align-codigo:right;
+
+  --print-x:-1mm;--print-y:0mm;--print-scale:1;
 }
-html,body{margin:0;padding:0;background:#fff;font-family:Arial,sans-serif}
-.etiqueta{
-  width:var(--etq-largura);height:var(--etq-altura);padding:var(--etq-padding);
-  border:var(--etq-borda) solid #000;border-radius:var(--etq-raio);background:#fff;
-  display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;
-  page-break-after:always;break-after:page;transform:translate(var(--etq-conteudo-x),var(--etq-conteudo-y));
+
+@page{
+  size:var(--papel-w) var(--papel-h);
+  margin:0;
 }
-.etiqueta:last-child{page-break-after:auto;break-after:auto}
-.topo{height:var(--etq-topo-altura);display:flex;justify-content:space-between;align-items:flex-start;min-width:0}
-.logo-bloco{min-width:0;max-width:calc(100% - var(--etq-qr) - 1.5mm)}
-.logo{display:flex;align-items:center;line-height:1;white-space:nowrap}
-.engrenagem{width:var(--etq-engrenagem);height:var(--etq-engrenagem);object-fit:contain;flex:none;transform:translate(var(--etq-engrenagem-x),var(--etq-engrenagem-y))}
-.bdr{font-size:var(--etq-bdr);font-weight:900;letter-spacing:-.7mm;color:#4b4b4b;line-height:.85;transform:translate(var(--etq-bdr-x),var(--etq-bdr-y))}
-.sub{font-size:var(--etq-sub);font-style:italic;font-weight:700;text-align:right;margin-top:-.9mm;color:#555;transform:translate(var(--etq-sub-x),var(--etq-sub-y))}
-.qr{width:var(--etq-qr);height:var(--etq-qr);object-fit:contain;flex:none;transform:translate(var(--etq-qr-x),var(--etq-qr-y))}
-.meio{font-size:var(--etq-info);font-weight:800;line-height:var(--etq-line-height);min-width:0;overflow:hidden;transform:translate(var(--etq-info-x),var(--etq-info-y))}
-.linha{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.codigo{font-size:var(--etq-codigo);font-weight:900;line-height:1;text-align:right;white-space:nowrap;transform:translate(var(--etq-codigo-x),var(--etq-codigo-y))}
-.estado{padding:12px;font-weight:800;color:#334155}
-@media screen{body{display:grid;gap:10px;justify-content:center;padding:14px;background:#e5e7eb}.etiqueta{box-shadow:0 5px 18px rgba(15,23,42,.18)}}
-@media print{html,body{width:55mm;margin:0!important;padding:0!important;background:#fff}.etiqueta{box-shadow:none}}
+
+html,body{
+  margin:0;
+  padding:0;
+  background:#fff;
+  font-family:Arial,sans-serif;
+}
+
+#etiquetas{
+  margin:0;
+  padding:0;
+}
+
+.paper{
+  position:relative;
+  width:var(--papel-w);
+  height:var(--papel-h);
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  flex:none;
+  page-break-after:always;
+  break-after:page;
+}
+
+.paper:last-child{
+  page-break-after:auto;
+  break-after:auto;
+}
+
+.label{
+  position:relative;
+  width:var(--arte-w);
+  height:var(--arte-h);
+  padding:var(--padding);
+  border:0;
+  border-radius:var(--raio);
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  overflow:hidden;
+  background:#fff;
+  transform:translate(var(--print-x),var(--print-y)) scale(var(--print-scale));
+  transform-origin:center center;
+  isolation:isolate;
+}
+
+.label::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border:var(--borda) solid #111;
+  border-radius:inherit;
+  pointer-events:none;
+  z-index:10;
+}
+
+.label-top{
+  height:var(--topo-h);
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  min-width:0;
+}
+
+.brand{
+  min-width:0;
+  max-width:calc(100% - var(--qr-size) - 1.5mm);
+}
+
+.brand-row{
+  display:flex;
+  align-items:center;
+  white-space:nowrap;
+  line-height:1;
+}
+
+.gear{
+  width:var(--gear-size);
+  height:var(--gear-size);
+  object-fit:contain;
+  flex:none;
+  transform:translate(var(--gear-x),var(--gear-y));
+}
+
+.bdr{
+  font-family:var(--font-bdr);
+  font-size:var(--bdr-size);
+  font-weight:var(--weight-bdr);
+  font-style:var(--style-bdr);
+  text-transform:var(--transform-bdr);
+  letter-spacing:var(--letter-bdr);
+  text-align:var(--align-bdr);
+  color:#4b4b4b;
+  line-height:.85;
+  transform:translate(var(--bdr-x),var(--bdr-y));
+}
+
+.sub{
+  font-family:var(--font-sub);
+  font-size:var(--sub-size);
+  font-weight:var(--weight-sub);
+  font-style:var(--style-sub);
+  text-transform:var(--transform-sub);
+  letter-spacing:var(--letter-sub);
+  text-align:var(--align-sub);
+  color:#555;
+  margin-top:-.7mm;
+  transform:translate(var(--sub-x),var(--sub-y));
+}
+
+.qr{
+  width:var(--qr-size);
+  height:var(--qr-size);
+  object-fit:contain;
+  flex:none;
+  background:#fff;
+  transform:translate(var(--qr-x),var(--qr-y));
+}
+
+.info{
+  min-width:0;
+  overflow:hidden;
+  line-height:1.15;
+}
+
+.local,.item{
+  display:block;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.local{
+  font-family:var(--font-local);
+  font-size:var(--local-size);
+  font-weight:var(--weight-local);
+  font-style:var(--style-local);
+  text-transform:var(--transform-local);
+  letter-spacing:var(--letter-local);
+  text-align:var(--align-local);
+  transform:translate(var(--local-x),var(--local-y));
+}
+
+.item{
+  font-family:var(--font-item);
+  font-size:var(--item-size);
+  font-weight:var(--weight-item);
+  font-style:var(--style-item);
+  text-transform:var(--transform-item);
+  letter-spacing:var(--letter-item);
+  text-align:var(--align-item);
+  transform:translate(var(--item-x),var(--item-y));
+}
+
+.codigo{
+  font-family:var(--font-codigo);
+  font-size:var(--codigo-size);
+  font-weight:var(--weight-codigo);
+  font-style:var(--style-codigo);
+  text-transform:var(--transform-codigo);
+  letter-spacing:var(--letter-codigo);
+  text-align:var(--align-codigo);
+  white-space:nowrap;
+  line-height:1;
+  transform:translate(var(--codigo-x),var(--codigo-y));
+}
+
+.estado{
+  padding:18px;
+  font-weight:800;
+  color:#334155;
+}
+
+/* Visualização no navegador: papel branco, sem alterar a impressão. */
+@media screen{
+ html,body{
+   width:100%;
+   min-width:100%;
+   min-height:100%;
+   background:#fff!important;
+ }
+ body{
+   display:grid;
+   gap:18px;
+   justify-content:center;
+   padding:18px;
+ }
+ .paper{
+   background:#fff;
+   outline:0;
+   box-shadow:none;
+ }
+ .label{
+   box-shadow:0 8px 22px rgba(15,23,42,.18);
+ }
+ body.embed{
+   padding:16px;
+ }
+}
+@media print{
+  html,body,#etiquetas{
+    margin:0!important;
+    padding:0!important;
+    background:#fff;
+  }
+
+  .paper{
+    outline:0;
+    box-shadow:none;
+  }
+}
 </style>
 </head>
+
 <body>
-<div id="etiquetas"><div class="estado">Carregando etiquetas...</div></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<div id="etiquetas">
+  <div class="estado">Preparando etiquetas...</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./JS/supabaseClient.js"></script>
+
 <script>
-AtlasEtiquetaConfig.aplicar();
-window.addEventListener('atlas:etiqueta-config-alterada', event => AtlasEtiquetaConfig.aplicar(event.detail));
+"use strict";
 
+const A = window.AtlasEtiquetaConfig;
 const params = new URLSearchParams(location.search);
-const codigos = (params.get('codigos') || '').split(',').map(v => v.trim()).filter(Boolean).slice(0,200);
-const container = document.getElementById('etiquetas');
-const db = () => window.client || window.supabaseClient;
-const esc = valor => String(valor ?? '-').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-const cortarTexto = (texto, limite) => {
-  const valor = String(texto || '-');
-  return valor.length > limite ? `${valor.substring(0, limite)}...` : valor;
-};
-const qrUrl = codigo => `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`https://saulohenry29.github.io/sistemaBDR/etiqueta.html?id=${codigo}`)}`;
+const isEmbed = params.get("embed") === "1" || window.self !== window.top;
+if(isEmbed){
+  document.body.classList.add("embed");
+}
 
-function modelo(p){
-  const config = AtlasEtiquetaConfig.carregar();
-  const codigo = p.codigo_qr || p.codigo_antigo || 'SEM-CODIGO';
-  const local = cortarTexto(p.localizacao || p.obra_nome || 'SEM OBRA', config.limiteLocal);
-  const item = cortarTexto(p.nome_bem || 'ITEM', config.limiteItem);
-  return `<section class="etiqueta">
-    <div class="topo">
-      <div class="logo-bloco">
-        <div class="logo"><img src="./imagens/engrenagem.png" class="engrenagem" alt=""><span class="bdr">BDR</span></div>
-        <div class="sub">Construart</div>
+const codigos = (params.get("codigos") || "")
+  .split(",")
+  .map(valor => valor.trim())
+  .filter(Boolean)
+  .slice(0, 200);
+
+const container = document.getElementById("etiquetas");
+const db = () => window.client || window.supabaseClient;
+
+const esc = valor => String(valor ?? "-").replace(
+  /[&<>'"]/g,
+  caractere => ({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    "'":"&#39;",
+    '"':"&quot;"
+  })[caractere]
+);
+
+function criarQr(codigo){
+  const link =
+    `https://saulohenry29.github.io/sistemaBDR/etiqueta.html?id=${encodeURIComponent(codigo)}`;
+
+  return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(link)}`;
+}
+
+function criarModelo(patrimonio){
+  const codigo =
+    patrimonio?.codigo_qr ||
+    patrimonio?.codigo_bem ||
+    patrimonio?.etiqueta ||
+    patrimonio?.codigo_antigo ||
+    "SEM-CODIGO";
+
+  const local =
+    patrimonio?.localizacao ||
+    patrimonio?.obra_nome ||
+    "SEM OBRA";
+
+  const item =
+    patrimonio?.nome_bem ||
+    "ITEM";
+
+  return `
+    <section class="paper">
+      <div class="label">
+
+        <div class="label-top">
+          <div class="brand">
+            <div class="brand-row">
+              <img
+                src="./imagens/engrenagem.png"
+                class="gear"
+                data-el="engrenagem"
+                alt=""
+              >
+
+              <span class="bdr" data-el="bdr">BDR</span>
+            </div>
+
+            <div class="sub" data-el="sub">Construart</div>
+          </div>
+
+          <img
+            class="qr"
+            data-el="qr"
+            src="${criarQr(codigo)}"
+            alt="QR ${esc(codigo)}"
+          >
+        </div>
+
+        <div class="info">
+          <div class="local" data-el="local">
+            Local: ${esc(local)}
+          </div>
+
+          <div class="item" data-el="item">
+            Item: ${esc(item)}
+          </div>
+        </div>
+
+        <div class="codigo" data-el="codigo">
+          ${esc(codigo)}
+        </div>
+
       </div>
-      <img class="qr" src="${qrUrl(codigo)}" alt="QR ${esc(codigo)}">
-    </div>
-    <div class="meio">
-      <div class="linha">Local: ${esc(local)}</div>
-      <div class="linha">Item: ${esc(item)}</div>
-    </div>
-    <div class="codigo">${esc(codigo)}</div>
-  </section>`;
+    </section>
+  `;
+}
+
+async function aguardarImagens(){
+  const imagens = Array.from(container.querySelectorAll("img"));
+
+  await Promise.all(
+    imagens.map(imagem => {
+      if(imagem.complete){
+        return Promise.resolve();
+      }
+
+      return new Promise(resolve => {
+        imagem.addEventListener("load", resolve, {once:true});
+        imagem.addEventListener("error", resolve, {once:true});
+      });
+    })
+  );
+}
+
+async function buscarPatrimonios(){
+  if(!db()){
+    console.warn("Supabase indisponível na impressão em lote.");
+    return [];
+  }
+
+  /*
+   * O patrimônio envia os códigos selecionados usando codigo_qr.
+   * Mantemos a mesma consulta que já funcionava antes.
+   */
+  const resposta = await db()
+    .from("patrimonio")
+    .select("*")
+    .in("codigo_qr", codigos);
+
+  if(resposta.error){
+    console.error(
+      "Erro ao buscar patrimônios para a impressão em lote:",
+      resposta.error
+    );
+
+    return [];
+  }
+
+  return resposta.data || [];
 }
 
 async function carregar(){
-  if(!codigos.length){container.innerHTML='<div class="estado">Nenhuma etiqueta selecionada.</div>';return}
-  let dados=[];
-  if(db()){
-    const resposta = await db().from('patrimonio').select('codigo_qr,codigo_antigo,nome_bem,localizacao').in('codigo_qr',codigos);
-    if(!resposta.error) dados = resposta.data || [];
-    else console.error('Erro ao carregar etiquetas em lote:', resposta.error);
+  if(!codigos.length){
+    container.innerHTML =
+      '<div class="estado">Nenhuma etiqueta selecionada.</div>';
+
+    return;
   }
-  const mapa = new Map(dados.map(p => [String(p.codigo_qr),p]));
-  container.innerHTML = codigos.map(c => modelo(mapa.get(c) || {codigo_qr:c})).join('');
-  await Promise.all(Array.from(container.querySelectorAll('img')).map(img => img.complete ? Promise.resolve() : new Promise(resolve => {img.onload=resolve;img.onerror=resolve})));
-  if(params.get('auto') === '1') setTimeout(() => window.print(),250);
+
+  /*
+   * IMPORTANTE:
+   * Não muda a versão do layout e não migra os valores já salvos.
+   * Primeiro busca PADRAO_GLOBAL no Supabase.
+   * Usa o localStorage apenas como plano B.
+   */
+  const configLocal = A.carregar();
+
+  const [configBanco, patrimonios] = await Promise.all([
+    A.carregarBanco().catch(erro => {
+      console.warn(
+        "Padrão global indisponível; usando configuração local.",
+        erro
+      );
+
+      return null;
+    }),
+
+    buscarPatrimonios()
+  ]);
+
+  const config = configBanco || configLocal;
+
+  const mapa = new Map(
+    patrimonios.map(patrimonio => [
+      String(patrimonio.codigo_qr),
+      patrimonio
+    ])
+  );
+
+  container.innerHTML = codigos
+    .map(codigo =>
+      criarModelo(
+        mapa.get(String(codigo)) || {codigo_qr: codigo}
+      )
+    )
+    .join("");
+
+  /*
+   * Aplica o padrão DEPOIS de inserir todas as etiquetas.
+   * Isso aplica dimensões, fontes, borda, visibilidade, escala e X/Y.
+   */
+  A.aplicar(config);
+
+  await aguardarImagens();
+
+  if(params.get("auto") === "1" && !isEmbed){
+    setTimeout(() => window.print(), 250);
+  }
 }
+
 carregar();
 </script>
 </body>

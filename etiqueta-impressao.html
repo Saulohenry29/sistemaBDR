@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Etiqueta Patrimônio Atlas</title>
-<script src="./JS/atlasEtiquetaConfig.js?v=8.1.0"></script>
+<script src="./JS/atlasEtiquetaConfig.js?v=8.1.2"></script>
 <script src="./JS/atlasPrintCenter.js?v=2.0.0"></script>
 <style>
 *{box-sizing:border-box}
@@ -52,11 +52,30 @@ html,body{margin:0;padding:0;width:var(--papel-w);height:var(--papel-h);overflow
 .calibration .caption{position:absolute;left:0;right:0;bottom:2mm;text-align:center;font-size:1.8mm;font-weight:700}
 @page{size:var(--papel-w) var(--papel-h);margin:0}
 @media screen{
- body{display:grid;place-items:center;min-width:100vw;min-height:100vh;background:#e9eef5}
- .paper{box-shadow:0 8px 25px rgba(15,23,42,.2);outline:1px dashed #64748b;outline-offset:-1px}
- /* Em qualquer prévia incorporada, a etiqueta aparece sempre centralizada.
-    O deslocamento de calibração fica reservado para a impressão real. */
+ html,body{
+   width:100%;
+   height:100%;
+   min-width:100%;
+   min-height:100%;
+   overflow:auto;
+   background:#fff!important;
+ }
+ body{
+   display:grid;
+   place-items:center;
+   padding:18px;
+ }
+ .paper{
+   background:#fff;
+   outline:0;
+   box-shadow:none;
+ }
+ .label{
+   box-shadow:0 8px 22px rgba(15,23,42,.18);
+ }
  body.preview-centralizado{--print-x:0mm!important;--print-y:0mm!important}
+ body.embed{padding:12px}
+ body.embed .paper{outline:0;box-shadow:none}
 }
 @media print{html,body{width:var(--papel-w);height:var(--papel-h)}.loading{display:none!important}}
 </style>
@@ -89,6 +108,8 @@ const A=window.AtlasEtiquetaConfig,params=new URLSearchParams(location.search),d
 const codigo=params.get("codigo")||params.get("id")||"PAT-9990004";
 const isCalibration=params.get("calibracao")==="1";
 const isPreview=params.get("preview")==="1" || window.self!==window.top;
+const isEmbed=params.get("embed")==="1" || window.self!==window.top;
+if(isEmbed)document.body.classList.add("embed");
 
 async function start(){
  let cfg=params.get("teste")==="1"?A.carregarTeste():null;
