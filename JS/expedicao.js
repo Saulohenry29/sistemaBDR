@@ -170,9 +170,10 @@ function obraCurta(id, fallback){ const txt = fallback || nomeObra(id); return t
 function fotoItem(i){ return i.foto_url || i.imagem_url || ""; }
 function placeholderIcon(i){ const t = `${i.nome || i.descricao || ""}`.toLowerCase(); if(t.includes("furadeira")||t.includes("parafusadeira")) return "🔩"; if(t.includes("notebook")||t.includes("computador")) return "💻"; if(t.includes("impressora")) return "🖨️"; if(t.includes("solda")) return "⚡"; if(t.includes("capacete")) return "⛑️"; if(t.includes("cadeira")) return "🪑"; return "📦"; }
 function carregarTopo(){ const u=usuarioAtual(); document.getElementById("usuarioNome").innerText = u ? "Olá, " + (u.nome || "usuário") : "Olá, usuário"; document.getElementById("usuarioPerfil").innerText = u ? (u.perfil || "-") : "-"; }
-function toggleMenuUsuario(e){ e?.stopPropagation(); document.getElementById("dropdownUser")?.classList.toggle("ativo"); document.getElementById("notifDropdown")?.classList.remove("ativo"); }
-function toggleNotificacoes(e){ e?.stopPropagation(); document.getElementById("notifDropdown")?.classList.toggle("ativo"); document.getElementById("dropdownUser")?.classList.remove("ativo"); }
-document.addEventListener("click",()=>{document.getElementById("dropdownUser")?.classList.remove("ativo");document.getElementById("notifDropdown")?.classList.remove("ativo");});
+/* =========================================================
+   TOPBAR OFICIAL ATLAS
+   Controlada exclusivamente por JS/atlasTopbar.js.
+========================================================= */
 
 function abrirAba(nome, btn){ document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active")); document.getElementById("tab-"+nome)?.classList.add("active"); document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active")); btn?.classList.add("active"); renderizarPedidos(); }
 function filtrarStatus(st, btn){ filtroAtual = st; document.querySelectorAll(".chip-exp").forEach(b=>b.classList.remove("active")); btn?.classList.add("active"); renderizarCatalogo(); }
@@ -2812,3 +2813,285 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
   console.log("✅ ATLAS EXPEDIÇÃO 3.5.0 carregado — escopo por obra + perfil");
 })();
 
+
+
+/* =========================================================
+   ATLAS EXPEDIÇÃO 3.6
+   CATÁLOGO COM FILTROS HORIZONTAIS E PAGINAÇÃO
+   Observação: nesta primeira versão, a paginação é visual.
+   Os dados já carregados em itensCatalogo são filtrados e
+   exibidos em blocos de 30, 50 ou 100 registros.
+========================================================= */
+(function(){
+  const estado = window.AtlasCatalogoPaginado = window.AtlasCatalogoPaginado || {
+    pagina: 1,
+    porPagina: 30,
+    totalPaginas: 1
+  };
+
+  function textoSeguro(v){
+    return String(v ?? "").trim();
+  }
+
+  function valorElemento(id, padrao){
+    const el = document.getElementById(id);
+    return el ? el.value : padrao;
+  }
+
+  function obraDoItem(item){
+    return textoSeguro(
+      item.obra_id ??
+      item.localizacao_obra_id ??
+      item.obra_origem_id ??
+      item.empresa_obra_id ??
+      item.obra_nome ??
+      item.obra ??
+      item.localizacao
+    );
+  }
+
+  function obraNomeDoItem(item){
+    return textoSeguro(
+      item.obra_nome ??
+      item.nome_obra ??
+      item.obra ??
+      item.localizacao ??
+      item.setor ??
+      obraDoItem(item)
+    );
+  }
+
+  function categoriaDoItem(item){
+    return textoSeguro(
+      item.tipo_item ??
+      item.categoria ??
+      item.tipo ??
+      item.grupo ??
+      item.classificacao ??
+      "OUTRO"
+    ).toUpperCase();
+  }
+
+  function dataDoItem(item){
+    const bruto = item.created_at ?? item.data_cadastro ?? item.updated_at ?? item.id ?? 0;
+    const data = new Date(bruto);
+    return Number.isNaN(data.getTime()) ? Number(item.id || 0) : data.getTime();
+  }
+
+  function compararTexto(a,b){
+    return textoSeguro(a).localeCompare(textoSeguro(b), "pt-BR", {numeric:true, sensitivity:"base"});
+  }
+
+  function preencherSelect(id, valores, textoTodos){
+    const select = document.getElementById(id);
+    if(!select) return;
+    const atual = select.value;
+    const opcoes = [`<option value="TODAS">${textoTodos}</option>`]
+      .concat(valores.map(v => `<option value="${String(v.valor).replace(/"/g,"&quot;")}">${v.rotulo}</option>`));
+    select.innerHTML = opcoes.join("");
+    if(Array.from(select.options).some(o => o.value === atual)) select.value = atual;
+  }
+
+  function atlasAtualizarOpcoesFiltros(){
+    const lista = Array.isArray(window.itensCatalogo) ? window.itensCatalogo : [];
+
+    const mapaObras = new Map();
+    lista.forEach(item => {
+      const valor = obraDoItem(item);
+      const rotulo = obraNomeDoItem(item);
+      if(valor && !mapaObras.has(valor)) mapaObras.set(valor, rotulo || valor);
+    });
+    const obrasOrdenadas = Array.from(mapaObras.entries())
+      .map(([valor,rotulo]) => ({valor,rotulo}))
+      .sort((a,b)=>compararTexto(a.rotulo,b.rotulo));
+    preencherSelect("filtroObraCatalogo", obrasOrdenadas, "Todas as obras");
+
+    const categorias = Array.from(new Set(lista.map(categoriaDoItem).filter(Boolean)))
+      .sort(compararTexto)
+      .map(valor => ({
+        valor,
+        rotulo: valor.replaceAll("_"," ").toLowerCase().replace(/\b\w/g, l=>l.toUpperCase())
+      }));
+    preencherSelect("filtroCategoriaCatalogo", categorias, "Todas");
+  }
+
+  function obterListaFiltrada(){
+    const buscaEl = document.getElementById("buscaCatalogo");
+    const busca = textoSeguro(buscaEl?.value).toLowerCase();
+    const obra = valorElemento("filtroObraCatalogo","TODAS");
+    const categoria = valorElemento("filtroCategoriaCatalogo","TODAS");
+    const ordenacao = valorElemento("ordenacaoCatalogo","RECENTES");
+
+    let lista = (Array.isArray(window.itensCatalogo) ? window.itensCatalogo : []).filter(item => {
+      const texto = [
+        item.codigo, item.codigo_bem, item.etiqueta, item.codigo_qr,
+        item.nome, item.nome_bem, item.descricao, item.marca, item.modelo,
+        obraNomeDoItem(item), item.localizacao, item.numero_serie
+      ].map(textoSeguro).join(" ").toLowerCase();
+
+      const status = typeof normalStatus === "function"
+        ? normalStatus(item.status)
+        : textoSeguro(item.status).toUpperCase();
+
+      const passaBusca = !busca || texto.includes(busca);
+      const passaStatus = window.filtroAtual === "TODOS" || status === window.filtroAtual;
+      const passaObra = obra === "TODAS" || obraDoItem(item) === obra;
+      const passaCategoria = categoria === "TODAS" || categoriaDoItem(item) === categoria;
+
+      return passaBusca && passaStatus && passaObra && passaCategoria;
+    });
+
+    lista.sort((a,b)=>{
+      if(ordenacao === "NOME_ASC") return compararTexto(a.nome ?? a.nome_bem, b.nome ?? b.nome_bem);
+      if(ordenacao === "CODIGO_ASC") return compararTexto(a.codigo ?? a.codigo_bem ?? a.etiqueta, b.codigo ?? b.codigo_bem ?? b.etiqueta);
+      if(ordenacao === "OBRA_ASC") return compararTexto(obraNomeDoItem(a), obraNomeDoItem(b));
+      if(ordenacao === "STATUS_ASC") return compararTexto(a.status, b.status);
+      return dataDoItem(b) - dataDoItem(a);
+    });
+
+    return lista;
+  }
+
+  function atualizarResumo(total, inicio, fim){
+    const resumo = document.getElementById("atlasResumoCatalogo");
+    if(resumo){
+      resumo.textContent = total
+        ? `Mostrando ${inicio + 1}–${fim} de ${total} itens`
+        : "Nenhum item encontrado";
+    }
+
+    const ativos = [];
+    const obra = valorElemento("filtroObraCatalogo","TODAS");
+    const categoria = valorElemento("filtroCategoriaCatalogo","TODAS");
+    const obraEl = document.getElementById("filtroObraCatalogo");
+    if(obra !== "TODAS") ativos.push(`Obra: ${obraEl?.selectedOptions?.[0]?.text || obra}`);
+    if(categoria !== "TODAS") ativos.push(`Categoria: ${categoria.replaceAll("_"," ")}`);
+    if(window.filtroAtual && window.filtroAtual !== "TODOS") ativos.push(`Status: ${window.filtroAtual.replaceAll("_"," ")}`);
+
+    const filtros = document.getElementById("atlasFiltrosAtivosCatalogo");
+    if(filtros) filtros.textContent = ativos.length ? `Filtros ativos — ${ativos.join(" • ")}` : "";
+  }
+
+  function atualizarPaginacao(){
+    const totalPaginas = Math.max(1, estado.totalPaginas);
+    const pagina = Math.min(Math.max(1, estado.pagina), totalPaginas);
+    estado.pagina = pagina;
+
+    const label = document.getElementById("atlasPaginaAtual");
+    if(label) label.textContent = `Página ${pagina} de ${totalPaginas}`;
+
+    const primeira = pagina <= 1;
+    const ultima = pagina >= totalPaginas;
+    ["atlasPrimeiraPagina","atlasPaginaAnterior"].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.disabled=primeira;
+    });
+    ["atlasProximaPagina","atlasUltimaPagina"].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.disabled=ultima;
+    });
+
+    const paginacao = document.getElementById("atlasPaginacaoCatalogo");
+    if(paginacao) paginacao.style.display = estado.totalPaginas <= 1 ? "none" : "flex";
+  }
+
+  window.renderizarCatalogo = function(){
+    const grid = document.getElementById("catalogoGrid");
+    if(!grid) return;
+
+    atlasAtualizarOpcoesFiltros();
+
+    estado.porPagina = Number(valorElemento("itensPorPaginaCatalogo", estado.porPagina || 30)) || 30;
+    const lista = obterListaFiltrada();
+    estado.totalPaginas = Math.max(1, Math.ceil(lista.length / estado.porPagina));
+    if(estado.pagina > estado.totalPaginas) estado.pagina = estado.totalPaginas;
+
+    const inicio = (estado.pagina - 1) * estado.porPagina;
+    const fim = Math.min(inicio + estado.porPagina, lista.length);
+    const pagina = lista.slice(inicio, fim);
+
+    if(!pagina.length){
+      grid.innerHTML = `<div class="cart-empty" style="grid-column:1/-1">Nenhum item encontrado com os filtros selecionados.</div>`;
+    }else{
+      grid.innerHTML = pagina.map(item => typeof cardItem === "function" ? cardItem(item) : "").join("");
+    }
+
+    atualizarResumo(lista.length, inicio, fim);
+    atualizarPaginacao();
+  };
+
+  window.atlasAlterarFiltroCatalogo = function(){
+    estado.pagina = 1;
+    window.renderizarCatalogo();
+  };
+
+  window.atlasAlterarItensPorPagina = function(){
+    estado.porPagina = Number(valorElemento("itensPorPaginaCatalogo",30)) || 30;
+    estado.pagina = 1;
+    window.renderizarCatalogo();
+  };
+
+  window.atlasMudarPaginaCatalogo = function(delta){
+    estado.pagina = Math.min(Math.max(1, estado.pagina + Number(delta || 0)), estado.totalPaginas);
+    window.renderizarCatalogo();
+    document.getElementById("catalogoGrid")?.scrollIntoView({behavior:"smooth",block:"start"});
+  };
+
+  window.atlasIrPaginaCatalogo = function(pagina){
+    estado.pagina = Math.min(Math.max(1, Number(pagina || 1)), estado.totalPaginas);
+    window.renderizarCatalogo();
+    document.getElementById("catalogoGrid")?.scrollIntoView({behavior:"smooth",block:"start"});
+  };
+
+  window.atlasIrUltimaPaginaCatalogo = function(){
+    window.atlasIrPaginaCatalogo(estado.totalPaginas);
+  };
+
+  window.atlasLimparFiltrosCatalogo = function(){
+    const ids = {
+      filtroObraCatalogo:"TODAS",
+      filtroCategoriaCatalogo:"TODAS",
+      ordenacaoCatalogo:"RECENTES",
+      itensPorPaginaCatalogo:"30",
+      buscaCatalogo:""
+    };
+    Object.entries(ids).forEach(([id,valor])=>{
+      const el=document.getElementById(id);
+      if(el) el.value=valor;
+    });
+    window.filtroAtual = "TODOS";
+    document.querySelectorAll(".chip-exp").forEach(btn=>{
+      btn.classList.toggle("active", btn.dataset.filtro === "TODOS");
+    });
+    estado.pagina = 1;
+    estado.porPagina = 30;
+    window.renderizarCatalogo();
+  };
+
+  // Busca digitada sempre retorna à primeira página.
+  document.addEventListener("DOMContentLoaded", function(){
+    const busca = document.getElementById("buscaCatalogo");
+    if(busca){
+      busca.removeAttribute("oninput");
+      let timer;
+      busca.addEventListener("input", ()=>{
+        clearTimeout(timer);
+        timer=setTimeout(()=>{
+          estado.pagina=1;
+          window.renderizarCatalogo();
+        },180);
+      });
+    }
+
+    // Mantém paginação correta quando os chips de status forem usados.
+    document.querySelectorAll(".chip-exp").forEach(btn=>{
+      btn.addEventListener("click", ()=>{ estado.pagina=1; });
+    });
+
+    setTimeout(()=>{
+      atlasAtualizarOpcoesFiltros();
+      window.renderizarCatalogo();
+    },350);
+  });
+
+  // Exporta para possíveis integrações futuras.
+  window.atlasAtualizarOpcoesFiltrosCatalogo = atlasAtualizarOpcoesFiltros;
+})();

@@ -1,0 +1,407 @@
+/* =========================================================
+   ATLAS SaaS - TOPBAR E CAMADAS OFICIAIS V1.1
+   Arquivo: CSS/atlas-topbar.css
+
+   RESPONSABILIDADE ÚNICA
+   - Barra superior
+   - Sininho e notificações
+   - Usuário e menu de conta
+   - Camadas globais / dropdowns
+
+   NÃO colocar estas regras novamente dentro dos HTMLs.
+========================================================= */
+
+:root{
+  /* Cores oficiais */
+  --atlas-red:var(--bdr-red,#d71920);
+  --atlas-red-soft:#fff1f2;
+  --atlas-dark:#111827;
+  --atlas-text:#111827;
+  --atlas-muted:#64748b;
+  --atlas-border:#e5e7eb;
+  --atlas-surface:#ffffff;
+
+  /* Escala oficial de camadas */
+  --atlas-z-base:1;
+  --atlas-z-content:10;
+  --atlas-z-sticky:100;
+  --atlas-z-sidebar:500;
+  --atlas-z-topbar:1000;
+  --atlas-z-dropdown:2000;
+  --atlas-z-overlay:3000;
+  --atlas-z-modal:4000;
+  --atlas-z-alert:5000;
+}
+
+/* =========================================================
+   1. BARRA SUPERIOR
+========================================================= */
+.bdr-topbar,
+.atlas-topbar,
+.relatorio-topbar{
+  position:relative;
+  z-index:var(--atlas-z-topbar);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  width:100%;
+  min-height:72px;
+  padding:12px 14px;
+  margin-bottom:10px;
+  overflow:visible;
+  border-left:4px solid var(--atlas-red);
+  border-radius:16px;
+  background:
+    radial-gradient(circle at right top,rgba(164,22,26,.12),transparent 35%),
+    linear-gradient(135deg,#fff,#f8fafc);
+  box-shadow:0 3px 14px rgba(15,23,42,.08);
+}
+
+.bdr-topbar-title,
+.atlas-topbar-title,
+.relatorio-title{
+  color:var(--atlas-red);
+  font-size:19px;
+  font-weight:900;
+  line-height:1.15;
+}
+
+.bdr-topbar-sub,
+.atlas-topbar-sub,
+.relatorio-sub{
+  margin-top:3px;
+  color:var(--atlas-muted);
+  font-size:12px;
+  font-weight:500;
+}
+
+/* =========================================================
+   2. AÇÕES DO TOPO
+========================================================= */
+.bdr-top-actions,
+.atlas-top-actions{
+  position:relative;
+  z-index:var(--atlas-z-topbar);
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:12px;
+  margin-left:auto;
+  overflow:visible;
+}
+
+.notif-wrap,
+.user-menu,
+.dash-user,
+.atlas-user-wrap{
+  position:relative;
+  overflow:visible;
+}
+
+/* =========================================================
+   3. BOTÃO DE NOTIFICAÇÕES
+========================================================= */
+.notif-btn,
+.atlas-notif-btn{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:38px;
+  height:38px;
+  min-width:38px;
+  padding:0;
+  border:1px solid #fee2e2;
+  border-radius:50%;
+  background:#fff;
+  color:var(--atlas-dark);
+  box-shadow:none;
+  cursor:pointer;
+  transition:background .18s ease,color .18s ease,transform .18s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+
+.notif-btn:hover,
+.atlas-notif-btn:hover,
+.notif-btn[aria-expanded="true"]{
+  background:var(--atlas-red-soft);
+  color:var(--atlas-red);
+  transform:translateY(-1px);
+}
+
+.notif-btn:focus-visible,
+.atlas-notif-btn:focus-visible,
+.user-menu:focus-visible{
+  outline:3px solid rgba(164,22,26,.18);
+  outline-offset:2px;
+}
+
+.notif-badge{
+  position:absolute;
+  top:-2px;
+  right:-2px;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  min-width:18px;
+  height:18px;
+  padding:0 5px;
+  border:2px solid #fff;
+  border-radius:999px;
+  background:#dc2626;
+  color:#fff;
+  font-size:10px;
+  font-weight:900;
+  line-height:1;
+}
+
+.notif-badge.ativo,
+.notif-badge:not(:empty){display:flex;}
+.notif-badge[data-count="0"]{display:none;}
+
+/* =========================================================
+   4. USUÁRIO
+========================================================= */
+.user-menu,
+.user-menu-top,
+.atlas-user-button{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-height:50px;
+  padding:8px 12px;
+  border:0;
+  border-radius:13px;
+  background:transparent;
+  color:var(--atlas-text);
+  cursor:pointer;
+  transition:background .18s ease,transform .18s ease;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+
+.user-menu:hover,
+.user-menu-top:hover,
+.user-menu[aria-expanded="true"],
+.user-menu-top[aria-expanded="true"]{
+  background:var(--atlas-red-soft);
+  transform:translateY(-1px);
+}
+
+.user-mini,
+.user-name-wrap{
+  min-width:0;
+  text-align:right;
+  pointer-events:none;
+}
+
+.user-mini b,
+.user-name{
+  display:block;
+  max-width:190px;
+  overflow:hidden;
+  color:var(--atlas-text);
+  font-size:13px;
+  font-weight:900;
+  line-height:1.15;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.user-mini small,
+.user-level{
+  display:block;
+  margin-top:2px;
+  color:var(--atlas-red);
+  font-size:10px;
+  font-weight:900;
+  line-height:1.15;
+  text-transform:uppercase;
+}
+
+.avatar,
+.atlas-avatar{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:42px;
+  height:42px;
+  min-width:42px;
+  border:2px solid #fee2e2;
+  border-radius:50%;
+  background:linear-gradient(135deg,#fecaca,#fff);
+  color:var(--atlas-red);
+  font-size:18px;
+  pointer-events:none;
+}
+
+/* =========================================================
+   5. DROPDOWNS GLOBAIS
+   O JS move estes elementos para o BODY enquanto estão abertos.
+========================================================= */
+.notif-dropdown,
+.dropdown-user,
+.user-dropdown,
+.atlas-dropdown{
+  position:fixed;
+  top:0;
+  left:0;
+  z-index:var(--atlas-z-dropdown);
+  display:none;
+  overflow:hidden;
+  border:1px solid var(--atlas-border);
+  border-radius:14px;
+  background:var(--atlas-surface);
+  box-shadow:0 20px 50px rgba(15,23,42,.22);
+  transform-origin:top right;
+}
+
+.notif-dropdown{
+  width:min(330px,calc(100vw - 20px));
+}
+
+.dropdown-user,
+.user-dropdown{
+  width:220px;
+  padding:8px;
+}
+
+.notif-dropdown.ativo,
+.dropdown-user.ativo,
+.user-dropdown.ativo,
+.user-dropdown.show,
+.atlas-dropdown.ativo{
+  display:block;
+  animation:atlasDropdownOpen .16s ease-out;
+}
+
+@keyframes atlasDropdownOpen{
+  from{opacity:0;transform:translateY(-6px) scale(.98)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+
+.notif-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:12px 14px;
+  border-bottom:1px solid #fecaca;
+  background:#fff5f5;
+  color:var(--atlas-red);
+  font-size:13px;
+  font-weight:900;
+}
+
+.notif-list{
+  max-height:min(360px,55vh);
+  overflow:auto;
+  overscroll-behavior:contain;
+}
+
+.notif-item{
+  padding:11px 14px;
+  border-bottom:1px solid #f1f5f9;
+  color:#374151;
+  font-size:12px;
+  line-height:1.4;
+  cursor:pointer;
+}
+
+.notif-item:hover{background:#f8fafc;}
+.notif-item strong{display:block;margin-bottom:3px;color:#111827;}
+
+.dropdown-user button,
+.user-dropdown button{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  width:100%;
+  min-height:40px;
+  padding:10px 11px;
+  border:0;
+  border-radius:9px;
+  background:#fff;
+  color:#374151;
+  font-size:12px;
+  font-weight:900;
+  text-align:left;
+  cursor:pointer;
+}
+
+.dropdown-user button:hover,
+.user-dropdown button:hover{
+  background:var(--atlas-red-soft);
+  color:var(--atlas-red);
+  transform:none;
+  filter:none;
+}
+
+.dropdown-user .logout-btn,
+.user-dropdown .logout-btn{color:#dc2626;}
+
+/* =========================================================
+   6. CAMADA DE PORTAL
+========================================================= */
+#atlasOverlayPortal{
+  position:fixed;
+  inset:0;
+  z-index:var(--atlas-z-dropdown);
+  width:0;
+  height:0;
+  pointer-events:none;
+}
+
+#atlasOverlayPortal > *{pointer-events:auto;}
+
+/* =========================================================
+   7. RESPONSIVIDADE
+========================================================= */
+@media(max-width:900px){
+  .bdr-topbar,
+  .atlas-topbar,
+  .relatorio-topbar{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  .bdr-top-actions,
+  .atlas-top-actions{
+    width:100%;
+    justify-content:space-between;
+    margin-left:0;
+  }
+
+  .user-mini b,
+  .user-name{max-width:160px;}
+
+  .notif-dropdown{
+    width:calc(100vw - 20px);
+    max-width:none;
+  }
+}
+
+@media(max-width:520px){
+  .bdr-topbar,
+  .atlas-topbar,
+  .relatorio-topbar{padding:11px;}
+
+  .user-mini b,
+  .user-name{max-width:125px;}
+
+  .dropdown-user,
+  .user-dropdown{
+    width:min(220px,calc(100vw - 20px));
+  }
+}
+
+@media print{
+  .bdr-top-actions,
+  .atlas-top-actions,
+  .notif-dropdown,
+  .dropdown-user,
+  .user-dropdown,
+  #atlasOverlayPortal{display:none!important;}
+}

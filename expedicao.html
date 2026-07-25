@@ -10,8 +10,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:,">
 <link rel="manifest" href="./manifest.json">
-<title>BDR ERP - Expedição </title>
+<title>BDR ERP - Expedição</title>
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
+<link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260724-v11">
+<link rel="stylesheet" href="./CSS/atlas-topbar.css?v=20260724-v3">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="./JS/supabaseClient.js"></script>
@@ -51,152 +53,6 @@
   --exp-purple:#7c3aed;    /* roxo: reservado */
   --exp-border:#e5e7eb;
 }
-
-/* =========================================================
-   2) TOPO PADRÃO BDR: TÍTULO, SININHO E USUÁRIO
-========================================================= */
-.bdr-topbar{
-  position:relative;
-  z-index:5000;
-}
-
-.bdr-topbar-title{
-  color:var(--bdr-red)!important;
-  font-weight:900;
-}
-
-.bdr-topbar-sub{
-  color:#6b7280;
-  font-size:12px;
-  margin-top:3px;
-  font-weight:500;
-}
-
-.bdr-top-actions{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  margin-left:auto;
-  position:relative;
-  z-index:6000;
-}
-
-.notif-wrap{position:relative;}
-
-.notif-btn{
-  width:38px;
-  height:38px;
-  border:none;
-  border-radius:50%;
-  background:#fff;
-  color:#111827;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-  position:relative;
-  padding:0;
-}
-
-.notif-badge{
-  position:absolute;
-  top:1px;
-  right:0;
-  min-width:17px;
-  height:17px;
-  padding:0 5px;
-  border-radius:999px;
-  background:#dc2626;
-  color:#fff;
-  font-size:10px;
-  font-weight:900;
-  display:none;
-  align-items:center;
-  justify-content:center;
-}
-
-.notif-dropdown{
-  position:absolute;
-  top:48px;
-  right:0;
-  width:340px;
-  background:#fff;
-  border:1px solid #e5e7eb;
-  border-radius:14px;
-  box-shadow:0 18px 35px rgba(15,23,42,.18);
-  overflow:hidden;
-  display:none;
-  z-index:999999!important;
-}
-
-.notif-dropdown.ativo{display:block;}
-.notif-head{
-  padding:12px 14px;
-  font-weight:900;
-  color:var(--bdr-red);
-  background:#fff5f5;
-  border-bottom:1px solid #fecaca;
-}
-.notif-list{max-height:300px;overflow:auto;}
-.notif-item{
-  padding:10px 14px;
-  border-bottom:1px solid #f1f5f9;
-  font-size:12px;
-  color:#374151;
-}
-
-.user-menu{
-  position:relative;
-  display:flex;
-  align-items:center;
-  gap:12px;
-  cursor:pointer;
-  padding:8px 12px;
-  border-radius:12px;
-}
-.user-mini{text-align:right;font-size:13px;pointer-events:none;}
-.user-mini small{color:var(--bdr-red);font-weight:900;}
-.avatar{
-  width:42px;
-  height:42px;
-  border-radius:50%;
-  background:linear-gradient(135deg,#fecaca,#fff);
-  border:2px solid #fee2e2;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:var(--bdr-red);
-  font-size:18px;
-}
-.dropdown-user{
-  position:absolute;
-  top:55px;
-  right:0;
-  background:#fff;
-  border:1px solid #e5e7eb;
-  border-radius:12px;
-  box-shadow:0 18px 35px rgba(15,23,42,.18);
-  padding:8px;
-  display:none;
-  min-width:220px;
-  z-index:999999!important;
-}
-.dropdown-user.ativo{display:block;}
-.dropdown-user button{
-  width:100%;
-  border:none;
-  background:#fff;
-  color:#374151;
-  padding:10px 11px;
-  border-radius:9px;
-  cursor:pointer;
-  font-weight:900;
-  text-align:left;
-  display:flex;
-  align-items:center;
-  gap:9px;
-}
-.dropdown-user .logout-btn{color:#dc2626;}
 
 /* =========================================================
    3) LAYOUT PRINCIPAL DO CATÁLOGO
@@ -689,16 +545,6 @@
 /* =========================================================
    PATCH BDR - CORREÇÕES EXPEDIÇÃO
 ========================================================= */
-.user-mini b{
-  display:block;
-  line-height:1.15;
-}
-.user-mini small{
-  display:block;
-  line-height:1.15;
-  margin-top:2px;
-}
-
 .cart-item{
   grid-template-columns:44px minmax(0,1fr) 34px !important;
   align-items:start;
@@ -802,8 +648,116 @@
 #modalCarrinho .btn-submit{height:44px;border:0;color:#fff;font-weight:900;}
 @media(max-width:700px){.searchbar{grid-template-columns:1fr 56px}.searchbar button:not(.btn-cart-top){display:none}.btn-cart-top{height:42px}}
 
+
+/* =========================================================
+   ATLAS EXPEDIÇÃO 3.6 - FILTROS HORIZONTAIS E PAGINAÇÃO
+========================================================= */
+.atlas-filtros-avancados{
+  display:grid;
+  grid-template-columns:minmax(190px,1.25fr) minmax(155px,1fr) minmax(170px,1fr) 145px auto;
+  gap:10px;
+  align-items:end;
+  margin:10px 0 12px;
+  padding:12px;
+  border:1px solid #e5e7eb;
+  border-radius:14px;
+  background:#f8fafc;
+}
+.atlas-campo-filtro{
+  display:grid;
+  gap:5px;
+}
+.atlas-campo-filtro label{
+  color:#475569;
+  font-size:11px;
+  font-weight:900;
+}
+.atlas-campo-filtro select{
+  width:100%;
+  height:40px;
+  border:1px solid #d1d5db;
+  border-radius:10px;
+  background:#fff;
+  color:#111827;
+  padding:0 10px;
+  font-size:12px;
+  font-weight:800;
+}
+.atlas-btn-limpar{
+  height:40px;
+  border:1px solid #fecaca;
+  border-radius:10px;
+  background:#fff;
+  color:#b91c1c;
+  padding:0 13px;
+  font-size:12px;
+  font-weight:900;
+  white-space:nowrap;
+  cursor:pointer;
+}
+.atlas-resumo-catalogo{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin:4px 0 10px;
+  color:#64748b;
+  font-size:12px;
+  font-weight:800;
+}
+.atlas-paginacao{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:16px;
+}
+.atlas-paginacao button{
+  min-height:38px;
+  border:1px solid #dbe3ee;
+  border-radius:10px;
+  background:#fff;
+  color:#334155;
+  padding:8px 12px;
+  font-size:12px;
+  font-weight:900;
+  cursor:pointer;
+}
+.atlas-paginacao button:hover:not(:disabled){
+  border-color:#2563eb;
+  color:#2563eb;
+}
+.atlas-paginacao button:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+.atlas-pagina-atual{
+  min-width:125px;
+  text-align:center;
+  color:#0f172a;
+  font-size:12px;
+  font-weight:900;
+}
+@media(max-width:900px){
+  .atlas-filtros-avancados{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .atlas-btn-limpar{width:100%;}
+}
+@media(max-width:560px){
+  .atlas-filtros-avancados{
+    grid-template-columns:1fr;
+  }
+  .atlas-resumo-catalogo{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+}
+
+
+
 </style>
-<link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260626-1">
 </head>
 <body>
 <script>verificarLogin();</script>
@@ -889,11 +843,37 @@
 </nav>
   </aside>
   <main class="bdr-main expedicao-premium-main">
+    <!-- =====================================================
+         TOPBAR OFICIAL ATLAS
+         Visual: CSS/atlas-topbar.css
+         Comportamento: JS/atlasTopbar.js
+    ====================================================== -->
     <div class="bdr-topbar">
-      <div><div class="bdr-topbar-title">📦 BDR ERP - Expedição</div><div class="bdr-topbar-sub">Catálogo interno, solicitações, reservas, retirada e transferência entre obras/setores.</div></div>
+      <div>
+        <div class="bdr-topbar-title">📦 BDR ERP - Expedição</div>
+        <div class="bdr-topbar-sub">Catálogo interno, solicitações, reservas, retirada e transferência entre obras/setores.</div>
+      </div>
+
       <div class="bdr-top-actions">
-        <div class="notif-wrap" data-permissao="RECEBER_NOTIFICACOES"><button class="notif-btn" onclick="toggleNotificacoes(event)"><i class="fa-regular fa-bell"></i><span id="notifBadge" class="notif-badge">0</span></button><div id="notifDropdown" class="notif-dropdown"><div class="notif-head">🔔 Central de notificações</div><div id="notifLista" class="notif-list"><div class="notif-item">Nenhuma notificação.</div></div></div></div>
-        <div class="user-menu" onclick="toggleMenuUsuario(event)"><div class="user-mini"><b id="usuarioNome">Olá, -</b><small id="usuarioPerfil">-</small></div><div class="avatar"><i class="fa-solid fa-user"></i></div><div id="dropdownUser" class="dropdown-user"><button data-permissao="USUARIOS_VER" onclick="ir('usuarios.html');event.stopPropagation()"><i class="fa-solid fa-user-gear"></i> Meu perfil / usuários</button><button class="logout-btn" onclick="logout();event.stopPropagation()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button></div></div>
+        <div class="notif-wrap" data-permissao="RECEBER_NOTIFICACOES">
+          <button class="notif-btn" type="button" data-atlas-toggle="notifications" aria-label="Abrir notificações">
+            <i class="fa-regular fa-bell"></i>
+            <span id="notifBadge" class="notif-badge" data-count="0">0</span>
+          </button>
+          <div id="notifDropdown" class="notif-dropdown">
+            <div class="notif-head">🔔 Central de notificações</div>
+            <div id="notifLista" class="notif-list"><div class="notif-item">Nenhuma notificação.</div></div>
+          </div>
+        </div>
+
+        <div class="user-menu" data-atlas-toggle="user" role="button" tabindex="0" aria-label="Abrir menu do usuário">
+          <div class="user-mini"><b id="usuarioNome">Olá, -</b><small id="usuarioPerfil">-</small></div>
+          <div class="avatar"><i class="fa-solid fa-user"></i></div>
+          <div id="dropdownUser" class="dropdown-user">
+            <button data-permissao="USUARIOS_VER" onclick="ir('usuarios.html')"><i class="fa-solid fa-user-gear"></i> Meu perfil / usuários</button>
+            <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -921,6 +901,45 @@
           <div class="card">
             <div class="exp-head"><div class="exp-title"><h2>Catálogo de itens</h2><p>Solicite materiais entre obras/setores da rede BDR.</p></div><button class="btn-dark" data-permissao="EXPEDICAO_VER" onclick="carregarTudo()"><i class="fa-solid fa-rotate"></i> Atualizar</button></div>
             <div class="searchbar"><input id="buscaCatalogo" placeholder="Buscar produto, patrimônio, código, obra..." oninput="renderizarCatalogo()"><button onclick="renderizarCatalogo()"><i class="fa-solid fa-search"></i> Buscar</button><button type="button" class="btn-cart-top" onclick="abrirModalCarrinho()" title="Abrir carrinho"><i class="fa-solid fa-cart-shopping"></i><span id="cartQtdTopo">0</span></button></div>
+            <div class="atlas-filtros-avancados">
+              <div class="atlas-campo-filtro">
+                <label for="filtroObraCatalogo">Obra</label>
+                <select id="filtroObraCatalogo" onchange="atlasAlterarFiltroCatalogo()">
+                  <option value="TODAS">Todas as obras</option>
+                </select>
+              </div>
+              <div class="atlas-campo-filtro">
+                <label for="filtroCategoriaCatalogo">Categoria</label>
+                <select id="filtroCategoriaCatalogo" onchange="atlasAlterarFiltroCatalogo()">
+                  <option value="TODAS">Todas</option>
+                </select>
+              </div>
+              <div class="atlas-campo-filtro">
+                <label for="ordenacaoCatalogo">Ordenar por</label>
+                <select id="ordenacaoCatalogo" onchange="atlasAlterarFiltroCatalogo()">
+                  <option value="RECENTES">Mais recentes</option>
+                  <option value="NOME_ASC">Nome (A–Z)</option>
+                  <option value="CODIGO_ASC">Patrimônio/código</option>
+                  <option value="OBRA_ASC">Obra</option>
+                  <option value="STATUS_ASC">Status</option>
+                </select>
+              </div>
+              <div class="atlas-campo-filtro">
+                <label for="itensPorPaginaCatalogo">Itens por página</label>
+                <select id="itensPorPaginaCatalogo" onchange="atlasAlterarItensPorPagina()">
+                  <option value="30" selected>30</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
+              <button type="button" class="atlas-btn-limpar" onclick="atlasLimparFiltrosCatalogo()">
+                <i class="fa-solid fa-filter-circle-xmark"></i> Limpar filtros
+              </button>
+            </div>
+            <div class="atlas-resumo-catalogo">
+              <span id="atlasResumoCatalogo">Mostrando 0 itens</span>
+              <span id="atlasFiltrosAtivosCatalogo"></span>
+            </div>
             <div class="chips">
               <button class="chip-exp active" data-filtro="TODOS" onclick="filtrarStatus('TODOS',this)">Todos <span class="num" id="chipTodos">0</span></button>
               <button class="chip-exp" data-filtro="ESTOQUE" onclick="filtrarStatus('ESTOQUE',this)">🟢 Estoque <span class="num" id="chipEstoque">0</span></button>
@@ -929,6 +948,13 @@
               <button class="chip-exp" data-filtro="RESERVADO" onclick="filtrarStatus('RESERVADO',this)">🟣 Reservados <span class="num" id="chipReservado">0</span></button>
             </div>
             <div id="catalogoGrid" class="catalogo-grid"></div>
+            <div id="atlasPaginacaoCatalogo" class="atlas-paginacao" aria-label="Paginação do catálogo">
+              <button type="button" id="atlasPrimeiraPagina" onclick="atlasIrPaginaCatalogo(1)">⏮ Primeira</button>
+              <button type="button" id="atlasPaginaAnterior" onclick="atlasMudarPaginaCatalogo(-1)">◀ Anterior</button>
+              <span id="atlasPaginaAtual" class="atlas-pagina-atual">Página 1 de 1</span>
+              <button type="button" id="atlasProximaPagina" onclick="atlasMudarPaginaCatalogo(1)">Próxima ▶</button>
+              <button type="button" id="atlasUltimaPagina" onclick="atlasIrUltimaPaginaCatalogo()">Última ⏭</button>
+            </div>
           </div>
         </div>
 
@@ -984,7 +1010,8 @@
 <script src="./JS/AtlasMotion.js?v=20260706-sprint242"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="./JS/AtlasSeparacaoQR.js?v=20260713-sprint330-rota-fiscal"></script>
-<script src="./JS/expedicao.js?v=20260721-exp350-escopo-perfil"></script>
+<script src="./JS/expedicao.js?v=20260723-exp360-filtros-paginacao"></script>
 <script src="./JS/bdrMenuMobileAtivo.js?v=20260702-3"></script>
+<script src="./JS/atlasTopbar.js?v=20260724-v4-zoom"></script>
 </body>
 </html>

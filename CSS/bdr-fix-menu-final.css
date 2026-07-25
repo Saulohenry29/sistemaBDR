@@ -1,215 +1,202 @@
 /* =========================================================
-   BDR ERP - MENU FIX FINAL V10.6
-   Arquivo esperado pelos HTMLs: CSS/bdr-fix-menu-final.css
-   Responsável apenas pelo menu lateral/inferior.
-   Corrige: arquivo 404/MIME text-html + menu mobile cortando as pontas.
+   ATLAS SaaS - MENU PRINCIPAL OFICIAL V11.0
+   Arquivo: CSS/bdr-fix-menu-final.css
+
+   RESPONSABILIDADE ÚNICA
+   - Menu lateral no desktop
+   - Menu inferior no tablet/celular
+   - Tooltip dos itens no desktop
+
+   NÃO contém regras de sininho, usuário, dropdown ou modal.
 ========================================================= */
 
 :root{
   --sidebar-width:72px;
-  --bdr-mobile-menu-altura:70px;
+  --atlas-menu-bg-start:#0f2238;
+  --atlas-menu-bg-end:#111827;
+  --atlas-menu-z:500;
+  --atlas-menu-tooltip-z:600;
+  --bdr-mobile-menu-altura:74px;
   --bdr-mobile-menu-btn:48px;
   --bdr-mobile-menu-icone:18px;
   --bdr-mobile-menu-gap:8px;
-  --bdr-mobile-content-bottom:92px;
+  --bdr-mobile-content-bottom:100px;
 }
 
-/* DESKTOP / NOTEBOOK */
+/* =========================================================
+   1. DESKTOP / NOTEBOOK
+========================================================= */
 @media(min-width:1201px){
   .bdr-sidebar{
-    position:fixed!important;
-    left:0!important;
-    top:0!important;
-    bottom:0!important;
-    width:72px!important;
-    height:100vh!important;
-    min-height:100vh!important;
-    background:linear-gradient(180deg,#0f2238,#111827)!important;
-    display:flex!important;
-    flex-direction:column!important;
-    align-items:center!important;
-    justify-content:flex-start!important;
-    padding:60px 0 30px!important;
-    z-index:999999!important;
-    overflow:visible!important;
-    box-shadow:4px 0 18px rgba(0,0,0,.18)!important;
-  }
-
-  .bdr-brand{display:none!important;}
-
-  .bdr-menu{
-    display:flex!important;
-    flex-direction:column!important;
-    align-items:center!important;
-    justify-content:flex-start!important;
-    gap:10px!important;
-    width:72px!important;
-    margin:0!important;
-    padding:0!important;
-    overflow:visible!important;
-  }
-
-  .bdr-menu-btn{
-    width:46px!important;
-    height:46px!important;
-    min-width:46px!important;
-    min-height:46px!important;
-    border-radius:14px!important;
-    flex:0 0 auto!important;
-  }
-
-  .bdr-menu-btn[data-tip]::before,
-  .bdr-menu-btn[data-tip]::after{
-    display:none!important;
-  }
-}
-
-/* TABLET / CELULAR */
-@media(max-width:1200px){
-  :root{--sidebar-width:0px!important;}
-
-  .bdr-sidebar{
-    position:fixed!important;
-    left:0!important;
-    right:0!important;
-    bottom:0!important;
-    top:auto!important;
-
-    width:100%!important;
-    height:74px!important;
-    min-height:74px!important;
-    max-height:74px!important;
-
-    padding:6px 12px calc(6px + env(safe-area-inset-bottom))!important;
-
-    display:flex!important;
-    flex-direction:row!important;
-    align-items:center!important;
-    justify-content:flex-start!important;
-
-    overflow-x:auto!important;
-    overflow-y:hidden!important;
-    scrollbar-width:none!important;
-    -webkit-overflow-scrolling:touch!important;
-
-    background:linear-gradient(180deg,#0f2238,#111827)!important;
-    border-radius:0!important;
-    box-shadow:0 -8px 24px rgba(0,0,0,.18)!important;
-    z-index:999999!important;
-  }
-
-  .bdr-sidebar::-webkit-scrollbar{
-    display:none!important;
+    position:fixed;
+    inset:0 auto auto 0;
+    z-index:var(--atlas-menu-z);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    width:var(--sidebar-width);
+    height:calc(100vh / var(--screen-zoom,1));
+    min-height:calc(100vh / var(--screen-zoom,1));
+    padding:60px 0 30px;
+    overflow:visible;
+    background:linear-gradient(180deg,var(--atlas-menu-bg-start),var(--atlas-menu-bg-end));
+    box-shadow:4px 0 18px rgba(0,0,0,.18);
   }
 
   .bdr-brand,
-  .bdr-menu-footer{
-    display:none!important;
-  }
+  .bdr-menu-footer{display:none;}
 
   .bdr-menu{
-    display:flex!important;
-    flex-direction:row!important;
-    align-items:center!important;
-    justify-content:flex-start!important;
-    gap:8px!important;
-
-    width:max-content!important;
-    min-width:max-content!important;
-
-    margin:0!important;
-    padding:0 28px!important;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    gap:10px;
+    width:var(--sidebar-width);
+    margin:0;
+    padding:0 0 20px;
+    overflow:visible;
   }
 
   .bdr-menu-btn{
-    width:48px!important;
-    height:48px!important;
-    min-width:48px!important;
-    min-height:48px!important;
-    max-width:48px!important;
-    max-height:48px!important;
-
-    flex:0 0 48px!important;
-    border-radius:15px!important;
-    transform:none!important;
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 46px;
+    width:46px;
+    height:46px;
+    min-width:46px;
+    min-height:46px;
+    padding:0;
+    border:0;
+    border-radius:14px;
+    background:transparent;
+    color:#fff;
+    cursor:pointer;
+    transition:background .18s ease,transform .18s ease,box-shadow .18s ease;
   }
 
   .bdr-menu-btn:hover{
-    transform:none!important;
+    background:rgba(255,255,255,.10);
+    transform:translateX(4px) scale(1.04);
   }
 
-  .bdr-menu-btn::after,
-  .bdr-menu-btn::before{
-    display:none!important;
+  .bdr-menu-btn.active{
+    background:linear-gradient(135deg,#b91c1c,#ef4444);
+    box-shadow:0 8px 18px rgba(185,28,28,.35);
   }
 
   .bdr-menu-icon i,
-  .bdr-menu-btn i{
-    font-size:18px!important;
-  }
-
-  .bdr-main,
-  .content,
-  .usuarios-premium-main{
-    margin-left:0!important;
-    width:100%!important;
-    max-width:100%!important;
-    padding-bottom:100px!important;
-  }
-}
-
-/* =========================================================
-   BDR FIX NOTEBOOK - MENU LATERAL ALTURA TOTAL
-   Corrige espaço vazio no final do menu quando o sistema usa zoom.
-========================================================= */
-@media(min-width:1201px){
-
-  .bdr-sidebar{
-    height:calc(100vh / var(--screen-zoom, 1))!important;
-    min-height:calc(100vh / var(--screen-zoom, 1))!important;
-    max-height:none!important;
-    bottom:auto!important;
-  }
-
-  .bdr-menu{
-    padding-bottom:20px!important;
-  }
-}
-
-/* =========================================================
-   MENU DESKTOP - NOME NO HOVER
-========================================================= */
-@media (min-width:1201px){
+  .bdr-menu-btn i{font-size:18px;color:#fff;}
 
   .bdr-menu-btn[data-tip]::after{
-    display:block!important;
-    content:attr(data-tip)!important;
-    position:absolute!important;
-    left:46px!important; /* Distancia do nome da pagina do menu */
-    top:50%!important;
-    transform:translate(8px,-50%)!important;
-
-    background:#111827!important;
-    color:#ffffff!important;
-    border:1px solid rgba(255,255,255,.08)!important;
-    border-radius:10px!important;
-    padding:8px 14px!important;
-
-    font-size:13px!important;
-    font-weight:800!important;
-    white-space:nowrap!important;
-
-    opacity:0!important;
-    visibility:hidden!important;
-    pointer-events:none!important;
-    box-shadow:0 10px 24px rgba(0,0,0,.18)!important;
-    transition:.18s ease!important;
-    z-index:1000000!important;
+    content:attr(data-tip);
+    position:absolute;
+    left:46px;
+    top:50%;
+    z-index:var(--atlas-menu-tooltip-z);
+    display:block;
+    width:max-content;
+    min-width:max-content;
+    padding:8px 14px;
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:10px;
+    background:#111827;
+    color:#fff;
+    box-shadow:0 10px 24px rgba(0,0,0,.18);
+    font-size:13px;
+    font-weight:800;
+    line-height:1.2;
+    white-space:nowrap;
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    transform:translate(8px,-50%);
+    transition:opacity .18s ease,visibility .18s ease,transform .18s ease;
   }
 
   .bdr-menu-btn[data-tip]:hover::after{
-    opacity:1!important;
-    visibility:visible!important;
-    transform:translate(14px,-50%)!important;
+    opacity:1;
+    visibility:visible;
+    transform:translate(14px,-50%);
+  }
+}
+
+/* =========================================================
+   2. TABLET / CELULAR
+========================================================= */
+@media(max-width:1200px){
+  :root{--sidebar-width:0px;}
+
+  .bdr-sidebar{
+    position:fixed;
+    inset:auto 0 0 0;
+    z-index:var(--atlas-menu-z);
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    justify-content:flex-start;
+    width:100%;
+    height:var(--bdr-mobile-menu-altura);
+    min-height:var(--bdr-mobile-menu-altura);
+    max-height:var(--bdr-mobile-menu-altura);
+    padding:6px 12px calc(6px + env(safe-area-inset-bottom));
+    overflow-x:auto;
+    overflow-y:hidden;
+    border-radius:0;
+    background:linear-gradient(180deg,var(--atlas-menu-bg-start),var(--atlas-menu-bg-end));
+    box-shadow:0 -8px 24px rgba(0,0,0,.18);
+    scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .bdr-sidebar::-webkit-scrollbar{display:none;}
+  .bdr-brand,.bdr-menu-footer{display:none;}
+
+  .bdr-menu{
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    justify-content:flex-start;
+    gap:var(--bdr-mobile-menu-gap);
+    width:max-content;
+    min-width:max-content;
+    margin:0;
+    padding:0 28px;
+  }
+
+  .bdr-menu-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 var(--bdr-mobile-menu-btn);
+    width:var(--bdr-mobile-menu-btn);
+    height:var(--bdr-mobile-menu-btn);
+    min-width:var(--bdr-mobile-menu-btn);
+    min-height:var(--bdr-mobile-menu-btn);
+    max-width:var(--bdr-mobile-menu-btn);
+    max-height:var(--bdr-mobile-menu-btn);
+    padding:0;
+    border:0;
+    border-radius:15px;
+    background:transparent;
+    color:#fff;
+    transform:none;
+  }
+
+  .bdr-menu-btn:hover{transform:none;}
+  .bdr-menu-btn::before,.bdr-menu-btn::after{display:none;}
+  .bdr-menu-icon i,.bdr-menu-btn i{font-size:var(--bdr-mobile-menu-icone);color:#fff;}
+
+  .bdr-main,
+  .content,
+  .usuarios-premium-main,
+  main{
+    width:100%;
+    max-width:100%;
+    margin-left:0;
+    padding-bottom:calc(var(--bdr-mobile-content-bottom) + env(safe-area-inset-bottom));
   }
 }
