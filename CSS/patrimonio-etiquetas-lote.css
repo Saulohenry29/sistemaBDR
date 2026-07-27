@@ -1,0 +1,141 @@
+/* =========================================================
+   ATLAS PATRIMÔNIO — MODAL DE ETIQUETAS EM LOTE
+========================================================= */
+
+.atlas-etiquetas-lote-bg{
+  position:fixed;
+  inset:0;
+  z-index:10050;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background:rgba(15,23,42,.68);
+  backdrop-filter:blur(3px);
+}
+
+.atlas-etiquetas-lote-bg.ativo{
+  display:flex;
+}
+
+.atlas-etiquetas-lote-modal{
+  width:min(980px, 96vw);
+  height:min(760px, 92vh);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  border-radius:16px;
+  background:#fff;
+  box-shadow:0 24px 70px rgba(15,23,42,.32);
+}
+
+.atlas-etiquetas-lote-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  padding:16px 18px;
+  border-bottom:1px solid #e2e8f0;
+}
+
+.atlas-etiquetas-lote-head h2{
+  margin:0;
+  color:#0f172a;
+  font-size:1.08rem;
+}
+
+.atlas-etiquetas-lote-head p{
+  margin:5px 0 0;
+  color:#64748b;
+  font-size:.88rem;
+}
+
+.atlas-etiquetas-lote-fechar{
+  border:0;
+  background:transparent;
+  color:#64748b;
+  font-size:1.15rem;
+  cursor:pointer;
+}
+
+.atlas-etiquetas-lote-preview{
+  position:relative;
+  flex:1;
+  min-height:260px;
+  background:#f1f5f9;
+}
+
+.atlas-etiquetas-lote-preview iframe{
+  width:100%;
+  height:100%;
+  border:0;
+  background:#fff;
+}
+
+.atlas-etiquetas-lote-carregando{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  background:#f8fafc;
+  color:#334155;
+}
+
+.atlas-etiquetas-lote-carregando[hidden]{
+  display:none;
+}
+
+.atlas-etiquetas-lote-carregando span{
+  color:#64748b;
+  font-size:.9rem;
+}
+
+.atlas-etiquetas-lote-footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:12px 18px;
+  border-top:1px solid #e2e8f0;
+  color:#475569;
+  font-weight:700;
+  font-size:.88rem;
+}
+
+.atlas-etiquetas-lote-cancelar{
+  border:1px solid #cbd5e1;
+  border-radius:9px;
+  padding:8px 13px;
+  background:#fff;
+  color:#334155;
+  font-weight:800;
+  cursor:pointer;
+}
+
+body.atlas-modal-aberto{
+  overflow:hidden;
+}
+
+@media(max-width:680px){
+  .atlas-etiquetas-lote-bg{
+    padding:0;
+  }
+
+  .atlas-etiquetas-lote-modal{
+    width:100vw;
+    height:100dvh;
+    border-radius:0;
+  }
+
+  .atlas-etiquetas-lote-footer{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .atlas-etiquetas-lote-cancelar{
+    width:100%;
+  }
+}

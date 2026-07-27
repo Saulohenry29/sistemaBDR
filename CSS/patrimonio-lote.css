@@ -1,0 +1,452 @@
+/* =========================================================
+   ATLAS PATRIMÔNIO — COMPONENTE DE CADASTRO EM LOTE
+   ---------------------------------------------------------
+   Fonte única dos estilos do componente.
+
+   Regra de layout:
+   1. Os campos específicos do tipo são renderizados primeiro.
+   2. Série/Lote é sempre o último item da grade.
+   3. Abrir o lote troca somente o conteúdo da área de série.
+   4. A posição dos campos anteriores nunca muda ao alternar.
+========================================================= */
+
+/* =========================================================
+   1. BLOCO SÉRIE / LOTE — ÚLTIMO ITEM DINÂMICO
+========================================================= */
+/*
+  O componente ocupa duas células consecutivas da grade:
+  - primeira célula: Número de série ou editor;
+  - segunda célula: botão + Lote ou ×.
+
+  Ele não é empurrado até a borda direita. Entra imediatamente
+  depois do último campo específico do tipo de patrimônio.
+*/
+.atlas-serie-lote{
+  min-width:0;
+  width:max-content;
+  max-width:100%;
+  grid-column:span 2;
+  display:grid;
+  grid-template-columns:minmax(155px,210px) 68px;
+  gap:10px;
+  align-items:start;
+  justify-content:start;
+}
+
+.atlas-serie-area{
+  width:100%;
+  min-width:0;
+}
+
+.atlas-serie-area > input{
+  width:100%!important;
+  min-width:0!important;
+}
+
+/*
+  No modo lote a posição externa não muda.
+  O editor apenas utiliza a largura das duas células já reservadas.
+*/
+.atlas-serie-lote[data-modo="lote"]{
+  width:100%;
+  max-width:430px;
+  grid-template-columns:minmax(0,1fr) 40px;
+  justify-content:stretch;
+}
+
+/* =========================================================
+   2. BOTÃO EXTERNO
+========================================================= */
+.atlas-lote-botao{
+  width:auto!important;
+  min-width:68px!important;
+  height:42px!important;
+  min-height:42px!important;
+  margin:0!important;
+  padding:0 11px!important;
+  border:1px solid #cbd5e1!important;
+  border-radius:9px!important;
+  background:#fff!important;
+  color:#334155!important;
+  box-shadow:none!important;
+  font-size:12px!important;
+  font-weight:850!important;
+  line-height:40px!important;
+  white-space:nowrap;
+  cursor:pointer;
+  transition:border-color .16s ease,background .16s ease,color .16s ease,transform .16s ease;
+}
+
+.atlas-lote-botao:hover{
+  border-color:#94a3b8!important;
+  background:#f8fafc!important;
+  color:#0f172a!important;
+  transform:translateY(-1px);
+}
+
+/* No modo aberto o botão vira um fechamento compacto. */
+.atlas-lote-botao.ativo{
+  width:40px!important;
+  min-width:40px!important;
+  padding:0!important;
+  border-color:#fecaca!important;
+  background:#fff7f7!important;
+  color:#991b1b!important;
+  font-size:18px!important;
+  line-height:38px!important;
+}
+
+/* =========================================================
+   3. EDITOR
+========================================================= */
+.atlas-lote-editor{
+  width:100%;
+  min-width:0;
+  overflow:hidden;
+  border:1px solid #dbe4f0;
+  border-radius:10px;
+  background:#fff;
+  box-shadow:0 7px 20px rgba(15,23,42,.06);
+  animation:atlasLoteEntrada .18s ease;
+}
+
+@keyframes atlasLoteEntrada{
+  from{opacity:0;transform:translateY(-4px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.atlas-lote-cabecalho{
+  padding:9px 10px 7px;
+  border-bottom:1px solid #eef2f7;
+}
+
+.atlas-lote-cabecalho strong{
+  display:block;
+  color:#0f172a;
+  font-size:12px;
+  font-weight:900;
+}
+
+.atlas-lote-cabecalho span{
+  display:block;
+  margin-top:2px;
+  color:#94a3b8;
+  font-size:10px;
+  font-weight:650;
+}
+
+.atlas-lote-sem-serie{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  margin:8px 10px 7px;
+  cursor:pointer;
+  user-select:none;
+  color:#475569;
+  font-size:11px;
+  font-weight:700;
+}
+
+.atlas-lote-sem-serie input{
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+}
+
+.atlas-lote-check-caixa{
+  width:15px;
+  height:15px;
+  position:relative;
+  flex:0 0 15px;
+  border:1.5px solid #94a3b8;
+  border-radius:4px;
+  background:#fff;
+}
+
+.atlas-lote-sem-serie input:checked + .atlas-lote-check-caixa{
+  border-color:#2563eb;
+  background:#2563eb;
+}
+
+.atlas-lote-sem-serie input:checked + .atlas-lote-check-caixa::after{
+  content:"";
+  position:absolute;
+  left:4px;
+  top:1px;
+  width:4px;
+  height:8px;
+  border:solid #fff;
+  border-width:0 2px 2px 0;
+  transform:rotate(45deg);
+}
+
+#atlasLoteComSerie{
+  padding:0 10px 9px;
+}
+
+#atlasLoteComSerie[hidden],
+#atlasLoteSemSerieCampos[hidden]{
+  display:none!important;
+}
+
+/* Quatro linhas visíveis; o restante usa rolagem interna. */
+.atlas-editor-series{
+  --linha:24px;
+  width:100%;
+  height:112px;
+  display:grid;
+  grid-template-columns:38px minmax(0,1fr);
+  overflow:hidden;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  background:#fff;
+  box-sizing:border-box;
+}
+
+.atlas-editor-series:focus-within{
+  border-color:#60a5fa;
+  box-shadow:0 0 0 3px rgba(59,130,246,.10);
+}
+
+.atlas-editor-gutter{
+  width:38px;
+  height:112px;
+  overflow:hidden;
+  padding:8px 0;
+  border-right:1px solid #e2e8f0;
+  background:#f8fafc;
+  color:#94a3b8;
+  box-sizing:border-box;
+  font:12px/var(--linha) ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  text-align:right;
+  user-select:none;
+}
+
+.atlas-editor-numero{
+  width:100%;
+  height:var(--linha);
+  padding:0 8px 0 0;
+  border-left:2px solid transparent;
+  box-sizing:border-box;
+  line-height:var(--linha);
+}
+
+.atlas-editor-numero.tem-erro{
+  border-left-color:#ef4444;
+  background:#fff1f2;
+  color:#b91c1c;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.atlas-editor-numero.tem-aviso{
+  border-left-color:#f59e0b;
+  background:#fffbeb;
+  color:#b45309;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.atlas-editor-textarea{
+  width:100%;
+  height:112px;
+  min-height:112px;
+  max-height:112px;
+  padding:8px 10px;
+  resize:none;
+  overflow:auto;
+  border:0;
+  outline:0;
+  background:#fff;
+  color:#0f172a;
+  caret-color:#2563eb;
+  box-sizing:border-box;
+  font:13px/var(--linha) ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  white-space:pre;
+}
+
+.atlas-editor-textarea::placeholder{
+  color:#cbd5e1;
+}
+
+.atlas-lote-rodape{
+  min-height:27px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding-top:5px;
+}
+
+.atlas-lote-contador{
+  color:#64748b;
+  font-size:10px;
+  font-weight:750;
+}
+
+.atlas-lote-contador.ok{color:#15803d}
+.atlas-lote-contador.erro{color:#b91c1c}
+
+.atlas-lote-limpar{
+  width:auto!important;
+  min-width:0!important;
+  height:23px!important;
+  min-height:23px!important;
+  padding:0 6px!important;
+  border:0!important;
+  border-radius:5px!important;
+  background:transparent!important;
+  color:#64748b!important;
+  box-shadow:none!important;
+  font-size:10px!important;
+  font-weight:750!important;
+  cursor:pointer;
+}
+
+.atlas-lote-limpar:hover{
+  background:#f1f5f9!important;
+  color:#334155!important;
+}
+
+.atlas-lote-erros{
+  display:grid;
+  gap:4px;
+  margin-top:3px;
+}
+
+.atlas-lote-erros[hidden]{display:none!important}
+
+.atlas-lote-erro-item{
+  width:100%;
+  min-height:29px;
+  padding:5px 8px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  border:1px solid #fecaca;
+  border-radius:6px;
+  background:#fff7f7;
+  color:#991b1b;
+  font-size:10px;
+  font-weight:750;
+  text-align:left;
+  cursor:pointer;
+}
+
+.atlas-lote-erro-linha{
+  flex:0 0 auto;
+  color:#dc2626;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-weight:900;
+}
+
+#atlasLoteSemSerieCampos{
+  padding:0 10px 10px;
+}
+
+#atlasLoteSemSerieCampos label{
+  display:block;
+  margin-bottom:4px;
+  color:#475569;
+  font-size:10px;
+  font-weight:750;
+}
+
+#atlasLoteQuantidade{
+  width:96px!important;
+  height:34px!important;
+  min-height:34px!important;
+  padding:0 9px!important;
+  font-size:12px!important;
+}
+
+#atlasLoteSemSerieCampos small{
+  display:block;
+  margin-top:5px;
+  color:#94a3b8;
+  font-size:10px;
+}
+
+/* =========================================================
+   4. CONFIRMAÇÃO DE TROCA
+========================================================= */
+.atlas-lote-confirmacao-bg{
+  position:fixed;
+  inset:0;
+  z-index:100080;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background:rgba(15,23,42,.64);
+  backdrop-filter:blur(2px);
+}
+
+.atlas-lote-confirmacao{
+  width:min(460px,94vw);
+  overflow:hidden;
+  border-radius:16px;
+  border-left:4px solid #d71920;
+  background:#fff;
+  box-shadow:0 24px 70px rgba(15,23,42,.30);
+}
+
+.atlas-lote-confirmacao-corpo{padding:18px}
+.atlas-lote-confirmacao h3{margin:0 0 9px;color:#991b1b;font-size:17px}
+.atlas-lote-confirmacao p{margin:0;color:#475569;font-size:13px;line-height:1.5}
+
+.atlas-lote-confirmacao-acoes{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  padding:12px 18px 16px;
+  border-top:1px solid #e2e8f0;
+}
+
+.atlas-lote-confirmacao-acoes button{
+  min-height:36px;
+  border-radius:9px;
+  padding:0 12px;
+  font-weight:850;
+  cursor:pointer;
+}
+
+.atlas-lote-confirmacao-cancelar{border:1px solid #cbd5e1;background:#fff;color:#334155}
+.atlas-lote-confirmacao-confirmar{border:1px solid #b91c1c;background:#b91c1c;color:#fff}
+
+/* =========================================================
+   5. RESPONSIVIDADE
+========================================================= */
+
+@media(max-width:900px){
+  .atlas-serie-lote,
+  .atlas-serie-lote[data-modo="lote"]{
+    grid-column:span 2;
+    width:100%;
+    max-width:none;
+    grid-template-columns:minmax(0,1fr) auto;
+  }
+}
+
+@media(max-width:560px){
+  .atlas-serie-lote,
+  .atlas-serie-lote[data-modo="lote"]{
+    grid-column:1 / -1;
+    width:100%;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:8px;
+  }
+
+  .atlas-lote-botao{
+    min-width:62px!important;
+    padding:0 9px!important;
+    font-size:11px!important;
+  }
+
+  .atlas-lote-botao.ativo{
+    width:40px!important;
+    min-width:40px!important;
+    padding:0!important;
+  }
+}

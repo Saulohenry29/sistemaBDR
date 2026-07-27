@@ -1,0 +1,3702 @@
+/*
+  ATLAS / BDR — PATRIMÔNIO V2 OFICIAL
+  Regra de negócio preservada da versão atual.
+  Fluxo de etiqueta consolidado e protegido contra impressão antecipada.
+*/
+let obras = [];
+let patrimonios = [];
+let bdrPatrimonioPaginaAtual = 1;
+const bdrPatrimonioPorPagina = 30;
+let bdrPatrimonioUltimaChaveFiltro = "";
+let patrimonioSelecionado = null;
+const bdrEtiquetasSelecionadas = new Set();
+let bdrModoSelecaoEtiquetas = false;
+let manutencoesPatrimonio = [];
+let statusDestinoDepoisManutencao = null;
+window.obraAtiva = null;
+window.obraTravada = false;
+
+
+
+function bdrCampoTextoLivre(el){
+  if(!el) return false;
+
+  const id = String(el.id || "").toLowerCase();
+  const type = String(el.type || "").toLowerCase();
+
+  if(el.tagName === "TEXTAREA") return true;
+
+  if(el.tagName === "INPUT"){
+    if(type && !["text", "search", "tel", "email", "url", ""].includes(type)) return false;
+    if(id.includes("valor")) return false;
+    return true;
+  }
+
+  return false;
+}
+
+function bdrMaiusculoSemMoverCursor(el){
+  if(!bdrCampoTextoLivre(el)) return;
+
+  const inicio = el.selectionStart;
+  const fim = el.selectionEnd;
+  const antigo = el.value || "";
+  const novo = antigo.toUpperCase();
+
+  if(antigo === novo) return;
+
+  el.value = novo;
+
+  try{
+    if(document.activeElement === el && typeof inicio === "number" && typeof fim === "number"){
+      el.setSelectionRange(inicio, fim);
+    }
+  }catch(e){}
+}
+
+document.addEventListener("change", function(e){
+  if(e && e.target && e.target.matches("input, textarea")){
+    bdrMaiusculoSemMoverCursor(e.target);
+  }
+}, true);
+
+document.addEventListener("blur", function(e){
+  if(e && e.target && e.target.matches("input, textarea")){
+    bdrMaiusculoSemMoverCursor(e.target);
+  }
+}, true);
+
+function ir(pagina){
+  window.location.href = pagina;
+}
+
+function db(){
+  return window.client || window.supabaseClient || null;
+}
+
+function patrimonioErroInternet(err){
+  const msg = String(err?.message || err || "").toLowerCase();
+  return msg.includes("failed to fetch") ||
+         msg.includes("internet_disconnected") ||
+         msg.includes("networkerror") ||
+         msg.includes("err_internet") ||
+         msg.includes("err_name_not_resolved");
+}
+
+let BDR_PATRIMONIO_ONLINE_REAL = null;
+window.BDR_PATRIMONIO_ONLINE_REAL = null;
+
+async function patrimonioOnlineReal(){
+  /*
+    REGRA OFICIAL:
+    usa o teste global do bdrCore.js.
+    Se o Supabase falhar, é OFFLINE para esta tela.
+  */
+  if(typeof window.bdrOnlineReal === "function"){
+    const ok = await window.bdrOnlineReal();
+    BDR_PATRIMONIO_ONLINE_REAL = ok;
+    window.BDR_PATRIMONIO_ONLINE_REAL = ok;
+    return ok;
+  }
+
+  if(navigator.onLine === false || !db()){
+    BDR_PATRIMONIO_ONLINE_REAL = false;
+    window.BDR_PATRIMONIO_ONLINE_REAL = false;
+    return false;
+  }
+
+  BDR_PATRIMONIO_ONLINE_REAL = true;
+  window.BDR_PATRIMONIO_ONLINE_REAL = true;
+  return true;
+}
+
+function patrimonioOffline(){
+  return BDR_PATRIMONIO_ONLINE_REAL === false ||
+         navigator.onLine === false ||
+         !db();
+}
+
+function mostrarAvisoModoOffline(){
+  const topo = document.getElementById("obraAtivaTexto");
+  if(!topo) return;
+
+  if(window.obraTravada && window.obraAtiva){
+    topo.innerText = (BDR_PATRIMONIO_ONLINE_REAL === false ? "📴 OFFLINE / " : "") +
+      "🔒 TRAVADO: " + (window.obraAtiva.codigo_obra || "-") + " - " + (window.obraAtiva.nome || "-");
+  }else if(BDR_PATRIMONIO_ONLINE_REAL === false){
+    topo.innerText = "📴 MODO OFFLINE - usando cache local";
+  }else{
+    topo.innerText = "🔓 Lançamento livre";
+  }
+}
+
+async function salvarOperacaoPatrimonioOffline(tipo, tabela, dados, opcoes={}){
+  if(typeof salvarOffline !== "function"){
+    alert("offlineQueue.js não carregou. Não foi possível salvar offline.");
+    return false;
+  }
+
+  await salvarOffline(tipo, tabela, dados, {
+    origem:"patrimonio.html",
+    ...opcoes
+  });
+
+  return true;
+}
+
+
+async function bdrSalvarPrimeiroNoTablet(tabela, payload, meta={}){
+  /*
+    REGRA NOVA:
+    - Com internet real: grava direto no Supabase.
+    - Sem internet: grava na fila/local para sincronizar depois.
+
+    Antes esta função sempre usava BDRSync.criar quando ele existia,
+    mesmo online. Por isso o patrimônio ficava como pendente/fila.
+  */
+
+  const onlineReal = await patrimonioOnlineReal();
+
+  if(onlineReal && db()){
+    const { data, error } = await db()
+      .from(tabela)
+      .insert([payload])
+      .select();
+
+    return {
+      offlineFirst:false,
+      sincronizado:true,
+      data:data || null,
+      error
+    };
+  }
+
+  if(window.BDRSync?.criar){
+    await window.BDRSync.criar(tabela, payload, {
+      origem:"patrimonio.html",
+      ...meta
+    });
+    return { offlineFirst:true, sincronizado:false, error:null };
+  }
+
+  await salvarOperacaoPatrimonioOffline("insert", tabela, [payload], meta);
+  return { offlineFirst:true, sincronizado:false, error:null };
+}
+
+async function bdrAtualizarPrimeiroNoTablet(tabela, match, payload, meta={}){
+  const onlineReal = await patrimonioOnlineReal();
+
+  if(onlineReal && db()){
+    let query = db().from(tabela).update(payload);
+
+    Object.entries(match || {}).forEach(([campo, valor]) => {
+      query = query.eq(campo, valor);
+    });
+
+    const { data, error } = await query.select();
+
+    return {
+      offlineFirst:false,
+      sincronizado:true,
+      data:data || null,
+      error
+    };
+  }
+
+  if(window.BDRSync?.atualizar){
+    await window.BDRSync.atualizar(tabela, match, payload, {
+      origem:"patrimonio.html",
+      ...meta
+    });
+    return { offlineFirst:true, sincronizado:false, error:null };
+  }
+
+  await salvarOperacaoPatrimonioOffline("update", tabela, payload, {
+    filtro:match,
+    ...meta
+  });
+
+  return { offlineFirst:true, sincronizado:false, error:null };
+}
+
+/*
+ * Mostra uma confirmação interna do Atlas.
+ *
+ * tipo = "sucesso" -> mensagem verde
+ * tipo = "offline" -> mensagem laranja
+ *
+ * Não bloqueia a tela e não exige clicar em OK.
+ */
+function atlasAvisoPatrimonio(titulo, texto, tipo="sucesso"){
+  let aviso = document.getElementById("atlasPatrimonioToast");
+
+  if(!aviso){
+    aviso = document.createElement("div");
+    aviso.id = "atlasPatrimonioToast";
+    aviso.className = "atlas-patrimonio-toast";
+    aviso.setAttribute("role","status");
+    aviso.setAttribute("aria-live","polite");
+    document.body.appendChild(aviso);
+  }
+
+  aviso.className =
+    "atlas-patrimonio-toast" +
+    (tipo === "offline" ? " offline" : "");
+
+  aviso.innerHTML =
+    `<span class="atlas-toast-titulo">${String(titulo || "Concluído")}</span>` +
+    `<span class="atlas-toast-texto">${String(texto || "")}</span>`;
+
+  aviso.classList.add("ativo");
+
+  clearTimeout(window.__atlasPatrimonioToastTimer);
+  window.__atlasPatrimonioToastTimer = setTimeout(()=>{
+    aviso.classList.remove("ativo");
+  },4200);
+}
+
+/*
+ * Mantém compatibilidade com o fluxo offline antigo,
+ * mas agora usando a mensagem visual do Atlas.
+ */
+function bdrAvisoSalvoTablet(texto="Salvo no tablet. Está pendente de sincronização. Pode continuar trabalhando."){
+  atlasAvisoPatrimonio(
+    "📦 Patrimônio salvo offline",
+    texto,
+    "offline"
+  );
+}
+
+function usuarioAtual(){
+  const u = localStorage.getItem("usuario_logado");
+  return u ? JSON.parse(u) : null;
+}
+
+function carregarUsuarioTopo(){
+  const usuario = usuarioAtual();
+  const nome = document.getElementById("usuarioNome");
+  const perfil = document.getElementById("usuarioPerfil");
+  if(nome) nome.innerText = usuario ? "Olá, " + (usuario.nome || "usuário") : "Olá, usuário";
+  if(perfil) perfil.innerText = usuario ? (usuario.perfil || "-") : "-";
+}
+
+function fecharMenusTopo(){
+  document.getElementById("dropdownUser")?.classList.remove("ativo");
+}
+document.addEventListener("click", fecharMenusTopo);
+
+function permissoesUsuarioBDR(usuario = usuarioAtual()){
+  if(!usuario) return [];
+  if(Array.isArray(usuario.permissoes)){
+    return usuario.permissoes.map(p => String(p).trim().toUpperCase()).filter(Boolean);
+  }
+  return String(usuario.permissoes || "")
+    .split(",")
+    .map(p => p.trim().toUpperCase())
+    .filter(Boolean);
+}
+
+function usuarioOwnerBDR(usuario = usuarioAtual()){
+  return Number(usuario?.id) === 1;
+}
+
+function usuarioTemPermissao(permissao){
+  const u = usuarioAtual();
+  if(!u) return false;
+
+  if(window.BDRMenuPermissoes && typeof window.BDRMenuPermissoes.temPermissao === "function"){
+    return window.BDRMenuPermissoes.temPermissao(permissao, u);
+  }
+
+  if(usuarioOwnerBDR(u)) return true;
+
+  const p = String(permissao || "").toUpperCase();
+  const ps = permissoesUsuarioBDR(u);
+
+  const aliases = {
+    "PATRIMONIO":"PATRIMONIO_VER",
+    "DASHBOARD":"DASHBOARD_VER",
+    "RELATORIOS":"RELATORIOS_VER",
+    "EMPRESAS":"EMPRESAS_VER",
+    "USUARIOS":"USUARIOS_VER",
+    "VER_VALORES":"VALORES_VER",
+    "VER_TODAS_OBRAS":"TODAS_OBRAS_VER",
+    "VER_ESTOQUE_PROPRIA_OBRA":"PROPRIA_OBRA_VER",
+    "CADASTRAR_PATRIMONIO":"PATRIMONIO_CRIAR",
+    "EDITAR_PATRIMONIO":"PATRIMONIO_EDITAR",
+    "ALTERAR_STATUS":"PATRIMONIO_MOVIMENTAR",
+    "MOVIMENTAR_PATRIMONIO":"PATRIMONIO_MOVIMENTAR",
+    "PATRIMONIO_MOVER":"PATRIMONIO_MOVIMENTAR"
+  };
+
+  if(ps.includes(p)) return true;
+  if(aliases[p] && ps.includes(aliases[p])) return true;
+
+  const legado = Object.entries(aliases).find(([,novo]) => novo === p)?.[0];
+  if(legado && ps.includes(legado)) return true;
+
+  return false;
+}
+
+function usuarioEhGestao(){
+  return usuarioTemPermissao("USUARIOS") || usuarioTemPermissao("EMPRESAS");
+}
+
+function usuarioPodeVerTodasObras(){
+  /*
+    REGRA OFICIAL BDR V10.7:
+    Patrimônio é visão operacional da própria obra.
+    Quem precisa consultar itens de outras obras deve usar Expedição.
+    Aqui só MASTER/OWNER ou permissão específica de patrimônio vê todas.
+  */
+  const u = usuarioAtual();
+  if(!u) return false;
+
+  if(usuarioOwnerBDR(u)) return true;
+
+  const perfil = String(u.perfil || "").toUpperCase();
+  if(perfil === "MASTER" || perfil === "OWNER") return true;
+
+  const ps = permissoesUsuarioBDR(u);
+  return ps.includes("PATRIMONIO_VER_TODAS_OBRAS") ||
+         ps.includes("PATRIMONIO_TODAS_OBRAS");
+}
+
+
+function usuarioPodeLancarQualquerObra(){
+  const u = usuarioAtual();
+  if(!u) return false;
+
+  if(usuarioOwnerBDR(u)) return true;
+
+  const perfil = String(u.perfil || "").toUpperCase();
+  if(perfil === "MASTER" || perfil === "OWNER") return true;
+
+  return usuarioTemPermissao("PATRIMONIO_LANCAR_QUALQUER_OBRA");
+}
+
+function obraVinculadaUsuarioBDR(){
+  const u = usuarioAtual();
+  if(!u || !u.obra_id) return null;
+
+  return (obras || []).find(o =>
+    String(o.id) === String(u.obra_id)
+  ) || null;
+}
+
+function aplicarRegraObraLancamentoBDR(){
+  const select = document.getElementById("obraSelect");
+  const btn = document.getElementById("btnTravarObra");
+  const u = usuarioAtual();
+
+  if(!select || !u) return;
+
+  if(usuarioPodeLancarQualquerObra()){
+    select.disabled = false;
+    if(btn) btn.disabled = false;
+    return;
+  }
+
+  const obraUsuario = obraVinculadaUsuarioBDR();
+
+  if(!obraUsuario){
+    select.value = "";
+    select.disabled = true;
+    if(btn){
+      btn.disabled = true;
+      btn.className = "lock-btn lock-off";
+      btn.innerText = "⚠️ Sem obra";
+    }
+    window.obraAtiva = null;
+    window.obraTravada = false;
+    return;
+  }
+
+  window.obraAtiva = obraUsuario;
+  window.obraTravada = true;
+  select.value = String(obraUsuario.id);
+  select.disabled = true;
+  atlasSincronizarCampoObra();
+
+  if(btn){
+    btn.disabled = true;
+    btn.className = "lock-btn lock-on";
+    btn.innerText = "🔒 Travado";
+  }
+
+  mostrarAvisoModoOffline();
+  setTimeout(atlasCompactarObraPatrimonio,0);
+}
+
+function bloquearPatrimonioSemPermissaoBDR(){
+  if(usuarioTemPermissao("PATRIMONIO_VER")) return true;
+  alert("Você não tem permissão para acessar Patrimônio.");
+  window.location.href = "dashboard.html";
+  return false;
+}
+
+function aplicarMenuPorPermissaoBDR(){
+  if(typeof window.bdrAplicarMenuEstavelSemPiscar === "function"){
+    window.bdrAplicarMenuEstavelSemPiscar();
+    return;
+  }
+
+  document.querySelectorAll(".bdr-menu .bdr-menu-btn").forEach(el => {
+    const permissao = el.getAttribute("data-permissao");
+    el.hidden = !usuarioTemPermissao(permissao);
+    el.style.display = usuarioTemPermissao(permissao) ? "" : "none";
+  });
+}
+
+function valor(id){
+  const el = document.getElementById(id);
+  if(!el) return "";
+  return String(el.value || "").trim();
+}
+
+function moedaParaNumero(valorTexto){
+  if(!valorTexto) return null;
+
+  return Number(
+    valorTexto
+      .replace(/\./g, "")
+      .replace(",", ".")
+      .replace(/[^\d.]/g, "")
+  ) || null;
+}
+
+
+
+function bdrCodigoObraLimpo(codigo){
+  return String(codigo || "")
+    .trim()
+    .replace(/[^0-9A-Za-z]/g, "")
+    .toUpperCase();
+}
+
+function bdrMontarCodigoPatrimonio(codigoObra, sequencial){
+  const cod = bdrCodigoObraLimpo(codigoObra);
+
+  if(!cod){
+    throw new Error("Código da obra/setor não informado.");
+  }
+
+  return "PAT-" + cod + String(Number(sequencial || 1)).padStart(4, "0");
+}
+
+function bdrExtrairSequencialPatrimonio(codigo_qr, codigoObra){
+  const prefixo = "PAT-" + bdrCodigoObraLimpo(codigoObra);
+  const codigo = String(codigo_qr || "");
+
+  if(!codigo.startsWith(prefixo)) return 0;
+
+  const final = codigo.replace(prefixo, "").replace(/\D/g, "");
+  return Number(final) || 0;
+}
+
+async function bdrProximoSequencialObra(obra){
+  const codigoObra = bdrCodigoObraLimpo(obra?.codigo_obra);
+
+  if(!codigoObra){
+    throw new Error("A obra/setor selecionada não tem código cadastrado.");
+  }
+
+  const prefixoCodigo = "PAT-" + codigoObra;
+  let maior = 0;
+
+  const onlineReal = await patrimonioOnlineReal();
+
+  if(onlineReal){
+    const { data, error } = await db()
+      .from("patrimonio")
+      .select("codigo_qr")
+      .like("codigo_qr", prefixoCodigo + "%")
+      .order("id", { ascending:false })
+      .limit(500);
+
+    if(error) throw error;
+
+    (data || []).forEach(p => {
+      const seq = bdrExtrairSequencialPatrimonio(p.codigo_qr, codigoObra);
+      if(seq > maior) maior = seq;
+    });
+  }else{
+    const cachePat = await BDROfflineDB.lerTabela("patrimonio") || [];
+    const locais = patrimonios || [];
+    const todos = [...cachePat, ...locais];
+
+    todos.forEach(p => {
+      const seq = bdrExtrairSequencialPatrimonio(p.codigo_qr, codigoObra);
+      if(seq > maior) maior = seq;
+    });
+  }
+
+  return maior + 1;
+}
+
+
+function bdrValorPatrimonioValido(){
+  const valorNumero = moedaParaNumero(valor("valor_bem"));
+  return Number.isFinite(Number(valorNumero)) && Number(valorNumero) > 0;
+}
+
+function bdrSetGerandoPatrimonio(gerando){
+  const btn = document.getElementById("btnGerarPatrimonio");
+  if(!btn) return;
+  btn.disabled = !!gerando;
+  btn.style.opacity = gerando ? "0.65" : "";
+  btn.style.cursor = gerando ? "not-allowed" : "";
+  btn.innerText = gerando ? "Salvando patrimônio..." : "Gerar Patrimônio";
+}
+
+function preencherFiltroObraPatrimonio(){
+  const filtro = document.getElementById("filtroObra");
+  if(!filtro) return;
+
+  const valorAtual = filtro.value;
+  filtro.innerHTML = `<option value="">Todas as obras/setores</option>`;
+
+  (obras || []).forEach(o => {
+    const texto = `${o.codigo_obra || "-"} - ${o.nome || "-"}`;
+    filtro.innerHTML += `<option value="${o.id}">${texto}</option>`;
+  });
+
+  const usuario = usuarioAtual();
+  if(usuario && !usuarioPodeVerTodasObras() && usuario.obra_id){
+    filtro.value = usuario.obra_id;
+    filtro.disabled = true;
+    return;
+  }
+
+  if(valorAtual && [...filtro.options].some(op => op.value === valorAtual)){
+    filtro.value = valorAtual;
+  }
+}
+
+function formatarMoeda(valor){
+  if(valor === null || valor === undefined || valor === ""){
+    return "R$ 0,00";
+  }
+
+  return Number(valor).toLocaleString("pt-BR", {
+    style:"currency",
+    currency:"BRL"
+  });
+}
+
+function mascaraMoeda(input){
+  let valor = input.value.replace(/\D/g, "");
+
+  if(!valor){
+    input.value = "";
+    return;
+  }
+
+  valor = (Number(valor) / 100).toFixed(2);
+
+  input.value = Number(valor).toLocaleString("pt-BR", {
+    minimumFractionDigits:2,
+    maximumFractionDigits:2
+  });
+}
+
+
+
+let atlasObraIndice = -1;
+let atlasObraResultados = [];
+let atlasObraComboIniciado = false;
+
+function atlasNormalizarBuscaObra(valor){
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .trim();
+}
+
+function atlasTextoObra(obra){
+  return `${obra?.codigo_obra || "-"} - ${obra?.nome || "-"}`;
+}
+
+function atlasObraSelecionadaAtual(){
+  const select = document.getElementById("obraSelect");
+  if(!select?.value) return null;
+  return (obras || []).find(o => String(o.id) === String(select.value)) || null;
+}
+
+function atlasFecharSugestoesObra(){
+  document.getElementById("obraSugestoes")?.classList.remove("ativo");
+  atlasObraIndice = -1;
+}
+
+function atlasSincronizarCampoObra(){
+  const select = document.getElementById("obraSelect");
+  const input = document.getElementById("obraBusca");
+  const seta = document.getElementById("obraComboSeta");
+
+  if(!select || !input) return;
+
+  const obra = atlasObraSelecionadaAtual();
+  input.value = obra ? atlasTextoObra(obra) : "";
+
+  const bloqueado = Boolean(select.disabled);
+  input.disabled = bloqueado;
+  if(seta) seta.disabled = bloqueado;
+}
+
+function atlasFiltrarObras(termo, abrirTudo = false){
+  const normalizado = atlasNormalizarBuscaObra(termo);
+
+  atlasObraResultados = (obras || []).filter(obra => {
+    if(abrirTudo || !normalizado) return true;
+
+    const codigo = atlasNormalizarBuscaObra(obra.codigo_obra);
+    const nome = atlasNormalizarBuscaObra(obra.nome);
+    const completo = atlasNormalizarBuscaObra(atlasTextoObra(obra));
+
+    return codigo.includes(normalizado)
+      || nome.includes(normalizado)
+      || completo.includes(normalizado);
+  }).slice(0, 80);
+
+  atlasObraIndice = atlasObraResultados.length ? 0 : -1;
+  atlasRenderizarSugestoesObra();
+}
+
+function atlasRenderizarSugestoesObra(){
+  const lista = document.getElementById("obraSugestoes");
+  if(!lista) return;
+
+  if(!atlasObraResultados.length){
+    lista.innerHTML = `<div class="atlas-obra-vazio">Nenhuma obra encontrada.</div>`;
+    lista.classList.add("ativo");
+    return;
+  }
+
+  lista.innerHTML = atlasObraResultados.map((obra, indice) => `
+    <button type="button"
+            class="atlas-obra-opcao ${indice === atlasObraIndice ? "selecionada" : ""}"
+            data-obra-id="${obra.id}">
+      ${atlasTextoObra(obra)}
+    </button>
+  `).join("");
+
+  lista.classList.add("ativo");
+
+  lista.querySelectorAll(".atlas-obra-opcao").forEach(botao => {
+    botao.addEventListener("mousedown", evento => evento.preventDefault());
+    botao.addEventListener("click", () => {
+      atlasSelecionarObraCombo(botao.dataset.obraId, false);
+    });
+  });
+}
+
+async function atlasSelecionarObraCombo(obraId, confirmarAutomaticamente = false){
+  const select = document.getElementById("obraSelect");
+  const input = document.getElementById("obraBusca");
+  if(!select || !input) return false;
+
+  const obra = (obras || []).find(o => String(o.id) === String(obraId));
+  if(!obra) return false;
+
+  select.value = String(obra.id);
+  input.value = atlasTextoObra(obra);
+  atlasFecharSugestoesObra();
+
+  if(confirmarAutomaticamente && !window.obraTravada){
+    await alternarTravaObra();
+  }
+
+  if(window.obraTravada){
+    setTimeout(() => document.getElementById("nome_bem")?.focus(), 30);
+  }
+
+  return true;
+}
+
+async function atlasConfirmarObraDigitada(){
+  const input = document.getElementById("obraBusca");
+  if(!input || input.disabled) return false;
+
+  const termo = atlasNormalizarBuscaObra(input.value);
+  if(!termo) return false;
+
+  const exata = (obras || []).find(obra =>
+    atlasNormalizarBuscaObra(obra.codigo_obra) === termo ||
+    atlasNormalizarBuscaObra(atlasTextoObra(obra)) === termo
+  );
+
+  const candidatas = exata
+    ? [exata]
+    : (atlasObraResultados.length
+        ? atlasObraResultados
+        : (obras || []).filter(obra =>
+            atlasNormalizarBuscaObra(atlasTextoObra(obra)).includes(termo)
+          ));
+
+  if(candidatas.length === 1){
+    return atlasSelecionarObraCombo(candidatas[0].id, false);
+  }
+
+  if(atlasObraIndice >= 0 && candidatas[atlasObraIndice]){
+    return atlasSelecionarObraCombo(candidatas[atlasObraIndice].id, false);
+  }
+
+  atlasFiltrarObras(input.value);
+  return false;
+}
+
+function atlasAtualizarComboObras(){
+  atlasSincronizarCampoObra();
+
+  const input = document.getElementById("obraBusca");
+  if(input && !input.disabled && document.activeElement === input){
+    atlasFiltrarObras(input.value);
+  }
+}
+
+function atlasIniciarComboObras(){
+  if(atlasObraComboIniciado) return;
+
+  const input = document.getElementById("obraBusca");
+  const seta = document.getElementById("obraComboSeta");
+  const lista = document.getElementById("obraSugestoes");
+  const select = document.getElementById("obraSelect");
+
+  if(!input || !seta || !lista || !select) return;
+  atlasObraComboIniciado = true;
+
+  input.addEventListener("focus", () => {
+    if(!input.disabled) atlasFiltrarObras(input.value);
+  });
+
+  input.addEventListener("input", () => {
+    select.value = "";
+    atlasFiltrarObras(input.value);
+  });
+
+  input.addEventListener("keydown", async evento => {
+    if(evento.key === "ArrowDown"){
+      evento.preventDefault();
+      if(!lista.classList.contains("ativo")) atlasFiltrarObras(input.value);
+      if(atlasObraResultados.length){
+        atlasObraIndice = Math.min(atlasObraIndice + 1, atlasObraResultados.length - 1);
+        atlasRenderizarSugestoesObra();
+      }
+      return;
+    }
+
+    if(evento.key === "ArrowUp"){
+      evento.preventDefault();
+      if(atlasObraResultados.length){
+        atlasObraIndice = Math.max(atlasObraIndice - 1, 0);
+        atlasRenderizarSugestoesObra();
+      }
+      return;
+    }
+
+    if(evento.key === "Enter"){
+      evento.preventDefault();
+      await atlasConfirmarObraDigitada();
+      return;
+    }
+
+    if(evento.key === "Tab"){
+      /*
+       * TAB apenas confirma a opção digitada no campo interno.
+       * O lançamento só fica travado quando o usuário aciona
+       * explicitamente o botão "Confirmar obra".
+       */
+      await atlasConfirmarObraDigitada();
+      return;
+    }
+
+    if(evento.key === "Escape"){
+      atlasFecharSugestoesObra();
+    }
+  });
+
+  input.addEventListener("blur", () => {
+    setTimeout(() => {
+      atlasFecharSugestoesObra();
+      const selecionada = atlasObraSelecionadaAtual();
+      if(selecionada){
+        input.value = atlasTextoObra(selecionada);
+      }
+    }, 140);
+  });
+
+  seta.addEventListener("click", () => {
+    if(input.disabled) return;
+
+    if(lista.classList.contains("ativo")){
+      atlasFecharSugestoesObra();
+    }else{
+      input.focus();
+      atlasFiltrarObras("", true);
+    }
+  });
+
+  document.addEventListener("click", evento => {
+    if(!document.getElementById("atlasObraCombo")?.contains(evento.target)){
+      atlasFecharSugestoesObra();
+    }
+  });
+
+  select.addEventListener("change", atlasSincronizarCampoObra);
+  atlasSincronizarCampoObra();
+}
+
+
+async function carregarObras(){
+
+  const preencherSelectObras = () => {
+    const select = document.getElementById("obraSelect");
+    const novaSelect = document.getElementById("novaObraSelect");
+
+    if(!select || !novaSelect) return;
+
+    select.innerHTML = `<option value="">Selecione a obra/setor</option>`;
+    novaSelect.innerHTML = `<option value="">Selecione nova obra/setor</option>`;
+
+    obras.forEach(o => {
+      const texto = `${o.codigo_obra || "-"} - ${o.nome || "-"}`;
+      select.innerHTML += `<option value="${o.id}">${texto}</option>`;
+      novaSelect.innerHTML += `<option value="${o.id}">${texto}</option>`;
+    });
+
+    preencherFiltroObraPatrimonio();
+
+    atlasIniciarComboObras();
+    atlasAtualizarComboObras();
+
+    // Cadastro novo respeita a obra vinculada do usuário.
+    // O select de movimentação (novaObraSelect) continua livre para enviar para outra obra.
+    aplicarRegraObraLancamentoBDR();
+  };
+
+  try{
+    const onlineReal = await patrimonioOnlineReal();
+
+    if(!onlineReal){
+      obras = await BDROfflineDB.lerTabela("obras") || [];
+      preencherSelectObras();
+      mostrarAvisoModoOffline();
+      return;
+    }
+
+    const { data, error } = await db()
+      .from("obras")
+      .select("*")
+      .eq("ativa", true)
+      .order("nome");
+
+    if(error) throw error;
+
+    obras = data || [];
+
+    if(window.BDROfflineDB?.salvarTabela){
+      await BDROfflineDB.salvarTabela("obras", obras);
+    }
+
+    preencherSelectObras();
+
+  }catch(e){
+    console.warn("Patrimônio: falha ao carregar obras online, usando cache:", e.message || e);
+    obras = await BDROfflineDB.lerTabela("obras") || [];
+    preencherSelectObras();
+    BDR_PATRIMONIO_ONLINE_REAL = false;
+    mostrarAvisoModoOffline();
+  }
+}
+
+async function alternarTravaObra(){
+
+  if(!usuarioTemPermissao("PATRIMONIO_CRIAR")){
+    alert("Você não tem permissão para alterar obra de lançamento.");
+    return;
+  }
+
+  if(!usuarioPodeLancarQualquerObra()){
+    aplicarRegraObraLancamentoBDR();
+    alert("Este usuário só pode lançar patrimônio na própria obra vinculada ao cadastro dele.");
+    return;
+  }
+
+  if(window.obraTravada){
+    const temDados =
+      valor("nome_bem") ||
+      valor("valor_bem") ||
+      valor("observacao") ||
+      valor("tipo_item");
+
+    if(temDados){
+      const ok = await bdrConfirmarAtlas(
+        "Você vai alterar a obra de lançamento.\n\n" +
+        "Os dados preenchidos no formulário serão mantidos.\n\n" +
+        "Deseja destravar para escolher outra obra?"
+      );
+      if(!ok) return;
+    }
+
+    destravarObra();
+    return;
+  }
+
+  let obra_id = document.getElementById("obraSelect").value;
+
+  if(!obra_id && document.getElementById("obraBusca")?.value){
+    const selecionouDigitacao = await atlasConfirmarObraDigitada();
+    if(!selecionouDigitacao) return;
+    obra_id = document.getElementById("obraSelect").value;
+  }
+
+  if(!obra_id){
+    alert("Selecione uma obra/setor para travar.");
+    return;
+  }
+
+  const obraSelecionada = obras.find(
+    o => String(o.id) === String(obra_id)
+  );
+
+  if(!obraSelecionada){
+    alert("Obra não encontrada.");
+    return;
+  }
+
+  window.obraAtiva = obraSelecionada;
+  window.obraTravada = true;
+
+  localStorage.setItem("obraAtivaId", obraSelecionada.id);
+  localStorage.setItem("obraTravada", "SIM");
+
+  atualizarVisualTrava();
+}
+
+function destravarObra(){
+  if(!usuarioPodeLancarQualquerObra()){
+    aplicarRegraObraLancamentoBDR();
+    return;
+  }
+
+  window.obraTravada = false;
+  window.obraAtiva = null;
+
+  localStorage.removeItem("obraAtivaId");
+  localStorage.removeItem("obraTravada");
+
+  atualizarVisualTrava();
+}
+
+function atualizarVisualTrava(){
+
+  const btn = document.getElementById("btnTravarObra");
+  const textoTopo = document.getElementById("obraAtivaTexto");
+  const select = document.getElementById("obraSelect");
+  const helper = document.getElementById("obraLockHelper");
+
+  if(window.obraTravada && window.obraAtiva){
+
+    if(select){
+      select.value = String(window.obraAtiva.id);
+      select.disabled = true;
+      select.title = "Obra ativa para lançamento. Clique no cadeado para alterar.";
+    }
+
+    if(btn){
+      btn.className = "lock-btn lock-on";
+      btn.innerText = "🟢 🔒 Obra ativa";
+      btn.title = "Clique para destravar e escolher outra obra.";
+    }
+
+    if(helper){
+      helper.innerText =
+        "🟢 Lançando nesta obra. Clique no cadeado para alterar antes de escolher outra.";
+    }
+
+    if(textoTopo){
+      textoTopo.innerText =
+        "🔒 OBRA ATIVA: " +
+        (window.obraAtiva.codigo_obra || "-") +
+        " - " +
+        (window.obraAtiva.nome || "-");
+    }
+
+  }else{
+
+    if(select){
+      select.disabled = false;
+      select.title = "Escolha a obra e confirme para travar o lançamento.";
+    }
+
+    if(btn){
+      btn.className = "lock-btn lock-off";
+      btn.innerText = "✅ Confirmar obra";
+      btn.title = "Confirmar a obra selecionada para lançamento.";
+    }
+
+    if(helper){
+      helper.innerText =
+        "🔓 Escolha a obra e confirme. Depois disso, todos os patrimônios serão lançados nela.";
+    }
+
+    if(textoTopo){
+      textoTopo.innerText = "🔓 Escolha uma obra de lançamento";
+    }
+  }
+
+  /*
+   * O select real fica oculto. Esta sincronização é indispensável
+   * para bloquear/desbloquear também o campo visível "obraBusca".
+   */
+  atlasSincronizarCampoObra();
+}
+
+function obterObraParaLancamento(){
+
+  if(!usuarioPodeLancarQualquerObra()){
+    const obraUsuario = obraVinculadaUsuarioBDR();
+    if(obraUsuario){
+      window.obraAtiva = obraUsuario;
+      window.obraTravada = true;
+      return obraUsuario;
+    }
+    return null;
+  }
+
+  if(window.obraTravada && window.obraAtiva){
+    return window.obraAtiva;
+  }
+
+  const obra_id = document.getElementById("obraSelect").value;
+
+  if(!obra_id){
+    return null;
+  }
+
+  const obraSelecionada = obras.find(
+    o => String(o.id) === String(obra_id)
+  );
+
+  return obraSelecionada || null;
+}
+
+
+
+const ATLAS_NOMES_PATRIMONIO_PADRAO = [
+  "ESMERILHADEIRA",
+  "ESMERILHADEIRA ANGULAR",
+  "FURADEIRA",
+  "FURADEIRA DE IMPACTO",
+  "FURADEIRA DE BANCADA",
+  "PARAFUSADEIRA",
+  "PARAFUSADEIRA DE IMPACTO",
+  "MARTELETE",
+  "SERRA CIRCULAR",
+  "SERRA MÁRMORE",
+  "SERRA TICO-TICO",
+  "LIXADEIRA",
+  "POLITRIZ",
+  "COMPRESSOR DE AR",
+  "MÁQUINA DE SOLDA",
+  "GERADOR",
+  "BETONEIRA",
+  "LAVADORA DE ALTA PRESSÃO",
+  "MOTOBOMBA",
+  "TRATOR",
+  "COLHEITADEIRA",
+  "RETROESCAVADEIRA",
+  "PÁ-CARREGADEIRA",
+  "ESCAVADEIRA",
+  "MOTONIVELADORA",
+  "ROLO COMPACTADOR",
+  "EMPILHADEIRA",
+  "PLATAFORMA ELEVATÓRIA",
+  "CAMINHÃO",
+  "CAMINHONETE",
+  "AUTOMÓVEL",
+  "MOTOCICLETA",
+  "NOTEBOOK",
+  "COMPUTADOR",
+  "MONITOR",
+  "IMPRESSORA",
+  "TELEVISÃO",
+  "RÁDIO COMUNICADOR",
+  "ROTEADOR",
+  "NOBREAK",
+  "MULTÍMETRO",
+  "FONTE DE ALIMENTAÇÃO",
+  "BANCADA DE OFICINA",
+  "ARMÁRIO",
+  "MESA",
+  "CADEIRA"
+];
+
+let atlasIndiceSugestaoPatrimonio = -1;
+
+function atlasNormalizarTextoSugestao(texto){
+  return String(texto || "")
+    .trim()
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"");
+}
+
+function atlasCatalogoNomesPatrimonio(){
+  const nomesBanco = (window.patrimonios || patrimonios || [])
+    .map(p => String(p?.nome_bem || "").trim())
+    .filter(Boolean);
+
+  const mapa = new Map();
+
+  [...ATLAS_NOMES_PATRIMONIO_PADRAO,...nomesBanco].forEach(nome=>{
+    const chave = atlasNormalizarTextoSugestao(nome);
+    if(chave && !mapa.has(chave)){
+      mapa.set(chave,String(nome).toUpperCase());
+    }
+  });
+
+  return Array.from(mapa.values()).sort((a,b)=>a.localeCompare(b,"pt-BR"));
+}
+
+function atlasAtualizarSugestoesPatrimonio(){
+  const input = document.getElementById("nome_bem");
+  const lista = document.getElementById("atlasSugestoesPatrimonio");
+  if(!input || !lista) return;
+
+  const termo = atlasNormalizarTextoSugestao(input.value);
+  atlasIndiceSugestaoPatrimonio = -1;
+
+  if(termo.length < 2){
+    atlasFecharSugestoesPatrimonio();
+    return;
+  }
+
+  const sugestoes = atlasCatalogoNomesPatrimonio()
+    .filter(nome=>atlasNormalizarTextoSugestao(nome).includes(termo))
+    .slice(0,8);
+
+  if(!sugestoes.length){
+    atlasFecharSugestoesPatrimonio();
+    return;
+  }
+
+  lista.innerHTML = sugestoes.map((nome,indice)=>`
+    <button type="button"
+            class="atlas-sugestao"
+            data-indice="${indice}"
+            onmousedown="event.preventDefault(); atlasEscolherSugestaoPatrimonio('${nome.replaceAll("'","\\'")}')">
+      ${nome}
+      <small>Toque, pressione Enter ou Tab para usar</small>
+    </button>
+  `).join("");
+
+  lista.classList.add("ativo");
+}
+
+function atlasEscolherSugestaoPatrimonio(nome){
+  const input = document.getElementById("nome_bem");
+  if(input){
+    input.value = String(nome || "").toUpperCase();
+    input.focus();
+  }
+  atlasFecharSugestoesPatrimonio();
+  window.AtlasPatrimonioLote?.resetar();
+}
+
+function atlasFecharSugestoesPatrimonio(){
+  const lista = document.getElementById("atlasSugestoesPatrimonio");
+  if(lista){
+    lista.classList.remove("ativo");
+    lista.innerHTML = "";
+  }
+  atlasIndiceSugestaoPatrimonio = -1;
+}
+
+function atlasTeclaSugestaoPatrimonio(event){
+  const lista = document.getElementById("atlasSugestoesPatrimonio");
+  if(!lista?.classList.contains("ativo")) return;
+
+  const botoes = Array.from(lista.querySelectorAll(".atlas-sugestao"));
+  if(!botoes.length) return;
+
+  if(event.key === "ArrowDown"){
+    event.preventDefault();
+    atlasIndiceSugestaoPatrimonio =
+      Math.min(atlasIndiceSugestaoPatrimonio + 1, botoes.length - 1);
+  }else if(event.key === "ArrowUp"){
+    event.preventDefault();
+    atlasIndiceSugestaoPatrimonio =
+      Math.max(atlasIndiceSugestaoPatrimonio - 1, 0);
+  }else if(event.key === "Enter" || event.key === "Tab"){
+    const indice = atlasIndiceSugestaoPatrimonio >= 0
+      ? atlasIndiceSugestaoPatrimonio
+      : 0;
+
+    const texto = botoes[indice]?.childNodes?.[0]?.textContent?.trim();
+    if(texto){
+      if(event.key === "Enter") event.preventDefault();
+      atlasEscolherSugestaoPatrimonio(texto);
+    }
+    return;
+  }else if(event.key === "Escape"){
+    atlasFecharSugestoesPatrimonio();
+    return;
+  }else{
+    return;
+  }
+
+  botoes.forEach((botao,indice)=>{
+    botao.classList.toggle("selecionada",indice === atlasIndiceSugestaoPatrimonio);
+  });
+}
+
+atlasSincronizarCampoObra();
+
+/*
+ * Deixa o bloco da obra pequeno.
+ *
+ * Usuário com uma única obra:
+ * - obra é selecionada automaticamente;
+ * - botão verde desaparece;
+ * - fica somente uma informação compacta.
+ *
+ * Usuário com várias obras:
+ * - seletor continua disponível;
+ * - botão permanece pequeno para preservar a lógica atual.
+ */
+function atlasCompactarObraPatrimonio(){
+  const card = document.getElementById("cardObraLancamento");
+  const select = document.getElementById("obraSelect");
+  const btn = document.getElementById("btnTravarObra");
+  const u = usuarioAtual();
+
+  if(!card || !select || !u) return;
+
+  const idsLiberados = String(u.obras_liberadas || "")
+    .split(/[;,|]/)
+    .map(x=>x.trim())
+    .filter(Boolean);
+
+  const ids = new Set(idsLiberados);
+  if(u.obra_id) ids.add(String(u.obra_id));
+
+  // MASTER/OWNER continuam vendo o seletor porque possuem acesso amplo.
+  const perfil = String(u.perfil || "").toUpperCase();
+  const acessoAmplo =
+    ["MASTER","OWNER"].includes(perfil) ||
+    usuarioTemPermissao("PATRIMONIO_LANCAR_QUALQUER_OBRA") ||
+    usuarioTemPermissao("TODAS_OBRAS_VER");
+
+  if(!acessoAmplo && ids.size === 1){
+    const obraId = Array.from(ids)[0];
+    const obra = (window.obras || obras || []).find(o=>String(o.id)===String(obraId));
+
+    if(obra){
+      select.value = String(obra.id);
+      select.disabled = true;
+      window.obraAtiva = obra;
+      window.obraTravada = true;
+      card.classList.add("obra-unica");
+
+      const titulo = card.querySelector("h3");
+      if(titulo) titulo.textContent = "🏗 Obra:";
+
+      if(btn) btn.style.display = "none";
+      return;
+    }
+  }
+
+  card.classList.remove("obra-unica");
+  if(btn) btn.style.display = "";
+}
+
+
+
+function atlasAlternarPatrimonioAntigo(){
+  const check = document.getElementById("checkLegado");
+  if(!check) return;
+
+  check.checked = !check.checked;
+  mostrarCamposLegado();
+
+  if(check.checked){
+    setTimeout(()=>document.getElementById("codigo_antigo")?.focus(),120);
+  }
+}
+
+function mostrarCamposLegado(){
+  const check = document.getElementById("checkLegado");
+  const campo = document.getElementById("camposLegado");
+  const botao = document.getElementById("atlasLegadoToggle");
+  const icone = botao?.querySelector(".atlas-legado-icone");
+  const ativo = !!check?.checked;
+
+  if(campo) campo.classList.toggle("ativo",ativo);
+
+  if(botao){
+    botao.classList.toggle("ativo",ativo);
+    botao.setAttribute("aria-pressed",ativo ? "true" : "false");
+  }
+
+  if(icone) icone.textContent = ativo ? "✓" : "○";
+
+  if(!ativo){
+    const input = document.getElementById("codigo_antigo");
+    if(input) input.value = "";
+  }
+}
+
+/* =========================================================
+   ATLAS PATRIMÔNIO — CAMPOS DINÂMICOS DO CADASTRO
+   ---------------------------------------------------------
+   Este bloco é a única fonte de montagem dos campos por tipo.
+   Marca e Modelo usam autocomplete; o componente de lote é
+   renderizado sempre no final dos campos compatíveis.
+========================================================= */
+const atlasAutocompleteEstado = {
+  marca:{indice:-1,itens:[]},
+  modelo:{indice:-1,itens:[]}
+};
+
+function atlasTextoMaiusculo(texto){
+  return String(texto || "").trim().toUpperCase();
+}
+
+function atlasListaUnica(valores){
+  const mapa = new Map();
+  (valores || []).forEach(valorItem => {
+    const texto = atlasTextoMaiusculo(valorItem);
+    if(!texto) return;
+    const chave = texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if(!mapa.has(chave)) mapa.set(chave, texto);
+  });
+  return [...mapa.values()].sort((a,b) => a.localeCompare(b,"pt-BR"));
+}
+
+function atlasOpcoesAutocomplete(tipo){
+  if(tipo === "marca"){
+    return atlasListaUnica((patrimonios || []).map(item => item?.marca));
+  }
+
+  const marca = atlasTextoMaiusculo(document.getElementById("marca")?.value);
+  return atlasListaUnica(
+    (patrimonios || [])
+      .filter(item => !marca || atlasTextoMaiusculo(item?.marca) === marca)
+      .map(item => item?.modelo)
+  );
+}
+
+function atlasEscaparHTML(texto){
+  return String(texto || "").replace(/[&<>"']/g, caractere => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[caractere]));
+}
+
+function atlasFecharAutocomplete(tipo){
+  document.getElementById(`atlasAutocomplete${tipo === "marca" ? "Marca" : "Modelo"}`)
+    ?.classList.remove("ativo");
+  atlasAutocompleteEstado[tipo].indice = -1;
+}
+
+function atlasSelecionarAutocomplete(tipo, valorSelecionado){
+  const campo = document.getElementById(tipo);
+  if(!campo) return;
+  campo.value = atlasTextoMaiusculo(valorSelecionado);
+  atlasFecharAutocomplete(tipo);
+
+  if(tipo === "marca"){
+    const modelo = document.getElementById("modelo");
+    if(modelo){
+      modelo.value = "";
+      modelo.focus();
+      atlasAtualizarAutocomplete("modelo");
+    }
+  }
+}
+
+function atlasAtualizarAutocomplete(tipo){
+  const campo = document.getElementById(tipo);
+  const lista = document.getElementById(`atlasAutocomplete${tipo === "marca" ? "Marca" : "Modelo"}`);
+  if(!campo || !lista) return;
+
+  bdrMaiusculoSemMoverCursor(campo);
+  const termo = atlasTextoMaiusculo(campo.value);
+  const opcoes = atlasOpcoesAutocomplete(tipo)
+    .filter(item => !termo || item.includes(termo))
+    .slice(0,30);
+
+  atlasAutocompleteEstado[tipo] = {indice:-1,itens:opcoes};
+
+  if(!opcoes.length){
+    lista.innerHTML = termo
+      ? `<div class="atlas-autocomplete-vazio">Use “${atlasEscaparHTML(termo)}” como novo valor.</div>`
+      : "";
+    lista.classList.toggle("ativo", Boolean(termo));
+    return;
+  }
+
+  lista.innerHTML = opcoes.map((opcao,indice) => `
+    <button type="button" class="atlas-autocomplete-opcao" data-indice="${indice}"
+      data-valor="${atlasEscaparHTML(opcao)}">${atlasEscaparHTML(opcao)}</button>
+  `).join("");
+
+  lista.querySelectorAll(".atlas-autocomplete-opcao").forEach(botao => {
+    botao.addEventListener("mousedown", evento => evento.preventDefault());
+    botao.addEventListener("click", () => atlasSelecionarAutocomplete(tipo, botao.dataset.valor));
+  });
+
+  lista.classList.add("ativo");
+}
+
+function atlasTeclaAutocomplete(evento,tipo){
+  const estado = atlasAutocompleteEstado[tipo];
+  const itens = estado.itens || [];
+  const lista = document.getElementById(`atlasAutocomplete${tipo === "marca" ? "Marca" : "Modelo"}`);
+
+  if(evento.key === "ArrowDown" && itens.length){
+    evento.preventDefault();
+    estado.indice = Math.min(estado.indice + 1, itens.length - 1);
+  }else if(evento.key === "ArrowUp" && itens.length){
+    evento.preventDefault();
+    estado.indice = Math.max(estado.indice - 1, 0);
+  }else if((evento.key === "Enter" || evento.key === "Tab") && lista?.classList.contains("ativo")){
+    const selecionado = itens[estado.indice >= 0 ? estado.indice : 0];
+    if(selecionado){
+      if(evento.key === "Enter") evento.preventDefault();
+      atlasSelecionarAutocomplete(tipo, selecionado);
+    }else{
+      atlasFecharAutocomplete(tipo);
+    }
+    return;
+  }else if(evento.key === "Escape"){
+    atlasFecharAutocomplete(tipo);
+    return;
+  }else{
+    return;
+  }
+
+  lista?.querySelectorAll(".atlas-autocomplete-opcao").forEach((botao,indice) => {
+    botao.classList.toggle("ativo", indice === estado.indice);
+    if(indice === estado.indice) botao.scrollIntoView({block:"nearest"});
+  });
+}
+
+function atlasCampoAutocomplete(tipo,placeholder){
+  const nome = tipo === "marca" ? "Marca" : "Modelo";
+  return `
+    <div class="atlas-autocomplete-campo">
+      <input id="${tipo}" autocomplete="off" placeholder="${placeholder}"
+        onfocus="atlasAtualizarAutocomplete('${tipo}')"
+        oninput="atlasAtualizarAutocomplete('${tipo}')"
+        onkeydown="atlasTeclaAutocomplete(event,'${tipo}')"
+        onblur="setTimeout(() => atlasFecharAutocomplete('${tipo}'),150)">
+      <div class="atlas-autocomplete-lista" id="atlasAutocomplete${nome}" role="listbox"></div>
+    </div>
+  `;
+}
+
+function atlasCampoSerieComLote(placeholder="Número de série"){
+  return window.AtlasPatrimonioLote?.renderizarCampo(placeholder) ||
+    `<input id="numero_serie" placeholder="${placeholder}">`;
+}
+
+function mostrarCampos(){
+  const tipo = valor("tipo_item");
+  const div = document.getElementById("camposExtras");
+  const campoOutro = document.getElementById("campoOutroTipo");
+  if(!div || !campoOutro) return;
+
+  window.AtlasPatrimonioLote?.fechar({limparSerie:false});
+  div.innerHTML = "";
+  campoOutro.style.display = tipo === "OUTRO" ? "grid" : "none";
+
+  const marca = (placeholder="Marca") => atlasCampoAutocomplete("marca",placeholder);
+  const modelo = (placeholder="Modelo") => atlasCampoAutocomplete("modelo",placeholder);
+  const serie = (placeholder="Número de série") => atlasCampoSerieComLote(placeholder);
+
+  if(["FERRAMENTA","EQUIPAMENTO","ELETRONICO","ELETRODOMESTICO","COMUNICACAO","ELETRICO","SEGURANCA","OFICINA"].includes(tipo)){
+    div.innerHTML = `${marca()}${modelo()}${serie()}`;
+  }
+
+  if(tipo === "INFORMATICA"){
+    div.innerHTML = `${marca()}${modelo()}<input id="especificacoes" placeholder="Especificações. Ex.: i5, 8 GB, SSD 256 GB">${serie()}`;
+  }
+
+  if(tipo === "VEICULO"){
+    div.innerHTML = `
+      <input id="placa" placeholder="Placa" onblur="validarDuplicidadeCampoPatrimonio('placa')">
+      <input id="renavam" placeholder="RENAVAM" onblur="validarDuplicidadeCampoPatrimonio('renavam')">
+      <input id="chassi" placeholder="Chassi" onblur="validarDuplicidadeCampoPatrimonio('chassi')">
+      ${marca()}${modelo()}
+      <input id="cor" placeholder="Cor">
+      <input id="combustivel" placeholder="Combustível">
+      <input id="ano_fabricacao" placeholder="Ano de fabricação" inputmode="numeric">
+      <input id="ano_modelo" placeholder="Ano do modelo" inputmode="numeric">
+      <input id="quilometragem" placeholder="KM atual" inputmode="decimal">
+    `;
+  }
+
+  if(["MAQUINA","MAQUINA_PESADA"].includes(tipo)){
+    div.innerHTML = `
+      ${marca()}${modelo()}
+      <input id="potencia" placeholder="Potência">
+      <input id="horimetro" placeholder="Horímetro" inputmode="decimal">
+      <input id="combustivel" placeholder="Combustível">
+      <input id="ano_fabricacao" placeholder="Ano de fabricação" inputmode="numeric">
+      <input id="ano_modelo" placeholder="Ano do modelo" inputmode="numeric">
+      ${serie()}
+    `;
+  }
+
+  if(tipo === "MOBILIARIO"){
+    div.innerHTML = `
+      <textarea id="descricao" class="atlas-campo-largo" placeholder="Descrição detalhada do imobilizado"></textarea>
+      ${marca("Marca / fabricante")}${modelo()}
+      <input id="fornecedor" placeholder="Fornecedor">
+      <input id="data_compra" type="date" title="Data de aquisição">
+      <input id="responsavel" placeholder="Responsável pelo bem">
+      <input id="departamento" placeholder="Departamento / setor">
+      <input id="endereco_estoque" placeholder="Localização detalhada. Ex.: Sala 02 / Prateleira A">
+      ${serie("Número de série, patrimônio do fabricante ou identificação")}
+    `;
+  }
+
+  if(tipo === "MATERIAL_APOIO"){
+    div.innerHTML = `${marca("Marca / fabricante")}${modelo("Modelo / descrição")}${serie("Número de série, se houver")}`;
+  }
+
+  if(tipo === "OUTRO"){
+    div.innerHTML = `${marca("Marca, se houver")}${modelo("Modelo, se houver")}${serie("Número de série, se houver")}`;
+  }
+
+  window.AtlasPatrimonioLote?.conectar();
+}
+
+window.atlasAtualizarAutocomplete = atlasAtualizarAutocomplete;
+window.atlasTeclaAutocomplete = atlasTeclaAutocomplete;
+window.atlasSelecionarAutocomplete = atlasSelecionarAutocomplete;
+window.atlasFecharAutocomplete = atlasFecharAutocomplete;
+
+
+function bdrNormalizarComparacao(valor){
+  return String(valor || "")
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Z0-9]/g, "")
+    .trim();
+}
+
+function bdrCampoVazioOuGenerico(valor){
+  const v = bdrNormalizarComparacao(valor);
+  return !v || ["SN", "SNN", "SEMNUMERO", "SEMNUMERACAO", "NA", "NAA", "NAOAPLICA", "NAOINFORMADO", "INFORMAR", "XXX", "000", "0000", "000000"].includes(v);
+}
+
+function bdrMesmoValor(a, b){
+  if(bdrCampoVazioOuGenerico(a) || bdrCampoVazioOuGenerico(b)) return false;
+  return bdrNormalizarComparacao(a) === bdrNormalizarComparacao(b);
+}
+
+function bdrResumoPatrimonioDuplicado(p){
+  return `${p.codigo_qr || "SEM CÓDIGO"} — ${p.nome_bem || "-"}\n` +
+    `Obra: ${p.localizacao || p.obra_nome || p.obra_id || "-"}\n` +
+    `Placa: ${p.placa || "-"} | RENAVAM: ${p.renavam || "-"} | Chassi: ${p.chassi || "-"}`;
+}
+
+async function bdrBaseDuplicidadePatrimonio(){
+  const campos = "id,codigo_qr,nome_bem,tipo_item,marca,modelo,numero_serie,placa,renavam,chassi,codigo_antigo,obra_id,localizacao,ativo";
+
+  try{
+    const onlineReal = await patrimonioOnlineReal();
+
+    if(onlineReal && db()){
+      const { data, error } = await db()
+        .from("patrimonio")
+        .select(campos)
+        .neq("ativo", false)
+        .limit(5000);
+
+      if(!error && Array.isArray(data)) return data;
+      console.warn("Anti-duplicidade: usando lista local porque o banco retornou erro:", error?.message || error);
+    }
+  }catch(e){
+    console.warn("Anti-duplicidade: falha ao consultar banco, usando lista local.", e);
+  }
+
+  try{
+    const cache = window.BDROfflineDB?.lerTabela
+      ? await BDROfflineDB.lerTabela("patrimonio")
+      : [];
+
+    return [ ...(patrimonios || []), ...(cache || []) ];
+  }catch(e){
+    return patrimonios || [];
+  }
+}
+
+async function bdrVerificarDuplicidadePatrimonio(dados, opcoes={}){
+  const lista = await bdrBaseDuplicidadePatrimonio();
+  const bloqueios = [];
+  const alertas = [];
+
+  const nomeNovo = bdrNormalizarComparacao(dados.nome_bem);
+  const marcaNova = bdrNormalizarComparacao(dados.marca);
+  const modeloNovo = bdrNormalizarComparacao(dados.modelo);
+  const serieNova = bdrNormalizarComparacao(dados.numero_serie);
+  const tipoNovo = String(dados.tipo_item || "").toUpperCase();
+
+  (lista || []).forEach(p => {
+    if(!p || p.ativo === false) return;
+    if(dados.id && String(p.id) === String(dados.id)) return;
+
+    // Veículos: placa, RENAVAM e chassi são identificadores únicos.
+    if(tipoNovo === "VEICULO"){
+      if(bdrMesmoValor(dados.placa, p.placa)){
+        bloqueios.push({motivo:"PLACA já cadastrada", patrimonio:p});
+        return;
+      }
+      if(bdrMesmoValor(dados.renavam, p.renavam)){
+        bloqueios.push({motivo:"RENAVAM já cadastrado", patrimonio:p});
+        return;
+      }
+      if(bdrMesmoValor(dados.chassi, p.chassi)){
+        bloqueios.push({motivo:"CHASSI já cadastrado", patrimonio:p});
+        return;
+      }
+    }
+
+    // Demais patrimônios: só bloqueia quando o conjunto completo é igual.
+    const nomeIgual = nomeNovo && nomeNovo === bdrNormalizarComparacao(p.nome_bem);
+    const marcaIgual = marcaNova && marcaNova === bdrNormalizarComparacao(p.marca);
+    const modeloIgual = modeloNovo && modeloNovo === bdrNormalizarComparacao(p.modelo);
+    const serieIgual = serieNova && serieNova === bdrNormalizarComparacao(p.numero_serie);
+
+    if(tipoNovo !== "VEICULO" && nomeIgual && marcaIgual && modeloIgual && serieIgual){
+      bloqueios.push({
+        motivo:"NOME + MARCA + MODELO + NÚMERO DE SÉRIE já cadastrados",
+        patrimonio:p
+      });
+      return;
+    }
+
+    // Código antigo continua sendo apenas um aviso, pois pode vir de bases legadas.
+    if(bdrMesmoValor(dados.codigo_antigo, p.codigo_antigo)){
+      alertas.push({motivo:"Código antigo/legado já encontrado", patrimonio:p});
+    }
+  });
+
+  const unicosBloqueio = [];
+  const vistosBloqueio = new Set();
+  bloqueios.forEach(item => {
+    const chave = `${item.motivo}-${item.patrimonio?.id}`;
+    if(!vistosBloqueio.has(chave)){
+      vistosBloqueio.add(chave);
+      unicosBloqueio.push(item);
+    }
+  });
+
+  const unicosAlerta = [];
+  const vistosAlerta = new Set();
+  alertas.forEach(item => {
+    const chave = `${item.motivo}-${item.patrimonio?.id}`;
+    if(!vistosAlerta.has(chave)){
+      vistosAlerta.add(chave);
+      unicosAlerta.push(item);
+    }
+  });
+
+  if(unicosBloqueio.length){
+    const msg = unicosBloqueio.slice(0,5).map(item =>
+      `🚫 ${item.motivo}\n${bdrResumoPatrimonioDuplicado(item.patrimonio)}\nSérie: ${item.patrimonio?.numero_serie || "-"}`
+    ).join("\n\n");
+
+    alert("Patrimônio duplicado encontrado.\n\n" + msg + "\n\nCadastro bloqueado para evitar duplicidade real.");
+    return false;
+  }
+
+  if(unicosAlerta.length && opcoes.confirmar !== false){
+    const msg = unicosAlerta.slice(0,5).map(item =>
+      `⚠️ ${item.motivo}\n${bdrResumoPatrimonioDuplicado(item.patrimonio)}`
+    ).join("\n\n");
+
+    return await bdrConfirmarAtlas(
+      "Possível duplicidade encontrada:\n\n" +
+      msg +
+      "\n\nDeseja continuar mesmo assim?"
+    );
+  }
+
+  return true;
+}
+
+async function validarDuplicidadeCampoPatrimonio(campo){
+  const v = valor(campo);
+  if(bdrCampoVazioOuGenerico(v)) return true;
+
+  const dados = {
+    nome_bem: valor("nome_bem"),
+    tipo_item: valor("tipo_item"),
+    placa: valor("placa"),
+    renavam: valor("renavam"),
+    chassi: valor("chassi"),
+    codigo_antigo: valor("codigo_antigo"),
+    marca: valor("marca"),
+    modelo: valor("modelo"),
+    obra_id: obterObraParaLancamento()?.id || null
+  };
+
+  const lista = await bdrBaseDuplicidadePatrimonio();
+  const achados = (lista || []).filter(p => {
+    if(!p || p.ativo === false) return false;
+    return bdrMesmoValor(v, p[campo]);
+  });
+
+  if(!achados.length) return true;
+
+  const msg = achados.slice(0,5).map(bdrResumoPatrimonioDuplicado).join("\n\n");
+
+  if(campo === "chassi" || campo === "renavam"){
+    alert(`🚫 ${campo.toUpperCase()} já cadastrado.\n\n${msg}\n\nEste campo bloqueia duplicidade.`);
+    const el = document.getElementById(campo);
+    if(el){ el.focus(); el.select?.(); }
+    return false;
+  }
+
+  alert(`⚠️ ${campo.toUpperCase()} já encontrado.\n\n${msg}\n\nConfira antes de continuar.`);
+  return true;
+}
+
+
+
+function atlasMascaraNCM(input){
+  if(!input) return;
+  input.value = String(input.value || "").replace(/\D/g, "").slice(0, 8);
+}
+
+function atlasAlternarDadosFiscais(forcarEstado){
+  const botao = document.getElementById("atlasFiscalToggle");
+  const campos = document.getElementById("camposFiscais");
+  if(!botao || !campos) return;
+
+  const ativoAtual = botao.classList.contains("ativo");
+  const ativo = typeof forcarEstado === "boolean" ? forcarEstado : !ativoAtual;
+
+  botao.classList.toggle("ativo", ativo);
+  botao.setAttribute("aria-pressed", String(ativo));
+  campos.classList.toggle("ativo", ativo);
+  campos.setAttribute("aria-hidden", String(!ativo));
+
+  const icone = botao.querySelector(".atlas-fiscal-icone");
+  if(icone) icone.textContent = ativo ? "✓" : "○";
+
+  if(ativo && typeof forcarEstado !== "boolean"){
+    setTimeout(() => document.getElementById("ncm")?.focus(), 120);
+  }
+}
+
+async function gerarPatrimonio(){
+
+  if(window.__BDR_PATRIMONIO_SALVANDO__){
+    alert("Já existe um cadastro de patrimônio sendo salvo. Aguarde finalizar.");
+    return;
+  }
+
+  if(!usuarioTemPermissao("PATRIMONIO_CRIAR")){
+    alert("Você não tem permissão para cadastrar patrimônio.");
+    return;
+  }
+
+
+  const obra = obterObraParaLancamento();
+
+  if(!obra){
+    alert("Selecione uma obra/setor para lançamento.");
+    return;
+  }
+
+  const nome_bem = valor("nome_bem");
+  const tipo_item = valor("tipo_item");
+  const status_inicial = valor("status_inicial") || "ESTOQUE";
+
+  if(!nome_bem || !tipo_item){
+    alert("Preencha nome do bem e tipo.");
+    return;
+  }
+
+  if(tipo_item === "OUTRO" && !valor("tipo_outro")){
+    alert("Descreva o tipo do ativo.");
+    return;
+  }
+
+  if(!bdrValorPatrimonioValido()){
+    alert("🚫 Informe o valor do patrimônio.\n\nO sistema não vai mais aceitar patrimônio sem valor ou com valor R$ 0,00.");
+    const campoValor = document.getElementById("valor_bem");
+    if(campoValor){ campoValor.focus(); campoValor.select?.(); }
+    return;
+  }
+
+  // Cadastro em lote: usa os mesmos dados do formulário e altera apenas a série/código.
+  if(window.AtlasPatrimonioLote?.ativo()){
+    await window.AtlasPatrimonioLote.salvar({
+      obra,
+      nome_bem,
+      tipo_item,
+      status_inicial
+    });
+    return;
+  }
+
+  window.__BDR_PATRIMONIO_SALVANDO__ = true;
+  bdrSetGerandoPatrimonio(true);
+
+  const dadosParaValidarDuplicidade = {
+    nome_bem,
+    tipo_item,
+    placa: valor("placa") || null,
+    renavam: valor("renavam") || null,
+    chassi: valor("chassi") || null,
+    codigo_antigo: valor("codigo_antigo") || null,
+    marca: valor("marca") || null,
+    modelo: valor("modelo") || null,
+    numero_serie: valor("numero_serie") || null,
+    obra_id: obra.id ? Number(obra.id) : null
+  };
+
+  const podeContinuarDuplicidade = await bdrVerificarDuplicidadePatrimonio(dadosParaValidarDuplicidade, { confirmar:true });
+  if(!podeContinuarDuplicidade){
+    window.__BDR_PATRIMONIO_SALVANDO__ = false;
+    bdrSetGerandoPatrimonio(false);
+    return;
+  }
+
+let sequencial = 1;
+let codigo_qr = "";
+
+try{
+  sequencial = await bdrProximoSequencialObra(obra);
+  codigo_qr = bdrMontarCodigoPatrimonio(obra.codigo_obra, sequencial);
+}catch(e){
+  console.error(e);
+  alert(e.message || "Não foi possível gerar o código do patrimônio.");
+  window.__BDR_PATRIMONIO_SALVANDO__ = false;
+  bdrSetGerandoPatrimonio(false);
+  return;
+}
+
+const usuarioLogado = JSON.parse(
+  localStorage.getItem("usuario_logado")
+);
+const patrimonio = {
+    nome_bem,
+    tipo_item,
+    tipo_outro: valor("tipo_outro") || null,
+
+    empresa_id: obra.empresa_id ? Number(obra.empresa_id) : 17,
+    obra_id: obra.id ? Number(obra.id) : null,
+    localizacao: obra.nome || null,
+
+    sequencial: Number(sequencial),
+    codigo_qr,
+    status: status_inicial,
+
+    marca: valor("marca") || null,
+    modelo: valor("modelo") || null,
+    numero_serie: valor("numero_serie") || null,
+    descricao: valor("descricao") || null,
+    fornecedor: valor("fornecedor") || null,
+    data_compra: valor("data_compra") || null,
+    responsavel: valor("responsavel") || null,
+    departamento: valor("departamento") || null,
+    endereco_estoque: valor("endereco_estoque") || null,
+
+    placa: valor("placa") || null,
+    renavam: valor("renavam") || null,
+    cor: valor("cor") || null,
+    combustivel: valor("combustivel") || null,
+    potencia: valor("potencia") || null,
+    chassi: valor("chassi") || null,
+
+horimetro: moedaParaNumero(valor("horimetro")),
+quilometragem: moedaParaNumero(valor("quilometragem")),
+
+ano_fabricacao: valor("ano_fabricacao")
+  ? parseInt(valor("ano_fabricacao"))
+  : null,
+
+ano_modelo: valor("ano_modelo")
+  ? parseInt(valor("ano_modelo"))
+  : null,
+
+    valor_bem: moedaParaNumero(valor("valor_bem")),
+    codigo_antigo: valor("codigo_antigo") || null,
+    ncm: valor("ncm") || null,
+    numero_nfe: valor("numero_nfe") || null,
+    estado_conservacao: valor("estado_conservacao") || "BOM",
+    observacao: [
+      valor("observacao"),
+      valor("especificacoes") ? "Especificações: " + valor("especificacoes") : ""
+    ].filter(Boolean).join(" | ") || null,
+
+    origem_cadastro:
+      document.getElementById("checkLegado").checked
+        ? "LEGADO"
+        : "NOVO",
+usuario_cadastro:
+  usuarioLogado?.nome || "Usuário não identificado",
+  };
+
+  const resp = await bdrSalvarPrimeiroNoTablet("patrimonio", patrimonio, {
+    acao:"CADASTRO_PATRIMONIO",
+    codigo_qr
+  });
+
+  if(resp.error){
+    console.error(resp.error);
+    alert(resp.error.message || "Erro ao salvar patrimônio.");
+    window.__BDR_PATRIMONIO_SALVANDO__ = false;
+    bdrSetGerandoPatrimonio(false);
+    return;
+  }
+
+  // Atualiza a tela na hora. Se gravou online, não marca como pendente.
+  const registroSalvo = Array.isArray(resp.data) && resp.data[0]
+    ? resp.data[0]
+    : {
+        ...patrimonio,
+        id: resp.offlineFirst ? "LOCAL-" + Date.now() : Date.now()
+      };
+
+  patrimonios.unshift({
+    ...registroSalvo,
+    __offline_pendente: !!resp.offlineFirst
+  });
+
+  if(resp.offlineFirst){
+    bdrAvisoSalvoTablet(
+      "Patrimônio criado offline: " +
+      codigo_qr +
+      "\nSerá sincronizado automaticamente quando a internet voltar."
+    );
+  }else{
+    atlasAvisoPatrimonio(
+      "✅ Patrimônio cadastrado",
+      `Código ${codigo_qr} salvo e sincronizado com sucesso.`
+    );
+  }
+  limparFormularioCadastro();
+  renderizarPatrimonios();
+  window.__BDR_PATRIMONIO_SALVANDO__ = false;
+  bdrSetGerandoPatrimonio(false);
+}
+function limparFormularioCadastro(){
+  document.getElementById("nome_bem").value = "";
+  document.getElementById("tipo_item").value = "";
+  document.getElementById("status_inicial").value = "ESTOQUE";
+  document.getElementById("valor_bem").value = "";
+  document.getElementById("tipo_outro").value = "";
+  document.getElementById("campoOutroTipo").style.display = "none";
+  document.getElementById("observacao").value = "";
+  document.getElementById("codigo_antigo").value = "";
+  document.getElementById("ncm").value = "";
+  document.getElementById("numero_nfe").value = "";
+  atlasAlternarDadosFiscais(false);
+
+  const campoEstado = document.getElementById("estado_conservacao");
+  if(campoEstado){
+    campoEstado.value = "BOM";
+  }
+
+  document.getElementById("checkLegado").checked = false;
+  mostrarCamposLegado();
+  document.getElementById("camposLegado").style.display = "none";
+  document.getElementById("camposExtras").innerHTML = "";
+  atlasFecharSugestoesPatrimonio();
+}
+
+async function carregarPatrimonios(){
+
+  try{
+    const onlineReal = await patrimonioOnlineReal();
+
+    if(!onlineReal){
+      let dadosCache = await BDROfflineDB.lerTabela("patrimonio") || [];
+      const usuario = usuarioAtual();
+
+      if(usuario && !usuarioPodeVerTodasObras()){
+        if(usuario.obra_id){
+          dadosCache = dadosCache.filter(p => String(p.obra_id) === String(usuario.obra_id));
+        }else{
+          dadosCache = [];
+        }
+      }
+
+      patrimonios = dadosCache;
+      renderizarPatrimonios();
+      mostrarAvisoModoOffline();
+      return;
+    }
+
+    let query = db()
+      .from("patrimonio")
+      .select("*")
+      .neq("ativo", false);
+
+    const usuario = usuarioAtual();
+
+    // Segurança: usuário comum nem baixa patrimônio de outras obras.
+    if(usuario && !usuarioPodeVerTodasObras()){
+      if(usuario.obra_id){
+        query = query.eq("obra_id", usuario.obra_id);
+      }else{
+        patrimonios = [];
+        renderizarPatrimonios();
+        mostrarAvisoModoOffline();
+        return;
+      }
+    }
+
+    const { data, error } = await query.order("id", { ascending:false });
+
+    if(error) throw error;
+
+    let dados = data || [];
+
+    // Defesa extra: mesmo se vier algo indevido, a tela só renderiza a própria obra.
+    if(usuario && !usuarioPodeVerTodasObras() && usuario.obra_id){
+      dados = dados.filter(p => String(p.obra_id) === String(usuario.obra_id));
+    }
+
+    patrimonios = dados;
+
+    if(window.BDROfflineDB?.salvarTabela){
+      await BDROfflineDB.salvarTabela("patrimonio", patrimonios);
+    }
+
+    renderizarPatrimonios();
+
+  }catch(e){
+    console.warn("Patrimônio: falha ao carregar patrimônios online, usando cache:", e.message || e);
+    let dadosCache = await BDROfflineDB.lerTabela("patrimonio") || [];
+    const usuario = usuarioAtual();
+
+    if(usuario && !usuarioPodeVerTodasObras()){
+      if(usuario.obra_id){
+        dadosCache = dadosCache.filter(p => String(p.obra_id) === String(usuario.obra_id));
+      }else{
+        dadosCache = [];
+      }
+    }
+
+    patrimonios = dadosCache;
+    BDR_PATRIMONIO_ONLINE_REAL = false;
+    renderizarPatrimonios();
+    mostrarAvisoModoOffline();
+  }
+}
+
+
+function normalizarBuscaPatrimonio(txt){
+  return String(txt || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function textoBuscaPatrimonio(p){
+  return `
+    ${p.nome_bem || ""}
+    ${p.codigo_qr || ""}
+    ${p.codigo_antigo || ""}
+    ${p.codigo_bem || ""}
+    ${p.patrimonio || ""}
+    ${p.localizacao || ""}
+    ${p.obra_nome || ""}
+    ${p.codigo_obra || ""}
+    ${p.marca || ""}
+    ${p.modelo || ""}
+    ${p.tipo_item || ""}
+    ${p.tipo_outro || ""}
+    ${p.status || ""}
+    ${p.placa || ""}
+    ${p.renavam || ""}
+    ${p.chassi || ""}
+    ${p.numero_serie || ""}
+    ${p.serie || ""}
+    ${p.numero_chassi || ""}
+    ${p.cor || ""}
+    ${p.combustivel || ""}
+    ${p.ano_fabricacao || ""}
+    ${p.ano_modelo || ""}
+    ${p.horimetro || ""}
+    ${p.quilometragem || ""}
+    ${p.estado_conservacao || ""}
+    ${p.observacao || ""}
+    ${p.usuario_cadastro || ""}
+    ${p.origem_cadastro || ""}
+    ${p.valor_bem || ""}
+  `;
+}
+
+
+
+function bdrResetPaginaPatrimonio(){
+  bdrPatrimonioPaginaAtual = 1;
+}
+
+function bdrPatrimonioFiltroChave(){
+  return [
+    valor("busca"),
+    valor("filtroObra"),
+    valor("filtroStatus"),
+    valor("filtroTipo")
+  ].join("||");
+}
+
+function bdrPatrimonioPaginaAnterior(){
+  if(bdrPatrimonioPaginaAtual > 1){
+    bdrPatrimonioPaginaAtual--;
+    renderizarPatrimonios();
+  }
+}
+
+function bdrPatrimonioProximaPagina(totalPaginas){
+  if(bdrPatrimonioPaginaAtual < Number(totalPaginas || 1)){
+    bdrPatrimonioPaginaAtual++;
+    renderizarPatrimonios();
+  }
+}
+
+function renderizarPatrimonios(){
+
+  const buscaOriginal = valor("busca");
+  const busca = normalizarBuscaPatrimonio(buscaOriginal);
+  const filtroStatus = valor("filtroStatus");
+  const filtroTipo = valor("filtroTipo");
+  const filtroObra = valor("filtroObra");
+
+  const chaveFiltro = bdrPatrimonioFiltroChave();
+  if(chaveFiltro !== bdrPatrimonioUltimaChaveFiltro){
+    bdrPatrimonioPaginaAtual = 1;
+    bdrPatrimonioUltimaChaveFiltro = chaveFiltro;
+  }
+
+  const lista = document.getElementById("lista");
+  lista.innerHTML = "";
+
+  const filtrados = patrimonios.filter(p => {
+    const textoBusca = normalizarBuscaPatrimonio(textoBuscaPatrimonio(p));
+
+    return (!busca || textoBusca.includes(busca)) &&
+      (!filtroObra || String(p.obra_id || "") === String(filtroObra)) &&
+      (!filtroStatus || p.status === filtroStatus) &&
+      (!filtroTipo || p.tipo_item === filtroTipo);
+  });
+
+  const total = filtrados.length;
+  const porPagina = bdrPatrimonioPorPagina;
+  const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
+  if(bdrPatrimonioPaginaAtual > totalPaginas) bdrPatrimonioPaginaAtual = totalPaginas;
+
+  const inicio = (bdrPatrimonioPaginaAtual - 1) * porPagina;
+  const fim = Math.min(inicio + porPagina, total);
+  const pagina = filtrados.slice(inicio, fim);
+
+  if(total === 0){
+    lista.innerHTML = `
+      <p>Nenhum patrimônio encontrado.</p>
+      ${buscaOriginal ? `<p style="color:#6b7280;font-size:12px;">Busca feita por: <b>${buscaOriginal}</b></p>` : ""}
+    `;
+    return;
+  }
+
+  lista.innerHTML = `
+    <div class="bdr-lista-tools">
+      <div>
+        <strong>Exibindo ${inicio + 1}–${fim} de ${total}</strong><br>
+        <span>${buscaOriginal ? "Resultado filtrado" : "Últimos patrimônios carregados"} • ${porPagina} por página</span>
+      </div>
+      <span>Use a pesquisa para localizar PAT, placa, série, nome ou obra.</span>
+    </div>
+
+    <div class="lista-header">
+      <div class="bdr-check-etiqueta"><input type="checkbox" aria-label="Selecionar itens desta página" title="Selecionar itens desta página" onchange="bdrSelecionarPaginaEtiquetas(this.checked)"></div>
+      <div>Código</div>
+      <div>Patrimônio</div>
+      <div>Obra / Setor</div>
+      <div>Tipo</div>
+      <div>Valor</div>
+      <div>Status</div>
+    </div>
+  `;
+
+  pagina.forEach(p => {
+
+    const statusClasse = String(p.status || "")
+      .replaceAll(" ", "-")
+      .replaceAll("_", "-")
+      .replaceAll("Ç", "C")
+      .replaceAll("Ã", "A");
+
+    const infoExtra = [
+      p.placa ? "Placa: " + p.placa : "",
+      p.renavam ? "RENAVAM: " + p.renavam : "",
+      p.chassi ? "Chassi: " + p.chassi : "",
+      p.numero_serie ? "Série: " + p.numero_serie : "",
+      p.ano_modelo ? "Ano mod: " + p.ano_modelo : ""
+    ].filter(Boolean).join(" | ");
+
+    lista.innerHTML += `
+      <div class="linha-patrimonio" onclick="abrirModal('${p.id}')">
+
+        <div class="bdr-check-etiqueta" onclick="event.stopPropagation()">
+          <input type="checkbox" class="bdr-etiqueta-check" data-codigo="${p.codigo_qr || ''}" ${bdrEtiquetasSelecionadas.has(String(p.codigo_qr || '')) ? 'checked' : ''} onchange="bdrAlternarSelecaoEtiqueta(this.dataset.codigo,this.checked)" aria-label="Selecionar etiqueta ${p.codigo_qr || ''}">
+        </div>
+
+        <div class="pat-codigo" title="${p.codigo_qr || "-"}">
+          ${p.codigo_qr || "-"} ${p.__offline_pendente ? '<span class="bdr-pendente-offline">OFFLINE</span>' : ''}
+        </div>
+
+        <div class="pat-nome" title="${p.nome_bem || "-"} ${infoExtra}">
+          ${p.nome_bem || "-"}
+          ${infoExtra ? `<br><small style="color:#6b7280;font-weight:700;">${infoExtra}</small>` : ""}
+        </div>
+
+        <div class="pat-local" title="${p.localizacao || "SEM OBRA"}">
+          ${p.localizacao || "SEM OBRA"}
+        </div>
+
+        <div class="pat-tipo">
+          ${p.tipo_item || "-"}
+        </div>
+
+        <div class="pat-valor">
+          ${formatarMoeda(p.valor_bem)}
+        </div>
+
+        <div class="pat-status status-${statusClasse}">
+          ${p.status || "SEM STATUS"}
+        </div>
+
+      </div>
+    `;
+  });
+
+  lista.innerHTML += `
+    <div class="bdr-paginacao">
+      <button type="button" onclick="bdrPatrimonioPaginaAnterior()" ${bdrPatrimonioPaginaAtual <= 1 ? "disabled" : ""}>◀ Anterior</button>
+      <span class="pagina-info">Página ${bdrPatrimonioPaginaAtual} de ${totalPaginas}</span>
+      <button type="button" onclick="bdrPatrimonioProximaPagina(${totalPaginas})" ${bdrPatrimonioPaginaAtual >= totalPaginas ? "disabled" : ""}>Próxima ▶</button>
+    </div>
+  `;
+  bdrAtualizarContadorEtiquetas();
+}
+
+function bdrAlternarSelecaoEtiqueta(codigo, marcado){
+  codigo = String(codigo || "").trim();
+  if(!codigo) return;
+  if(marcado) bdrEtiquetasSelecionadas.add(codigo); else bdrEtiquetasSelecionadas.delete(codigo);
+  bdrAtualizarContadorEtiquetas();
+}
+
+function bdrSelecionarPaginaEtiquetas(marcado){
+  document.querySelectorAll(".bdr-etiqueta-check").forEach(check => {
+    check.checked = marcado;
+    bdrAlternarSelecaoEtiqueta(check.dataset.codigo, marcado);
+  });
+}
+
+function bdrAtualizarContadorEtiquetas(){
+  const quantidade = bdrEtiquetasSelecionadas.size;
+  const el = document.getElementById("bdrQtdEtiquetasSelecionadas");
+  const botao = document.getElementById("bdrBotaoAcaoEtiquetas");
+  const ajuda = document.getElementById("bdrLoteAjuda");
+
+  if(el) el.textContent = `${quantidade} etiqueta(s) selecionada(s)`;
+
+  if(botao){
+    if(bdrModoSelecaoEtiquetas){
+      botao.className = "bdr-lote-imprimir";
+      botao.textContent = quantidade ? `🖨 Imprimir ${quantidade} etiqueta(s)` : "🖨 Imprimir selecionadas";
+      botao.disabled = quantidade === 0;
+    }else{
+      botao.className = "bdr-lote-selecionar";
+      botao.textContent = "☑ Selecionar etiquetas";
+      botao.disabled = false;
+    }
+  }
+
+  if(ajuda){
+    ajuda.textContent = bdrModoSelecaoEtiquetas
+      ? "Marque os patrimônios desejados na lista."
+      : "Imprima uma ou várias etiquetas sem poluir a lista.";
+  }
+}
+
+function bdrEntrarModoSelecaoEtiquetas(){
+  bdrModoSelecaoEtiquetas = true;
+  document.body.classList.add("bdr-modo-selecao-etiquetas");
+  bdrAtualizarContadorEtiquetas();
+}
+
+function bdrCancelarSelecaoEtiquetas(){
+  bdrEtiquetasSelecionadas.clear();
+  document.querySelectorAll(".bdr-etiqueta-check").forEach(c => c.checked=false);
+  const checkPagina = document.querySelector('.lista-header .bdr-check-etiqueta input');
+  if(checkPagina) checkPagina.checked = false;
+  bdrModoSelecaoEtiquetas = false;
+  document.body.classList.remove("bdr-modo-selecao-etiquetas");
+  bdrAtualizarContadorEtiquetas();
+}
+
+function bdrLimparSelecaoEtiquetas(){
+  bdrEtiquetasSelecionadas.clear();
+  document.querySelectorAll(".bdr-etiqueta-check").forEach(c => c.checked=false);
+  bdrAtualizarContadorEtiquetas();
+}
+
+function bdrAcaoPrincipalEtiquetas(){
+  if(!bdrModoSelecaoEtiquetas){
+    bdrEntrarModoSelecaoEtiquetas();
+    return;
+  }
+  bdrImprimirEtiquetasSelecionadas();
+}
+
+function bdrImprimirEtiquetasSelecionadas(){
+  if(!usuarioTemPermissao("PATRIMONIO_IMPRIMIR")){
+    alert("Você não tem permissão para imprimir etiquetas.");
+    return;
+  }
+
+  const codigos = Array.from(bdrEtiquetasSelecionadas);
+  if(!codigos.length){
+    alert("Selecione pelo menos um patrimônio na lista.");
+    return;
+  }
+
+  if(!window.AtlasEtiquetasLote){
+    alert("O módulo de impressão em lote não foi carregado.");
+    return;
+  }
+
+  window.AtlasEtiquetasLote.abrir(codigos);
+}
+
+function bdrLabelTipo(tipo, tipoOutro=""){
+  const mapa = {
+    ELETRONICO:"Eletrônico",
+    ELETRODOMESTICO:"Eletrodoméstico",
+    VEICULO:"Veículo",
+    FERRAMENTA:"Ferramenta",
+    MAQUINA:"Máquina",
+    MOBILIARIO:"Mobiliário",
+    INFORMATICA:"Informática",
+    EQUIPAMENTO:"Equipamento",
+    MATERIAL_APOIO:"Material de apoio",
+    OUTRO:"Outro"
+  };
+  const base = mapa[String(tipo || "").toUpperCase()] || tipo || "-";
+  return tipoOutro ? `${base} - ${tipoOutro}` : base;
+}
+
+function bdrLabelEstado(estado){
+  const v = String(estado || "").toUpperCase().trim();
+
+  const mapa = {
+    "1":"Ótimo",
+    "2":"Bom",
+    "3":"Regular",
+    "4":"Ruim",
+    "5":"Ruim",
+    "NOVO":"Ótimo",
+    "OTIMO":"Ótimo",
+    "ÓTIMO":"Ótimo",
+    "BOM":"Bom",
+    "REGULAR":"Regular",
+    "RUIM":"Ruim",
+    "INSERVIVEL":"Ruim",
+    "INSERVÍVEL":"Ruim"
+  };
+
+  return mapa[v] || (estado ? String(estado) : "-");
+}
+
+function bdrTemValor(v){
+  const txt = String(v ?? "").trim();
+  if(!txt) return false;
+  return !["-", "NULL", "null", "undefined"].includes(txt);
+}
+
+function bdrLinhaInfo(label, valor){
+  if(!bdrTemValor(valor)) return "";
+  return `<strong>${label}:</strong> ${valor}<br>`;
+}
+
+function bdrLinhasTipoPatrimonio(p){
+  const tipo = String(p.tipo_item || "").toUpperCase();
+  let html = "";
+
+  html += bdrLinhaInfo("Marca", p.marca);
+  html += bdrLinhaInfo("Modelo", p.modelo);
+
+  if(tipo === "VEICULO"){
+    html += bdrLinhaInfo("Placa", p.placa);
+    html += bdrLinhaInfo("RENAVAM", p.renavam);
+    html += bdrLinhaInfo("Chassi", p.chassi);
+    html += bdrLinhaInfo("Cor", p.cor);
+    html += bdrLinhaInfo("Combustível", p.combustivel);
+    html += bdrLinhaInfo("Ano fabricação", p.ano_fabricacao);
+    html += bdrLinhaInfo("Ano modelo", p.ano_modelo);
+    html += bdrLinhaInfo("KM/Horímetro", p.horimetro || p.quilometragem);
+    return html;
+  }
+
+  if(tipo === "MAQUINA"){
+    html += bdrLinhaInfo("Potência", p.potencia);
+    html += bdrLinhaInfo("Combustível", p.combustivel);
+    html += bdrLinhaInfo("Ano fabricação", p.ano_fabricacao);
+    html += bdrLinhaInfo("Ano modelo", p.ano_modelo);
+    html += bdrLinhaInfo("Horímetro", p.horimetro || p.quilometragem);
+    html += bdrLinhaInfo("Nº Série", p.numero_serie);
+    return html;
+  }
+
+  if(["ELETRONICO","ELETRODOMESTICO","FERRAMENTA","INFORMATICA","EQUIPAMENTO"].includes(tipo)){
+    html += bdrLinhaInfo("Nº Série", p.numero_serie);
+    return html;
+  }
+
+  if(["MOBILIARIO","MATERIAL_APOIO"].includes(tipo)){
+    return html;
+  }
+
+  html += bdrLinhaInfo("Nº Série", p.numero_serie);
+  return html;
+}
+
+function abrirModal(id){
+
+  const p = patrimonios.find(
+    x => String(x.id) === String(id) || Number(x.id) === Number(id)
+  );
+
+  if(!p){
+    alert("Patrimônio não encontrado.");
+    return;
+  }
+
+  patrimonioSelecionado = p;
+
+  document.getElementById("modalTitulo").innerText =
+    p.nome_bem || "Patrimônio";
+
+  document.getElementById("modalInfo").innerHTML = `
+    ${bdrLinhaInfo("Código", p.codigo_qr)}
+    ${bdrLinhaInfo("Código antigo", p.codigo_antigo)}
+    ${bdrLinhaInfo("NCM", p.ncm)}
+    ${bdrLinhaInfo("Número da NF-e", p.numero_nfe)}
+    ${bdrLinhaInfo("Descrição", p.descricao)}
+    ${bdrLinhaInfo("Fornecedor", p.fornecedor)}
+    ${bdrLinhaInfo("Data de aquisição", p.data_compra ? new Date(p.data_compra + "T00:00:00").toLocaleDateString("pt-BR") : null)}
+    ${bdrLinhaInfo("Responsável", p.responsavel)}
+    ${bdrLinhaInfo("Departamento / setor", p.departamento)}
+    ${bdrLinhaInfo("Localização detalhada", p.endereco_estoque)}
+    ${bdrLinhaInfo("Origem", p.origem_cadastro)}
+    ${bdrLinhaInfo("Cadastrado por", p.usuario_cadastro)}
+    ${bdrLinhaInfo("Status", p.status)}
+    ${bdrLinhaInfo("Obra", p.localizacao)}
+    ${bdrLinhaInfo("Tipo", bdrLabelTipo(p.tipo_item, p.tipo_outro))}
+    ${bdrLinhasTipoPatrimonio(p)}
+    ${bdrLinhaInfo("Valor", formatarMoeda(p.valor_bem))}
+    ${bdrLinhaInfo("Estado de conservação", bdrLabelEstado(p.estado_conservacao))}
+    ${bdrLinhaInfo("Observação", p.observacao)}
+  `;
+
+  document.getElementById("observacaoMov").value = "";
+  document.getElementById("novaObraSelect").value = "";
+
+  aplicarPermissoesTela();
+
+  document.getElementById("modalBg").style.display = "flex";
+}
+
+function fecharModal(){
+  document.getElementById("modalBg").style.display = "none";
+  patrimonioSelecionado = null;
+}
+
+function aplicarPermissoesTela(){
+  const usuario = usuarioAtual();
+
+  if(!usuario) return;
+
+  const podeCadastrar =
+    usuarioEhGestao() ||
+    usuarioTemPermissao("PATRIMONIO_CRIAR");
+
+  const podeMovimentar =
+    usuarioEhGestao() ||
+    usuarioTemPermissao("PATRIMONIO_MOVIMENTAR");
+
+  const podeEditar =
+    usuarioEhGestao() ||
+    usuarioTemPermissao("PATRIMONIO_EDITAR") ||
+    usuarioTemPermissao("PATRIMONIO_CRIAR");
+
+  const podeImprimir =
+    usuarioEhGestao() ||
+    usuarioTemPermissao("PATRIMONIO_IMPRIMIR");
+
+  const podeExcluir =
+    usuarioOwnerBDR(usuario) ||
+    usuarioTemPermissao("PATRIMONIO_EXCLUIR");
+
+  const cardEntrada = document.getElementById("cardEntradaPatrimonio");
+  const cardObra = document.getElementById("cardObraLancamento");
+
+  if(cardEntrada){
+    cardEntrada.style.display = podeCadastrar ? "" : "none";
+  }
+
+  if(cardObra){
+    cardObra.style.display = podeCadastrar ? "" : "none";
+  }
+
+  document.querySelectorAll(".acao-movimentar").forEach(btn => {
+    btn.style.display = podeMovimentar ? "" : "none";
+    btn.disabled = !podeMovimentar;
+  });
+
+  document.querySelectorAll(".acao-editar").forEach(btn => {
+    btn.style.display = podeEditar ? "" : "none";
+    btn.disabled = !podeEditar;
+  });
+
+  document.querySelectorAll(".acao-imprimir").forEach(btn => {
+    btn.style.display = podeImprimir ? "" : "none";
+    btn.disabled = !podeImprimir;
+  });
+
+  document.querySelectorAll(".acao-excluir").forEach(btn => {
+    btn.style.display = podeExcluir ? "" : "none";
+    btn.disabled = !podeExcluir;
+  });
+
+  const observacaoMov = document.getElementById("observacaoMov");
+  const novaObraSelect = document.getElementById("novaObraSelect");
+
+  if(observacaoMov){
+    observacaoMov.style.display = podeMovimentar ? "" : "none";
+    observacaoMov.disabled = !podeMovimentar;
+  }
+
+  if(novaObraSelect){
+    novaObraSelect.style.display = podeMovimentar ? "" : "none";
+    novaObraSelect.disabled = !podeMovimentar;
+  }
+}
+
+async function gravarMovimentacao(dados){
+
+  const agoraLocal = new Date(Date.now() - 4 * 60 * 60 * 1000)
+    .toISOString()
+    .replace("T", " ")
+    .slice(0, 19);
+const usuarioLogado = JSON.parse(
+  localStorage.getItem("usuario_logado")
+);
+
+  const payloadMovimentacao = {
+    patrimonio_id: dados.patrimonio_id,
+    empresa_id: dados.empresa_id,
+    obra_origem_id: dados.obra_origem_id,
+    obra_destino_id: dados.obra_destino_id,
+    tipo: dados.tipo,
+    status_anterior: dados.status_anterior,
+    status_novo: dados.status_novo,
+    observacao: dados.observacao,
+    usuario: usuarioLogado?.nome || "Usuário não identificado",
+    data_movimentacao: agoraLocal
+  };
+
+  const resp = await bdrSalvarPrimeiroNoTablet("movimentacoes", payloadMovimentacao, {
+    acao:"MOVIMENTACAO_PATRIMONIO"
+  });
+
+  if(resp.error){
+    console.error(resp.error);
+    alert("Erro ao gravar movimentação: " + resp.error.message);
+    return false;
+  }
+
+  return true;
+}
+
+
+
+function diasEntreDatasBDR(inicio, fim){
+  if(!inicio) return 0;
+  const a = new Date(String(inicio).replace(" ", "T"));
+  const b = fim ? new Date(String(fim).replace(" ", "T")) : new Date();
+  if(isNaN(a.getTime()) || isNaN(b.getTime())) return 0;
+  return Math.max(0, Math.ceil((b.getTime() - a.getTime()) / 86400000));
+}
+
+async function carregarManutencoesPatrimonio(){
+  try{
+    if(!db()) return;
+    const { data, error } = await db()
+      .from("manutencoes_patrimonio")
+      .select("*")
+      .order("id", { ascending:false })
+      .limit(500);
+
+    if(error){
+      console.warn("Não foi possível carregar manutenções:", error.message);
+      manutencoesPatrimonio = [];
+      return;
+    }
+
+    manutencoesPatrimonio = data || [];
+    renderizarAnalyticsManutencao();
+  }catch(e){
+    console.warn("Analytics manutenção indisponível:", e);
+  }
+}
+
+function renderizarAnalyticsManutencao(){
+  const abertas = manutencoesPatrimonio.filter(m => String(m.status || "ABERTA").toUpperCase() !== "FECHADA");
+  const fechadas = manutencoesPatrimonio.filter(m => String(m.status || "").toUpperCase() === "FECHADA");
+  const diasLista = manutencoesPatrimonio.map(m => Number(m.dias_parado || diasEntreDatasBDR(m.data_entrada, m.data_saida))).filter(n => n > 0);
+  const mediaDias = diasLista.length ? Math.round(diasLista.reduce((s,n)=>s+n,0) / diasLista.length) : 0;
+  const custo = manutencoesPatrimonio.reduce((s,m) => s + Number(m.valor_orcamento || 0), 0);
+
+  const set = (id, txt) => { const el = document.getElementById(id); if(el) el.innerText = txt; };
+  set("kpiManutAbertas", abertas.length);
+  set("kpiManutFechadas", fechadas.length);
+  set("kpiManutDiasMedios", mediaDias);
+  set("kpiManutCusto", formatarMoeda(custo));
+
+  const ranking = {};
+  manutencoesPatrimonio.forEach(m => {
+    const chave = m.nome_patrimonio || m.codigo_patrimonio || ("ID " + m.patrimonio_id);
+    if(!ranking[chave]) ranking[chave] = {qtd:0, dias:0, custo:0};
+    ranking[chave].qtd++;
+    ranking[chave].dias += Number(m.dias_parado || diasEntreDatasBDR(m.data_entrada, m.data_saida));
+    ranking[chave].custo += Number(m.valor_orcamento || 0);
+  });
+
+  const top = Object.entries(ranking)
+    .sort((a,b) => b[1].qtd - a[1].qtd || b[1].dias - a[1].dias)
+    .slice(0,5);
+
+  const box = document.getElementById("listaAnalyticsManutencao");
+  if(!box) return;
+
+  if(!manutencoesPatrimonio.length){
+    box.innerHTML = `<div class="bdr-manutencao-item">Nenhuma manutenção registrada ainda.</div>`;
+    return;
+  }
+
+  box.innerHTML = top.map(([nome, r]) => `
+    <div class="bdr-manutencao-item">
+      <b>${nome}</b><br>
+      Ocorrências: <b>${r.qtd}</b> • Dias parado: <b>${r.dias}</b> • Orçamentos: <b>${formatarMoeda(r.custo)}</b>
+    </div>
+  `).join("");
+}
+
+function manutencaoAbertaDoPatrimonio(id){
+  return manutencoesPatrimonio.find(m =>
+    String(m.patrimonio_id) === String(id) &&
+    String(m.status || "ABERTA").toUpperCase() !== "FECHADA"
+  );
+}
+
+function abrirModalManutencao(){
+  if(!patrimonioSelecionado) return;
+  const info = document.getElementById("manutInfoAbertura");
+  if(info){
+    info.innerHTML = `<b>${patrimonioSelecionado.codigo_qr || "-"}</b> • ${patrimonioSelecionado.nome_bem || "-"}<br>Informe o motivo para enviar este patrimônio à manutenção.`;
+  }
+  document.getElementById("manut_motivo").value = valor("observacaoMov") || "";
+  document.getElementById("modalManutencaoBg").style.display = "flex";
+}
+
+function fecharModalManutencao(){
+  document.getElementById("modalManutencaoBg").style.display = "none";
+}
+
+function abrirModalFecharManutencao(novoStatus){
+  if(!patrimonioSelecionado) return;
+  statusDestinoDepoisManutencao = novoStatus || "ESTOQUE";
+  const aberta = manutencaoAbertaDoPatrimonio(patrimonioSelecionado.id);
+  const info = document.getElementById("manutInfoFechamento");
+  if(info){
+    info.innerHTML = `
+      <b>${patrimonioSelecionado.codigo_qr || "-"}</b> • ${patrimonioSelecionado.nome_bem || "-"}<br>
+      Aberta há <b>${diasEntreDatasBDR(aberta?.data_entrada)} dia(s)</b>. Para sair da manutenção informe orçamento/solução.
+    `;
+  }
+  document.getElementById("manut_fornecedor").value = "";
+  document.getElementById("manut_valor_orcamento").value = "";
+  document.getElementById("manut_descricao_orcamento").value = "";
+  document.getElementById("manut_solucao").value = "";
+  document.getElementById("modalFecharManutencaoBg").style.display = "flex";
+}
+
+function fecharModalFecharManutencao(){
+  document.getElementById("modalFecharManutencaoBg").style.display = "none";
+  statusDestinoDepoisManutencao = null;
+}
+
+async function registrarEntradaManutencaoBDR(motivo){
+  const usuario = usuarioAtual();
+  const payload = {
+    patrimonio_id: patrimonioSelecionado.id,
+    codigo_patrimonio: patrimonioSelecionado.codigo_qr || patrimonioSelecionado.codigo_antigo || null,
+    nome_patrimonio: patrimonioSelecionado.nome_bem || null,
+    obra_id: patrimonioSelecionado.obra_id || null,
+    status: "ABERTA",
+    motivo,
+    usuario_abertura: usuario?.nome || "Usuário não identificado"
+  };
+
+  const { error } = await db().from("manutencoes_patrimonio").insert([payload]);
+  if(error) throw error;
+}
+
+async function fecharManutencaoBDR(dados){
+  const aberta = manutencaoAbertaDoPatrimonio(patrimonioSelecionado.id);
+  if(!aberta){
+    throw new Error("Não encontrei manutenção aberta para este patrimônio.");
+  }
+
+  const usuario = usuarioAtual();
+  const dias = diasEntreDatasBDR(aberta.data_entrada, new Date().toISOString());
+
+  const { error } = await db()
+    .from("manutencoes_patrimonio")
+    .update({
+      status: "FECHADA",
+      data_saida: new Date().toISOString(),
+      dias_parado: dias,
+      fornecedor: dados.fornecedor,
+      valor_orcamento: dados.valor_orcamento,
+      descricao_orcamento: dados.descricao_orcamento,
+      solucao: dados.solucao,
+      usuario_fechamento: usuario?.nome || "Usuário não identificado"
+    })
+    .eq("id", aberta.id);
+
+  if(error) throw error;
+}
+
+async function confirmarEntradaManutencao(){
+  const motivo = valor("manut_motivo");
+  if(!motivo || motivo.length < 5){
+    alert("Informe o motivo da manutenção com pelo menos 5 caracteres.");
+    return;
+  }
+  document.getElementById("observacaoMov").value = motivo;
+
+  try{
+    if(patrimonioOffline()){
+      alert("Para registrar manutenção inteligente, é necessário estar online.");
+      return;
+    }
+    await registrarEntradaManutencaoBDR(motivo);
+    fecharModalManutencao();
+    await alterarStatusBaseBDR("MANUTENCAO", motivo);
+    await carregarManutencoesPatrimonio();
+  }catch(e){
+    console.error(e);
+    alert(e.message || "Erro ao abrir manutenção.");
+  }
+}
+
+async function confirmarFechamentoManutencao(){
+  const fornecedor = valor("manut_fornecedor");
+  const valorOrcamento = moedaParaNumero(valor("manut_valor_orcamento"));
+  const descricao = valor("manut_descricao_orcamento");
+  const solucao = valor("manut_solucao");
+
+  if(!fornecedor || fornecedor.length < 2){ alert("Informe o fornecedor/oficina."); return; }
+  if(!valorOrcamento || valorOrcamento <= 0){ alert("Informe o valor do orçamento."); return; }
+  if(!descricao || descricao.length < 5){ alert("Informe a descrição do orçamento."); return; }
+  if(!solucao || solucao.length < 5){ alert("Informe a solução/resultado da manutenção."); return; }
+
+  const obs = `Saída da manutenção | Fornecedor: ${fornecedor} | Orçamento: ${formatarMoeda(valorOrcamento)} | ${descricao} | Solução: ${solucao}`;
+  document.getElementById("observacaoMov").value = obs;
+
+  try{
+    if(patrimonioOffline()){
+      alert("Para fechar manutenção inteligente, é necessário estar online.");
+      return;
+    }
+    await fecharManutencaoBDR({
+      fornecedor,
+      valor_orcamento: valorOrcamento,
+      descricao_orcamento: descricao,
+      solucao
+    });
+    const destino = statusDestinoDepoisManutencao || "ESTOQUE";
+    fecharModalFecharManutencao();
+    await alterarStatusBaseBDR(destino, obs);
+    await carregarManutencoesPatrimonio();
+  }catch(e){
+    console.error(e);
+    alert(e.message || "Erro ao fechar manutenção.");
+  }
+}
+
+
+async function alterarStatus(novoStatus){
+  if(!usuarioTemPermissao("PATRIMONIO_MOVIMENTAR")){
+    alert("Você não tem permissão para movimentar patrimônio.");
+    return;
+  }
+
+  if(!patrimonioSelecionado){
+    alert("Selecione um patrimônio.");
+    return;
+  }
+
+  const statusAtual = String(patrimonioSelecionado.status || "").toUpperCase();
+
+  if(novoStatus === "MANUTENCAO"){
+    abrirModalManutencao();
+    return;
+  }
+
+  if(statusAtual === "MANUTENCAO" && novoStatus !== "MANUTENCAO"){
+    abrirModalFecharManutencao(novoStatus);
+    return;
+  }
+
+  return alterarStatusBaseBDR(novoStatus);
+}
+
+async function alterarStatusBaseBDR(novoStatus, observacaoForcada=null){
+
+  if(!usuarioTemPermissao("PATRIMONIO_MOVIMENTAR")){
+    alert("Você não tem permissão para movimentar patrimônio.");
+    return;
+  }
+
+
+  if(!patrimonioSelecionado){
+    alert("Selecione um patrimônio.");
+    return;
+  }
+
+  const obs = observacaoForcada || valor("observacaoMov");
+
+  if(!obs || obs.length < 5){
+    alert("Informe uma justificativa da movimentação.");
+    return;
+  }
+
+  const statusAnterior = patrimonioSelecionado.status || null;
+
+  
+  if(patrimonioOffline()){
+    await salvarOperacaoPatrimonioOffline("update", "patrimonio", {
+      status: novoStatus
+    }, {
+      filtro:{ id: patrimonioSelecionado.id }
+    });
+
+    await salvarOperacaoPatrimonioOffline("insert", "movimentacoes", [{
+      patrimonio_id: patrimonioSelecionado.id,
+      empresa_id: patrimonioSelecionado.empresa_id,
+      obra_origem_id: patrimonioSelecionado.obra_id,
+      obra_destino_id: patrimonioSelecionado.obra_id,
+      tipo: "ALTERACAO_STATUS",
+      status_anterior: statusAnterior,
+      status_novo: novoStatus,
+      observacao: obs,
+      usuario: usuarioAtual()?.nome || "Usuário não identificado",
+      data_movimentacao: new Date().toISOString()
+    }]);
+
+    patrimonios = patrimonios.map(p =>
+      Number(p.id) === Number(patrimonioSelecionado.id)
+        ? {...p, status:novoStatus, __offline_pendente:!!respStatus.offlineFirst}
+        : p
+    );
+
+    alert("📦 Sem internet. Alteração de status salva no aparelho e será sincronizada quando a internet voltar.");
+
+    fecharModal();
+    renderizarPatrimonios();
+    return;
+  }
+
+  const respStatus = await bdrAtualizarPrimeiroNoTablet(
+    "patrimonio",
+    { id: patrimonioSelecionado.id },
+    { status: novoStatus },
+    { acao:"ALTERACAO_STATUS_PATRIMONIO" }
+  );
+
+  if(respStatus.error){
+    console.error(respStatus.error);
+    alert(respStatus.error.message || "Erro ao alterar status.");
+    return;
+  }
+
+  patrimonios = patrimonios.map(p =>
+    Number(p.id) === Number(patrimonioSelecionado.id)
+      ? {...p, status:novoStatus, __offline_pendente:!!respStatus.offlineFirst}
+      : p
+  );
+
+  await gravarMovimentacao({
+    patrimonio_id: patrimonioSelecionado.id,
+    empresa_id: patrimonioSelecionado.empresa_id,
+    obra_origem_id: patrimonioSelecionado.obra_id,
+    obra_destino_id: patrimonioSelecionado.obra_id,
+    tipo: "ALTERACAO_STATUS",
+    status_anterior: statusAnterior,
+    status_novo: novoStatus,
+    observacao: obs
+  });
+
+  if(respStatus.offlineFirst){ bdrAvisoSalvoTablet("Status alterado offline. Será sincronizado automaticamente quando a internet voltar."); }
+
+  fecharModal();
+  renderizarPatrimonios();
+}
+
+async function trocarObra(){
+
+  if(!usuarioTemPermissao("PATRIMONIO_MOVIMENTAR")){
+    alert("Você não tem permissão para trocar obra/setor.");
+    return;
+  }
+
+
+  if(!patrimonioSelecionado){
+    alert("Selecione um patrimônio.");
+    return;
+  }
+
+  const obs = valor("observacaoMov");
+
+  if(!obs || obs.length < 5){
+    alert("Informe uma justificativa da troca de setor/obra.");
+    return;
+  }
+
+  const novaObraId = document.getElementById("novaObraSelect").value;
+
+  if(!novaObraId){
+    alert("Selecione a nova obra/setor.");
+    return;
+  }
+
+  const novaObra = obras.find(
+    o => String(o.id) === String(novaObraId)
+  );
+
+  if(!novaObra){
+    alert("Obra não encontrada.");
+    return;
+  }
+
+  const statusAnterior = patrimonioSelecionado.status || null;
+  const obraOrigemId = patrimonioSelecionado.obra_id || null;
+
+  const payload = {
+    obra_id: novaObra.id,
+    empresa_id: novaObra.empresa_id,
+    localizacao: novaObra.nome,
+    status: "EM_USO"
+  };
+
+  
+  if(patrimonioOffline()){
+    await salvarOperacaoPatrimonioOffline("update", "patrimonio", payload, {
+      filtro:{ id: patrimonioSelecionado.id }
+    });
+
+    await salvarOperacaoPatrimonioOffline("insert", "movimentacoes", [{
+      patrimonio_id: patrimonioSelecionado.id,
+      empresa_id: novaObra.empresa_id,
+      obra_origem_id: obraOrigemId,
+      obra_destino_id: novaObra.id,
+      tipo: "TROCA_SETOR",
+      status_anterior: statusAnterior,
+      status_novo: "EM_USO",
+      observacao: obs,
+      usuario: usuarioAtual()?.nome || "Usuário não identificado",
+      data_movimentacao: new Date().toISOString()
+    }]);
+
+    patrimonios = patrimonios.map(p =>
+      Number(p.id) === Number(patrimonioSelecionado.id)
+        ? {...p, ...payload, __offline_pendente:!!respTroca.offlineFirst}
+        : p
+    );
+
+    alert("📦 Sem internet. Troca de setor salva no aparelho e será sincronizada quando a internet voltar.");
+
+    fecharModal();
+    renderizarPatrimonios();
+    return;
+  }
+
+  const respTroca = await bdrAtualizarPrimeiroNoTablet(
+    "patrimonio",
+    { id: patrimonioSelecionado.id },
+    payload,
+    { acao:"TROCA_SETOR_PATRIMONIO" }
+  );
+
+  if(respTroca.error){
+    console.error(respTroca.error);
+    alert(respTroca.error.message || "Erro ao transferir patrimônio.");
+    return;
+  }
+
+  patrimonios = patrimonios.map(p =>
+    Number(p.id) === Number(patrimonioSelecionado.id)
+      ? {...p, ...payload, __offline_pendente:!!respTroca.offlineFirst}
+      : p
+  );
+
+  await gravarMovimentacao({
+    patrimonio_id: patrimonioSelecionado.id,
+    empresa_id: novaObra.empresa_id,
+    obra_origem_id: obraOrigemId,
+    obra_destino_id: novaObra.id,
+    tipo: "TROCA_SETOR",
+    status_anterior: statusAnterior,
+    status_novo: "EM_USO",
+    observacao: obs
+  });
+
+  if(respTroca.offlineFirst){ bdrAvisoSalvoTablet("Transferência salva offline. Será sincronizada automaticamente quando a internet voltar."); }
+
+  fecharModal();
+  renderizarPatrimonios();
+}
+
+
+async function excluirPatrimonio(){
+  if(!usuarioTemPermissao("PATRIMONIO_EXCLUIR")){
+    alert("Você não tem permissão para excluir patrimônio.");
+    return;
+  }
+
+  if(!patrimonioSelecionado){
+    alert("Selecione um patrimônio.");
+    return;
+  }
+
+  const confirma = await bdrConfirmarAtlas(`Confirma inativar/excluir o patrimônio ${patrimonioSelecionado.codigo_qr || "-"}?
+
+Ele sairá das consultas normais, mas o histórico fica preservado.`);
+  if(!confirma) return;
+
+  const motivo = valor("observacaoMov");
+  if(!motivo || motivo.length < 5){
+    alert("Informe uma justificativa no campo de movimentação antes de excluir/inativar.");
+    return;
+  }
+
+  const resp = await bdrAtualizarPrimeiroNoTablet(
+    "patrimonio",
+    { id: patrimonioSelecionado.id },
+    { ativo:false, status:"BAIXADO" },
+    { acao:"EXCLUSAO_INATIVACAO_PATRIMONIO", motivo }
+  );
+
+  if(resp.error){
+    alert(resp.error.message || "Erro ao excluir/inativar patrimônio.");
+    return;
+  }
+
+  await gravarMovimentacao({
+    patrimonio_id: patrimonioSelecionado.id,
+    empresa_id: patrimonioSelecionado.empresa_id,
+    obra_origem_id: patrimonioSelecionado.obra_id,
+    obra_destino_id: patrimonioSelecionado.obra_id,
+    tipo: "EXCLUSAO_INATIVACAO",
+    status_anterior: patrimonioSelecionado.status,
+    status_novo: "BAIXADO",
+    observacao: motivo
+  });
+
+  patrimonios = patrimonios.filter(p => String(p.id) !== String(patrimonioSelecionado.id));
+  alert("Patrimônio inativado com sucesso.");
+  fecharModal();
+  renderizarPatrimonios();
+}
+
+
+
+let atlasEtiquetaPronta = false;
+let atlasEtiquetaToken = 0;
+let atlasEtiquetaTimer = null;
+
+function atlasAvisoEtiqueta(mensagem){
+  if(typeof window.AtlasDialog?.alert === "function"){
+    window.AtlasDialog.alert({ titulo:"Etiqueta", mensagem, tipo:"aviso" });
+    return;
+  }
+  alert(mensagem);
+}
+
+function atlasDefinirEstadoImpressao(pronta, texto){
+  atlasEtiquetaPronta = Boolean(pronta);
+  const botao = document.getElementById("btnImprimirEtiquetaOficial");
+  const status = document.getElementById("statusEtiquetaOficial");
+
+  if(botao){
+    botao.disabled = !atlasEtiquetaPronta;
+    botao.setAttribute("aria-busy", atlasEtiquetaPronta ? "false" : "true");
+    botao.innerHTML = atlasEtiquetaPronta
+      ? "🖨 Imprimir etiqueta"
+      : "⏳ Carregando etiqueta...";
+  }
+
+  if(status){
+    status.textContent = texto || (atlasEtiquetaPronta ? "Prévia pronta para impressão." : "Carregando configuração e QR Code...");
+    status.classList.toggle("pronto", atlasEtiquetaPronta);
+  }
+}
+
+function imprimirEtiqueta(){
+  if(!usuarioTemPermissao("PATRIMONIO_IMPRIMIR")){
+    atlasAvisoEtiqueta("Você não tem permissão para imprimir etiqueta.");
+    return;
+  }
+
+  if(!patrimonioSelecionado){
+    atlasAvisoEtiqueta("Selecione um patrimônio.");
+    return;
+  }
+
+  abrirModalEtiquetaBDR();
+}
+
+function bdrCodigoEtiquetaAtual(){
+  const p = patrimonioSelecionado || {};
+  return p.codigo_qr || p.codigo_antigo || "";
+}
+
+function bdrUrlEtiquetaAtual(){
+  const codigo = bdrCodigoEtiquetaAtual();
+  if(!codigo) return "";
+  return "etiqueta-impressao.html?id=" + encodeURIComponent(codigo);
+}
+
+function abrirModalEtiquetaBDR(){
+  const codigo = bdrCodigoEtiquetaAtual();
+  if(!codigo){
+    atlasAvisoEtiqueta("Esse patrimônio não possui código para imprimir etiqueta.");
+    return;
+  }
+
+  const modal = document.getElementById("modalEtiquetaBg");
+  const frame = document.getElementById("bdrEtiquetaFrame");
+  if(!modal || !frame){
+    atlasAvisoEtiqueta("A área de impressão não foi carregada corretamente.");
+    return;
+  }
+
+  atlasEtiquetaToken += 1;
+  const tokenAtual = atlasEtiquetaToken;
+  clearTimeout(atlasEtiquetaTimer);
+  atlasDefinirEstadoImpressao(false, "Carregando configuração oficial da etiqueta...");
+
+  frame.onload = () => {
+    if(tokenAtual !== atlasEtiquetaToken) return;
+
+    // O onload confirma o documento. O pequeno período adicional permite
+    // finalizar QR Code, fontes e configuração assíncrona da etiqueta.
+    atlasEtiquetaTimer = setTimeout(() => {
+      if(tokenAtual !== atlasEtiquetaToken) return;
+      atlasDefinirEstadoImpressao(true, "Prévia pronta. Confira e clique em imprimir.");
+    }, 1000);
+  };
+
+  frame.onerror = () => {
+    if(tokenAtual !== atlasEtiquetaToken) return;
+    atlasDefinirEstadoImpressao(false, "Falha ao carregar a etiqueta.");
+    atlasAvisoEtiqueta("Não foi possível carregar a prévia. A impressão foi bloqueada.");
+  };
+
+  frame.src = bdrUrlEtiquetaAtual() + "&preview=1&t=" + Date.now();
+  modal.classList.add("ativo");
+}
+
+function fecharModalEtiqueta(){
+  atlasEtiquetaToken += 1;
+  clearTimeout(atlasEtiquetaTimer);
+  atlasDefinirEstadoImpressao(false, "Prévia encerrada.");
+  document.getElementById("modalEtiquetaBg")?.classList.remove("ativo");
+}
+
+function imprimirEtiquetaModalBDR(){
+  if(!atlasEtiquetaPronta){
+    atlasAvisoEtiqueta("A etiqueta ainda está carregando. Aguarde a mensagem “Prévia pronta”.");
+    return;
+  }
+
+  const frame = document.getElementById("bdrEtiquetaFrame");
+  if(!frame || !frame.contentWindow){
+    atlasDefinirEstadoImpressao(false, "Prévia indisponível.");
+    atlasAvisoEtiqueta("A prévia da etiqueta não está disponível.");
+    return;
+  }
+
+  try{
+    atlasDefinirEstadoImpressao(false, "Enviando etiqueta para a impressora...");
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+
+    setTimeout(() => {
+      fecharModalEtiqueta();
+    }, 700);
+  }catch(error){
+    console.error("ATLAS: falha ao imprimir etiqueta", error);
+    atlasDefinirEstadoImpressao(false, "Falha na impressão.");
+    atlasAvisoEtiqueta("Não foi possível imprimir a etiqueta. Tente novamente.");
+  }
+}
+
+document.addEventListener("keydown", event => {
+  const modal = document.getElementById("modalEtiquetaBg");
+  if(!modal?.classList.contains("ativo")) return;
+
+  if(event.key === "Escape"){
+    event.preventDefault();
+    event.stopPropagation();
+    fecharModalEtiqueta();
+    return;
+  }
+
+  if(event.key === "Enter"){
+    event.preventDefault();
+    event.stopPropagation();
+    imprimirEtiquetaModalBDR();
+  }
+});
+
+
+function montarCamposEdicaoPorTipo(){
+  const tipo = valor("edit_tipo_item") || String(patrimonioSelecionado?.tipo_item || "");
+  const box = document.getElementById("editCamposExtras");
+  if(!box) return;
+
+  box.innerHTML = "";
+
+  if(
+    tipo === "ELETRONICO" ||
+    tipo === "FERRAMENTA" ||
+    tipo === "ELETRODOMESTICO" ||
+    tipo === "INFORMATICA" ||
+    tipo === "EQUIPAMENTO"
+  ){
+    box.innerHTML = `
+      <input id="edit_marca" placeholder="Marca">
+      <input id="edit_modelo" placeholder="Modelo">
+      <input id="edit_numero_serie" placeholder="Número de série">
+    `;
+  }
+
+  if(tipo === "VEICULO"){
+    box.innerHTML = `
+      <input id="edit_placa" placeholder="Placa">
+      <input id="edit_renavam" placeholder="RENAVAM">
+      <input id="edit_chassi" placeholder="Chassi">
+      <input id="edit_marca" placeholder="Marca">
+      <input id="edit_modelo" placeholder="Modelo">
+      <input id="edit_cor" placeholder="Cor">
+      <input id="edit_ano_fabricacao" placeholder="Ano fabricação">
+      <input id="edit_ano_modelo" placeholder="Ano modelo">
+      <input id="edit_combustivel" placeholder="Combustível">
+      <input id="edit_horimetro" placeholder="KM / Horímetro">
+    `;
+  }
+
+  if(tipo === "MAQUINA"){
+    box.innerHTML = `
+      <input id="edit_marca" placeholder="Marca">
+      <input id="edit_modelo" placeholder="Modelo">
+      <input id="edit_numero_serie" placeholder="Número de série">
+      <input id="edit_potencia" placeholder="Potência">
+      <input id="edit_horimetro" placeholder="Horímetro">
+      <input id="edit_combustivel" placeholder="Combustível">
+      <input id="edit_ano_fabricacao" placeholder="Ano fabricação">
+      <input id="edit_ano_modelo" placeholder="Ano modelo">
+    `;
+  }
+
+  if(tipo === "MOBILIARIO"){
+    box.innerHTML = `
+      <textarea id="edit_descricao" class="atlas-campo-largo" placeholder="Descrição detalhada do imobilizado"></textarea>
+      <input id="edit_marca" placeholder="Marca / fabricante">
+      <input id="edit_modelo" placeholder="Modelo">
+      <input id="edit_numero_serie" placeholder="Número de série, patrimônio do fabricante ou identificação">
+      <input id="edit_fornecedor" placeholder="Fornecedor">
+      <input id="edit_data_compra" type="date" title="Data de aquisição">
+      <input id="edit_responsavel" placeholder="Responsável pelo bem">
+      <input id="edit_departamento" placeholder="Departamento / setor">
+      <input id="edit_endereco_estoque" placeholder="Localização detalhada">
+    `;
+  }
+
+  if(tipo === "MATERIAL_APOIO"){
+    box.innerHTML = `
+      <input id="edit_marca" placeholder="Marca/Fabricante">
+      <input id="edit_modelo" placeholder="Modelo/Descrição">
+      <input id="edit_numero_serie" placeholder="Número de série">
+    `;
+  }
+
+  if(tipo === "OUTRO"){
+    box.innerHTML = `
+      <input id="edit_tipo_outro" placeholder="Descreva o tipo do ativo">
+      <input id="edit_marca" placeholder="Marca/Fabricante">
+      <input id="edit_modelo" placeholder="Modelo/Descrição">
+      <input id="edit_numero_serie" placeholder="Número de série">
+    `;
+  }
+}
+
+function bdrSetValorCampo(id, valorCampo){
+  const el = document.getElementById(id);
+  if(el) el.value = valorCampo || "";
+}
+
+function bdrEstadoParaSelect(estado){
+  const v = String(estado || "").toUpperCase().trim();
+  if(["1","NOVO","OTIMO","ÓTIMO"].includes(v)) return "OTIMO";
+  if(["3","REGULAR"].includes(v)) return "REGULAR";
+  if(["4","5","RUIM","INSERVIVEL","INSERVÍVEL"].includes(v)) return "RUIM";
+  return "BOM";
+}
+
+function abrirEdicao(){
+
+  if(!usuarioTemPermissao("PATRIMONIO_EDITAR")){
+    alert("Você não tem permissão para editar patrimônio.");
+    return;
+  }
+
+  if(!patrimonioSelecionado){
+    alert("Selecione um patrimônio.");
+    return;
+  }
+
+  bdrSetValorCampo("edit_nome_bem", patrimonioSelecionado.nome_bem || "");
+  bdrSetValorCampo("edit_tipo_item", patrimonioSelecionado.tipo_item || "");
+  bdrSetValorCampo("edit_estado_conservacao", bdrEstadoParaSelect(patrimonioSelecionado.estado_conservacao));
+
+  bdrSetValorCampo("edit_valor_bem",
+    patrimonioSelecionado.valor_bem
+      ? Number(patrimonioSelecionado.valor_bem).toLocaleString("pt-BR", {
+          minimumFractionDigits:2,
+          maximumFractionDigits:2
+        })
+      : ""
+  );
+
+  bdrSetValorCampo("edit_codigo_antigo", patrimonioSelecionado.codigo_antigo || "");
+  bdrSetValorCampo("edit_ncm", patrimonioSelecionado.ncm || "");
+  bdrSetValorCampo("edit_numero_nfe", patrimonioSelecionado.numero_nfe || "");
+  bdrSetValorCampo("edit_observacao", patrimonioSelecionado.observacao || "");
+  bdrSetValorCampo("motivo_correcao", "");
+
+  montarCamposEdicaoPorTipo();
+
+  bdrSetValorCampo("edit_tipo_outro", patrimonioSelecionado.tipo_outro || "");
+  bdrSetValorCampo("edit_marca", patrimonioSelecionado.marca || "");
+  bdrSetValorCampo("edit_modelo", patrimonioSelecionado.modelo || "");
+  bdrSetValorCampo("edit_numero_serie", patrimonioSelecionado.numero_serie || "");
+  bdrSetValorCampo("edit_descricao", patrimonioSelecionado.descricao || "");
+  bdrSetValorCampo("edit_fornecedor", patrimonioSelecionado.fornecedor || "");
+  bdrSetValorCampo("edit_data_compra", patrimonioSelecionado.data_compra || "");
+  bdrSetValorCampo("edit_responsavel", patrimonioSelecionado.responsavel || "");
+  bdrSetValorCampo("edit_departamento", patrimonioSelecionado.departamento || "");
+  bdrSetValorCampo("edit_endereco_estoque", patrimonioSelecionado.endereco_estoque || "");
+  bdrSetValorCampo("edit_placa", patrimonioSelecionado.placa || "");
+  bdrSetValorCampo("edit_renavam", patrimonioSelecionado.renavam || "");
+  bdrSetValorCampo("edit_chassi", patrimonioSelecionado.chassi || "");
+  bdrSetValorCampo("edit_cor", patrimonioSelecionado.cor || "");
+  bdrSetValorCampo("edit_combustivel", patrimonioSelecionado.combustivel || "");
+  bdrSetValorCampo("edit_potencia", patrimonioSelecionado.potencia || "");
+  bdrSetValorCampo("edit_ano_fabricacao", patrimonioSelecionado.ano_fabricacao || "");
+  bdrSetValorCampo("edit_ano_modelo", patrimonioSelecionado.ano_modelo || "");
+  bdrSetValorCampo("edit_horimetro", patrimonioSelecionado.horimetro || patrimonioSelecionado.quilometragem || "");
+
+  document.getElementById("modalEdicaoBg").style.display = "flex";
+}
+
+function fecharEdicao(){
+  document.getElementById("modalEdicaoBg").style.display = "none";
+}
+
+async function salvarEdicaoPatrimonio(){
+
+  if(!usuarioTemPermissao("PATRIMONIO_EDITAR")){
+    alert("Você não tem permissão para salvar edição de patrimônio.");
+    return;
+  }
+
+  if(!patrimonioSelecionado){
+    alert("Selecione um patrimônio.");
+    return;
+  }
+
+  const motivo = valor("motivo_correcao");
+
+  if(!motivo || motivo.length < 5){
+    alert("Informe o motivo da correção cadastral.");
+    return;
+  }
+
+  const tipoEditado = valor("edit_tipo_item") || patrimonioSelecionado.tipo_item;
+
+  const dadosAtualizados = {
+    nome_bem: valor("edit_nome_bem"),
+    tipo_item: tipoEditado || null,
+    tipo_outro: valor("edit_tipo_outro") || null,
+    valor_bem: moedaParaNumero(valor("edit_valor_bem")),
+    estado_conservacao: valor("edit_estado_conservacao") || "BOM",
+    marca: valor("edit_marca") || null,
+    modelo: valor("edit_modelo") || null,
+    numero_serie: valor("edit_numero_serie") || null,
+    descricao: valor("edit_descricao") || null,
+    fornecedor: valor("edit_fornecedor") || null,
+    data_compra: valor("edit_data_compra") || null,
+    responsavel: valor("edit_responsavel") || null,
+    departamento: valor("edit_departamento") || null,
+    endereco_estoque: valor("edit_endereco_estoque") || null,
+    placa: valor("edit_placa") || null,
+    renavam: valor("edit_renavam") || null,
+    chassi: valor("edit_chassi") || null,
+    cor: valor("edit_cor") || null,
+    combustivel: valor("edit_combustivel") || null,
+    potencia: valor("edit_potencia") || null,
+    ano_fabricacao: valor("edit_ano_fabricacao") ? parseInt(valor("edit_ano_fabricacao")) : null,
+    ano_modelo: valor("edit_ano_modelo") ? parseInt(valor("edit_ano_modelo")) : null,
+    horimetro: moedaParaNumero(valor("edit_horimetro")),
+    quilometragem: moedaParaNumero(valor("edit_horimetro")),
+    codigo_antigo: valor("edit_codigo_antigo") || null,
+    ncm: valor("edit_ncm") || null,
+    numero_nfe: valor("edit_numero_nfe") || null,
+    observacao: valor("edit_observacao") || null
+  };
+
+  const podeContinuarDuplicidadeEdicao = await bdrVerificarDuplicidadePatrimonio({
+    id: patrimonioSelecionado.id,
+    nome_bem: dadosAtualizados.nome_bem,
+    tipo_item: dadosAtualizados.tipo_item,
+    placa: dadosAtualizados.placa,
+    renavam: dadosAtualizados.renavam,
+    chassi: dadosAtualizados.chassi,
+    codigo_antigo: dadosAtualizados.codigo_antigo,
+    marca: dadosAtualizados.marca,
+    modelo: dadosAtualizados.modelo,
+    obra_id: patrimonioSelecionado.obra_id || null
+  }, { confirmar:true });
+
+  if(!podeContinuarDuplicidadeEdicao) return;
+
+  if(patrimonioOffline()){
+    await salvarOperacaoPatrimonioOffline("update", "patrimonio", dadosAtualizados, {
+      filtro:{ id: patrimonioSelecionado.id }
+    });
+
+    await salvarOperacaoPatrimonioOffline("insert", "movimentacoes", [{
+      patrimonio_id: patrimonioSelecionado.id,
+      empresa_id: patrimonioSelecionado.empresa_id,
+      obra_origem_id: patrimonioSelecionado.obra_id,
+      obra_destino_id: patrimonioSelecionado.obra_id,
+      tipo: "CORRECAO_CADASTRAL",
+      status_anterior: patrimonioSelecionado.status,
+      status_novo: patrimonioSelecionado.status,
+      observacao: motivo,
+      usuario: usuarioAtual()?.nome || "Usuário não identificado",
+      data_movimentacao: new Date().toISOString()
+    }]);
+
+    patrimonios = patrimonios.map(p =>
+      Number(p.id) === Number(patrimonioSelecionado.id)
+        ? {...p, ...dadosAtualizados, __offline_pendente:true}
+        : p
+    );
+
+    alert("📦 Sem internet. Correção salva no aparelho e será sincronizada quando a internet voltar.");
+
+    fecharEdicao();
+    fecharModal();
+    renderizarPatrimonios();
+    return;
+  }
+
+  const respEdicao = await bdrAtualizarPrimeiroNoTablet(
+    "patrimonio",
+    { id: patrimonioSelecionado.id },
+    dadosAtualizados,
+    { acao:"CORRECAO_CADASTRAL_PATRIMONIO", motivo }
+  );
+
+  if(respEdicao.error){
+    console.error(respEdicao.error);
+    alert(respEdicao.error.message || "Erro ao salvar correção.");
+    return;
+  }
+
+  patrimonios = patrimonios.map(p =>
+    Number(p.id) === Number(patrimonioSelecionado.id)
+      ? {...p, ...dadosAtualizados, __offline_pendente:!!respEdicao.offlineFirst}
+      : p
+  );
+
+  await gravarMovimentacao({
+    patrimonio_id: patrimonioSelecionado.id,
+    empresa_id: patrimonioSelecionado.empresa_id,
+    obra_origem_id: patrimonioSelecionado.obra_id,
+    obra_destino_id: patrimonioSelecionado.obra_id,
+    tipo: "CORRECAO_CADASTRAL",
+    status_anterior: patrimonioSelecionado.status,
+    status_novo: patrimonioSelecionado.status,
+    observacao: motivo
+  });
+
+  if(respEdicao.offlineFirst){
+    bdrAvisoSalvoTablet("Correção cadastral salva offline. Será sincronizada automaticamente quando a internet voltar.");
+  }
+
+  fecharEdicao();
+  fecharModal();
+  renderizarPatrimonios();
+}
+
+async function iniciar(){
+  if(!bloquearPatrimonioSemPermissaoBDR()) return;
+  aplicarMenuPorPermissaoBDR();
+
+  carregarUsuarioTopo();
+
+  if(!db()){
+    console.warn("Supabase não carregado. Tentando cache local.");
+  }
+
+  const onlineReal = await patrimonioOnlineReal();
+
+  if(!onlineReal){
+    BDR_PATRIMONIO_ONLINE_REAL = false;
+    mostrarAvisoModoOffline();
+  }
+
+  await carregarObras();
+
+  if(usuarioPodeLancarQualquerObra()){
+    const obraSalva = localStorage.getItem("obraAtivaId");
+    const travada = localStorage.getItem("obraTravada");
+
+    if(obraSalva && travada === "SIM"){
+      const existe = obras.find(
+        o => String(o.id) === String(obraSalva)
+      );
+
+      if(existe){
+        window.obraAtiva = existe;
+        window.obraTravada = true;
+        document.getElementById("obraSelect").value = obraSalva;
+      }
+    }
+  }else{
+    localStorage.removeItem("obraAtivaId");
+    localStorage.removeItem("obraTravada");
+    aplicarRegraObraLancamentoBDR();
+  }
+
+  atualizarVisualTrava();
+  aplicarPermissoesTela();
+  aplicarMenuPorPermissaoBDR();
+
+  await carregarPatrimonios();
+  await carregarManutencoesPatrimonio();
+  aplicarPermissoesTela();
+}
+
+
+async function bdrTentarSincronizarPendenciasPatrimonio(){
+  const onlineReal = await patrimonioOnlineReal();
+  if(!onlineReal) return;
+
+  try{
+    if(typeof BDRSyncCenter?.atualizar === "function"){
+      await BDRSyncCenter.atualizar();
+    }
+
+    if(typeof BDRSync?.sincronizar === "function"){
+      await BDRSync.sincronizar();
+    }
+
+    if(typeof sincronizarOffline === "function"){
+      await sincronizarOffline();
+    }
+
+    await carregarPatrimonios();
+    await carregarManutencoesPatrimonio();
+  }catch(e){
+    console.warn("Patrimônio: tentativa de sincronização automática falhou:", e);
+  }
+}
+
+function bdrPatrimonioOnlineLocalRapido(){
+  // Não consulta Supabase aqui. Evita flood offline.
+  if(navigator.onLine === false) return false;
+
+  if(typeof window.bdrOnline === "function"){
+    try{
+      return window.bdrOnline() !== false;
+    }catch(e){
+      return navigator.onLine !== false;
+    }
+  }
+
+  return navigator.onLine !== false;
+}
+
+window.addEventListener("offline", () => {
+  BDR_PATRIMONIO_ONLINE_REAL = false;
+  window.BDR_PATRIMONIO_ONLINE_REAL = false;
+  mostrarAvisoModoOffline();
+});
+
+window.addEventListener("online", () => {
+  if(typeof window.bdrResetOnlineReal === "function"){
+    try{ window.bdrResetOnlineReal(); }catch(e){}
+  }
+  setTimeout(bdrTentarSincronizarPendenciasPatrimonio, 1200);
+});
+
+setInterval(async () => {
+  // Regra limpa: offline não chama bdrOnlineReal nem Supabase.
+  if(!bdrPatrimonioOnlineLocalRapido()){
+    BDR_PATRIMONIO_ONLINE_REAL = false;
+    window.BDR_PATRIMONIO_ONLINE_REAL = false;
+    mostrarAvisoModoOffline();
+    if(typeof BDRSyncCenter?.atualizar === "function"){
+      BDRSyncCenter.atualizar();
+    }
+    return;
+  }
+
+  await bdrTentarSincronizarPendenciasPatrimonio();
+}, 30000);
+
+iniciar();

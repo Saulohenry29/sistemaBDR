@@ -11,6 +11,10 @@
 <title>BDR ERP - Entrada de Materiais</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
+<link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260724-padrao-profissional-v1">
+<link rel="stylesheet" href="./CSS/atlas-topbar.css?v=20260724-padrao-profissional-v1">
+<script src="./JS/atlasDialog.js?v=20260724-padrao-profissional-v1"></script>
+<script src="./JS/bdrNotificacoes.js?v=20260724-padrao-profissional-v1"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="./JS/supabaseClient.js"></script>
@@ -20,7 +24,6 @@
 <script src="./JS/offlineDB.js"></script>
 <script src="./JS/bdrSyncEngine.js"></script>
 <script src="./JS/bdrSyncCenter.js"></script>
-<script src="./JS/bdrNotificacoes.js"></script>
 <script src="./JS/bdrMenuPermissoes.js"></script>
 <script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260629-2"></script>
 <script src="./JS/bdr-menu-permissoes-hard-fix.js?v=20260629-1"></script>
@@ -40,248 +43,79 @@ body{
   background:var(--bdr-bg)!important;
 }
 
-.bdr-topbar-sub{
-  color:#6b7280;
-  font-size:12px;
-  margin-top:3px;
-  font-weight:500;
-}
 
-.bdr-topbar-title{
-  color:var(--bdr-red)!important;
-  font-weight:900;
-}
+
+
 
 /* =========================================================
    TOPO PADRÃO BDR - USUÁRIO + NOTIFICAÇÕES
 ========================================================= */
-.bdr-top-actions{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  margin-left:auto;
-}
 
-.notif-wrap{
-  position:relative;
-}
 
-.notif-btn{
-  width:38px;
-  height:38px;
-  border:none;
-  border-radius:50%;
-  background:#fff;
-  color:#111827;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-  position:relative;
-  box-shadow:none;
-  outline:none!important;
-  -webkit-tap-highlight-color:transparent;
-}
 
-.notif-btn:hover{
-  background:#fff1f2;
-  color:var(--bdr-red);
-  transform:translateY(-1px);
-}
 
-.notif-btn:focus,
-.notif-btn:active{
-  outline:none!important;
-  box-shadow:none!important;
-}
 
-.notif-badge{
-  position:absolute;
-  top:1px;
-  right:0;
-  min-width:17px;
-  height:17px;
-  padding:0 5px;
-  border-radius:999px;
-  background:#dc2626;
-  color:white;
-  font-size:10px;
-  font-weight:900;
-  display:none;
-  align-items:center;
-  justify-content:center;
-}
 
-.notif-dropdown{
-  position:absolute;
-  top:48px;
-  right:0;
-  width:330px;
-  background:#fff;
-  border:1px solid #e5e7eb;
-  border-radius:14px;
-  box-shadow:0 18px 35px rgba(15,23,42,.18);
-  overflow:hidden;
-  display:none;
-  z-index:9999;
-}
 
-.notif-dropdown.ativo{
-  display:block;
-  animation:dropdownTop .16s ease;
-}
 
-.notif-head{
-  padding:12px 14px;
-  font-weight:900;
-  color:var(--bdr-red);
-  background:#fff5f5;
-  border-bottom:1px solid #fecaca;
-}
 
-.notif-list{
-  max-height:280px;
-  overflow:auto;
-}
 
-.notif-item{
-  padding:10px 14px;
-  border-bottom:1px solid #f1f5f9;
-  font-size:12px;
-  color:#374151;
-  cursor:pointer;
-}
 
-.notif-item:hover{
-  background:#f9fafb;
-}
 
-.notif-item strong{
-  display:block;
-  color:#111827;
-  margin-bottom:3px;
-}
 
-.user-menu{
-  position:relative;
-  display:flex;
-  align-items:center;
-  gap:12px;
-  cursor:pointer;
-  padding:8px 12px;
-  border-radius:12px;
-  transition:.22s ease;
-  outline:none!important;
-  user-select:none!important;
-  caret-color:transparent!important;
-  -webkit-tap-highlight-color:transparent;
-}
 
-.user-menu,
-.user-menu *,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #usuarioNome,
 #usuarioPerfil{
   user-select:none!important;
   caret-color:transparent!important;
 }
 
-.user-menu:hover{
-  background:rgba(255,255,255,.55);
-  transform:translateX(4px) scale(1.02);
-}
 
-.user-menu:hover .avatar{
-  transform:scale(1.06);
-}
 
-.user-mini{
-  text-align:right;
-  font-size:13px;
-  pointer-events:none;
-}
 
-.user-mini b{
-  display:block;
-  outline:none!important;
-}
 
-.user-mini small{
-  color:var(--bdr-red);
-  font-weight:900;
-  outline:none!important;
-}
 
-.avatar{
-  width:42px;
-  height:42px;
-  border-radius:50%;
-  background:linear-gradient(135deg,#fecaca,#fff);
-  border:2px solid #fee2e2;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:var(--bdr-red);
-  font-size:18px;
-  transition:.22s ease;
-  pointer-events:none;
-}
 
-.dropdown-user{
-  position:absolute;
-  top:55px;
-  right:0;
-  background:#fff;
-  border:1px solid #e5e7eb;
-  border-radius:12px;
-  box-shadow:0 18px 35px rgba(15,23,42,.18);
-  padding:8px;
-  display:none;
-  min-width:220px;
-  z-index:9999;
-}
 
-.dropdown-user.ativo{
-  display:block;
-  animation:dropdownTop .16s ease;
-}
+
+
+
+
+
+
+
+
 
 @keyframes dropdownTop{
   from{opacity:0;transform:translateY(-6px)}
   to{opacity:1;transform:translateY(0)}
 }
 
-.dropdown-user button{
-  width:100%;
-  border:none;
-  background:#fff;
-  color:#374151;
-  padding:10px 11px;
-  border-radius:9px;
-  cursor:pointer;
-  font-weight:900;
-  text-align:left;
-  display:flex;
-  align-items:center;
-  gap:9px;
-}
 
-.dropdown-user button:hover{
-  background:#fff1f2;
-  color:var(--bdr-red);
-  transform:none;
-  filter:none;
-}
 
-.dropdown-user .logout-btn{
-  color:#dc2626;
-}
+
+
+
 
 button:focus,
 button:active,
 .bdr-menu-btn:focus,
-.bdr-menu-btn:active,
-.user-menu:focus,
-.user-menu:active{
+.bdr-menu-btn:active{
   outline:none!important;
   box-shadow:none!important;
 }
@@ -519,48 +353,20 @@ td select{
     grid-template-columns:1fr;
   }
 
-  .bdr-top-actions{
-    width:100%;
-    justify-content:space-between;
-  }
+  
 
-  .notif-dropdown{
-    right:-80px;
-    width:300px;
-  }
+  
 }
 
 /* CORREÇÃO DEFINITIVA: remove barra/cursor piscando no sino e topo */
-.bdr-top-actions,
-.bdr-top-actions *,
-.notif-wrap,
-.notif-wrap *,
-.notif-btn,
-.notif-btn *,
-.notif-btn i,
-.notif-badge{
-  outline:none!important;
-  box-shadow:none!important;
-  user-select:none!important;
-  caret-color:transparent!important;
-  -webkit-user-select:none!important;
-  -webkit-tap-highlight-color:transparent!important;
-}
 
-.notif-btn i,
-.notif-badge{
-  pointer-events:none;
-}
 
-.notif-btn:focus,
-.notif-btn:focus-visible,
-.notif-btn:active{
-  outline:0!important;
-  box-shadow:none!important;
-}
+
+
+
 
 </style>
-<link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260627-RELATORIO-1">
+<!-- ATLAS: visual oficial da Topbar -->
 </head>
 
 <body>
@@ -657,7 +463,7 @@ td select{
 
       <div class="bdr-top-actions">
         <div class="notif-wrap">
-          <button class="notif-btn" type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="toggleNotificacoes(event); this.blur();" title="Notificações">
+          <button class="notif-btn" type="button" title="Notificações" data-atlas-toggle="notifications" aria-label="Abrir notificações">
             <i class="fa-regular fa-bell"></i>
             <span id="notifBadge" class="notif-badge">0</span>
           </button>
@@ -670,7 +476,7 @@ td select{
           </div>
         </div>
 
-        <div class="user-menu" onclick="toggleMenuUsuario(event)">
+        <div class="user-menu" data-atlas-toggle="user" aria-label="Abrir menu do usuário">
           <div class="user-mini">
             <b id="usuarioNome" tabindex="-1">Olá, -</b>
             <small id="usuarioPerfil" tabindex="-1">-</small>
@@ -833,13 +639,6 @@ function carregarUsuarioTopo(){
   }
 }
 
-function toggleMenuUsuario(event){
-  if(event) event.stopPropagation();
-
-  document.getElementById("dropdownUser")?.classList.toggle("ativo");
-  document.getElementById("notifDropdown")?.classList.remove("ativo");
-}
-
 function fecharMenusTopo(){
   document.getElementById("dropdownUser")?.classList.remove("ativo");
   document.getElementById("notifDropdown")?.classList.remove("ativo");
@@ -861,5 +660,9 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 <script src="./JS/bdrUppercase.js"></script>
 <script src="./JS/bdrMenuMobileAtivo.js?v=20260702-3"></script>
+
+  <!-- ATLAS: controlador oficial da Topbar (último script da página) -->
+
+<script src="./JS/atlasTopbar.js?v=20260724-padrao-profissional-v1"></script>
 </body>
 </html>
