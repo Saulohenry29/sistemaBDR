@@ -337,6 +337,8 @@
 <button class="fechar" onclick="fecharModal()">X</button>
 <h2 id="modalTitulo">Patrimônio</h2>
 <div class="modal-info" id="modalInfo"></div>
+
+<div id="atlasControlesPatrimonioAtivo">
 <label><strong>Justificativa obrigatória da movimentação</strong></label>
 <textarea id="observacaoMov" placeholder="Ex: item enviado para manutenção, troca de setor, baixa por defeito..."></textarea>
 <br/><br/>
@@ -344,6 +346,8 @@
 <select id="novaObraSelect">
 <option value="">Selecione nova obra/setor</option>
 </select>
+</div>
+
 <div class="acoes">
 <button class="btn-ok acao-movimentar" onclick="alterarStatus('ESTOQUE')">📦 Voltar Estoque</button>
 <button class="btn-blue acao-movimentar" onclick="alterarStatus('EM_USO')">✅ Colocar Em Uso</button>
@@ -353,6 +357,7 @@
 <button class="btn-dark acao-imprimir" onclick="imprimirEtiqueta()">🖨 Etiqueta</button>
 <button class="acao-editar" onclick="abrirEdicao()">✏️ Editar Dados</button>
 <button class="bdr-btn-danger acao-excluir" onclick="excluirPatrimonio()">🗑 Excluir</button>
+<button id="btnReativarPatrimonio" class="btn-ok" onclick="reativarPatrimonio()" style="display:none">♻️ Reativar patrimônio</button>
 </div>
 </div>
 </div>
@@ -500,7 +505,7 @@
 <script src="./JS/patrimonio/patrimonio-lote.js?v=20260727-alinhamento-dinamico"></script>
 <script src="./JS/patrimonio/patrimonio-etiquetas-lote.js?v=20260726-v1"></script>
 <script src="./JS/atlasGestorNotificacoes.js?v=20260728-patrimonio"></script>
-<script src="./JS/patrimonio/patrimonio.js?v=20260728-exclusao-logica-v1"></script>
+<script src="./JS/patrimonio/patrimonio.js?v=20260728-reativacao-v1"></script>
 <script src="./JS/bdrUppercase.js"></script>
 <script src="./JS/patrimonio/patrimonio-permissoes.js?v=20260725-v1"></script>
 <script src="./JS/bdrMenuMobileAtivo.js?v=20260702-3"></script>

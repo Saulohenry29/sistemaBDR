@@ -2580,12 +2580,25 @@ async function abrirModal(id){
   aplicarPermissoesTela();
 
   const inativo = p.ativo === false || String(p.status || "").toUpperCase() === "INATIVO";
+  const controlesAtivo = document.getElementById("atlasControlesPatrimonioAtivo");
+  const botaoReativar = document.getElementById("btnReativarPatrimonio");
+
+  // Patrimônio inativo fica somente para consulta, impressão e reativação.
+  if(controlesAtivo){
+    controlesAtivo.style.display = inativo ? "none" : "";
+  }
+
   document.querySelectorAll(".acao-movimentar,.acao-editar,.acao-excluir").forEach(btn => {
     if(inativo){
       btn.style.display = "none";
       btn.disabled = true;
     }
   });
+
+  if(botaoReativar){
+    botaoReativar.style.display = inativo ? "" : "none";
+    botaoReativar.disabled = !inativo;
+  }
 
   document.getElementById("modalBg").style.display = "flex";
 }
@@ -2601,9 +2614,19 @@ function atlasEscapeHtml(valor){
 
 function atlasFormatarDataHora(valor){
   if(!valor) return "-";
+
   const texto = String(valor).trim();
-  const data = new Date(/[zZ]$|[+-]\d{2}:?\d{2}$/.test(texto) ? texto : texto.replace(" ", "T") + "Z");
+  const possuiFuso = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(texto);
+
+  // data_movimentacao é gravada no horário local de Cuiabá e não possui fuso.
+  // Acrescentar "Z" faria o navegador subtrair quatro horas novamente.
+  const textoData = possuiFuso
+    ? texto
+    : texto.replace(" ", "T") + "-04:00";
+
+  const data = new Date(textoData);
   if(Number.isNaN(data.getTime())) return texto;
+
   return data.toLocaleString("pt-BR", {
     timeZone:"America/Cuiaba",
     day:"2-digit", month:"2-digit", year:"numeric",
@@ -2639,7 +2662,8 @@ async function atlasMontarBlocoExclusao(patrimonio){
 
   return `
     <div style="margin:0 0 14px;padding:14px;border:1px solid #fecaca;border-left:5px solid #dc2626;border-radius:12px;background:#fff7f7;color:#7f1d1d;">
-      <div style="font-weight:950;font-size:14px;margin-bottom:10px;">🚫 Informações da exclusão</div>
+      <div style="display:inline-flex;align-items:center;gap:7px;margin-bottom:11px;padding:6px 10px;border-radius:999px;background:#fee2e2;color:#991b1b;font-weight:950;font-size:12px;">🚫 PATRIMÔNIO INATIVO</div>
+      <div style="font-weight:950;font-size:14px;margin-bottom:10px;">Informações da exclusão</div>
       <div style="display:grid;gap:7px;font-size:12px;line-height:1.45;">
         <div><strong>Data:</strong> ${atlasEscapeHtml(dataHora)}</div>
         <div><strong>Usuário:</strong> ${atlasEscapeHtml(usuario)}</div>
@@ -3309,7 +3333,11 @@ Esta ação removerá o patrimônio das consultas do sistema.`);
   );
 
   if(resp.error){
-    alert(resp.error.message || "Erro ao excluir patrimônio.");
+    console.error("Atlas: erro técnico ao excluir patrimônio:", resp.error);
+    atlasAvisoPatrimonio(
+      "Não foi possível excluir",
+      "O patrimônio continua ativo. Tente novamente ou entre em contato com o administrador."
+    );
     return;
   }
 
@@ -3344,6 +3372,132 @@ Esta ação removerá o patrimônio das consultas do sistema.`);
   fecharModal();
   renderizarPatrimonios();
 }
+
+async function atlasNotificarReativacaoPatrimonio({ patrimonio, usuarioNome, obraSetor, dataHora }){
+  try{
+    const gestor = window.AtlasGestorNotificacoes;
+    if(!gestor || typeof gestor.criarNotificacao !== "function"){
+      console.warn("Atlas: Gestor de Notificações não carregado. A reativação foi concluída sem notificação.");
+      return false;
+    }
+
+    const codigo = patrimonio?.codigo_qr || patrimonio?.codigo_bem || "-";
+    const descricao = patrimonio?.nome_bem || patrimonio?.descricao || "Patrimônio";
+    const mensagem = [
+      `Código: ${codigo}`,
+      `Descrição: ${descricao}`,
+      `Usuário: ${usuarioNome}`,
+      `Obra / Setor: ${obraSetor}`,
+      `Data: ${dataHora}`,
+      "Novo status: ESTOQUE"
+    ].join(" | ");
+
+    await gestor.criarNotificacao({
+      usuario_destino_id:1,
+      empresa_id:patrimonio?.empresa_id || usuarioAtual()?.empresa_id || null,
+      tipo:"PATRIMONIO_REATIVADO",
+      titulo:"♻️ Patrimônio reativado",
+      mensagem,
+      link:"patrimonio.html?patrimonio=" + encodeURIComponent(patrimonio?.id || ""),
+      patrimonio_id:patrimonio?.id || null,
+      obra_origem_id:patrimonio?.obra_id || null,
+      obra_destino_id:patrimonio?.obra_id || null
+    });
+    return true;
+  }catch(e){
+    console.warn("Atlas: falha ao criar notificação da reativação:", e?.message || e);
+    return false;
+  }
+}
+
+async function reativarPatrimonio(){
+  const usuario = usuarioAtual();
+  const podeReativar =
+    usuarioEhGestao() ||
+    usuarioTemPermissao("PATRIMONIO_MOVIMENTAR") ||
+    usuarioTemPermissao("PATRIMONIO_EXCLUIR") ||
+    usuarioTemPermissao("PATRIMONIO_EDITAR") ||
+    usuarioTemPermissao("PATRIMONIO_CRIAR");
+
+  if(!podeReativar){
+    alert("Você não tem permissão para reativar patrimônio.");
+    return;
+  }
+
+  if(!patrimonioSelecionado){
+    alert("Selecione um patrimônio.");
+    return;
+  }
+
+  const estaInativo = patrimonioSelecionado.ativo === false ||
+    String(patrimonioSelecionado.status || "").toUpperCase() === "INATIVO";
+
+  if(!estaInativo){
+    alert("Este patrimônio já está ativo.");
+    return;
+  }
+
+  const codigo = patrimonioSelecionado.codigo_qr || patrimonioSelecionado.codigo_bem || "-";
+  const confirma = await bdrConfirmarAtlas(`Confirma reativar o patrimônio ${codigo}?
+
+Ele voltará ao status ESTOQUE e ficará disponível nas consultas do sistema.`);
+  if(!confirma) return;
+
+  const patrimonioReativado = { ...patrimonioSelecionado };
+  const usuarioNome = usuario?.nome || usuario?.usuario || usuario?.email || "Usuário não identificado";
+  const obraSetor = patrimonioReativado.localizacao || patrimonioReativado.obra_nome || patrimonioReativado.setor || "-";
+  const dataHora = new Date().toLocaleString("pt-BR", {
+    timeZone:"America/Cuiaba",
+    day:"2-digit", month:"2-digit", year:"numeric",
+    hour:"2-digit", minute:"2-digit"
+  });
+
+  const resp = await bdrAtualizarPrimeiroNoTablet(
+    "patrimonio",
+    { id: patrimonioReativado.id },
+    { ativo:true, status:"ESTOQUE" },
+    { acao:"REATIVACAO_PATRIMONIO" }
+  );
+
+  if(resp.error){
+    console.error("Atlas: erro técnico ao reativar patrimônio:", resp.error);
+    atlasAvisoPatrimonio(
+      "Não foi possível reativar",
+      "O patrimônio continua inativo. Tente novamente ou entre em contato com o administrador."
+    );
+    return;
+  }
+
+  await gravarMovimentacao({
+    patrimonio_id:patrimonioReativado.id,
+    empresa_id:patrimonioReativado.empresa_id,
+    obra_origem_id:patrimonioReativado.obra_id,
+    obra_destino_id:patrimonioReativado.obra_id,
+    tipo:"REATIVACAO",
+    status_anterior:"INATIVO",
+    status_novo:"ESTOQUE",
+    observacao:"Patrimônio reativado e devolvido ao estoque."
+  });
+
+  if(!resp.offlineFirst){
+    await atlasNotificarReativacaoPatrimonio({
+      patrimonio:patrimonioReativado,
+      usuarioNome,
+      obraSetor,
+      dataHora
+    });
+  }
+
+  patrimonios = patrimonios.filter(p => String(p.id) !== String(patrimonioReativado.id));
+  atlasAvisoPatrimonio(
+    "♻️ Patrimônio reativado",
+    "O patrimônio voltou ao estoque e já está disponível nas consultas do sistema."
+  );
+  fecharModal();
+  renderizarPatrimonios();
+}
+
+window.reativarPatrimonio = reativarPatrimonio;
 
 // Compatibilidade temporária com chamadas antigas externas.
 async function excluirPatrimonio(){
