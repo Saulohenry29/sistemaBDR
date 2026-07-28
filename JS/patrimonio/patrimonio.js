@@ -13,6 +13,7 @@ const bdrEtiquetasSelecionadas = new Set();
 let bdrModoSelecaoEtiquetas = false;
 let manutencoesPatrimonio = [];
 let statusDestinoDepoisManutencao = null;
+let atlasMostrarInativos = false;
 window.obraAtiva = null;
 window.obraTravada = false;
 
@@ -326,7 +327,8 @@ function usuarioTemPermissao(permissao){
     "EDITAR_PATRIMONIO":"PATRIMONIO_EDITAR",
     "ALTERAR_STATUS":"PATRIMONIO_MOVIMENTAR",
     "MOVIMENTAR_PATRIMONIO":"PATRIMONIO_MOVIMENTAR",
-    "PATRIMONIO_MOVER":"PATRIMONIO_MOVIMENTAR"
+    "PATRIMONIO_MOVER":"PATRIMONIO_MOVIMENTAR",
+    "VER_PATRIMONIOS_INATIVOS":"PATRIMONIO_INATIVOS_VER"
   };
 
   if(ps.includes(p)) return true;
@@ -1549,16 +1551,18 @@ function mostrarCampos(){
       ${serie()}
     `;
   }
-
-  if(tipo === "MOBILIARIO"){
-    div.innerHTML = `
-      <textarea id="descricao" class="atlas-campo-largo" placeholder="Descrição detalhada do imobilizado"></textarea>
-      ${marca("Marca / fabricante")}${modelo()}
+ 
+/*   - - Esses são para adicionar campo em cadastro de bens. tipo de patrimonio - cada 1 é uma coisa diferente, mas todos são campos de cadastro de bens. - -
       <input id="fornecedor" placeholder="Fornecedor">
       <input id="data_compra" type="date" title="Data de aquisição">
       <input id="responsavel" placeholder="Responsável pelo bem">
       <input id="departamento" placeholder="Departamento / setor">
       <input id="endereco_estoque" placeholder="Localização detalhada. Ex.: Sala 02 / Prateleira A">
+      <textarea id="descricao" class="atlas-campo-largo" placeholder="Descrição detalhada do imobilizado"></textarea>*/
+
+  if(tipo === "MOBILIARIO"){
+    div.innerHTML = `
+      ${marca("Marca / fabricante")}${modelo()}
       ${serie("Número de série, patrimônio do fabricante ou identificação")}
     `;
   }
@@ -2015,7 +2019,48 @@ function limparFormularioCadastro(){
   atlasFecharSugestoesPatrimonio();
 }
 
+function atlasPodeVerInativos(){
+  const usuario = usuarioAtual();
+  return usuarioOwnerBDR(usuario) || usuarioTemPermissao("PATRIMONIO_INATIVOS_VER");
+}
+
+function atlasAtualizarBotaoInativos(){
+  const botao = document.getElementById("btnMostrarInativos");
+  const opcaoStatus = document.getElementById("filtroStatusInativo");
+  const permitido = atlasPodeVerInativos();
+
+  if(botao){
+    botao.hidden = !permitido;
+    botao.style.display = permitido ? "inline-flex" : "none";
+    botao.classList.toggle("ativo", atlasMostrarInativos);
+    botao.setAttribute("aria-pressed", String(atlasMostrarInativos));
+    botao.innerHTML = atlasMostrarInativos
+      ? '<i class="fa-solid fa-arrow-left"></i> Voltar aos ativos'
+      : '<i class="fa-solid fa-eye-slash"></i> Mostrar inativos';
+  }
+
+  if(opcaoStatus) opcaoStatus.hidden = !atlasMostrarInativos;
+}
+
+async function atlasAlternarVisualizacaoInativos(){
+  if(!atlasPodeVerInativos()){
+    alert("Você não tem permissão para visualizar patrimônios inativos.");
+    return;
+  }
+
+  atlasMostrarInativos = !atlasMostrarInativos;
+  const filtroStatus = document.getElementById("filtroStatus");
+  if(filtroStatus) filtroStatus.value = atlasMostrarInativos ? "INATIVO" : "";
+
+  bdrResetPaginaPatrimonio();
+  atlasAtualizarBotaoInativos();
+  await carregarPatrimonios();
+}
+
+window.atlasAlternarVisualizacaoInativos = atlasAlternarVisualizacaoInativos;
+
 async function carregarPatrimonios(){
+  const visualizarInativos = atlasMostrarInativos && atlasPodeVerInativos();
 
   try{
     const onlineReal = await patrimonioOnlineReal();
@@ -2023,6 +2068,10 @@ async function carregarPatrimonios(){
     if(!onlineReal){
       let dadosCache = await BDROfflineDB.lerTabela("patrimonio") || [];
       const usuario = usuarioAtual();
+
+      dadosCache = dadosCache.filter(p =>
+        visualizarInativos ? p.ativo === false : p.ativo !== false
+      );
 
       if(usuario && !usuarioPodeVerTodasObras()){
         if(usuario.obra_id){
@@ -2035,17 +2084,17 @@ async function carregarPatrimonios(){
       patrimonios = dadosCache;
       renderizarPatrimonios();
       mostrarAvisoModoOffline();
+      atlasAtualizarBotaoInativos();
       return;
     }
 
-    let query = db()
-      .from("patrimonio")
-      .select("*")
-      .neq("ativo", false);
+    let query = db().from("patrimonio").select("*");
+    query = visualizarInativos
+      ? query.eq("ativo", false)
+      : query.neq("ativo", false);
 
     const usuario = usuarioAtual();
 
-    // Segurança: usuário comum nem baixa patrimônio de outras obras.
     if(usuario && !usuarioPodeVerTodasObras()){
       if(usuario.obra_id){
         query = query.eq("obra_id", usuario.obra_id);
@@ -2053,33 +2102,38 @@ async function carregarPatrimonios(){
         patrimonios = [];
         renderizarPatrimonios();
         mostrarAvisoModoOffline();
+        atlasAtualizarBotaoInativos();
         return;
       }
     }
 
     const { data, error } = await query.order("id", { ascending:false });
-
     if(error) throw error;
 
     let dados = data || [];
 
-    // Defesa extra: mesmo se vier algo indevido, a tela só renderiza a própria obra.
     if(usuario && !usuarioPodeVerTodasObras() && usuario.obra_id){
       dados = dados.filter(p => String(p.obra_id) === String(usuario.obra_id));
     }
 
     patrimonios = dados;
 
-    if(window.BDROfflineDB?.salvarTabela){
+    // O cache mantém apenas o conjunto carregado nesta visualização.
+    if(window.BDROfflineDB?.salvarTabela && !visualizarInativos){
       await BDROfflineDB.salvarTabela("patrimonio", patrimonios);
     }
 
     renderizarPatrimonios();
+    atlasAtualizarBotaoInativos();
 
   }catch(e){
     console.warn("Patrimônio: falha ao carregar patrimônios online, usando cache:", e.message || e);
     let dadosCache = await BDROfflineDB.lerTabela("patrimonio") || [];
     const usuario = usuarioAtual();
+
+    dadosCache = dadosCache.filter(p =>
+      visualizarInativos ? p.ativo === false : p.ativo !== false
+    );
 
     if(usuario && !usuarioPodeVerTodasObras()){
       if(usuario.obra_id){
@@ -2093,6 +2147,7 @@ async function carregarPatrimonios(){
     BDR_PATRIMONIO_ONLINE_REAL = false;
     renderizarPatrimonios();
     mostrarAvisoModoOffline();
+    atlasAtualizarBotaoInativos();
   }
 }
 
@@ -2151,7 +2206,8 @@ function bdrPatrimonioFiltroChave(){
     valor("busca"),
     valor("filtroObra"),
     valor("filtroStatus"),
-    valor("filtroTipo")
+    valor("filtroTipo"),
+    atlasMostrarInativos ? "INATIVOS" : "ATIVOS"
   ].join("||");
 }
 
@@ -2188,8 +2244,10 @@ function renderizarPatrimonios(){
 
   const filtrados = patrimonios.filter(p => {
     const textoBusca = normalizarBuscaPatrimonio(textoBuscaPatrimonio(p));
+    const estadoAtivoCorreto = atlasMostrarInativos ? p.ativo === false : p.ativo !== false;
 
-    return (!busca || textoBusca.includes(busca)) &&
+    return estadoAtivoCorreto &&
+      (!busca || textoBusca.includes(busca)) &&
       (!filtroObra || String(p.obra_id || "") === String(filtroObra)) &&
       (!filtroStatus || p.status === filtroStatus) &&
       (!filtroTipo || p.tipo_item === filtroTipo);
@@ -2520,6 +2578,14 @@ function abrirModal(id){
 
   aplicarPermissoesTela();
 
+  const inativo = p.ativo === false || String(p.status || "").toUpperCase() === "INATIVO";
+  document.querySelectorAll(".acao-movimentar,.acao-editar,.acao-excluir").forEach(btn => {
+    if(inativo){
+      btn.style.display = "none";
+      btn.disabled = true;
+    }
+  });
+
   document.getElementById("modalBg").style.display = "flex";
 }
 
@@ -2589,14 +2655,17 @@ function aplicarPermissoesTela(){
   const novaObraSelect = document.getElementById("novaObraSelect");
 
   if(observacaoMov){
-    observacaoMov.style.display = podeMovimentar ? "" : "none";
-    observacaoMov.disabled = !podeMovimentar;
+    const podeJustificar = podeMovimentar || podeExcluir;
+    observacaoMov.style.display = podeJustificar ? "" : "none";
+    observacaoMov.disabled = !podeJustificar;
   }
 
   if(novaObraSelect){
     novaObraSelect.style.display = podeMovimentar ? "" : "none";
     novaObraSelect.disabled = !podeMovimentar;
   }
+
+  atlasAtualizarBotaoInativos();
 }
 
 async function gravarMovimentacao(dados){
@@ -3087,9 +3156,9 @@ async function trocarObra(){
 }
 
 
-async function excluirPatrimonio(){
+async function inativarPatrimonio(){
   if(!usuarioTemPermissao("PATRIMONIO_EXCLUIR")){
-    alert("Você não tem permissão para excluir patrimônio.");
+    alert("Você não tem permissão para inativar patrimônio.");
     return;
   }
 
@@ -3098,26 +3167,28 @@ async function excluirPatrimonio(){
     return;
   }
 
-  const confirma = await bdrConfirmarAtlas(`Confirma inativar/excluir o patrimônio ${patrimonioSelecionado.codigo_qr || "-"}?
-
-Ele sairá das consultas normais, mas o histórico fica preservado.`);
-  if(!confirma) return;
-
   const motivo = valor("observacaoMov");
   if(!motivo || motivo.length < 5){
-    alert("Informe uma justificativa no campo de movimentação antes de excluir/inativar.");
+    alert("Informe uma justificativa com pelo menos 5 caracteres antes de inativar.");
+    document.getElementById("observacaoMov")?.focus();
     return;
   }
 
+  const confirma = await bdrConfirmarAtlas(`Confirma a inativação do patrimônio ${patrimonioSelecionado.codigo_qr || "-"}?
+
+Ele deixará de aparecer nas consultas normais. O cadastro e o histórico serão preservados para auditoria.`);
+  if(!confirma) return;
+
+  const statusAnterior = patrimonioSelecionado.status || null;
   const resp = await bdrAtualizarPrimeiroNoTablet(
     "patrimonio",
     { id: patrimonioSelecionado.id },
-    { ativo:false, status:"BAIXADO" },
-    { acao:"EXCLUSAO_INATIVACAO_PATRIMONIO", motivo }
+    { ativo:false, status:"INATIVO" },
+    { acao:"INATIVACAO_PATRIMONIO", motivo }
   );
 
   if(resp.error){
-    alert(resp.error.message || "Erro ao excluir/inativar patrimônio.");
+    alert(resp.error.message || "Erro ao inativar patrimônio.");
     return;
   }
 
@@ -3126,17 +3197,27 @@ Ele sairá das consultas normais, mas o histórico fica preservado.`);
     empresa_id: patrimonioSelecionado.empresa_id,
     obra_origem_id: patrimonioSelecionado.obra_id,
     obra_destino_id: patrimonioSelecionado.obra_id,
-    tipo: "EXCLUSAO_INATIVACAO",
-    status_anterior: patrimonioSelecionado.status,
-    status_novo: "BAIXADO",
+    tipo: "INATIVACAO",
+    status_anterior: statusAnterior,
+    status_novo: "INATIVO",
     observacao: motivo
   });
 
   patrimonios = patrimonios.filter(p => String(p.id) !== String(patrimonioSelecionado.id));
-  alert("Patrimônio inativado com sucesso.");
+  atlasAvisoPatrimonio(
+    "🚫 Patrimônio inativado",
+    "O item saiu das consultas normais e permanece disponível para auditoria."
+  );
   fecharModal();
   renderizarPatrimonios();
 }
+
+// Compatibilidade temporária com chamadas antigas externas.
+async function excluirPatrimonio(){
+  return inativarPatrimonio();
+}
+
+window.inativarPatrimonio = inativarPatrimonio;
 
 
 

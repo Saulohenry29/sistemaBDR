@@ -1800,3 +1800,25 @@ textarea,
 .atlas-autocomplete-opcao:hover,
 .atlas-autocomplete-opcao.ativo{background:#eff6ff;color:#1d4ed8}
 .atlas-autocomplete-vazio{padding:9px 11px;color:#94a3b8;font-size:11px;font-weight:700}
+
+/* =========================================================
+   ATLAS PATRIMÔNIO — VISUALIZAÇÃO DE INATIVOS
+========================================================= */
+.atlas-inativos-toggle{
+  min-height:40px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  padding:0 12px;
+  border:1px solid #cbd5e1;
+  border-radius:10px;
+  background:#fff;
+  color:#475569;
+  font-size:12px;
+  font-weight:850;
+  cursor:pointer;
+}
+.atlas-inativos-toggle:hover{background:#f8fafc;border-color:#94a3b8;color:#0f172a}
+.atlas-inativos-toggle.ativo{background:#fff7ed;border-color:#fdba74;color:#9a3412}
+.status-INATIVO,.status-inativo{background:#e5e7eb!important;color:#374151!important}

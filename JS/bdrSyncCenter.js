@@ -275,7 +275,14 @@
       return;
     }
 
-    const c = await window.BDRSync.contadores();
+    const bruto = await window.BDRSync.contadores();
+
+    const c = {
+      pendentes: Number(bruto?.pendentes || bruto?.total || 0),
+      sincronizados: Number(bruto?.sincronizados || 0),
+      conflitos: Number(bruto?.conflitos || 0),
+      erros: Number(bruto?.erros || bruto?.erro || 0)
+    };
 
     document.getElementById("syncPendentes").innerText = c.pendentes;
     document.getElementById("syncOk").innerText = c.sincronizados;
@@ -345,35 +352,73 @@
     if(!lista || !window.BDRSync) return;
 
     const todos = await window.BDRSync.listarTudo();
+    const itens = Array.isArray(todos) ? todos : [];
 
-    const ultimos = todos
-      .sort((a,b) => String(b.criado_em).localeCompare(String(a.criado_em)))
+    const ultimos = itens
+      .slice()
+      .sort((a,b) =>
+        String(b.criado_em || b.data || "")
+          .localeCompare(String(a.criado_em || a.data || ""))
+      )
       .slice(0,50);
 
     if(ultimos.length === 0){
-      lista.innerHTML = `<div class="bdr-sync-item">Nenhum registro na fila ainda.</div>`;
+      lista.innerHTML = `<div class="bdr-sync-item">Nenhuma pendência na fila.</div>`;
       return;
     }
 
-    lista.innerHTML = ultimos.map(item => `
-      <div class="bdr-sync-item bdr-sync-status-${item.status}">
-        <b>${String(item.status || "").toUpperCase()}</b>
-        • ${item.acao || "-"} em <b>${item.tabela || "-"}</b><br>
+    lista.innerHTML = ultimos.map(item => {
+      const id = String(item.id || "");
+      const operacao = item.operacao || item.tipo || item.acao || "-";
+      const erro = item.ultimo_erro || item.erro || "";
+      const payload = item.dados ?? item.payload ?? {};
+      const status = erro ? "erro" : "pendente";
 
-        <span>
-          Criado: ${item.criado_em || "-"}
-          • Tentativas: ${item.tentativas || 0}
-        </span>
+      return `
+        <div class="bdr-sync-item bdr-sync-status-${status}">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+            <div>
+              <b>${escapeHtml(String(operacao).toUpperCase())}</b>
+              em <b>${escapeHtml(item.tabela || "-")}</b><br>
 
-        ${item.erro ? `
-          <p style="color:#991b1b;font-weight:900;">
-            Erro: ${escapeHtml(item.erro)}
-          </p>
-        ` : ""}
+              <span>
+                Criado: ${escapeHtml(item.criado_em || item.data || "-")}
+                • Tentativas: ${Number(item.tentativas || 0)}
+              </span>
+            </div>
 
-        <pre>${escapeHtml(JSON.stringify(item.payload || {}, null, 2))}</pre>
-      </div>
-    `).join("");
+            <button
+              type="button"
+              onclick="BDRSyncCenter.removerPendencia('${escapeHtml(id)}')"
+              style="border:none;background:#dc2626;color:#fff;border-radius:8px;padding:7px 9px;font-weight:900;cursor:pointer;">
+              Remover
+            </button>
+          </div>
+
+          ${erro ? `
+            <p style="color:#991b1b;font-weight:900;">
+              Erro: ${escapeHtml(erro)}
+            </p>
+          ` : ""}
+
+          <pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre>
+        </div>
+      `;
+    }).join("");
+  }
+
+  async function removerPendencia(id){
+    if(!id || !window.BDRSync?.remover) return;
+
+    const confirma = window.confirm(
+      "Remover somente esta pendência da fila local?\n\n" +
+      "Use esta opção apenas para um item antigo ou quebrado que não pode mais sincronizar."
+    );
+
+    if(!confirma) return;
+
+    await window.BDRSync.remover(id);
+    await atualizar();
   }
 
   /* =========================================================
@@ -393,10 +438,28 @@
      7. SINCRONIZAR MANUALMENTE
   ========================================================= */
   async function sincronizarAgora(){
-    if(window.BDRSync){
-      await window.BDRSync.sincronizarPendentes();
-      await atualizar();
+    if(!window.BDRSync){
+      alert("O mecanismo de sincronização não está disponível.");
+      return;
     }
+
+    const executar =
+      window.BDRSync.sincronizarAgora ||
+      window.BDRSync.sincronizar ||
+      window.BDRSync.processarFila;
+
+    if(typeof executar !== "function"){
+      alert("A função de sincronização não foi encontrada.");
+      return;
+    }
+
+    try{
+      await executar();
+    }catch(error){
+      console.error("Erro ao sincronizar:", error);
+    }
+
+    await atualizar();
   }
 
   /* =========================================================
@@ -420,7 +483,8 @@
     atualizar,
     abrir,
     fechar,
-    sincronizarAgora
+    sincronizarAgora,
+    removerPendencia
   };
 
   /* =========================================================

@@ -286,6 +286,7 @@
 <option value="EM_USO">Em uso</option>
 <option value="MANUTENCAO">Manutenção</option>
 <option value="BAIXADO">Baixado</option>
+<option id="filtroStatusInativo" value="INATIVO" hidden>Inativo</option>
 </select>
 <select id="filtroTipo" onchange="bdrResetPaginaPatrimonio(); renderizarPatrimonios()">
 <option value="">Todos os tipos</option>
@@ -304,6 +305,9 @@
 <option value="OFICINA">🛠 Equipamento de oficina</option>
 <option value="OUTRO">📦 Outro</option>
 </select>
+<button class="atlas-inativos-toggle" id="btnMostrarInativos" type="button" hidden onclick="atlasAlternarVisualizacaoInativos()" aria-pressed="false">
+  <i class="fa-solid fa-eye-slash"></i> Mostrar inativos
+</button>
 </div>
 </div>
 <div class="card" data-permissao="PATRIMONIO_VER" id="cardAnalyticsManutencao">
@@ -337,7 +341,7 @@
 <h2 id="modalTitulo">Patrimônio</h2>
 <div class="modal-info" id="modalInfo"></div>
 <label><strong>Justificativa obrigatória da movimentação</strong></label>
-<textarea id="observacaoMov" placeholder="Ex: item enviado para manutenção, troca de setor, baixa por defeito..."></textarea>
+<textarea id="observacaoMov" placeholder="Informe o motivo da movimentação ou da inativação..."></textarea>
 <br/><br/>
 <label>Trocar para outra obra/setor</label>
 <select id="novaObraSelect">
@@ -351,7 +355,7 @@
 <button class="btn-gray acao-movimentar" onclick="alterarStatus('BAIXADO')">⬇️ Baixar</button>
 <button class="btn-dark acao-imprimir" onclick="imprimirEtiqueta()">🖨 Etiqueta</button>
 <button class="acao-editar" onclick="abrirEdicao()">✏️ Editar Dados</button>
-<button class="bdr-btn-danger acao-excluir" onclick="excluirPatrimonio()">🗑 Excluir/Inativar</button>
+<button class="bdr-btn-danger acao-excluir" onclick="inativarPatrimonio()">🚫 Inativar</button>
 </div>
 </div>
 </div>
