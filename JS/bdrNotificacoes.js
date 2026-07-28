@@ -20,7 +20,7 @@
 
   const BDR_NOTIF = {
     __loaded:true,
-    versao:'12.1-card-acao-clicavel',
+    versao:'12.2-patrimonio-estavel',
     intervaloMs:10000,
     timer:null,
     carregando:false,
@@ -32,7 +32,10 @@
     audioLiberado:false,
     audioCtx:null,
     ultimoAvisoEm:0,
-    realtimeChannel:null
+    realtimeChannel:null,
+    notificacoesCache:[],
+    quantidadeVisivel:5,
+    passoMostrarMais:5
   };
 
   function temSupabase(){
@@ -134,9 +137,31 @@
       .notif-badge.bdr-badge-pulse{
         animation:bdrBadgePulse .75s ease-in-out 0s 2;
       }
+      .notif-wrap{
+        position:relative!important;
+        z-index:2147483000!important;
+        overflow:visible!important;
+      }
       .notif-dropdown{
         width:min(400px,calc(100vw - 24px))!important;
+        max-height:min(620px,calc(100vh - 110px))!important;
+        overflow:hidden!important;
+        z-index:2147483001!important;
+        isolation:isolate;
       }
+      .notif-list{
+        max-height:min(285px,calc(100vh - 205px))!important;
+        overflow-y:auto!important;
+        overflow-x:hidden!important;
+        overscroll-behavior:contain;
+        scrollbar-gutter:stable;
+        touch-action:pan-y;
+        user-select:text!important;
+      }
+      .notif-list::-webkit-scrollbar{width:10px}
+      .notif-list::-webkit-scrollbar-track{background:#f1f5f9}
+      .notif-list::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:999px;border:2px solid #f1f5f9}
+      .notif-list::-webkit-scrollbar-thumb:hover{background:#94a3b8}
       .notif-head{
         display:flex!important;
         align-items:center!important;
@@ -183,7 +208,12 @@
         font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;
       }
       .bdr-notif-fechar:hover{background:#e2e8f0;color:#0f172a}
+      .notif-item,
+      .notif-item *{user-select:text!important}
       .notif-item small{display:block;margin-top:5px;color:#64748b}
+      .bdr-notif-mais-wrap{padding:10px 12px;background:#f8fafc;border-top:1px solid #e5e7eb}
+      .bdr-notif-mostrar-mais{width:100%;border:1px solid #bfdbfe!important;background:#eff6ff!important;color:#1d4ed8!important;border-radius:10px!important;padding:9px 12px!important;font-size:11px!important;font-weight:900!important;cursor:pointer!important}
+      .bdr-notif-mostrar-mais:hover{background:#dbeafe!important;transform:none!important}
       .notif-btn.bdr-notif-offline{opacity:.75;filter:grayscale(.25)}
       .bdr-notif-toast-forte{
         position:fixed;top:14px;left:50%;transform:translate(-50%,-18px);
@@ -418,17 +448,31 @@
     return '';
   }
 
-  function renderNotificacoes(rows){
+  function renderNotificacoes(rows, manterQuantidade=false){
     const lista = listaEl();
     if(!lista) return;
 
-    if(!Array.isArray(rows) || !rows.length){
+    const dados = Array.isArray(rows) ? rows : [];
+    BDR_NOTIF.notificacoesCache = dados;
+
+    if(!manterQuantidade){
+      BDR_NOTIF.quantidadeVisivel = BDR_NOTIF.passoMostrarMais;
+    }
+
+    if(!dados.length){
       renderMensagem('Nenhuma notificação no momento.');
       return;
     }
 
-    const pendentes = rows.filter(tipoEhAcao);
-    const atualizacoes = rows.filter(n => !tipoEhAcao(n));
+    const pendentes = dados.filter(tipoEhAcao);
+    const atualizacoes = dados.filter(n => !tipoEhAcao(n));
+    const limite = Math.max(BDR_NOTIF.passoMostrarMais, BDR_NOTIF.quantidadeVisivel);
+
+    let restantes = limite;
+    const pendentesVisiveis = pendentes.slice(0, restantes);
+    restantes -= pendentesVisiveis.length;
+    const atualizacoesVisiveis = atualizacoes.slice(0, Math.max(0, restantes));
+    const totalVisivel = pendentesVisiveis.length + atualizacoesVisiveis.length;
 
     function htmlItem(n){
       const acao = tipoEhAcao(n);
@@ -445,18 +489,27 @@
           <strong>${titulo}</strong>
           <div>${mensagem}</div>
           <small>${data}</small>
-
         </div>`;
     }
 
     let html = '';
-    if(pendentes.length){
+    if(pendentesVisiveis.length){
       html += '<div class="bdr-notif-grupo-titulo">Pendentes</div>';
-      html += pendentes.map(htmlItem).join('');
+      html += pendentesVisiveis.map(htmlItem).join('');
     }
-    if(atualizacoes.length){
+    if(atualizacoesVisiveis.length){
       html += '<div class="bdr-notif-grupo-titulo">Atualizações</div>';
-      html += atualizacoes.map(htmlItem).join('');
+      html += atualizacoesVisiveis.map(htmlItem).join('');
+    }
+
+    if(totalVisivel < dados.length){
+      const faltam = dados.length - totalVisivel;
+      html += `
+        <div class="bdr-notif-mais-wrap">
+          <button type="button" class="bdr-notif-mostrar-mais" data-mostrar-mais>
+            Mostrar mais... (${Math.min(BDR_NOTIF.passoMostrarMais, faltam)} de ${faltam})
+          </button>
+        </div>`;
     }
 
     lista.innerHTML = html;
@@ -509,7 +562,7 @@
       const primeiraCarga = !BDR_NOTIF.primeiraCargaConcluida;
 
       atualizarBadge(naoLidas);
-      renderNotificacoes(rows);
+      renderNotificacoes(rows, true);
 
       if(!primeiraCarga && naoLidas > totalAnterior){
         const nova = rows[0] || {};
@@ -656,9 +709,15 @@
     if(!drop) return;
 
     document.getElementById('dropdownUser')?.classList.remove('ativo');
-    drop.classList.toggle('ativo');
+    const vaiAbrir = !drop.classList.contains('ativo');
+    drop.classList.toggle('ativo', vaiAbrir);
 
-    if(drop.classList.contains('ativo')) await carregarNotificacoes();
+    if(vaiAbrir){
+      BDR_NOTIF.quantidadeVisivel = BDR_NOTIF.passoMostrarMais;
+      await carregarNotificacoes();
+      renderNotificacoes(BDR_NOTIF.notificacoesCache, true);
+      listaEl()?.scrollTo({ top:0, behavior:'auto' });
+    }
   }
 
   function registrarEventBus(){
@@ -696,8 +755,20 @@
         head.appendChild(btn);
       }
 
+      ['pointerdown','mousedown','mouseup','touchstart','wheel'].forEach(tipo => {
+        drop.addEventListener(tipo, e => e.stopPropagation(), { passive: tipo === 'wheel' || tipo === 'touchstart' });
+      });
+
       drop.addEventListener('click', async e => {
         e.stopPropagation();
+
+        if(e.target.closest('[data-mostrar-mais]')){
+          BDR_NOTIF.quantidadeVisivel += BDR_NOTIF.passoMostrarMais;
+          const rolagemAtual = listaEl()?.scrollTop || 0;
+          renderNotificacoes(BDR_NOTIF.notificacoesCache, true);
+          if(listaEl()) listaEl().scrollTop = rolagemAtual;
+          return;
+        }
 
         if(e.target.closest('[data-marcar-todas]')){
           await marcarTodasComoLidas();
@@ -715,10 +786,24 @@
           return;
         }
 
+        const selecao = String(window.getSelection?.()?.toString() || '').trim();
+        if(selecao) return;
+
         if(item.classList.contains('bdr-notif-acao') && link){
           await marcarNotificacaoComoLida(id, link);
         }
       });
+    }
+
+    const botaoSininho = notifBtnEl();
+    if(botaoSininho && !botaoSininho.dataset.bdrNotifLigado){
+      botaoSininho.dataset.bdrNotifLigado = '1';
+      botaoSininho.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        toggleNotificacoes(e);
+      }, true);
     }
 
     iniciarNotificacoes();
@@ -747,5 +832,5 @@
   window.bdrMarcarNotificacaoComoLida = marcarNotificacaoComoLida;
   window.bdrMarcarTodasNotificacoesComoLidas = marcarTodasComoLidas;
 
-  console.log('✅ BDR NOTIFICAÇÕES V12.1 carregado - cartão azul clicável');
+  console.log('✅ BDR NOTIFICAÇÕES V12.2 carregado - Patrimônio estável + mostrar mais');
 })();

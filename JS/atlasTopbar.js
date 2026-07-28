@@ -1,8 +1,8 @@
 /* =========================================================
-   ATLAS SaaS - CONTROLADOR OFICIAL DE TOPBAR V1.2
+   ATLAS SaaS - CONTROLADOR OFICIAL DE TOPBAR V1.3
    Arquivo: JS/atlasTopbar.js
 
-   CORREÇÃO V1.2
+   CORREÇÃO V1.3
    - Compensa automaticamente o zoom aplicado no BODY.
    - Alinha os dropdowns pela borda direita do botão.
    - Elimina ajustes manuais como -88, +30 ou +50.
@@ -199,6 +199,11 @@
      6. ABRIR E FECHAR
   ========================================================= */
   function closeActive({restoreFocus = false} = {}){
+
+    /* Limpa qualquer animação visual do sino ao fechar */
+    document.querySelector(".notif-btn")?.classList.remove("bdr-notif-animando");
+    document.querySelector(".notif-badge")?.classList.remove("bdr-badge-pulse");
+
     const {activeButton, activeDropdown} = state;
 
     if(activeDropdown){
@@ -216,9 +221,15 @@
       activeButton.setAttribute("aria-expanded", "false");
 
       if(restoreFocus){
-        activeButton.focus({preventScroll: true});
+        /* Removido para evitar o cursor (caret) piscando */
       }
     }
+
+    try{
+      if(document.activeElement instanceof HTMLElement){
+        document.activeElement.blur();
+      }
+    }catch(e){}
 
     state.activeButton = null;
     state.activeDropdown = null;
@@ -295,10 +306,34 @@
     }
   }
 
-  function onViewportChange(){
+  function onResize(){
     if(state.activeDropdown){
       closeActive();
     }
+  }
+
+  function onScroll(event){
+    if(!state.activeDropdown) return;
+
+    /*
+      Rolagem dentro do próprio dropdown deve continuar funcionando.
+      Antes, qualquer scroll capturado pela janela fechava o painel,
+      inclusive a roda do mouse e o arraste da barra da lista.
+    */
+    const origem = event?.target;
+    if(
+      origem &&
+      origem !== window &&
+      origem !== document &&
+      origem !== document.documentElement &&
+      origem !== document.body &&
+      state.activeDropdown.contains(origem)
+    ){
+      return;
+    }
+
+    /* Rolagem real da página fecha o dropdown para não perder alinhamento. */
+    closeActive();
   }
 
   /* =========================================================
@@ -368,13 +403,13 @@
 
     window.addEventListener(
       "resize",
-      onViewportChange,
+      onResize,
       {passive: true}
     );
 
     window.addEventListener(
       "scroll",
-      onViewportChange,
+      onScroll,
       {passive: true, capture: true}
     );
   }
