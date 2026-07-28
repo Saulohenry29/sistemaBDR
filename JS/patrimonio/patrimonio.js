@@ -2019,45 +2019,38 @@ function limparFormularioCadastro(){
   atlasFecharSugestoesPatrimonio();
 }
 
+/* =========================================================
+   ATLAS — VISUALIZAÇÃO DE EXCLUÍDOS/INATIVOS
+   ---------------------------------------------------------
+   - Somente o usuário interno ID 1 enxerga a opção no filtro.
+   - Para os demais usuários, o item apenas desaparece da lista.
+========================================================= */
 function atlasPodeVerInativos(){
   const usuario = usuarioAtual();
-  return usuarioOwnerBDR(usuario) || usuarioTemPermissao("PATRIMONIO_INATIVOS_VER");
+  return Number(usuario?.id || usuario?.usuario_id || 0) === 1;
 }
 
 function atlasAtualizarBotaoInativos(){
-  const botao = document.getElementById("btnMostrarInativos");
   const opcaoStatus = document.getElementById("filtroStatusInativo");
-  const permitido = atlasPodeVerInativos();
-
-  if(botao){
-    botao.hidden = !permitido;
-    botao.style.display = permitido ? "inline-flex" : "none";
-    botao.classList.toggle("ativo", atlasMostrarInativos);
-    botao.setAttribute("aria-pressed", String(atlasMostrarInativos));
-    botao.innerHTML = atlasMostrarInativos
-      ? '<i class="fa-solid fa-arrow-left"></i> Voltar aos ativos'
-      : '<i class="fa-solid fa-eye-slash"></i> Mostrar inativos';
-  }
-
-  if(opcaoStatus) opcaoStatus.hidden = !atlasMostrarInativos;
+  if(opcaoStatus) opcaoStatus.hidden = !atlasPodeVerInativos();
 }
 
-async function atlasAlternarVisualizacaoInativos(){
-  if(!atlasPodeVerInativos()){
-    alert("Você não tem permissão para visualizar patrimônios inativos.");
+async function atlasAoAlterarFiltroStatus(){
+  const filtroStatus = document.getElementById("filtroStatus");
+  const selecionado = String(filtroStatus?.value || "").toUpperCase();
+
+  if(selecionado === "INATIVO" && !atlasPodeVerInativos()){
+    if(filtroStatus) filtroStatus.value = "";
+    alert("Você não tem permissão para visualizar patrimônios excluídos.");
     return;
   }
 
-  atlasMostrarInativos = !atlasMostrarInativos;
-  const filtroStatus = document.getElementById("filtroStatus");
-  if(filtroStatus) filtroStatus.value = atlasMostrarInativos ? "INATIVO" : "";
-
+  atlasMostrarInativos = selecionado === "INATIVO";
   bdrResetPaginaPatrimonio();
-  atlasAtualizarBotaoInativos();
   await carregarPatrimonios();
 }
 
-window.atlasAlternarVisualizacaoInativos = atlasAlternarVisualizacaoInativos;
+window.atlasAoAlterarFiltroStatus = atlasAoAlterarFiltroStatus;
 
 async function carregarPatrimonios(){
   const visualizarInativos = atlasMostrarInativos && atlasPodeVerInativos();
@@ -2535,7 +2528,7 @@ function bdrLinhasTipoPatrimonio(p){
   return html;
 }
 
-function abrirModal(id){
+async function abrirModal(id){
 
   const p = patrimonios.find(
     x => String(x.id) === String(id) || Number(x.id) === Number(id)
@@ -2551,7 +2544,15 @@ function abrirModal(id){
   document.getElementById("modalTitulo").innerText =
     p.nome_bem || "Patrimônio";
 
+  let blocoExclusao = "";
+  const inativoSelecionado = p.ativo === false || String(p.status || "").toUpperCase() === "INATIVO";
+
+  if(inativoSelecionado && atlasPodeVerInativos()){
+    blocoExclusao = await atlasMontarBlocoExclusao(p);
+  }
+
   document.getElementById("modalInfo").innerHTML = `
+    ${blocoExclusao}
     ${bdrLinhaInfo("Código", p.codigo_qr)}
     ${bdrLinhaInfo("Código antigo", p.codigo_antigo)}
     ${bdrLinhaInfo("NCM", p.ncm)}
@@ -2589,6 +2590,65 @@ function abrirModal(id){
   document.getElementById("modalBg").style.display = "flex";
 }
 
+function atlasEscapeHtml(valor){
+  return String(valor ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function atlasFormatarDataHora(valor){
+  if(!valor) return "-";
+  const texto = String(valor).trim();
+  const data = new Date(/[zZ]$|[+-]\d{2}:?\d{2}$/.test(texto) ? texto : texto.replace(" ", "T") + "Z");
+  if(Number.isNaN(data.getTime())) return texto;
+  return data.toLocaleString("pt-BR", {
+    timeZone:"America/Cuiaba",
+    day:"2-digit", month:"2-digit", year:"numeric",
+    hour:"2-digit", minute:"2-digit"
+  });
+}
+
+async function atlasBuscarMovimentacaoExclusao(patrimonioId){
+  if(!db() || !patrimonioId) return null;
+
+  const { data, error } = await db()
+    .from("movimentacoes")
+    .select("*")
+    .eq("patrimonio_id", patrimonioId)
+    .eq("status_novo", "INATIVO")
+    .order("id", { ascending:false })
+    .limit(1)
+    .maybeSingle();
+
+  if(error){
+    console.warn("Atlas: não foi possível carregar os dados da exclusão:", error.message || error);
+    return null;
+  }
+  return data || null;
+}
+
+async function atlasMontarBlocoExclusao(patrimonio){
+  const mov = await atlasBuscarMovimentacaoExclusao(patrimonio?.id);
+  const obraSetor = patrimonio?.localizacao || patrimonio?.obra_nome || patrimonio?.setor || "-";
+  const usuario = mov?.usuario || "-";
+  const dataHora = atlasFormatarDataHora(mov?.data_movimentacao || mov?.created_at);
+  const motivo = mov?.observacao || "-";
+
+  return `
+    <div style="margin:0 0 14px;padding:14px;border:1px solid #fecaca;border-left:5px solid #dc2626;border-radius:12px;background:#fff7f7;color:#7f1d1d;">
+      <div style="font-weight:950;font-size:14px;margin-bottom:10px;">🚫 Informações da exclusão</div>
+      <div style="display:grid;gap:7px;font-size:12px;line-height:1.45;">
+        <div><strong>Data:</strong> ${atlasEscapeHtml(dataHora)}</div>
+        <div><strong>Usuário:</strong> ${atlasEscapeHtml(usuario)}</div>
+        <div><strong>Obra / Setor:</strong> ${atlasEscapeHtml(obraSetor)}</div>
+        <div><strong>Motivo:</strong> ${atlasEscapeHtml(motivo)}</div>
+      </div>
+    </div>`;
+}
+
 function fecharModal(){
   document.getElementById("modalBg").style.display = "none";
   patrimonioSelecionado = null;
@@ -2616,9 +2676,14 @@ function aplicarPermissoesTela(){
     usuarioEhGestao() ||
     usuarioTemPermissao("PATRIMONIO_IMPRIMIR");
 
+  // Quem já consegue trabalhar/movimentar patrimônio também pode excluí-lo.
+  // A exclusão é lógica: o registro é preservado internamente.
   const podeExcluir =
-    usuarioOwnerBDR(usuario) ||
-    usuarioTemPermissao("PATRIMONIO_EXCLUIR");
+    usuarioEhGestao() ||
+    usuarioTemPermissao("PATRIMONIO_MOVIMENTAR") ||
+    usuarioTemPermissao("PATRIMONIO_EXCLUIR") ||
+    usuarioTemPermissao("PATRIMONIO_EDITAR") ||
+    usuarioTemPermissao("PATRIMONIO_CRIAR");
 
   const cardEntrada = document.getElementById("cardEntradaPatrimonio");
   const cardObra = document.getElementById("cardObraLancamento");
@@ -3156,9 +3221,54 @@ async function trocarObra(){
 }
 
 
+async function atlasNotificarExclusaoPatrimonio({ patrimonio, motivo, usuarioNome, obraSetor, dataHora }){
+  try{
+    const gestor = window.AtlasGestorNotificacoes;
+    if(!gestor || typeof gestor.criarNotificacao !== "function"){
+      console.warn("Atlas: Gestor de Notificações não carregado. A exclusão foi concluída sem notificação.");
+      return false;
+    }
+
+    const codigo = patrimonio?.codigo_qr || patrimonio?.codigo_bem || "-";
+    const descricao = patrimonio?.nome_bem || patrimonio?.descricao || "Patrimônio";
+    const mensagem = [
+      `Código: ${codigo}`,
+      `Descrição: ${descricao}`,
+      `Usuário: ${usuarioNome}`,
+      `Obra / Setor: ${obraSetor}`,
+      `Data: ${dataHora}`,
+      `Motivo: ${motivo}`
+    ].join(" | ");
+
+    await gestor.criarNotificacao({
+      usuario_destino_id:1,
+      empresa_id:patrimonio?.empresa_id || usuarioAtual()?.empresa_id || null,
+      tipo:"PATRIMONIO_INATIVADO",
+      titulo:"🚫 Patrimônio excluído",
+      mensagem,
+      link:"patrimonio.html?filtro=INATIVO&patrimonio=" + encodeURIComponent(patrimonio?.id || ""),
+      patrimonio_id:patrimonio?.id || null,
+      obra_origem_id:patrimonio?.obra_id || null,
+      obra_destino_id:patrimonio?.obra_id || null
+    });
+    return true;
+  }catch(e){
+    console.warn("Atlas: falha ao criar notificação da exclusão:", e?.message || e);
+    return false;
+  }
+}
+
 async function inativarPatrimonio(){
-  if(!usuarioTemPermissao("PATRIMONIO_EXCLUIR")){
-    alert("Você não tem permissão para inativar patrimônio.");
+  const usuario = usuarioAtual();
+  const podeExcluir =
+    usuarioEhGestao() ||
+    usuarioTemPermissao("PATRIMONIO_MOVIMENTAR") ||
+    usuarioTemPermissao("PATRIMONIO_EXCLUIR") ||
+    usuarioTemPermissao("PATRIMONIO_EDITAR") ||
+    usuarioTemPermissao("PATRIMONIO_CRIAR");
+
+  if(!podeExcluir){
+    alert("Você não tem permissão para excluir patrimônio.");
     return;
   }
 
@@ -3169,44 +3279,67 @@ async function inativarPatrimonio(){
 
   const motivo = valor("observacaoMov");
   if(!motivo || motivo.length < 5){
-    alert("Informe uma justificativa com pelo menos 5 caracteres antes de inativar.");
+    alert("Informe o motivo da exclusão com pelo menos 5 caracteres.");
     document.getElementById("observacaoMov")?.focus();
     return;
   }
 
-  const confirma = await bdrConfirmarAtlas(`Confirma a inativação do patrimônio ${patrimonioSelecionado.codigo_qr || "-"}?
+  const codigo = patrimonioSelecionado.codigo_qr || patrimonioSelecionado.codigo_bem || "-";
+  const confirma = await bdrConfirmarAtlas(`Confirma excluir o patrimônio ${codigo}?
 
-Ele deixará de aparecer nas consultas normais. O cadastro e o histórico serão preservados para auditoria.`);
+Esta ação removerá o patrimônio das consultas do sistema.`);
   if(!confirma) return;
 
   const statusAnterior = patrimonioSelecionado.status || null;
+  const patrimonioExcluido = { ...patrimonioSelecionado };
+  const usuarioNome = usuario?.nome || usuario?.usuario || usuario?.email || "Usuário não identificado";
+  const obraSetor = patrimonioExcluido.localizacao || patrimonioExcluido.obra_nome || patrimonioExcluido.setor || "-";
+  const agoraIso = new Date().toISOString();
+  const dataHora = new Date().toLocaleString("pt-BR", {
+    timeZone:"America/Cuiaba",
+    day:"2-digit", month:"2-digit", year:"numeric",
+    hour:"2-digit", minute:"2-digit"
+  });
+
   const resp = await bdrAtualizarPrimeiroNoTablet(
     "patrimonio",
-    { id: patrimonioSelecionado.id },
+    { id: patrimonioExcluido.id },
     { ativo:false, status:"INATIVO" },
     { acao:"INATIVACAO_PATRIMONIO", motivo }
   );
 
   if(resp.error){
-    alert(resp.error.message || "Erro ao inativar patrimônio.");
+    alert(resp.error.message || "Erro ao excluir patrimônio.");
     return;
   }
 
   await gravarMovimentacao({
-    patrimonio_id: patrimonioSelecionado.id,
-    empresa_id: patrimonioSelecionado.empresa_id,
-    obra_origem_id: patrimonioSelecionado.obra_id,
-    obra_destino_id: patrimonioSelecionado.obra_id,
-    tipo: "INATIVACAO",
-    status_anterior: statusAnterior,
-    status_novo: "INATIVO",
-    observacao: motivo
+    patrimonio_id: patrimonioExcluido.id,
+    empresa_id: patrimonioExcluido.empresa_id,
+    obra_origem_id: patrimonioExcluido.obra_id,
+    obra_destino_id: patrimonioExcluido.obra_id,
+    tipo:"INATIVACAO",
+    status_anterior:statusAnterior,
+    status_novo:"INATIVO",
+    observacao:motivo
   });
 
-  patrimonios = patrimonios.filter(p => String(p.id) !== String(patrimonioSelecionado.id));
+  // A notificação é enviada somente quando houver conexão real.
+  if(!resp.offlineFirst){
+    await atlasNotificarExclusaoPatrimonio({
+      patrimonio:patrimonioExcluido,
+      motivo,
+      usuarioNome,
+      obraSetor,
+      dataHora,
+      criadoEm:agoraIso
+    });
+  }
+
+  patrimonios = patrimonios.filter(p => String(p.id) !== String(patrimonioExcluido.id));
   atlasAvisoPatrimonio(
-    "🚫 Patrimônio inativado",
-    "O item saiu das consultas normais e permanece disponível para auditoria."
+    "✅ Patrimônio excluído",
+    "O patrimônio foi removido das consultas do sistema."
   );
   fecharModal();
   renderizarPatrimonios();
@@ -3707,9 +3840,24 @@ async function iniciar(){
   aplicarPermissoesTela();
   aplicarMenuPorPermissaoBDR();
 
+  // Quando a notificação for clicada, abre diretamente o patrimônio excluído.
+  const parametros = new URLSearchParams(window.location.search);
+  const abrirInativoId = parametros.get("patrimonio");
+  const filtroUrl = String(parametros.get("filtro") || "").toUpperCase();
+
+  if(filtroUrl === "INATIVO" && atlasPodeVerInativos()){
+    atlasMostrarInativos = true;
+    const filtroStatus = document.getElementById("filtroStatus");
+    if(filtroStatus) filtroStatus.value = "INATIVO";
+  }
+
   await carregarPatrimonios();
   await carregarManutencoesPatrimonio();
   aplicarPermissoesTela();
+
+  if(abrirInativoId && atlasMostrarInativos && atlasPodeVerInativos()){
+    await abrirModal(abrirInativoId);
+  }
 }
 
 

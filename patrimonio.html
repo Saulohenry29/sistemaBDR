@@ -280,13 +280,13 @@
 <select id="filtroObra" onchange="bdrResetPaginaPatrimonio(); renderizarPatrimonios()">
 <option value="">Todas as obras/setores</option>
 </select>
-<select id="filtroStatus" onchange="bdrResetPaginaPatrimonio(); renderizarPatrimonios()">
+<select id="filtroStatus" onchange="atlasAoAlterarFiltroStatus()">
 <option value="">Todos os status</option>
 <option value="ESTOQUE">Estoque</option>
 <option value="EM_USO">Em uso</option>
 <option value="MANUTENCAO">Manutenção</option>
 <option value="BAIXADO">Baixado</option>
-<option id="filtroStatusInativo" value="INATIVO" hidden>Inativo</option>
+<option id="filtroStatusInativo" value="INATIVO" hidden>Inativos</option>
 </select>
 <select id="filtroTipo" onchange="bdrResetPaginaPatrimonio(); renderizarPatrimonios()">
 <option value="">Todos os tipos</option>
@@ -305,9 +305,6 @@
 <option value="OFICINA">🛠 Equipamento de oficina</option>
 <option value="OUTRO">📦 Outro</option>
 </select>
-<button class="atlas-inativos-toggle" id="btnMostrarInativos" type="button" hidden onclick="atlasAlternarVisualizacaoInativos()" aria-pressed="false">
-  <i class="fa-solid fa-eye-slash"></i> Mostrar inativos
-</button>
 </div>
 </div>
 <div class="card" data-permissao="PATRIMONIO_VER" id="cardAnalyticsManutencao">
@@ -341,7 +338,7 @@
 <h2 id="modalTitulo">Patrimônio</h2>
 <div class="modal-info" id="modalInfo"></div>
 <label><strong>Justificativa obrigatória da movimentação</strong></label>
-<textarea id="observacaoMov" placeholder="Informe o motivo da movimentação ou da inativação..."></textarea>
+<textarea id="observacaoMov" placeholder="Ex: item enviado para manutenção, troca de setor, baixa por defeito..."></textarea>
 <br/><br/>
 <label>Trocar para outra obra/setor</label>
 <select id="novaObraSelect">
@@ -355,7 +352,7 @@
 <button class="btn-gray acao-movimentar" onclick="alterarStatus('BAIXADO')">⬇️ Baixar</button>
 <button class="btn-dark acao-imprimir" onclick="imprimirEtiqueta()">🖨 Etiqueta</button>
 <button class="acao-editar" onclick="abrirEdicao()">✏️ Editar Dados</button>
-<button class="bdr-btn-danger acao-excluir" onclick="inativarPatrimonio()">🚫 Inativar</button>
+<button class="bdr-btn-danger acao-excluir" onclick="excluirPatrimonio()">🗑 Excluir</button>
 </div>
 </div>
 </div>
@@ -502,7 +499,8 @@
 <script src="./JS/bdrSyncCenter.js"></script>
 <script src="./JS/patrimonio/patrimonio-lote.js?v=20260727-alinhamento-dinamico"></script>
 <script src="./JS/patrimonio/patrimonio-etiquetas-lote.js?v=20260726-v1"></script>
-<script src="./JS/patrimonio/patrimonio.js?v=20260727-alinhamento-dinamico"></script>
+<script src="./JS/atlasGestorNotificacoes.js?v=20260728-patrimonio"></script>
+<script src="./JS/patrimonio/patrimonio.js?v=20260728-exclusao-logica-v1"></script>
 <script src="./JS/bdrUppercase.js"></script>
 <script src="./JS/patrimonio/patrimonio-permissoes.js?v=20260725-v1"></script>
 <script src="./JS/bdrMenuMobileAtivo.js?v=20260702-3"></script>
