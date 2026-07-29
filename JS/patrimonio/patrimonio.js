@@ -1650,51 +1650,65 @@ async function bdrVerificarDuplicidadePatrimonio(dados, opcoes={}){
   const modeloNovo = bdrNormalizarComparacao(dados.modelo);
   const serieNova = bdrNormalizarComparacao(dados.numero_serie);
   const tipoNovo = String(dados.tipo_item || "").toUpperCase();
+  const obraNova = String(dados.obra_id || "");
 
   (lista || []).forEach(p => {
     if(!p || p.ativo === false) return;
     if(dados.id && String(p.id) === String(dados.id)) return;
 
-    // Veículos: placa, RENAVAM e chassi são identificadores únicos.
     if(tipoNovo === "VEICULO"){
       if(bdrMesmoValor(dados.placa, p.placa)){
         bloqueios.push({motivo:"PLACA já cadastrada", patrimonio:p});
-        return;
       }
+
       if(bdrMesmoValor(dados.renavam, p.renavam)){
         bloqueios.push({motivo:"RENAVAM já cadastrado", patrimonio:p});
-        return;
       }
+
       if(bdrMesmoValor(dados.chassi, p.chassi)){
         bloqueios.push({motivo:"CHASSI já cadastrado", patrimonio:p});
-        return;
       }
+
+      return;
     }
 
-    // Demais patrimônios: só bloqueia quando o conjunto completo é igual.
     const nomeIgual = nomeNovo && nomeNovo === bdrNormalizarComparacao(p.nome_bem);
     const marcaIgual = marcaNova && marcaNova === bdrNormalizarComparacao(p.marca);
     const modeloIgual = modeloNovo && modeloNovo === bdrNormalizarComparacao(p.modelo);
     const serieIgual = serieNova && serieNova === bdrNormalizarComparacao(p.numero_serie);
+    const mesmaObra = !obraNova || String(p.obra_id || "") === obraNova;
 
-    if(tipoNovo !== "VEICULO" && nomeIgual && marcaIgual && modeloIgual && serieIgual){
-      bloqueios.push({
-        motivo:"NOME + MARCA + MODELO + NÚMERO DE SÉRIE já cadastrados",
+    if(nomeIgual && marcaIgual && modeloIgual && serieIgual){
+      alertas.push({
+        motivo:"Nome, marca, modelo e número de série iguais",
         patrimonio:p
       });
-      return;
+    }else if(serieIgual){
+      alertas.push({
+        motivo:"Número de série já encontrado",
+        patrimonio:p
+      });
+    }else if(nomeIgual && marcaIgual && modeloIgual && mesmaObra){
+      alertas.push({
+        motivo:"Nome, marca e modelo iguais na mesma obra",
+        patrimonio:p
+      });
     }
 
-    // Código antigo continua sendo apenas um aviso, pois pode vir de bases legadas.
     if(bdrMesmoValor(dados.codigo_antigo, p.codigo_antigo)){
-      alertas.push({motivo:"Código antigo/legado já encontrado", patrimonio:p});
+      alertas.push({
+        motivo:"Código antigo/legado já encontrado",
+        patrimonio:p
+      });
     }
   });
 
   const unicosBloqueio = [];
   const vistosBloqueio = new Set();
+
   bloqueios.forEach(item => {
     const chave = `${item.motivo}-${item.patrimonio?.id}`;
+
     if(!vistosBloqueio.has(chave)){
       vistosBloqueio.add(chave);
       unicosBloqueio.push(item);
@@ -1703,8 +1717,10 @@ async function bdrVerificarDuplicidadePatrimonio(dados, opcoes={}){
 
   const unicosAlerta = [];
   const vistosAlerta = new Set();
+
   alertas.forEach(item => {
     const chave = `${item.motivo}-${item.patrimonio?.id}`;
+
     if(!vistosAlerta.has(chave)){
       vistosAlerta.add(chave);
       unicosAlerta.push(item);
@@ -1713,22 +1729,28 @@ async function bdrVerificarDuplicidadePatrimonio(dados, opcoes={}){
 
   if(unicosBloqueio.length){
     const msg = unicosBloqueio.slice(0,5).map(item =>
-      `🚫 ${item.motivo}\n${bdrResumoPatrimonioDuplicado(item.patrimonio)}\nSérie: ${item.patrimonio?.numero_serie || "-"}`
+      `🚫 ${item.motivo}\n${bdrResumoPatrimonioDuplicado(item.patrimonio)}`
     ).join("\n\n");
 
-    alert("Patrimônio duplicado encontrado.\n\n" + msg + "\n\nCadastro bloqueado para evitar duplicidade real.");
+    alert(
+      "Veículo duplicado encontrado.\n\n" +
+      msg +
+      "\n\nPlaca, RENAVAM e chassi não podem se repetir."
+    );
+
     return false;
   }
 
   if(unicosAlerta.length && opcoes.confirmar !== false){
     const msg = unicosAlerta.slice(0,5).map(item =>
-      `⚠️ ${item.motivo}\n${bdrResumoPatrimonioDuplicado(item.patrimonio)}`
+      `⚠️ ${item.motivo}\n${bdrResumoPatrimonioDuplicado(item.patrimonio)}\n` +
+      `Série: ${item.patrimonio?.numero_serie || "-"}`
     ).join("\n\n");
 
     return await bdrConfirmarAtlas(
-      "Possível duplicidade encontrada:\n\n" +
+      "Possível patrimônio duplicado encontrado:\n\n" +
       msg +
-      "\n\nDeseja continuar mesmo assim?"
+      "\n\nDeseja cadastrar mesmo assim?"
     );
   }
 
@@ -1737,38 +1759,54 @@ async function bdrVerificarDuplicidadePatrimonio(dados, opcoes={}){
 
 async function validarDuplicidadeCampoPatrimonio(campo){
   const v = valor(campo);
-  if(bdrCampoVazioOuGenerico(v)) return true;
 
-  const dados = {
-    nome_bem: valor("nome_bem"),
-    tipo_item: valor("tipo_item"),
-    placa: valor("placa"),
-    renavam: valor("renavam"),
-    chassi: valor("chassi"),
-    codigo_antigo: valor("codigo_antigo"),
-    marca: valor("marca"),
-    modelo: valor("modelo"),
-    obra_id: obterObraParaLancamento()?.id || null
-  };
+  if(bdrCampoVazioOuGenerico(v)){
+    return true;
+  }
 
+  const tipoItem = String(valor("tipo_item") || "").toUpperCase();
   const lista = await bdrBaseDuplicidadePatrimonio();
+
   const achados = (lista || []).filter(p => {
     if(!p || p.ativo === false) return false;
     return bdrMesmoValor(v, p[campo]);
   });
 
-  if(!achados.length) return true;
+  if(!achados.length){
+    document.getElementById(campo)?.classList.remove(
+      "atlas-campo-duplicado",
+      "atlas-campo-alerta"
+    );
+    return true;
+  }
 
-  const msg = achados.slice(0,5).map(bdrResumoPatrimonioDuplicado).join("\n\n");
+  const msg = achados
+    .slice(0,5)
+    .map(bdrResumoPatrimonioDuplicado)
+    .join("\n\n");
 
-  if(campo === "chassi" || campo === "renavam"){
-    alert(`🚫 ${campo.toUpperCase()} já cadastrado.\n\n${msg}\n\nEste campo bloqueia duplicidade.`);
-    const el = document.getElementById(campo);
-    if(el){ el.focus(); el.select?.(); }
+  const identificadorUnicoVeiculo =
+    tipoItem === "VEICULO" &&
+    ["placa", "renavam", "chassi"].includes(campo);
+
+  if(identificadorUnicoVeiculo){
+    alert(
+      `🚫 ${campo.toUpperCase()} já cadastrado.\n\n` +
+      msg +
+      "\n\nEste identificador não pode se repetir em veículos."
+    );
+
+    document.getElementById(campo)?.classList.add("atlas-campo-duplicado");
     return false;
   }
 
-  alert(`⚠️ ${campo.toUpperCase()} já encontrado.\n\n${msg}\n\nConfira antes de continuar.`);
+  alert(
+    `⚠️ ${campo.toUpperCase()} já encontrado.\n\n` +
+    msg +
+    "\n\nVocê ainda poderá cadastrar este patrimônio."
+  );
+
+  document.getElementById(campo)?.classList.add("atlas-campo-alerta");
   return true;
 }
 

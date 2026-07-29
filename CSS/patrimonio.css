@@ -1821,3 +1821,43 @@ textarea,
 .atlas-inativos-toggle:hover{background:#f8fafc;border-color:#94a3b8;color:#0f172a}
 .atlas-inativos-toggle.ativo{background:#fff7ed;border-color:#fdba74;color:#9a3412}
 .status-INATIVO,.status-inativo{background:#e5e7eb!important;color:#374151!important}
+
+/* =========================================================
+   ATLAS PATRIMÔNIO — CAMADAS DO AUTOCOMPLETE
+========================================================= */
+#cardEntradaPatrimonio{
+  position:relative!important;
+  z-index:30!important;
+  overflow:visible!important;
+}
+
+#cardEntradaPatrimonio .grid,
+#cardEntradaPatrimonio #camposExtras,
+.atlas-autocomplete-campo{
+  overflow:visible!important;
+}
+
+.atlas-autocomplete-campo{
+  position:relative!important;
+  z-index:40!important;
+}
+
+.atlas-autocomplete-lista{
+  z-index:50!important;
+}
+
+.card:has(#busca),
+.card:has(#lista){
+  position:relative!important;
+  z-index:1!important;
+}
+
+.atlas-campo-duplicado{
+  border-color:#dc2626!important;
+  box-shadow:0 0 0 3px rgba(220,38,38,.12)!important;
+}
+
+.atlas-campo-alerta{
+  border-color:#f59e0b!important;
+  box-shadow:0 0 0 3px rgba(245,158,11,.12)!important;
+}
