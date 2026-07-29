@@ -1583,18 +1583,17 @@ input, textarea{
 
 #cardObraLancamento{
   position:relative!important;
-  z-index:5000!important;
+  z-index:20!important;
 }
 
 .atlas-obra-combo{
   position:relative!important;
-  z-index:6000!important;
+  z-index:21!important;
 }
 
 .atlas-obra-sugestoes{
-  z-index:2147483000!important;
+  z-index:22!important;
   position:absolute!important;
-  isolation:isolate;
 }
 
 #cardEntradaPatrimonio,
