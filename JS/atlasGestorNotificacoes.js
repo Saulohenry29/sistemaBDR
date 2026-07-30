@@ -20,7 +20,7 @@
 
   const Gestor = {
     __loaded:true,
-    versao:"1.7-almoxarifado-por-etapa"
+    versao:"1.8-preferencia-notificacoes-estrita"
   };
 
   const PERFIS_OPERACIONAIS = ["MASTER", "ADMIN", "ALMOXARIFE", "ALMOXARIFADO", "SUPERVISOR", "GESTOR", "LOGISTICA", "LOGÍSTICA"];
@@ -90,6 +90,20 @@
     return upper(u?.permissoes);
   }
 
+  function listaPermissoesUsuario(u){
+    return texto(u?.permissoes)
+      .split(",")
+      .map(item => upper(item))
+      .filter(Boolean);
+  }
+
+  function usuarioAceitaNotificacoes(u){
+    if(!u || u.ativo === false) return false;
+
+    return listaPermissoesUsuario(u)
+      .includes("RECEBER_NOTIFICACOES");
+  }
+
   function possuiAlgumaPermissao(u, lista){
     const p = permissoesUsuario(u);
     return (lista || []).some(x => p.includes(x));
@@ -121,11 +135,12 @@
     if(!u || u.ativo === false) return false;
     if(estaBloqueadoExpedicao(u)) return false;
 
-    // Regra profissional do Atlas:
-    // - Se tiver permissão explícita, recebe.
-    // - Se ainda não existir tela para marcar permissões, perfis operacionais recebem por padrão.
-    // - Para bloquear um MASTER/ADMIN específico, use NAO_RECEBER_NOTIFICACOES_EXPEDICAO.
-    return possuiAlgumaPermissao(u, PERMISSOES_EXPEDICAO) || perfilOperacional(u);
+    /*
+     * Regra oficial:
+     * perfil MASTER/ADMIN não recebe por padrão.
+     * A opção "Receber notificações e sininho" precisa estar marcada.
+     */
+    return usuarioAceitaNotificacoes(u);
   }
 
   function usuarioTemAcessoObra(u, obraId){
@@ -277,6 +292,34 @@
     const banco = db();
     if(!banco) throw new Error("Supabase não carregado.");
     if(!usuario_destino_id) return false;
+
+    /*
+     * Proteção central:
+     * nenhuma rotina pode inserir notificação para usuário que
+     * desmarcou RECEBER_NOTIFICACOES.
+     */
+    const { data: usuarioDestino, error: erroUsuarioDestino } = await banco
+      .from("usuarios_sistema")
+      .select("id,ativo,permissoes")
+      .eq("id", usuario_destino_id)
+      .maybeSingle();
+
+    if(erroUsuarioDestino){
+      console.warn(
+        "AtlasGestorNotificacoes: falha ao validar preferência do destinatário.",
+        erroUsuarioDestino.message || erroUsuarioDestino
+      );
+      return false;
+    }
+
+    if(!usuarioAceitaNotificacoes(usuarioDestino)){
+      console.info(
+        "AtlasGestorNotificacoes: notificação ignorada. " +
+        "O usuário não está marcado para receber notificações.",
+        usuario_destino_id
+      );
+      return false;
+    }
 
     const payload = {
       empresa_id: empresa_id || empresaAtualId(),

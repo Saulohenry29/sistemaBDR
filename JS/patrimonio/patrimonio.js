@@ -3283,6 +3283,68 @@ async function trocarObra(){
 }
 
 
+
+/* =========================================================
+   ATLAS PATRIMÔNIO — DESTINATÁRIOS DAS NOTIFICAÇÕES
+
+   Regra oficial:
+   - somente usuário ativo;
+   - precisa ter RECEBER_NOTIFICACOES marcado;
+   - quem executou a ação não recebe o próprio alerta azul;
+   - a confirmação verde local continua aparecendo normalmente.
+========================================================= */
+async function atlasBuscarDestinatariosNotificacaoPatrimonio(empresaId){
+  try{
+    const banco = db();
+    const autor = usuarioAtual();
+    const autorId = autor?.id || autor?.usuario_id || null;
+
+    if(!banco) return [];
+
+    let query = banco
+      .from("usuarios_sistema")
+      .select("id,nome,usuario,email,empresa_id,ativo,permissoes");
+
+    if(empresaId){
+      query = query.eq("empresa_id", empresaId);
+    }
+
+    const { data, error } = await query;
+
+    if(error){
+      console.warn(
+        "Atlas Patrimônio: não foi possível buscar destinatários das notificações.",
+        error.message || error
+      );
+      return [];
+    }
+
+    return (data || []).filter(usuario => {
+      if(!usuario || usuario.ativo === false) return false;
+
+      if(
+        autorId != null &&
+        String(usuario.id || "") === String(autorId)
+      ){
+        return false;
+      }
+
+      const permissoes = String(usuario.permissoes || "")
+        .split(",")
+        .map(item => item.trim().toUpperCase())
+        .filter(Boolean);
+
+      return permissoes.includes("RECEBER_NOTIFICACOES");
+    });
+  }catch(e){
+    console.warn(
+      "Atlas Patrimônio: falha ao preparar destinatários.",
+      e?.message || e
+    );
+    return [];
+  }
+}
+
 async function atlasNotificarExclusaoPatrimonio({ patrimonio, motivo, usuarioNome, obraSetor, dataHora }){
   try{
     const gestor = window.AtlasGestorNotificacoes;
@@ -3302,13 +3364,29 @@ async function atlasNotificarExclusaoPatrimonio({ patrimonio, motivo, usuarioNom
       `Motivo: ${motivo}`
     ].join(" | ");
 
-    await gestor.criarNotificacao({
-      usuario_destino_id:1,
-      empresa_id:patrimonio?.empresa_id || usuarioAtual()?.empresa_id || null,
+    const empresaId =
+      patrimonio?.empresa_id ||
+      usuarioAtual()?.empresa_id ||
+      null;
+
+    const destinatarios =
+      await atlasBuscarDestinatariosNotificacaoPatrimonio(empresaId);
+
+    if(!destinatarios.length){
+      console.info(
+        "Atlas Patrimônio: exclusão concluída sem alerta azul. " +
+        "Nenhum outro usuário ativo está marcado para receber notificações."
+      );
+      return true;
+    }
+
+    await gestor.notificarLista(destinatarios, {
+      empresa_id:empresaId,
       tipo:"PATRIMONIO_INATIVADO",
       titulo:"🚫 Patrimônio excluído",
       mensagem,
-      link:"patrimonio.html?filtro=INATIVO&patrimonio=" + encodeURIComponent(patrimonio?.id || ""),
+      link:"patrimonio.html?filtro=INATIVO&patrimonio=" +
+        encodeURIComponent(patrimonio?.id || ""),
       patrimonio_id:patrimonio?.id || null,
       obra_origem_id:patrimonio?.obra_id || null,
       obra_destino_id:patrimonio?.obra_id || null
@@ -3430,13 +3508,29 @@ async function atlasNotificarReativacaoPatrimonio({ patrimonio, usuarioNome, obr
       "Novo status: ESTOQUE"
     ].join(" | ");
 
-    await gestor.criarNotificacao({
-      usuario_destino_id:1,
-      empresa_id:patrimonio?.empresa_id || usuarioAtual()?.empresa_id || null,
+    const empresaId =
+      patrimonio?.empresa_id ||
+      usuarioAtual()?.empresa_id ||
+      null;
+
+    const destinatarios =
+      await atlasBuscarDestinatariosNotificacaoPatrimonio(empresaId);
+
+    if(!destinatarios.length){
+      console.info(
+        "Atlas Patrimônio: reativação concluída sem alerta azul. " +
+        "Nenhum outro usuário ativo está marcado para receber notificações."
+      );
+      return true;
+    }
+
+    await gestor.notificarLista(destinatarios, {
+      empresa_id:empresaId,
       tipo:"PATRIMONIO_REATIVADO",
       titulo:"♻️ Patrimônio reativado",
       mensagem,
-      link:"patrimonio.html?patrimonio=" + encodeURIComponent(patrimonio?.id || ""),
+      link:"patrimonio.html?patrimonio=" +
+        encodeURIComponent(patrimonio?.id || ""),
       patrimonio_id:patrimonio?.id || null,
       obra_origem_id:patrimonio?.obra_id || null,
       obra_destino_id:patrimonio?.obra_id || null

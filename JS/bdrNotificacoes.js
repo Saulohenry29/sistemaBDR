@@ -20,7 +20,7 @@
 
   const BDR_NOTIF = {
     __loaded:true,
-    versao:'12.2-patrimonio-estavel',
+    versao:'12.3-toast-verde-sem-duplicidade-patrimonio',
     intervaloMs:10000,
     timer:null,
     carregando:false,
@@ -142,21 +142,30 @@
         z-index:2147483000!important;
         overflow:visible!important;
       }
+      
       .notif-dropdown{
-        width:min(400px,calc(100vw - 24px))!important;
-        max-height:min(620px,calc(100vh - 110px))!important;
-        overflow:hidden!important;
-        z-index:2147483001!important;
-        isolation:isolate;
+        width:min(430px,calc(100vw - 24px))!important;
+         max-height:min(700px,calc(100vh - 110px))!important;
+
+         overflow:hidden!important;
+         z-index:2147483001!important;
+         isolation:isolate;
       }
-      .notif-list{
+
+       /* tablela.bdr-notif-tabela{width:100%!important;border-collapse:collapse!important} . 
+          esse bloco a baixo é para ajustar o tamanho da notificação sininho */
+
+       .notif-list{
         max-height:min(285px,calc(100vh - 205px))!important;
+        min-height:300px!important;
+
         overflow-y:auto!important;
         overflow-x:hidden!important;
+
         overscroll-behavior:contain;
         scrollbar-gutter:stable;
         touch-action:pan-y;
-        user-select:text!important;
+         user-select:text!important;
       }
       .notif-list::-webkit-scrollbar{width:10px}
       .notif-list::-webkit-scrollbar-track{background:#f1f5f9}
@@ -217,9 +226,9 @@
       .notif-btn.bdr-notif-offline{opacity:.75;filter:grayscale(.25)}
       .bdr-notif-toast-forte{
         position:fixed;top:14px;left:50%;transform:translate(-50%,-18px);
-        width:min(520px,calc(100vw - 24px));background:linear-gradient(135deg,#1d4ed8,#2563eb);
+        width:min(520px,calc(100vw - 24px));background:linear-gradient(135deg,#15803d,#16a34a);
         color:#fff;border-radius:16px;padding:13px 16px;z-index:2147483647;
-        box-shadow:0 18px 45px rgba(37,99,235,.34);opacity:0;pointer-events:none;
+        box-shadow:0 18px 45px rgba(22,163,74,.30);opacity:0;pointer-events:none;
         transition:.22s ease;font-size:13px;font-weight:900;text-align:center;
       }
       .bdr-notif-toast-forte.ativo{opacity:1;transform:translate(-50%,0)}
@@ -352,6 +361,27 @@
   }
 
   function avisarNovaNotificacao(mensagem){
+    const textoAviso = String(mensagem || "");
+    const textoNormalizado = textoAviso.toUpperCase();
+
+    /*
+     * Patrimônio já mostra a confirmação verde local.
+     * A notificação continua registrada no sininho, mas não cria
+     * um segundo popup por cima da confirmação.
+     */
+    const ehConfirmacaoPatrimonio =
+      textoNormalizado.includes("PATRIMÔNIO EXCLUÍDO") ||
+      textoNormalizado.includes("PATRIMONIO EXCLUIDO") ||
+      textoNormalizado.includes("PATRIMÔNIO INATIVADO") ||
+      textoNormalizado.includes("PATRIMONIO INATIVADO") ||
+      textoNormalizado.includes("PATRIMÔNIO REATIVADO") ||
+      textoNormalizado.includes("PATRIMONIO REATIVADO");
+
+    if(ehConfirmacaoPatrimonio){
+      animarSininho();
+      return;
+    }
+
     const agora = Date.now();
     if(agora - BDR_NOTIF.ultimoAvisoEm < 850) return;
     BDR_NOTIF.ultimoAvisoEm = agora;
@@ -359,7 +389,7 @@
     tocarSom();
     vibrar();
     animarSininho();
-    mostrarToast(mensagem);
+    mostrarToast(textoAviso);
   }
 
   function bdrDataComoUTC(valor){
