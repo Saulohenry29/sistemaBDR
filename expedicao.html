@@ -10,31 +10,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:,">
 <link rel="manifest" href="./manifest.json">
-<title>BDR ERP - Expedição</title>
+<title>Atlas - Expedição Nova</title>
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
 <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260724-v11">
 <link rel="stylesheet" href="./CSS/atlas-topbar.css?v=20260724-v3">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script src="./JS/supabaseClient.js"></script>
-<script src="./JS/auth.js"></script>
-<script src="./JS/bdrCore.js"></script>
-<script src="./JS/offlineQueue.js"></script>
-<script src="./JS/offlineDB.js"></script>
-<script src="./JS/bdrSyncEngine.js"></script>
-<script src="./JS/bdrSyncCenter.js"></script>
-<script src="./JS/atlasEvents.js?v=20260706-sprint242"></script>
-<script src="./JS/atlasEventStore.js?v=20260706-sprint251"></script>
-<script src="./JS/atlasAudio/atlasAudio.js"></script>
-<script src="./JS/atlasGestorNotificacoes.js"></script>
-<script src="./JS/bdrNotificacoes.js"></script>
-<script src="./JS/AtlasGestorReservas.js?v=20260708-sprint28"></script>
-<script src="./JS/AtlasModal.js?v=20260708-sprint313"></script>
-<script src="./JS/AtlasLogistica.js?v=20260708-sprint313"></script>
-<script src="./JS/AtlasFiscal.js?v=20260713-sprint330"></script>
-<script src="./JS/atlasWorkflow.js?v=20260713-sprint330"></script>
-<script src="./JS/bdrMenuPermissoes.js"></script>
-<script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260629-2"></script>
+<!-- =========================================================
+     EXPEDIÇÃO NOVA - CARREGAMENTO ENXUTO
+     Scripts básicos usam defer e módulos pesados são carregados
+     somente quando a função correspondente for utilizada.
+========================================================= -->
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script defer src="./JS/supabaseClient.js"></script>
+<script defer src="./JS/auth.js"></script>
+<script defer src="./JS/bdrCore.js"></script>
+<script defer src="./JS/offlineQueue.js"></script>
+<script defer src="./JS/offlineDB.js"></script>
+<script defer src="./JS/bdrSyncEngine.js"></script>
+<script defer src="./JS/bdrSyncCenter.js"></script>
+<script defer src="./JS/atlasEvents.js"></script>
+<script defer src="./JS/atlasEventStore.js"></script>
+<script defer src="./JS/atlasGestorNotificacoes.js"></script>
+<script defer src="./JS/atlasAudio/atlasAudio.js"></script>
+<script defer src="./JS/bdrNotificacoes.js"></script>
+<script defer src="./JS/bdrMenuPermissoes.js"></script>
+<script defer src="./JS/bdr-menu-ocultar-de-verdade.js"></script>
+<script defer src="./JS/expedicao/expedicaoBoot.js"></script>
 
 <style>
 /* =========================================================
@@ -760,9 +761,11 @@
 
 
 </style>
+<link rel="stylesheet" href="./CSS/expedicao-nova.css">
 </head>
-<body>
-<script>verificarLogin();</script>
+<body class="atlas-expedicao-nova">
+<div id="atlasExpedicaoLoading" class="atlas-expedicao-loading"><div class="atlas-expedicao-loading-card"><strong>🚚 Abrindo Expedição</strong><span>Carregando somente o necessário...</span></div></div>
+
 <div class="app-layout">
   <aside class="bdr-sidebar">
   <div class="bdr-brand">
@@ -975,45 +978,11 @@
 <div id="modalDetalhe" class="modal-bg"><div class="modal"><div class="modal-head"><span id="modalTitulo">Detalhes</span><button class="fechar-modal" onclick="fecharModalDetalhe()">X</button></div><div class="modal-body" id="modalConteudo"></div></div></div>
 <div id="modalRetirada" class="modal-bg"><div class="modal"><div class="modal-head"><span>🚚 Confirmar retirada</span><button class="fechar-modal" onclick="fecharModalRetirada()">X</button></div><div class="modal-body"><input id="retMotorista" placeholder="Motorista / responsável"><br><br><input id="retVeiculo" placeholder="Veículo"><br><br><input id="retPlaca" placeholder="Placa"><br><br><textarea id="retObs" placeholder="Observação da retirada"></textarea><br><br><button class="btn-ok" data-permissao="EXPEDICAO_ENTREGAR" onclick="confirmarRetiradaModal()">Confirmar retirada</button></div></div></div>
 
-<script>
-/* PATCH BDR - abre expedição direto na aba certa via URL
-   Exemplo: expedicao.html?aba=separacao */
-(function(){
-  function abrirAbaPorUrl(){
-    const params = new URLSearchParams(location.search);
-    const aba = params.get("aba");
-    if(!aba) return;
 
-    const tentar = () => {
-      if(typeof abrirAba !== "function") return false;
 
-      const botao = Array.from(document.querySelectorAll(".tab-btn"))
-        .find(b => (b.getAttribute("onclick") || "").includes("'" + aba + "'"));
 
-      abrirAba(aba, botao || null);
-      return true;
-    };
 
-    if(!tentar()){
-      let tentativas = 0;
-      const timer = setInterval(() => {
-        tentativas++;
-        if(tentar() || tentativas > 20) clearInterval(timer);
-      }, 150);
-    }
-  }
 
-  document.addEventListener("DOMContentLoaded", abrirAbaPorUrl);
-})();
-</script>
-<script defer src="./JS/pwa-update.js"></script>
 
-<script src="./JS/bdrUppercase.js"></script>
-<script src="./JS/AtlasMotion.js?v=20260706-sprint242"></script>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script src="./JS/AtlasSeparacaoQR.js"></script>
-<script src="./JS/expedicao.js?v=20260723-exp360-filtros-paginacao"></script>
-<script src="./JS/bdrMenuMobileAtivo.js?v=20260702-3"></script>
-<script src="./JS/atlasTopbar.js?v=20260728-v1.3.1-sem-piscar"></script>
 </body>
 </html>

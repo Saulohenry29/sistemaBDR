@@ -3,3 +3,35 @@
 .atlas-expedicao-loading.oculto{opacity:0;pointer-events:none}
 .atlas-expedicao-loading-card{display:flex;flex-direction:column;gap:7px;min-width:260px;padding:22px 25px;border-radius:18px;background:#fff;box-shadow:0 20px 55px rgba(15,23,42,.18);text-align:center}
 .atlas-expedicao-loading-card strong{font-size:17px;color:#a4161a}.atlas-expedicao-loading-card span{font-size:12px;color:#64748b}
+/* =========================================================
+   ATLAS EXPEDIÇÃO — COMPORTAMENTO DE APLICATIVO
+   ---------------------------------------------------------
+   Impede seleção acidental dos textos da interface.
+   Campos de digitação e conteúdos úteis continuam liberados.
+========================================================= */
+
+body.atlas-expedicao-nova,
+body.atlas-expedicao-nova button,
+body.atlas-expedicao-nova .card,
+body.atlas-expedicao-nova .kpi,
+body.atlas-expedicao-nova .tabs,
+body.atlas-expedicao-nova .pedido-card,
+body.atlas-expedicao-nova .produto-card,
+body.atlas-expedicao-nova .chip-exp,
+body.atlas-expedicao-nova .bdr-topbar,
+body.atlas-expedicao-nova .bdr-sidebar{
+  user-select:none!important;
+  -webkit-user-select:none!important;
+  caret-color:transparent!important;
+}
+
+/* Campos onde o usuário precisa digitar ou copiar */
+body.atlas-expedicao-nova input,
+body.atlas-expedicao-nova textarea,
+body.atlas-expedicao-nova select,
+body.atlas-expedicao-nova .permitir-selecao,
+body.atlas-expedicao-nova .notif-item{
+  user-select:text!important;
+  -webkit-user-select:text!important;
+  caret-color:auto!important;
+}
