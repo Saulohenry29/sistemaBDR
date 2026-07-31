@@ -427,6 +427,7 @@ async function salvar(contexto){
     }
 
     if(criados){
+      window.AtlasAudio?.concluido?.();
       if(typeof atlasAvisoPatrimonio === "function"){
         atlasAvisoPatrimonio(
           "✅ Cadastro em lote concluído",

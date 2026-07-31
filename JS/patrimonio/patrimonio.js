@@ -2027,6 +2027,7 @@ usuario_cadastro:
       "\nSerá sincronizado automaticamente quando a internet voltar."
     );
   }else{
+    window.AtlasAudio?.concluido?.();
     atlasAvisoPatrimonio(
       "✅ Patrimônio cadastrado",
       `Código ${codigo_qr} salvo e sincronizado com sucesso.`

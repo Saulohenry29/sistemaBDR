@@ -1,5 +1,5 @@
 /* =========================================================
-   ATLAS GESTOR DE NOTIFICAÇÕES V1.2
+   ATLAS GESTOR DE NOTIFICAÇÕES V3.0
    Arquivo: JS/atlasGestorNotificacoes.js
    Sprint 2.6: Central oficial de destinatários
 
@@ -7,8 +7,9 @@
    - decidir quem deve receber notificações;
    - respeitar obra/setor, cargo/perfil e permissões;
    - evitar notificar o próprio solicitante no pedido.criado;
-   - criar notificações na tabela oficial notificacoes;
-   - emitir eventos para AtlasEvents / AtlasEventStore / sininho.
+   - ser a única porta de escrita na tabela notificacoes;
+   - emitir eventos para AtlasEvents / AtlasEventStore / sininho;
+   - separar notificações de ação das informativas.
 ========================================================= */
 (function(){
   "use strict";
@@ -20,10 +21,9 @@
 
   const Gestor = {
     __loaded:true,
-    versao:"1.8-preferencia-notificacoes-estrita"
+    versao:"3.0-central-unica-limpa"
   };
 
-  const PERFIS_OPERACIONAIS = ["MASTER", "ADMIN", "ALMOXARIFE", "ALMOXARIFADO", "SUPERVISOR", "GESTOR", "LOGISTICA", "LOGÍSTICA"];
 
   const PERMISSOES_EXPEDICAO = [
     "RECEBER_NOTIFICACOES_EXPEDICAO",
@@ -104,6 +104,48 @@
       .includes("RECEBER_NOTIFICACOES");
   }
 
+
+  const DETALHES_NOTIFICACAO = {
+    PATRIMONIO:["NOTIF_PATRIMONIO_CRIACAO","NOTIF_PATRIMONIO_ETIQUETA","NOTIF_PATRIMONIO_MOVIMENTACAO","NOTIF_PATRIMONIO_STATUS"],
+    EXPEDICAO:["NOTIF_EXPEDICAO_PEDIDOS","NOTIF_EXPEDICAO_APROVACAO","NOTIF_EXPEDICAO_SEPARACAO","NOTIF_EXPEDICAO_TRANSPORTE","NOTIF_EXPEDICAO_RECEBIMENTO"],
+    ESTOQUE:["NOTIF_ESTOQUE_MOVIMENTACAO","NOTIF_ESTOQUE_BAIXO"],
+    INVENTARIO:["NOTIF_INVENTARIO_ANDAMENTO","NOTIF_INVENTARIO_FINALIZADO"]
+  };
+
+  function preferenciaDoTipo(tipo){
+    const t=upper(tipo);
+    if(t.includes("PATRIMONIO")){
+      if(t.includes("CRIAD") || t.includes("CADASTR")) return ["PATRIMONIO","NOTIF_PATRIMONIO_CRIACAO"];
+      if(t.includes("ETIQUETA") || t.includes("IMPRESS")) return ["PATRIMONIO","NOTIF_PATRIMONIO_ETIQUETA"];
+      if(t.includes("MOVIMENT") || t.includes("TRANSFER")) return ["PATRIMONIO","NOTIF_PATRIMONIO_MOVIMENTACAO"];
+      return ["PATRIMONIO","NOTIF_PATRIMONIO_STATUS"];
+    }
+    if(t.includes("PEDIDO") || t.includes("EXPEDICAO") || t.includes("RETIRADA") || t.includes("RECEB")){
+      if(t.includes("CRIADO") || t.includes("SOLICIT")) return ["EXPEDICAO","NOTIF_EXPEDICAO_PEDIDOS"];
+      if(t.includes("APROV") || t.includes("RECUS")) return ["EXPEDICAO","NOTIF_EXPEDICAO_APROVACAO"];
+      if(t.includes("SEPAR")) return ["EXPEDICAO","NOTIF_EXPEDICAO_SEPARACAO"];
+      if(t.includes("TRANSITO") || t.includes("RETIRADA") || t.includes("ENVIADO")) return ["EXPEDICAO","NOTIF_EXPEDICAO_TRANSPORTE"];
+      if(t.includes("RECEB") || t.includes("DIVERGEN")) return ["EXPEDICAO","NOTIF_EXPEDICAO_RECEBIMENTO"];
+      return ["EXPEDICAO","NOTIF_EXPEDICAO_PEDIDOS"];
+    }
+    if(t.includes("INVENTARIO")) return ["INVENTARIO",t.includes("FINAL")?"NOTIF_INVENTARIO_FINALIZADO":"NOTIF_INVENTARIO_ANDAMENTO"];
+    if(t.includes("ESTOQUE")) return ["ESTOQUE",t.includes("BAIXO")?"NOTIF_ESTOQUE_BAIXO":"NOTIF_ESTOQUE_MOVIMENTACAO"];
+    return ["GERAL",null];
+  }
+
+  function usuarioAceitaTipoNotificacao(u,tipo){
+    if(!usuarioAceitaNotificacoes(u)) return false;
+    const perms=listaPermissoesUsuario(u);
+    const [modulo,detalhe]=preferenciaDoTipo(tipo);
+    if(modulo==="GERAL") return true;
+    const configuradas=Object.values(DETALHES_NOTIFICACAO).flat().filter(p=>perms.includes(p));
+    const algumModulo=["PATRIMONIO","EXPEDICAO","ESTOQUE","INVENTARIO"].some(m=>perms.includes("NOTIF_"+m));
+    // Compatibilidade com usuários antigos: apenas RECEBER_NOTIFICACOES = recebe tudo.
+    if(!configuradas.length && !algumModulo) return true;
+    if(perms.includes("NOTIF_"+modulo)) return true;
+    return detalhe ? perms.includes(detalhe) : false;
+  }
+
   function possuiAlgumaPermissao(u, lista){
     const p = permissoesUsuario(u);
     return (lista || []).some(x => p.includes(x));
@@ -113,9 +155,6 @@
     return possuiAlgumaPermissao(u, BLOQUEIOS_EXPEDICAO);
   }
 
-  function perfilOperacional(u){
-    return PERFIS_OPERACIONAIS.includes(upper(u?.perfil)) || PERFIS_OPERACIONAIS.includes(upper(u?.cargo));
-  }
 
   function podeAprovarPedido(u){
     if(!u || u.ativo === false || estaBloqueadoExpedicao(u)) return false;
@@ -124,24 +163,7 @@
       possuiAlgumaPermissao(u, ["EXPEDICAO_APROVAR","APROVAR_PEDIDO_ORIGEM"]);
   }
 
-  function podeSepararPedido(u){
-    if(!u || u.ativo === false || estaBloqueadoExpedicao(u)) return false;
-    const perfil = upper(u?.perfil || u?.cargo);
-    return ["MASTER","ADMIN","ALMOXARIFE","ALMOXARIFADO","LOGISTICA","LOGÍSTICA"].includes(perfil) ||
-      possuiAlgumaPermissao(u, ["EXPEDICAO_SEPARAR"]);
-  }
 
-  function podeReceberExpedicao(u){
-    if(!u || u.ativo === false) return false;
-    if(estaBloqueadoExpedicao(u)) return false;
-
-    /*
-     * Regra oficial:
-     * perfil MASTER/ADMIN não recebe por padrão.
-     * A opção "Receber notificações e sininho" precisa estar marcada.
-     */
-    return usuarioAceitaNotificacoes(u);
-  }
 
   function usuarioTemAcessoObra(u, obraId){
     if(!obraId) return false;
@@ -202,17 +224,6 @@
 
       const { data, error } = await query;
       if(error) throw error;
-
-    /* ===============================
-       SOM DA NOTIFICAÇÃO
-    =============================== */
-    try {
-      const audio = new Audio("./assets/audio/notificacao.mp3");
-      audio.volume = 0.5;
-      audio.play().catch(err => console.warn("Áudio bloqueado:", err));
-    } catch(err) {
-      console.warn("Erro ao tocar áudio:", err);
-    }
       return Array.isArray(data) ? data : [];
     }
 
@@ -230,6 +241,7 @@
     const base = (usuarios || [])
       .filter(u => u && u.ativo !== false)
       .filter(podeAprovarPedido)
+      .filter(u => usuarioAceitaTipoNotificacao(u, "PEDIDO_CRIADO"))
       .filter(u => !mesmoSolicitante(u, pedido));
 
     // Regra oficial Sprint 2.6.2:
@@ -258,6 +270,7 @@
 
     return unicoPorId((usuarios || [])
       .filter(u => u && u.ativo !== false)
+      .filter(usuarioAceitaNotificacoes)
       .filter(u => {
         const mesmoNome = solicitante && [upper(u.nome), upper(u.usuario), upper(u.email)].includes(solicitante);
         return mesmoNome || usuarioTemAcessoObra(u, destinoId);
@@ -323,10 +336,10 @@
       return false;
     }
 
-    if(!usuarioAceitaNotificacoes(usuarioDestino)){
+    if(!usuarioAceitaTipoNotificacao(usuarioDestino, tipo)){
       console.info(
         "AtlasGestorNotificacoes: notificação ignorada. " +
-        "O usuário não está marcado para receber notificações.",
+        "O usuário desativou esta notificação ou este tipo de evento.",
         usuario_destino_id
       );
       return false;
@@ -338,7 +351,7 @@
       tipo: tipo || "FLUXO",
       titulo: titulo || "Notificação",
       mensagem: mensagem || "",
-      link: link || "expedicao.html",
+      link: link === undefined ? "expedicao.html" : (link || null),
       lida: false,
       status: "NAO_LIDA",
       pedido_id: pedido_id || null,
@@ -421,7 +434,14 @@
       dados_json:{ notificacoes:total, itens:(itens || []).length }
     });
 
-    return { ok:true, notificacoes:total, origemId, destinoId, destinatarios:responsaveis.map(u => ({id:u.id,nome:u.nome,perfil:u.perfil,obra_id:u.obra_id})) };
+    return {
+      ok:total > 0,
+      notificacoes:total,
+      origemId,
+      destinoId,
+      motivo:total > 0 ? null : "Responsáveis encontrados, mas as preferências bloquearam a notificação.",
+      destinatarios:responsaveis.map(u => ({id:u.id,nome:u.nome,perfil:u.perfil,obra_id:u.obra_id}))
+    };
   }
 
   async function notificarDestinoPedido(pedido, tipo, titulo, mensagem, link){
@@ -434,7 +454,7 @@
       tipo,
       titulo,
       mensagem,
-      link:link || "expedicao.html?aba=historico",
+      link:link === undefined ? "expedicao.html?aba=historico" : (link || null),
       pedido_id:pedido.id,
       obra_origem_id:pedido.obra_origem_id || null,
       obra_destino_id:pedido.obra_destino_id || pedido.obra_id || null
@@ -457,9 +477,10 @@
       REGRA OFICIAL ATLAS:
       - Pedido novo: somente quem aprova.
       - Pedido autorizado: somente equipe operacional de separação.
-      - ALMOXARIFE/ALMOXARIFADO não depende da obra do pedido para receber,
-        pois pode separar itens de qualquer origem liberada no catálogo.
-      - MASTER/ADMIN não entram aqui automaticamente.
+      - A equipe de separação precisa pertencer à obra de origem/CD
+        ou possuir acesso explícito àquela origem.
+      - O solicitante/destino recebe somente um aviso informativo.
+      - MASTER/ADMIN não entram automaticamente como separadores.
     */
     let separadores = unicoPorId(
       (usuarios || [])
@@ -474,31 +495,19 @@
             "RECEBER_NOTIFICACOES_EXPEDICAO",
             "RECEBER_NOTIFICACOES_MOVIMENTACOES"
           ]);
-          return (perfilAlmox || permissaoSeparar) && recebeNotif;
+          const pertenceOrigem =
+            usuarioTemAcessoObra(u, origemId) ||
+            (
+              usuarioPodeAtenderQualquerOrigem(u) &&
+              possuiAlgumaPermissao(u, ["EXPEDICAO_SEPARAR_TODAS_OBRAS"])
+            );
+
+          return (perfilAlmox || permissaoSeparar) &&
+                 recebeNotif &&
+                 pertenceOrigem;
         })
     );
 
-    // Fallback seguro: se ninguém tiver a permissão de notificação configurada,
-    // usa os perfis de almoxarifado/logística ativos.
-    if(!separadores.length){
-      separadores = unicoPorId(
-        (usuarios || [])
-          .filter(u => u && u.ativo !== false)
-          .filter(u => !estaBloqueadoExpedicao(u))
-          .filter(u => ["ALMOXARIFE","ALMOXARIFADO","LOGISTICA","LOGÍSTICA"]
-            .includes(upper(u?.perfil || u?.cargo)))
-      );
-    }
-
-    console.table(separadores.map(u => ({
-      id:u.id,
-      nome:u.nome,
-      perfil:u.perfil,
-      obra_id:u.obra_id,
-      permissoes:u.permissoes,
-      etapa:"SEPARACAO",
-      pedido:pedido?.codigo || pedido?.id
-    })));
 
     const total = await notificarLista(separadores, {
       empresa_id:empresaId,
@@ -526,6 +535,53 @@
     };
   }
 
+
+  /* =========================================================
+     AVISO INFORMATIVO PARA A OBRA DE ORIGEM
+     Usado quando a origem precisa acompanhar o fluxo.
+  ========================================================= */
+  async function notificarOrigemPedido(pedido, tipo, titulo, mensagem, link){
+    const empresaId = pedido?.empresa_id || empresaAtualId();
+    const origemId = pedido?.obra_origem_id || null;
+    const usuarios = await buscarUsuariosEmpresa(empresaId);
+
+    const destinatarios = unicoPorId(
+      (usuarios || [])
+        .filter(u => u && u.ativo !== false)
+        .filter(u => !estaBloqueadoExpedicao(u))
+        .filter(u => usuarioAceitaTipoNotificacao(u, tipo))
+        .filter(u =>
+          usuarioTemAcessoObra(u, origemId) ||
+          (
+            usuarioGlobal(u) &&
+            possuiAlgumaPermissao(u, PERMISSOES_EXPEDICAO)
+          )
+        )
+    );
+
+    const total = await notificarLista(destinatarios, {
+      empresa_id:empresaId,
+      tipo,
+      titulo,
+      mensagem,
+      link:link === undefined ? "expedicao.html?aba=historico" : (link || null),
+      pedido_id:pedido?.id || null,
+      obra_origem_id:origemId,
+      obra_destino_id:pedido?.obra_destino_id || pedido?.obra_id || null
+    });
+
+    return {
+      ok:total > 0,
+      notificacoes:total,
+      destinatarios:destinatarios.map(u => ({
+        id:u.id,
+        nome:u.nome,
+        perfil:u.perfil,
+        obra_id:u.obra_id
+      }))
+    };
+  }
+
   async function diagnosticarPedidoCriado(pedido, itens){
     const empresaId = pedido?.empresa_id || empresaAtualId();
     const origemId = pedido?.obra_origem_id || null;
@@ -539,11 +595,10 @@
       ativo:u.ativo,
       tem_permissao:possuiAlgumaPermissao(u, PERMISSOES_EXPEDICAO),
       bloqueado:estaBloqueadoExpedicao(u),
-      operacional:perfilOperacional(u),
       acesso_origem:usuarioTemAcessoObra(u, origemId),
       global:usuarioGlobal(u),
       mesmo_solicitante:mesmoSolicitante(u, pedido),
-      pode_receber:podeReceberExpedicao(u)
+      aceita_notificacao:usuarioAceitaNotificacoes(u)
     }));
     console.table(linhas);
     return linhas;
@@ -557,12 +612,14 @@
   Gestor.notificarPedidoCriado = notificarPedidoCriado;
   Gestor.notificarDestinoPedido = notificarDestinoPedido;
   Gestor.notificarSeparacaoPedido = notificarSeparacaoPedido;
+  Gestor.notificarOrigemPedido = notificarOrigemPedido;
   Gestor.usuarioPodeAtenderQualquerOrigem = usuarioPodeAtenderQualquerOrigem;
-  Gestor.podeReceberExpedicao = podeReceberExpedicao;
+  Gestor.usuarioAceitaNotificacoes = usuarioAceitaNotificacoes;
+  Gestor.usuarioAceitaTipoNotificacao = usuarioAceitaTipoNotificacao;
   Gestor.usuarioTemAcessoObra = usuarioTemAcessoObra;
   Gestor.diagnosticarPedidoCriado = diagnosticarPedidoCriado;
 
   window.AtlasGestorNotificacoes = Gestor;
 
-  console.log("✅ ATLAS GESTOR NOTIFICAÇÕES V1.7 carregado - destinatários corretos por etapa");
+  console.log("✅ ATLAS GESTOR NOTIFICAÇÕES V3.0 carregado - central única e regras por papel");
 })();

@@ -405,3 +405,33 @@
   .user-dropdown,
   #atlasOverlayPortal{display:none!important;}
 }
+
+/* =========================================================
+   ATLAS TOPBAR — SININHO SEM CURSOR PISCANDO
+========================================================= */
+
+.notif-wrap,
+.notif-btn,
+.notif-btn *,
+.notif-badge{
+  user-select:none!important;
+  -webkit-user-select:none!important;
+  caret-color:transparent!important;
+}
+
+.notif-btn{
+  cursor:pointer!important;
+}
+
+/* Evita a marca piscando depois do clique com o mouse */
+.notif-btn:focus:not(:focus-visible){
+  outline:none!important;
+  box-shadow:none!important;
+}
+
+/* Mantém acessibilidade para quem navega pelo teclado */
+.notif-btn:focus-visible{
+  outline:2px solid #2563eb!important;
+  outline-offset:3px!important;
+}
+

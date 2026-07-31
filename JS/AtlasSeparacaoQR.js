@@ -37,7 +37,7 @@
 
   const AtlasSeparacaoQR = {
     __loaded:true,
-    versao:"1.9-rota-inteligente-ios-ajuste"
+    versao:"2.0-atlas-audio-v3"
   };
 
   const estado = {
@@ -327,31 +327,23 @@
   }
 
   function somSucesso(){
+    if(window.AtlasAudio?.scannerOK) return window.AtlasAudio.scannerOK();
     tom(880,0,.09); tom(1175,.12,.11);
-    try{ navigator.vibrate?.([60]); }catch(e){}
   }
 
   function somErro(){
-    const ctx = audioCtx();
-    try{ ctx?.resume?.(); }catch(e){}
-    tom(260,0,.20,.30);
-    tom(180,.24,.28,.32);
-    tom(130,.56,.20,.26);
-    try{
-      if(typeof navigator.vibrate === "function"){
-        navigator.vibrate([240,100,240,100,320]);
-      }
-    }catch(e){}
+    if(window.AtlasAudio?.scannerErro) return window.AtlasAudio.scannerErro();
+    tom(260,0,.20,.30); tom(180,.24,.28,.32);
   }
 
   function somItem(){
+    if(window.AtlasAudio?.scannerOK) return window.AtlasAudio.scannerOK();
     tom(660,0,.08); tom(880,.1,.08); tom(1320,.2,.14);
-    try{ navigator.vibrate?.([55,40,55]); }catch(e){}
   }
 
   function somPedido(){
+    if(window.AtlasAudio?.concluido) return window.AtlasAudio.concluido();
     tom(523,0,.12); tom(659,.14,.12); tom(784,.28,.12); tom(1047,.42,.25);
-    try{ navigator.vibrate?.([80,50,80,50,180]); }catch(e){}
   }
 
   function toast(msg,tipo=""){

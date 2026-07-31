@@ -1,5 +1,5 @@
 /* BDR ERP - Service Worker V4 SAFE OFFLINE */
-const BDR_CACHE_VERSION = "bdr-erp-v4.0.4-atlas-qr-local-20260730";
+const BDR_CACHE_VERSION = "bdr-erp-v4.0.5-cache-audio-206-safe";
 
 const BDR_ASSETS = [
   "./",
@@ -55,6 +55,34 @@ const BDR_ASSETS = [
   "./JS/usuarios.js"
 ];
 
+
+/* =========================================================
+   CACHE SEGURO
+   ---------------------------------------------------------
+   O navegador pode carregar MP3 em partes usando HTTP 206.
+   O Cache Storage não aceita respostas parciais.
+
+   Esta função salva somente respostas completas e válidas.
+========================================================= */
+async function bdrSalvarRespostaCompletaNoCache(cacheName, request, response){
+  try{
+    if(!response) return false;
+
+    // Resposta parcial de áudio/vídeo: não pode entrar no Cache Storage.
+    if(response.status === 206) return false;
+
+    // Evita guardar erros, redirecionamentos problemáticos e respostas inválidas.
+    if(!response.ok) return false;
+
+    const cache = await caches.open(cacheName);
+    await cache.put(request, response.clone());
+    return true;
+  }catch(error){
+    console.warn("BDR SW: resposta não armazenada no cache:", request.url, error);
+    return false;
+  }
+}
+
 self.addEventListener("install", event => {
   self.skipWaiting();
   event.waitUntil(
@@ -85,8 +113,7 @@ self.addEventListener("fetch", event => {
   if(url.hostname.includes("cdn.jsdelivr.net") || url.hostname.includes("cdnjs.cloudflare.com")){
     event.respondWith(
       caches.match(req).then(cached => cached || fetch(req).then(resp => {
-        const clone = resp.clone();
-        caches.open(BDR_CACHE_VERSION).then(cache => cache.put(req, clone));
+        bdrSalvarRespostaCompletaNoCache(BDR_CACHE_VERSION, req, resp);
         return resp;
       }).catch(() => cached))
     );
@@ -96,8 +123,7 @@ self.addEventListener("fetch", event => {
   if(req.headers.get("accept")?.includes("text/html")){
     event.respondWith(
       fetch(req).then(resp => {
-        const clone = resp.clone();
-        caches.open(BDR_CACHE_VERSION).then(cache => cache.put(req, clone));
+        bdrSalvarRespostaCompletaNoCache(BDR_CACHE_VERSION, req, resp);
         return resp;
       }).catch(async () => await caches.match(req) || await caches.match("./login.html") || await caches.match("./index.html"))
     );
@@ -106,8 +132,7 @@ self.addEventListener("fetch", event => {
 
   event.respondWith(
     fetch(req).then(resp => {
-      const clone = resp.clone();
-      caches.open(BDR_CACHE_VERSION).then(cache => cache.put(req, clone));
+      bdrSalvarRespostaCompletaNoCache(BDR_CACHE_VERSION, req, resp);
       return resp;
     }).catch(async () => await caches.match(req))
   );

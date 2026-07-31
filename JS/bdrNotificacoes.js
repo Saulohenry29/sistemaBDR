@@ -21,7 +21,7 @@
 
   const BDR_NOTIF = {
     __loaded:true,
-    versao:'13.0-sininho-fonte-oficial',
+    versao:'13.1-modo-usuario',
     intervaloMs:10000,
     timer:null,
     carregando:false,
@@ -182,8 +182,6 @@
 
        .notif-list{
         max-height:min(285px,calc(100vh - 205px))!important;
-        min-height:300px!important;
-
         overflow-y:auto!important;
         overflow-x:hidden!important;
 
@@ -446,6 +444,14 @@
     return false;
   }
 
+  function modoAvisoUsuario(){
+    const u=usuarioAtualSeguro();
+    const perms=String(u?.permissoes || '').split(',').map(x=>x.trim().toUpperCase());
+    if(perms.includes('NOTIF_MODO_SILENCIOSO')) return 'SILENCIOSO';
+    if(perms.includes('NOTIF_MODO_VISUAL')) return 'VISUAL';
+    return 'SOM';
+  }
+
   function avisarNovaNotificacao(notificacao){
     /*
      * Mantém compatibilidade com chamadas antigas que enviavam somente texto.
@@ -506,11 +512,16 @@
       textoNormalizado.includes("PATRIMÔNIO REATIVADO") ||
       textoNormalizado.includes("PATRIMONIO REATIVADO");
 
-    tocarSom(chave);
-    vibrar();
+    const modo = modoAvisoUsuario();
+
+    if(modo === "SOM"){
+      tocarSom(chave);
+      vibrar();
+    }
+
     animarSininho();
 
-    if(ehConfirmacaoPatrimonio) return;
+    if(ehConfirmacaoPatrimonio || modo === "SILENCIOSO") return;
 
     mostrarToast(textoAviso);
   }
@@ -1011,5 +1022,5 @@
   window.bdrMarcarNotificacaoComoLida = marcarNotificacaoComoLida;
   window.bdrMarcarTodasNotificacoesComoLidas = marcarTodasComoLidas;
 
-  console.log('✅ BDR NOTIFICAÇÕES V13.0 carregado - sininho é a fonte oficial do som');
+  console.log('✅ BDR NOTIFICAÇÕES V13.2 carregado - altura automática e preferências por usuário');
 })();

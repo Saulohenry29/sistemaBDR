@@ -1,0 +1,5 @@
+/* ATLAS EXPEDIÇÃO NOVA — carregamento inicial */
+.atlas-expedicao-loading{position:fixed;inset:0;z-index:2147483646;display:grid;place-items:center;background:rgba(248,250,252,.94);transition:opacity .2s ease}
+.atlas-expedicao-loading.oculto{opacity:0;pointer-events:none}
+.atlas-expedicao-loading-card{display:flex;flex-direction:column;gap:7px;min-width:260px;padding:22px 25px;border-radius:18px;background:#fff;box-shadow:0 20px 55px rgba(15,23,42,.18);text-align:center}
+.atlas-expedicao-loading-card strong{font-size:17px;color:#a4161a}.atlas-expedicao-loading-card span{font-size:12px;color:#64748b}

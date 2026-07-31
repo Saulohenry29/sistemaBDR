@@ -1861,3 +1861,56 @@ textarea,
   border-color:#f59e0b!important;
   box-shadow:0 0 0 3px rgba(245,158,11,.12)!important;
 }
+
+/* =========================================================
+   ATLAS PATRIMÔNIO — CORREÇÃO FINAL DAS CAMADAS DA OBRA
+   ---------------------------------------------------------
+   A lista de obras precisa aparecer acima do card
+   "Novo Patrimônio".
+
+   Havia um conflito no próprio arquivo:
+   - Obra de lançamento: z-index 20
+   - Novo Patrimônio: z-index 30
+
+   Como esta regra fica no final do CSS, ela passa a ser
+   a fonte oficial das camadas desta área.
+========================================================= */
+
+#cardObraLancamento{
+  position:relative!important;
+  z-index:100!important;
+  overflow:visible!important;
+}
+
+#cardObraLancamento .lock-row{
+  position:relative!important;
+  z-index:101!important;
+  overflow:visible!important;
+}
+
+#atlasObraCombo,
+.atlas-obra-combo{
+  position:relative!important;
+  z-index:102!important;
+  overflow:visible!important;
+}
+
+#obraSugestoes,
+.atlas-obra-sugestoes{
+  position:absolute!important;
+  z-index:103!important;
+}
+
+/* O cadastro permanece atrás da lista de obras. */
+#cardEntradaPatrimonio{
+  position:relative!important;
+  z-index:10!important;
+}
+
+/* Não deixa cards seguintes criarem uma camada acima. */
+.card:has(#busca),
+.card:has(#lista){
+  position:relative!important;
+  z-index:1!important;
+}
+

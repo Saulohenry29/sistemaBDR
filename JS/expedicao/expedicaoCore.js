@@ -1,4 +1,4 @@
-/* ATLAS EXPEDIÇÃO 3.6.0 - NOTIFICAÇÃO SEGURA + ATLAS AUDIO V3 */
+/* ATLAS EXPEDIÇÃO 3.2.0 - SEPARAÇÃO GUIADA POR QR */
 /* =========================================================
    ATUALIZADO: EXPEDIÇÃO COM OFFLINE BDR
 ========================================================= */
@@ -107,64 +107,6 @@ document.addEventListener("DOMContentLoaded", () => setTimeout(aplicarStatusExpT
 function valor(id){ return String(document.getElementById(id)?.value || "").trim(); }
 function esc(v){ return String(v ?? "").replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
 function usuarioAtual(){ try{ const u=localStorage.getItem("usuario_logado") || localStorage.getItem("usuarioLogado"); return u ? JSON.parse(u) : null; }catch(e){ return null; } }
-
-/* =========================================================
-   ATLAS AUDIO V3 — MÉTODOS OFICIAIS DA EXPEDIÇÃO
-========================================================= */
-function atlasAudioScannerOK(){
-  try{ return window.AtlasAudio?.scannerOK?.() || false; }catch(e){ return false; }
-}
-function atlasAudioScannerErro(){
-  try{ return window.AtlasAudio?.scannerErro?.() || false; }catch(e){ return false; }
-}
-function atlasAudioConcluido(){
-  try{ return window.AtlasAudio?.concluido?.() || false; }catch(e){ return false; }
-}
-
-window.atlasAudioScannerOK = atlasAudioScannerOK;
-window.atlasAudioScannerErro = atlasAudioScannerErro;
-window.atlasAudioConcluido = atlasAudioConcluido;
-
-/* =========================================================
-   NOTIFICAÇÃO SEGURA DE PEDIDO CRIADO
-   - Prioriza o AtlasWorkflow.
-   - Se o Workflow não estiver disponível ou retornar 0, usa o
-     AtlasGestorNotificacoes diretamente.
-   - Nunca deixa o pedido ser criado sem tentar notificar.
-========================================================= */
-async function atlasNotificarPedidoCriadoSeguro(pedido, itens){
-  const pedidoId = pedido?.id;
-  if(!pedidoId) return {ok:false, notificacoes:0, motivo:"Pedido sem ID."};
-
-  let resultado = null;
-
-  if(window.AtlasWorkflow && typeof window.AtlasWorkflow.notificarOrigemPedidoCriado === "function"){
-    try{
-      resultado = await window.AtlasWorkflow.notificarOrigemPedidoCriado(pedidoId);
-      if(Number(resultado?.notificacoes || 0) > 0) return resultado;
-    }catch(e){
-      console.warn("Atlas Expedição: Workflow não notificou o pedido.", e?.message || e);
-    }
-  }
-
-  if(window.AtlasGestorNotificacoes && typeof window.AtlasGestorNotificacoes.notificarPedidoCriado === "function"){
-    try{
-      const direto = await window.AtlasGestorNotificacoes.notificarPedidoCriado(pedido, itens || []);
-      if(Number(direto?.notificacoes || 0) > 0) return direto;
-      resultado = direto || resultado;
-    }catch(e){
-      console.warn("Atlas Expedição: Gestor não notificou o pedido.", e?.message || e);
-    }
-  }
-
-  console.warn("Atlas Expedição: pedido criado sem destinatário de notificação.", {
-    pedido_id:pedidoId,
-    codigo:pedido?.codigo,
-    resultado
-  });
-
-  return resultado || {ok:false, notificacoes:0, motivo:"Nenhum destinatário encontrado."};
-}
 
 /* =========================================================
    ATLAS CARRINHO PERSISTENTE POR USUÁRIO
@@ -1140,18 +1082,17 @@ async function enviarSolicitacao(){
     const ri=await db().from("itens_retirada").insert(itensPayload);
     if(ri.error){ alert("Pedido criado, mas erro nos itens: "+ri.error.message); return; }
 
-    // A notificação oficial é obrigatória após gravar pedido e itens.
-    // O helper tenta Workflow e, se necessário, o Gestor diretamente.
-    const resultadoNotificacao = await atlasNotificarPedidoCriadoSeguro(r.data, itensPayload);
-
-    if(Number(resultadoNotificacao?.notificacoes || 0) === 0){
-      await hist(
-        r.data.id,
-        null,
-        "SOLICITADO",
-        "Pedido criado, porém nenhum aprovador habilitado recebeu notificação. " +
-        (resultadoNotificacao?.motivo || "Verifique permissões e obra de origem.")
-      );
+    // ATLAS SPRINT 2.3: a tela cria o pedido, mas quem registra histórico,
+    // movimentação e notificação oficial é o AtlasWorkflow.
+    if(window.AtlasWorkflow && typeof AtlasWorkflow.notificarOrigemPedidoCriado === "function"){
+      try{
+        await AtlasWorkflow.notificarOrigemPedidoCriado(r.data.id);
+      }catch(e){
+        console.warn("AtlasWorkflow: falha ao notificar origem:", e?.message || e);
+      }
+    }else{
+      await hist(r.data.id,null,"SOLICITADO",`Solicitação criada por ${u?.nome||"Usuário"}.`);
+      await notificarGestao("Nova solicitação de expedição", `${u?.nome||"Usuário"} solicitou ${itens.length} item(ns) de ${nomeObra(origemId)}.`, "expedicao.html?aba=solicitacoes");
     }
   }
 
@@ -1162,7 +1103,6 @@ async function enviarSolicitacao(){
   renderizarCatalogo();
   fecharModalCarrinho();
   atlasToast("✅ Solicitação enviada com sucesso.");
-  atlasAudioConcluido();
   await carregarTudo();
 }
 async function hist(pedidoId, anterior, novo, obs){ try{ const u=usuarioAtual(); await db().from("historico_pedidos_retirada").insert([{pedido_id:pedidoId,status_anterior:anterior,status_novo:novo,usuario:u?.nome||"Sistema",observacao:obs}]); }catch(e){} }

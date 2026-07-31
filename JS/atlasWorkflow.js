@@ -1,15 +1,16 @@
 /* =========================================================
-   ATLAS WORKFLOW V1.7 - MOTOR DE FLUXO LOGÍSTICO
+   ATLAS WORKFLOW V3.0 - MOTOR DE FLUXO LOGÍSTICO
    Arquivo: JS/atlasWorkflow.js
    Sprint 2.8: integrado ao AtlasGestorNotificacoes e AtlasGestorReservas
-   - Workflow executa regra de negócio
-   - Gestor decide destinatários e cria notificações
+   - Workflow altera estados, histórico e movimentações
+   - Gestor é a única porta para criar notificações
+   - AtlasAudio toca somente conclusões locais do operador
 ========================================================= */
 (function(){
   "use strict";
 
   const AtlasWorkflow = {
-    versao: "2.2-notificacao-separacao-3.1.13"
+    versao: "3.0-fluxo-limpo"
   };
 
   const STATUS = {
@@ -49,14 +50,18 @@
     return u?.nome || u?.usuario || "SISTEMA";
   }
 
-  function usuarioIdAtual(){
-    const u = usuarioAtual();
-    return u?.id || u?.usuario_id || null;
-  }
 
-  function empresaAtualId(){
-    const u = usuarioAtual();
-    return Number(u?.empresa_id || 17);
+  function gestorNotificacoes(){
+    const gestor = window.AtlasGestorNotificacoes;
+
+    if(!gestor){
+      throw new Error(
+        "AtlasGestorNotificacoes não está carregado. " +
+        "Carregue JS/atlasGestorNotificacoes.js antes do Workflow."
+      );
+    }
+
+    return gestor;
   }
 
   function normalizarStatus(status){
@@ -161,130 +166,6 @@
     return Array.isArray(data) ? data : [];
   }
 
-  async function buscarUsuariosSistema({ empresa_id, obra_id, incluirTodosResponsaveis=false } = {}){
-    const banco = db();
-    if(!banco) throw new Error("Supabase não carregado.");
-
-    let query = banco
-      .from("usuarios_sistema")
-      .select("id,nome,usuario,email,empresa_id,obra_id,perfil,ativo,permissoes,obras_liberadas")
-      .eq("ativo", true);
-
-    if(empresa_id){
-      query = query.eq("empresa_id", empresa_id);
-    }
-
-    const { data, error } = await query;
-
-    if(error){
-      console.warn("AtlasWorkflow: erro ao buscar usuarios_sistema:", error.message);
-      return [];
-    }
-
-    let lista = Array.isArray(data) ? data : [];
-
-    if(obra_id && !incluirTodosResponsaveis){
-      lista = lista.filter(u => {
-        // Regra oficial Atlas:
-        // - MASTER recebe como gestor global;
-        // - ADMIN/ALMOXARIFE/permissões precisam pertencer à obra origem
-        //   ou ter a obra liberada. Isso evita o solicitante/destino
-        //   receber a notificação inicial do próprio pedido.
-        if(usuarioEhMasterGlobal(u)) return true;
-        return usuarioPertenceObra(u, obra_id);
-      });
-    }
-
-    return unicoPorId(lista.filter(perfilEhResponsavel));
-  }
-
-  async function buscarUsuariosDestinoPedido(pedido){
-    const banco = db();
-    if(!banco) throw new Error("Supabase não carregado.");
-
-    const empresaId = pedido.empresa_id || empresaAtualId();
-    const destinoId = pedido.obra_destino_id || pedido.obra_id || null;
-    const nomeSolicitante = String(pedido.solicitante || pedido.usuario_criacao || "").trim();
-
-    let query = banco
-      .from("usuarios_sistema")
-      .select("id,nome,usuario,email,empresa_id,obra_id,perfil,ativo,permissoes,obras_liberadas")
-      .eq("ativo", true)
-      .eq("empresa_id", empresaId);
-
-    const { data, error } = await query;
-    if(error){
-      console.warn("AtlasWorkflow: erro ao buscar usuários destino:", error.message);
-      return [];
-    }
-
-    const usuarios = Array.isArray(data) ? data : [];
-    const destinoTxt = String(destinoId || "");
-    const solicitanteLower = nomeSolicitante.toLowerCase();
-
-    const filtrados = usuarios.filter(u => {
-      const nomeIgual = solicitanteLower && String(u.nome || u.usuario || "").toLowerCase().includes(solicitanteLower);
-      const mesmaObra = destinoTxt && String(u.obra_id || "") === destinoTxt;
-      const obrasLiberadas = String(u.obras_liberadas || "").split(/[;,|]/).map(x => x.trim()).includes(destinoTxt);
-      return nomeIgual || mesmaObra || obrasLiberadas;
-    });
-
-    return unicoPorId(filtrados);
-  }
-
-  async function criarNotificacao({ usuario_destino_id, empresa_id, tipo, titulo, mensagem, link, pedido_id, obra_origem_id, obra_destino_id }){
-    const banco = db();
-    if(!banco) throw new Error("Supabase não carregado.");
-
-    if(!usuario_destino_id){
-      console.warn("AtlasWorkflow: notificação sem usuario_destino_id ignorada.");
-      return false;
-    }
-
-    const payload = {
-      empresa_id: empresa_id || empresaAtualId(),
-      usuario_destino_id,
-      tipo: tipo || "FLUXO",
-      titulo: titulo || "Notificação",
-      mensagem: mensagem || "",
-      link: link || "expedicao.html",
-      lida: false,
-      status: "NAO_LIDA",
-      pedido_id: pedido_id || null,
-      obra_origem_id: obra_origem_id || null,
-      obra_destino_id: obra_destino_id || null,
-      created_at: new Date().toISOString()
-    };
-
-    const { data, error } = await banco.from("notificacoes").insert([payload]).select("id").single();
-    if(error) throw error;
-
-    emitirAtlas("notificacao.criada", {
-      notificacao:{ ...payload, id:data?.id || null },
-      usuario_destino_id: usuario_destino_id,
-      pedido_id: pedido_id || null,
-      tipo: payload.tipo,
-      titulo: payload.titulo
-    });
-
-    return true;
-  }
-
-  async function notificarUsuarios(usuarios, payloadBase){
-    const lista = unicoPorId(usuarios || []);
-    let total = 0;
-
-    for(const u of lista){
-      const ok = await criarNotificacao({
-        ...payloadBase,
-        usuario_destino_id: u.id,
-        empresa_id: u.empresa_id || payloadBase.empresa_id || empresaAtualId()
-      });
-      if(ok) total++;
-    }
-
-    return total;
-  }
 
   async function registrarHistoricoPedido({ pedido_id, item_id, status_anterior, status_novo, observacao }){
     const banco = db();
@@ -385,107 +266,41 @@
   async function notificarOrigemPedidoCriado(pedidoId){
     const pedido = await buscarPedido(pedidoId);
     const itens = await buscarItensPedido(pedidoId);
-    const origemId = pedido.obra_origem_id || null;
-    const destinoId = pedido.obra_destino_id || pedido.obra_id || null;
 
     await registrarMovimentacaoSolicitada(pedidoId);
 
-    // Sprint 2.6: a decisão de quem recebe saiu do Workflow.
-    // O AtlasGestorNotificacoes é a central oficial para permissões, obra, cargo e bloqueios.
-    if(window.AtlasGestorNotificacoes && typeof window.AtlasGestorNotificacoes.notificarPedidoCriado === "function"){
-      const resultado = await window.AtlasGestorNotificacoes.notificarPedidoCriado(pedido, itens);
-
-      await registrarHistoricoPedido({
-        pedido_id: pedidoId,
-        status_anterior: null,
-        status_novo: pedido.status || STATUS.SOLICITADO,
-        observacao: resultado.ok
-          ? "Pedido criado e notificação enviada pelo Atlas Gestor para " + resultado.notificacoes + " destinatário(s)."
-          : "Pedido criado, mas o Atlas Gestor não encontrou destinatários: " + (resultado.motivo || "sem motivo informado")
-      });
-
-      return {
-        ok: !!resultado.ok,
-        notificacoes: resultado.notificacoes || 0,
-        origemId,
-        destinoId,
-        motivo: resultado.motivo || null,
-        destinatarios: resultado.destinatarios || []
-      };
-    }
-
-    // Fallback antigo caso o Gestor não esteja carregado.
-    const empresaId = pedido.empresa_id || empresaAtualId();
-    const usuariosOrigem = await buscarUsuariosSistema({
-      empresa_id: empresaId,
-      obra_id: origemId,
-      incluirTodosResponsaveis: false
-    });
-
-    const usuarios = filtrarUsuariosExcetoSolicitante(usuariosOrigem, pedido);
-
-    if(!usuarios.length){
-      await registrarHistoricoPedido({
-        pedido_id: pedidoId,
-        status_anterior: null,
-        status_novo: pedido.status || STATUS.SOLICITADO,
-        observacao: "Pedido criado, mas nenhum usuário responsável da origem foi encontrado e o Gestor não estava carregado."
-      });
-      return { ok:false, motivo:"Nenhum responsável encontrado e Gestor não carregado.", origemId, destinoId };
-    }
-
-    const resumoItens = itens.length
-      ? " Itens: " + itens.slice(0,6).map(i => i.patrimonio_codigo || i.patrimonio_nome || i.produto_id || i.id).join("; ")
-      : "";
-
-    const total = await notificarUsuarios(usuarios, {
-      empresa_id: empresaId,
-      tipo: "PEDIDO_CRIADO",
-      titulo: "📋 Novo pedido recebido",
-      mensagem: "Pedido " + (pedido.codigo || "#" + pedido.id) + " aguardando análise. Solicitante: " + (pedido.solicitante || pedido.usuario_criacao || "-") + "." + resumoItens,
-      link: "expedicao.html?aba=solicitacoes",
-      pedido_id: pedido.id,
-      obra_origem_id: origemId,
-      obra_destino_id: destinoId
-    });
+    const resultado = await gestorNotificacoes()
+      .notificarPedidoCriado(pedido, itens);
 
     await registrarHistoricoPedido({
-      pedido_id: pedidoId,
-      status_anterior: null,
-      status_novo: pedido.status || STATUS.SOLICITADO,
-      observacao: "Pedido criado e notificação enviada para " + total + " usuário(s) responsável(is) da origem."
+      pedido_id:pedidoId,
+      status_anterior:null,
+      status_novo:pedido.status || STATUS.SOLICITADO,
+      observacao:resultado.ok
+        ? "Pedido criado e notificação enviada para " +
+          resultado.notificacoes + " aprovador(es) da origem."
+        : "Pedido criado, mas nenhuma notificação foi enviada: " +
+          (resultado.motivo || "sem destinatário habilitado.")
     });
 
     emitirAtlas("pedido.criado", {
       modulo:"EXPEDICAO",
-      pedido_id: pedido.id,
-      codigo: pedido.codigo || null,
-      status: pedido.status || STATUS.SOLICITADO,
-      obra_origem_id: origemId,
-      obra_destino_id: destinoId,
-      notificacoes: total
+      pedido_id:pedido.id,
+      codigo:pedido.codigo || null,
+      status:pedido.status || STATUS.SOLICITADO,
+      obra_origem_id:pedido.obra_origem_id || null,
+      obra_destino_id:pedido.obra_destino_id || pedido.obra_id || null,
+      notificacoes:resultado.notificacoes || 0
     });
 
-    return { ok:true, notificacoes:total, origemId, destinoId };
+    return resultado;
   }
 
   async function notificarSolicitantePedido(pedido, tipo, titulo, mensagem, link){
-    if(window.AtlasGestorNotificacoes && typeof window.AtlasGestorNotificacoes.notificarDestinoPedido === "function"){
-      const r = await window.AtlasGestorNotificacoes.notificarDestinoPedido(pedido, tipo, titulo, mensagem, link);
-      return r.notificacoes || 0;
-    }
+    const resultado = await gestorNotificacoes()
+      .notificarDestinoPedido(pedido, tipo, titulo, mensagem, link);
 
-    const usuariosDestino = await buscarUsuariosDestinoPedido(pedido);
-    return await notificarUsuarios(usuariosDestino, {
-      empresa_id: pedido.empresa_id || empresaAtualId(),
-      tipo,
-      titulo,
-      mensagem,
-      link: link || "expedicao.html?aba=historico",
-      pedido_id: pedido.id,
-      obra_origem_id: pedido.obra_origem_id || null,
-      obra_destino_id: pedido.obra_destino_id || pedido.obra_id || null
-    });
+    return resultado.notificacoes || 0;
   }
 
   async function decidirItensPedido(pedidoId, decisoes){
@@ -647,12 +462,42 @@
       }
     }
 
+    const notificacaoSolicitante = statusPedido === STATUS.RECUSADO
+      ? {
+          tipo:"PEDIDO_RECUSADO",
+          titulo:"❌ Pedido recusado",
+          mensagem:
+            "Pedido " + (pedido.codigo || "#" + pedido.id) +
+            " foi recusado por " + usuario + "." + msgReserva,
+          link:null
+        }
+      : statusPedido === STATUS.EM_FILA
+        ? {
+            tipo:"PEDIDO_EM_FILA",
+            titulo:"⏳ Pedido em fila",
+            mensagem:
+              "Pedido " + (pedido.codigo || "#" + pedido.id) +
+              " foi analisado por " + usuario +
+              " e aguarda disponibilidade dos itens." + msgReserva,
+            link:null
+          }
+        : {
+            tipo:"PEDIDO_APROVADO",
+            titulo:"✅ Pedido aprovado",
+            mensagem:
+              "Seu pedido " + (pedido.codigo || "#" + pedido.id) +
+              " foi aprovado por " + usuario +
+              " e encaminhado ao almoxarifado da origem para separação. " +
+              "Nenhuma ação é necessária.",
+            link:null
+          };
+
     await notificarSolicitantePedido(
       { ...pedido, status: statusPedido },
-      statusPedido === STATUS.RECUSADO ? "PEDIDO_RECUSADO" : statusPedido === STATUS.EM_FILA ? "PEDIDO_EM_FILA" : "PEDIDO_APROVADO",
-      statusPedido === STATUS.RECUSADO ? "❌ Pedido recusado" : statusPedido === STATUS.EM_FILA ? "⏳ Pedido em fila" : "✅ Pedido analisado",
-      "Pedido " + (pedido.codigo || "#" + pedido.id) + " foi analisado por " + usuario + ". Status: " + statusPedido + "." + msgReserva,
-      "expedicao.html?aba=historico"
+      notificacaoSolicitante.tipo,
+      notificacaoSolicitante.titulo,
+      notificacaoSolicitante.mensagem,
+      notificacaoSolicitante.link
     );
 
     return { ok:true, statusPedido, total, aprovados, recusados, reservas:resultadoReservas };
@@ -695,6 +540,7 @@
       data_separacao: new Date().toISOString()
     });
     await notificarSolicitantePedido(pedido, "PEDIDO_AGUARDANDO_RETIRADA", "📦 Pedido aguardando retirada", "Pedido " + (pedido.codigo || "#" + pedido.id) + " foi separado por " + nomeUsuario() + " e aguarda motorista/retirada.", "");
+    tocarConcluido();
     return pedido;
   }
 
@@ -713,6 +559,7 @@
     });
 
     await notificarSolicitantePedido(pedido, "PEDIDO_EM_TRANSITO", "🛣 Pedido em trânsito", "Pedido " + (pedido.codigo || "#" + pedido.id) + " saiu com motorista " + motorista + ", placa " + placa + ".", "expedicao.html?aba=transito");
+    tocarConcluido();
     return pedido;
   }
 
@@ -745,27 +592,27 @@
       }
     }
 
-    const origem = await buscarUsuariosSistema({ empresa_id: pedido.empresa_id || empresaAtualId(), obra_id: pedido.obra_origem_id || null });
-    await notificarUsuarios(origem, {
-      empresa_id: pedido.empresa_id || empresaAtualId(),
-      tipo: "PEDIDO_RECEBIDO",
-      titulo: dadosRecebimento?.divergencia ? "⚠️ Pedido recebido com divergência" : "✅ Pedido entregue",
-      mensagem: "Pedido " + (pedido.codigo || "#" + pedido.id) + " foi recebido por " + nomeUsuario() + ". Conferência: " + (dadosRecebimento?.divergencia ? "com divergência" : "sem divergência") + ".",
-      link: "expedicao.html?aba=historico",
-      pedido_id: pedido.id,
-      obra_origem_id: pedido.obra_origem_id || null,
-      obra_destino_id: pedido.obra_destino_id || pedido.obra_id || null
-    });
+    await gestorNotificacoes().notificarOrigemPedido(
+      pedido,
+      "PEDIDO_RECEBIDO",
+      dadosRecebimento?.divergencia
+        ? "⚠️ Pedido recebido com divergência"
+        : "✅ Pedido entregue",
+      "Pedido " + (pedido.codigo || "#" + pedido.id) +
+        " foi recebido por " + nomeUsuario() +
+        ". Conferência: " +
+        (dadosRecebimento?.divergencia ? "com divergência" : "sem divergência") +
+        ".",
+      "expedicao.html?aba=historico"
+    );
 
+    tocarConcluido();
     return atualizado;
   }
 
   AtlasWorkflow.STATUS = STATUS;
   AtlasWorkflow.buscarPedido = buscarPedido;
   AtlasWorkflow.buscarItensPedido = buscarItensPedido;
-  AtlasWorkflow.buscarUsuariosSistema = buscarUsuariosSistema;
-  AtlasWorkflow.criarNotificacao = criarNotificacao;
-  AtlasWorkflow.notificarUsuarios = notificarUsuarios;
   AtlasWorkflow.registrarHistoricoPedido = registrarHistoricoPedido;
   AtlasWorkflow.registrarMovimentacaoSolicitada = registrarMovimentacaoSolicitada;
   AtlasWorkflow.alterarStatusPedido = alterarStatusPedido;
@@ -782,5 +629,5 @@
 
   window.AtlasWorkflow = AtlasWorkflow;
 
-  console.log("✅ ATLAS WORKFLOW V2.2 carregado - notificação correta da separação");
+  console.log("✅ ATLAS WORKFLOW V3.0 carregado - fluxo limpo e notificações centralizadas");
 })();
