@@ -1,152 +1,250 @@
 /* =========================================================
-   ATLAS AUDIO ENGINE V2.0
-   Arquivo: JS/atlasAudio.js
+   ATLAS AUDIO V3.0 - PADRÃO OFICIAL
+   ---------------------------------------------------------
+   Sons oficiais:
+   - AtlasAudio.notificacao()
+   - AtlasAudio.scannerOK()
+   - AtlasAudio.scannerErro()
+   - AtlasAudio.concluido()
 
-   Melhorias:
-   - Não reinicia um áudio enquanto ele ainda está tocando.
-   - Libera automaticamente quando o áudio termina.
-   - Evita sobreposição de chamadas iguais.
+   Estrutura esperada:
+   /assets/audio/notificacao.mp3
+   /assets/audio/scanner-ok.mp3
+   /assets/audio/scanner-erro.mp3
+   /assets/audio/concluido.mp3
 ========================================================= */
-(function(){
+
+(function () {
   'use strict';
 
-  if(window.AtlasAudio && window.AtlasAudio.__loaded){
-    console.warn('AtlasAudio já carregado. Ignorando duplicado.');
+  // Evita carregar o motor de áudio duas vezes.
+  if (window.AtlasAudio && window.AtlasAudio.__loaded) {
+    console.warn('Atlas Audio já carregado. Ignorando duplicado.');
     return;
   }
 
   const CONFIG = {
-    pasta:'./assets/audio/',
-    volumeGeral:0.65,
-    sons:{
-      notificacao:'notificacao.mp3',
-      scan_ok:'scan_ok.mp3',
-      scan_erro:'scan_erro.mp3',
-      scan_final:'scan_final.mp3',
-      sucesso:'sucesso.mp3',
-      erro:'erro.mp3',
-      alerta:'alerta.mp3'
-    }
+    volume: 0.85,
+
+    arquivos: {
+      notificacao: 'assets/audio/notificacao.mp3',
+      scannerOK: 'assets/audio/scanner-ok.mp3',
+      scannerErro: 'assets/audio/scanner-erro.mp3',
+      concluido: 'assets/audio/concluido.mp3'
+    },
+
+    // Evita que o mesmo som reinicie enquanto ainda está tocando.
+    impedirSobreposicao: true,
+
+    // Pequena proteção contra chamadas duplicadas quase simultâneas.
+    intervaloMinimoMs: 180
   };
 
-  const estado={
-    liberado:false,
-    audioCtx:null,
-    cache:new Map(),
-    reproduzindo:new Set(),
-    silencioso:localStorage.getItem('atlas_audio_silencioso')==='1'
-  };
+  const audios = new Map();
+  const tocando = new Set();
+  const ultimoToque = new Map();
 
-  function caminho(nome){
-    return CONFIG.sons[nome] ? CONFIG.pasta + CONFIG.sons[nome] : '';
-  }
+  let liberado = false;
+  let inicializado = false;
 
-  function obterAudio(nome){
-    if(!CONFIG.sons[nome]) return null;
+  function criarAudio(nome) {
+    const caminho = CONFIG.arquivos[nome];
 
-    if(!estado.cache.has(nome)){
-      const a=new Audio(caminho(nome));
-      a.preload='auto';
-      a.volume=CONFIG.volumeGeral;
-      estado.cache.set(nome,a);
+    if (!caminho) {
+      console.warn(`Atlas Audio: arquivo não configurado para "${nome}".`);
+      return null;
     }
-    return estado.cache.get(nome);
-  }
 
-  async function liberar(){
-    try{
-      const Ctx=window.AudioContext||window.webkitAudioContext;
-      if(Ctx){
-        if(!estado.audioCtx) estado.audioCtx=new Ctx();
-        if(estado.audioCtx.state==='suspended') await estado.audioCtx.resume();
+    const audio = new Audio(caminho);
+    audio.preload = 'auto';
+    audio.volume = CONFIG.volume;
+
+    audio.addEventListener('ended', () => {
+      tocando.delete(nome);
+      audio.currentTime = 0;
+    });
+
+    audio.addEventListener('pause', () => {
+      if (audio.ended || audio.currentTime === 0) {
+        tocando.delete(nome);
       }
-      estado.liberado=true;
+    });
+
+    audio.addEventListener('error', () => {
+      tocando.delete(nome);
+      console.warn(`Atlas Audio: não foi possível carregar "${caminho}".`);
+    });
+
+    audios.set(nome, audio);
+    return audio;
+  }
+
+  function obterAudio(nome) {
+    return audios.get(nome) || criarAudio(nome);
+  }
+
+  function inicializar() {
+    if (inicializado) return;
+
+    Object.keys(CONFIG.arquivos).forEach(obterAudio);
+    inicializado = true;
+  }
+
+  async function liberar() {
+    inicializar();
+
+    if (liberado) return true;
+
+    /*
+     * Navegadores, principalmente iPhone/Safari, exigem uma interação
+     * real do usuário antes de permitir reprodução automática.
+     */
+    try {
+      const audio = obterAudio('scannerOK');
+
+      if (audio) {
+        audio.muted = true;
+        audio.currentTime = 0;
+
+        await audio.play();
+        audio.pause();
+        audio.currentTime = 0;
+        audio.muted = false;
+      }
+
+      liberado = true;
+      console.log('🔊 Atlas Audio V3 liberado.');
       return true;
-    }catch(e){
-      console.warn('AtlasAudio: não foi possível liberar o áudio.',e);
+    } catch (erro) {
       return false;
     }
   }
 
-  function registrarLiberacaoAutomatica(){
-    const fn=async()=>{
-      await liberar();
-      ['click','pointerdown','touchstart','keydown'].forEach(ev=>{
-        document.removeEventListener(ev,fn,true);
-      });
-    };
-    ['click','pointerdown','touchstart','keydown'].forEach(ev=>{
-      document.addEventListener(ev,fn,{capture:true,passive:true});
+  async function tocar(nome) {
+    inicializar();
+
+    const audio = obterAudio(nome);
+    if (!audio) return false;
+
+    const agora = Date.now();
+    const ultimo = ultimoToque.get(nome) || 0;
+
+    if (agora - ultimo < CONFIG.intervaloMinimoMs) {
+      return false;
+    }
+
+    if (CONFIG.impedirSobreposicao && tocando.has(nome)) {
+      return false;
+    }
+
+    ultimoToque.set(nome, agora);
+
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = CONFIG.volume;
+
+      tocando.add(nome);
+      await audio.play();
+
+      liberado = true;
+      return true;
+    } catch (erro) {
+      tocando.delete(nome);
+
+      console.warn(
+        `Atlas Audio: o navegador bloqueou "${nome}". ` +
+        'Interaja com a página uma vez e tente novamente.'
+      );
+
+      return false;
+    }
+  }
+
+  function parar(nome) {
+    const audio = audios.get(nome);
+    if (!audio) return;
+
+    audio.pause();
+    audio.currentTime = 0;
+    tocando.delete(nome);
+  }
+
+  function pararTodos() {
+    audios.forEach((audio, nome) => {
+      audio.pause();
+      audio.currentTime = 0;
+      tocando.delete(nome);
     });
   }
 
-  function tocarBipReserva(){ return false; } // mantém API; raramente usado
+  function definirVolume(valor) {
+    const volume = Number(valor);
 
-  async function tocar(nome,opcoes={}){
-    if(estado.silencioso) return false;
-    if(estado.reproduzindo.has(nome)) return false;
-
-    const audio=obterAudio(nome);
-    if(!audio) return tocarBipReserva(nome);
-
-    estado.reproduzindo.add(nome);
-
-    const liberarEstado=()=>{
-      estado.reproduzindo.delete(nome);
-      audio.removeEventListener('ended',liberarEstado);
-      audio.removeEventListener('error',liberarEstado);
-    };
-
-    audio.addEventListener('ended',liberarEstado,{once:true});
-    audio.addEventListener('error',liberarEstado,{once:true});
-
-    try{
-      audio.pause();
-      audio.currentTime=0;
-      audio.volume=Math.max(0,Math.min(1,Number(opcoes.volume??CONFIG.volumeGeral)));
-      await audio.play();
-      return true;
-    }catch(e){
-      estado.reproduzindo.delete(nome);
-      console.warn(`AtlasAudio: ${CONFIG.sons[nome]} não tocou.`,e);
-      return tocarBipReserva(nome);
+    if (!Number.isFinite(volume) || volume < 0 || volume > 1) {
+      console.warn('Atlas Audio: o volume deve estar entre 0 e 1.');
+      return false;
     }
+
+    CONFIG.volume = volume;
+    audios.forEach(audio => {
+      audio.volume = volume;
+    });
+
+    return true;
   }
 
-  function definirSilencioso(v){
-    estado.silencioso=!!v;
-    localStorage.setItem('atlas_audio_silencioso',estado.silencioso?'1':'0');
-  }
+  /*
+   * Libera os sons após a primeira interação real do usuário.
+   * Isso ajuda no Chrome, Safari, iPhone e PWA.
+   */
+  ['pointerdown', 'touchstart', 'click', 'keydown'].forEach(evento => {
+    document.addEventListener(
+      evento,
+      () => {
+        liberar();
+      },
+      { once: true, passive: true }
+    );
+  });
 
-  function definirVolume(v){
-    CONFIG.volumeGeral=Math.max(0,Math.min(1,Number(v)||0.65));
-    estado.cache.forEach(a=>a.volume=CONFIG.volumeGeral);
-  }
+  const AtlasAudio = {
+    __loaded: true,
+    versao: '3.0-padrao-atlas',
 
-  function preCarregar(){ Object.keys(CONFIG.sons).forEach(obterAudio); }
+    notificacao() {
+      return tocar('notificacao');
+    },
 
-  window.AtlasAudio={
-    __loaded:true,
-    versao:'2.0.0',
+    scannerOK() {
+      return tocar('scannerOK');
+    },
+
+    scannerErro() {
+      return tocar('scannerErro');
+    },
+
+    concluido() {
+      return tocar('concluido');
+    },
+
     liberar,
-    preCarregar,
-    tocar,
+    parar,
+    pararTodos,
     definirVolume,
-    definirSilencioso,
-    estaSilencioso:()=>estado.silencioso,
-    notificacao:()=>tocar('notificacao'),
-    sucesso:()=>tocar('sucesso'),
-    erro:()=>tocar('erro'),
-    alerta:()=>tocar('alerta'),
-    scan:{
-      ok:()=>tocar('scan_ok'),
-      erro:()=>tocar('scan_erro'),
-      final:()=>tocar('scan_final')
+
+    get liberado() {
+      return liberado;
+    },
+
+    get volume() {
+      return CONFIG.volume;
     }
   };
 
-  registrarLiberacaoAutomatica();
-  preCarregar();
+  window.AtlasAudio = AtlasAudio;
 
-  console.log('✅ ATLAS AUDIO ENGINE V2.0 carregado');
+  console.log(
+    '✅ ATLAS AUDIO V3 carregado - notificação, scanner OK, scanner erro e concluído'
+  );
 })();
