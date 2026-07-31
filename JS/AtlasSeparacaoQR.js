@@ -37,7 +37,7 @@
 
   const AtlasSeparacaoQR = {
     __loaded:true,
-    versao:"2.0-atlas-audio-v3"
+    versao:"2.1-audio-final-unico-compatibilidade"
   };
 
   const estado = {
@@ -336,10 +336,6 @@
     tom(260,0,.20,.30); tom(180,.24,.28,.32);
   }
 
-  function somItem(){
-    if(window.AtlasAudio?.scannerOK) return window.AtlasAudio.scannerOK();
-    tom(660,0,.08); tom(880,.1,.08); tom(1320,.2,.14);
-  }
 
   function somPedido(){
     if(window.AtlasAudio?.concluido) return window.AtlasAudio.concluido();
@@ -862,7 +858,9 @@
       if(error) throw error;
 
       Object.assign(i,payload);
-      somItem();
+
+      // Confirmação de quantidade fica silenciosa.
+      // O som "concluído" toca somente ao finalizar o pedido inteiro.
       toast("Item conferido e separado","ok");
 
       const proximoPendente = estado.itens.findIndex((x,idx)=>idx>estado.indice && !itemConferido(x));
@@ -898,14 +896,47 @@
 
     estado.bloqueado = true;
     try{
-      if(window.AtlasLogistica?.finalizarSeparacao){
-        await window.AtlasLogistica.finalizarSeparacao(estado.pedido.id);
-      }else if(window.AtlasWorkflow?.finalizarSeparacao){
-        await window.AtlasWorkflow.finalizarSeparacao(estado.pedido.id);
-      }else{
-        throw new Error("Motor de logística não carregado.");
+      /*
+       * COMPATIBILIDADE TEMPORÁRIA
+       * -------------------------------------------------------
+       * Algumas versões antigas do AtlasLogistica/Workflow ainda
+       * chamam tocarConcluido() diretamente.
+       *
+       * Criamos uma função silenciosa apenas durante a conclusão,
+       * evitando o erro "Can't find variable: tocarConcluido" e
+       * impedindo que o áudio toque duas vezes.
+       *
+       * O único som oficial será executado logo depois, por somPedido().
+       */
+      const tocarConcluidoAnterior = window.tocarConcluido;
+      const criouCompatibilidade = typeof window.tocarConcluido !== "function";
+
+      if(criouCompatibilidade){
+        window.tocarConcluido = function(){
+          return true;
+        };
       }
 
+      try{
+        if(window.AtlasLogistica?.finalizarSeparacao){
+          await window.AtlasLogistica.finalizarSeparacao(estado.pedido.id);
+        }else if(window.AtlasWorkflow?.finalizarSeparacao){
+          await window.AtlasWorkflow.finalizarSeparacao(estado.pedido.id);
+        }else{
+          throw new Error("Motor de logística não carregado.");
+        }
+      }finally{
+        if(criouCompatibilidade){
+          if(tocarConcluidoAnterior === undefined){
+            try{ delete window.tocarConcluido; }
+            catch(e){ window.tocarConcluido = undefined; }
+          }else{
+            window.tocarConcluido = tocarConcluidoAnterior;
+          }
+        }
+      }
+
+      // Único áudio de conclusão de toda a separação.
       somPedido();
       toast("Separação concluída com sucesso","ok");
       const pedidoId = estado.pedido.id;
@@ -1428,5 +1459,5 @@
   AtlasSeparacaoQR.normalizarCodigo = normalizarCodigo;
 
   window.AtlasSeparacaoQR = AtlasSeparacaoQR;
-  console.log("✅ ATLAS SEPARAÇÃO QR V1.9 carregado - rota inteligente e iPhone ajustado");
+  console.log("✅ ATLAS SEPARAÇÃO QR V2.1 carregado - som final único e compatibilidade corrigida");
 })();
