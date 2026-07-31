@@ -1,5 +1,5 @@
 /* BDR ERP - Service Worker V4 SAFE OFFLINE */
-const BDR_CACHE_VERSION = "bdr-erp-v4.0.3-label-studio-v8-1-20260720";
+const BDR_CACHE_VERSION = "bdr-erp-v4.0.4-atlas-qr-local-20260730";
 
 const BDR_ASSETS = [
   "./",
@@ -14,6 +14,9 @@ const BDR_ASSETS = [
   "./empresa.html",
   "./entrada.html",
   "./triagem.html",
+  "./etiqueta-impressao.html",
+  "./etiqueta-lote.html",
+  "./etiqueta-config.html",
   "./manifest.json",
 
   "./icons/icon-192.png",
@@ -21,6 +24,7 @@ const BDR_ASSETS = [
 
   "./assets/logo-bdr.png",
   "./assets/obra-bdr.jpg",
+  "./imagens/engrenagem.png",
 
   "./CSS/layout-bdr.css",
   "./CSS/responsivo-bdr.css",
@@ -36,13 +40,17 @@ const BDR_ASSETS = [
   "./JS/offlineSync.js",
   "./JS/offlineQueue.js",
   "./JS/bdrLocalCache.js",
-  
-  
+  "./JS/atlasEtiquetaConfig.js",
+  "./JS/atlasPrintCenter.js",
+  "./JS/atlasQRCode/qrcode.min.js",
+  "./JS/atlasQRCode.js",
+
   "./JS/entrada.js",
   "./JS/triagem.js",
   "./JS/estoque.js",
   "./JS/expedicao.js",
   "./JS/patrimonioService.js",
+  "./JS/patrimonio/patrimonio.js",
   "./JS/movimentacao.js",
   "./JS/usuarios.js"
 ];
@@ -72,18 +80,15 @@ self.addEventListener("fetch", event => {
   if(req.method !== "GET") return;
 
   const url = new URL(req.url);
-
   if(url.hostname.includes("supabase.co")) return;
 
   if(url.hostname.includes("cdn.jsdelivr.net") || url.hostname.includes("cdnjs.cloudflare.com")){
     event.respondWith(
-      caches.match(req).then(cached => {
-        return cached || fetch(req).then(resp => {
-          const clone = resp.clone();
-          caches.open(BDR_CACHE_VERSION).then(cache => cache.put(req, clone));
-          return resp;
-        }).catch(() => cached);
-      })
+      caches.match(req).then(cached => cached || fetch(req).then(resp => {
+        const clone = resp.clone();
+        caches.open(BDR_CACHE_VERSION).then(cache => cache.put(req, clone));
+        return resp;
+      }).catch(() => cached))
     );
     return;
   }
@@ -94,24 +99,17 @@ self.addEventListener("fetch", event => {
         const clone = resp.clone();
         caches.open(BDR_CACHE_VERSION).then(cache => cache.put(req, clone));
         return resp;
-      }).catch(async () => {
-        return await caches.match(req) ||
-               await caches.match("./login.html") ||
-               await caches.match("./index.html");
-      })
+      }).catch(async () => await caches.match(req) || await caches.match("./login.html") || await caches.match("./index.html"))
     );
     return;
   }
 
-  // Network-first para CSS/JS/imagens: evita o sistema ficar preso em arquivo velho.
   event.respondWith(
     fetch(req).then(resp => {
       const clone = resp.clone();
       caches.open(BDR_CACHE_VERSION).then(cache => cache.put(req, clone));
       return resp;
-    }).catch(async () => {
-      return await caches.match(req);
-    })
+    }).catch(async () => await caches.match(req))
   );
 });
 

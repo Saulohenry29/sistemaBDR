@@ -18,7 +18,28 @@
 <link href="./CSS/patrimonio-etiquetas-lote.css?v=20260726-v1" rel="stylesheet"/>
 <link href="./CSS/patrimonio.css?v=20260727-layout-final" rel="stylesheet"/>
 <script src="./JS/atlasDialog.js?v=20260724-padrao-profissional-v1"></script>
-<script src="./JS/bdrNotificacoes.js?v=20260728-v12-4-scroll-real"></script>
+
+<!-- =========================================================
+     ATLAS AUDIO ENGINE
+     Carregado antes das notificações porque o sininho utiliza
+     o AtlasAudio para reproduzir o som de nova notificação.
+
+     Estrutura esperada:
+     JS/
+       audio/
+         atlasAudio.js
+
+     Este endereço ficará fixo. Nas próximas atualizações,
+     substitua somente o conteúdo do arquivo atlasAudio.js.
+========================================================= -->
+<script src="./JS/atlasAudio/atlasAudio.js"></script>
+
+<!-- =========================================================
+     CENTRAL DE NOTIFICAÇÕES
+     O endereço também ficará fixo. Nas próximas atualizações,
+     substitua somente o arquivo bdrNotificacoes.js.
+========================================================= -->
+<script src="./JS/bdrNotificacoes.js"></script>
 <!-- Ícones profissionais do menu -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet"/>
 

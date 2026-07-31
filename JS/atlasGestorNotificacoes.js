@@ -202,6 +202,17 @@
 
       const { data, error } = await query;
       if(error) throw error;
+
+    /* ===============================
+       SOM DA NOTIFICAÇÃO
+    =============================== */
+    try {
+      const audio = new Audio("./assets/audio/notificacao.mp3");
+      audio.volume = 0.5;
+      audio.play().catch(err => console.warn("Áudio bloqueado:", err));
+    } catch(err) {
+      console.warn("Erro ao tocar áudio:", err);
+    }
       return Array.isArray(data) ? data : [];
     }
 

@@ -2015,6 +2015,11 @@ usuario_cadastro:
     __offline_pendente: !!resp.offlineFirst
   });
 
+  // Pré-gera o QR local sem bloquear o cadastro.
+  atlasPreGerarQRCodePatrimonio(codigo_qr).catch(error =>
+    console.warn("Atlas: patrimônio salvo, mas o aquecimento do QR ficou para a impressão.",error)
+  );
+
   if(resp.offlineFirst){
     bdrAvisoSalvoTablet(
       "Patrimônio criado offline: " +
@@ -3671,6 +3676,52 @@ function atlasDefinirEstadoImpressao(pronta, texto){
   }
 }
 
+/* =========================================================
+   ATLAS QR LOCAL — CARREGAMENTO E PRÉ-GERAÇÃO
+   O patrimônio já aquece o QR depois do cadastro, sem atrasar o salvamento.
+========================================================= */
+let atlasQRCodeCarregandoPromise=null;
+function atlasCarregarScriptLocal(src,id){
+  return new Promise((resolve,reject)=>{
+    if(id&&document.getElementById(id)){
+      const existente=document.getElementById(id);
+      if(existente.dataset.carregado==="1")return resolve();
+      existente.addEventListener("load",resolve,{once:true});
+      existente.addEventListener("error",reject,{once:true});
+      return;
+    }
+    const script=document.createElement("script");
+    script.src=src;
+    if(id)script.id=id;
+    script.onload=()=>{script.dataset.carregado="1";resolve();};
+    script.onerror=()=>reject(new Error("Não foi possível carregar "+src));
+    document.head.appendChild(script);
+  });
+}
+async function atlasGarantirQRCodeLocal(){
+  if(window.AtlasQRCode)return window.AtlasQRCode;
+  if(atlasQRCodeCarregandoPromise)return atlasQRCodeCarregandoPromise;
+  atlasQRCodeCarregandoPromise=(async()=>{
+    if(!window.AtlasQRCodeCore){
+      await atlasCarregarScriptLocal("./JS/atlasQRCode/qrcode.min.js?v=1.0.0","atlasQRCodeCoreScript");
+    }
+    if(!window.AtlasQRCode){
+      await atlasCarregarScriptLocal("./JS/atlasQRCode.js?v=1.0.0","atlasQRCodeScript");
+    }
+    return window.AtlasQRCode;
+  })();
+  return atlasQRCodeCarregandoPromise;
+}
+async function atlasPreGerarQRCodePatrimonio(codigo){
+  if(!codigo)return null;
+  const QR=await atlasGarantirQRCodeLocal();
+  return QR.preGerar(codigo,{tamanho:220,nivel:"M"});
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  atlasGarantirQRCodeLocal().catch(error=>console.warn("Atlas QR local não pré-carregado.",error));
+});
+
 function imprimirEtiqueta(){
   if(!usuarioTemPermissao("PATRIMONIO_IMPRIMIR")){
     atlasAvisoEtiqueta("Você não tem permissão para imprimir etiqueta.");
@@ -3691,10 +3742,30 @@ function bdrCodigoEtiquetaAtual(){
 }
 
 function bdrUrlEtiquetaAtual(){
+  const p = patrimonioSelecionado || {};
   const codigo = bdrCodigoEtiquetaAtual();
   if(!codigo) return "";
-  return "etiqueta-impressao.html?id=" + encodeURIComponent(codigo);
+
+  const params = new URLSearchParams({
+    id: codigo,
+    local: p.localizacao || p.obra_nome || "SEM OBRA",
+    item: p.nome_bem || "ITEM"
+  });
+
+  if(p.obra_id) params.set("obra_id", p.obra_id);
+  return "etiqueta-impressao.html?" + params.toString();
 }
+
+window.addEventListener("message", event => {
+  if(event.origin !== location.origin) return;
+  if(event.data?.tipo !== "ATLAS_ETIQUETA_PRONTA") return;
+
+  const frame = document.getElementById("bdrEtiquetaFrame");
+  if(!frame || event.source !== frame.contentWindow) return;
+
+  clearTimeout(atlasEtiquetaTimer);
+  atlasDefinirEstadoImpressao(true, "Prévia pronta. Confira e clique em imprimir.");
+});
 
 function abrirModalEtiquetaBDR(){
   const codigo = bdrCodigoEtiquetaAtual();
@@ -3717,13 +3788,25 @@ function abrirModalEtiquetaBDR(){
 
   frame.onload = () => {
     if(tokenAtual !== atlasEtiquetaToken) return;
+    atlasDefinirEstadoImpressao(false, "Gerando QR Code local...");
 
-    // O onload confirma o documento. O pequeno período adicional permite
-    // finalizar QR Code, fontes e configuração assíncrona da etiqueta.
+    // Fallback seguro: normalmente o postMessage chega em poucos milissegundos.
     atlasEtiquetaTimer = setTimeout(() => {
       if(tokenAtual !== atlasEtiquetaToken) return;
-      atlasDefinirEstadoImpressao(true, "Prévia pronta. Confira e clique em imprimir.");
-    }, 1000);
+      try{
+        const doc = frame.contentDocument;
+        const qr = doc?.getElementById("qr");
+        const pronto = doc?.body?.classList.contains("ready") &&
+          String(qr?.src || "").startsWith("data:image/png");
+        if(pronto){
+          atlasDefinirEstadoImpressao(true, "Prévia pronta. Confira e clique em imprimir.");
+        }else{
+          atlasDefinirEstadoImpressao(false, "QR local ainda não ficou pronto. Feche e tente novamente.");
+        }
+      }catch(e){
+        atlasDefinirEstadoImpressao(false, "Não foi possível confirmar a prévia.");
+      }
+    }, 2000);
   };
 
   frame.onerror = () => {

@@ -7,6 +7,8 @@
 
 <!-- Usa a MESMA configuração estável da impressão individual. -->
 <script src="./JS/atlasEtiquetaConfig.js?v=8.1.1"></script>
+<script src="./JS/atlasQRCode/qrcode.min.js?v=1.0.0"></script>
+<script src="./JS/atlasQRCode.js?v=1.0.0"></script>
 
 <style>
 *{box-sizing:border-box}
@@ -274,6 +276,7 @@ html,body{
 "use strict";
 
 const A = window.AtlasEtiquetaConfig;
+const QR = window.AtlasQRCode;
 const params = new URLSearchParams(location.search);
 const isEmbed = params.get("embed") === "1" || window.self !== window.top;
 if(isEmbed){
@@ -300,14 +303,9 @@ const esc = valor => String(valor ?? "-").replace(
   })[caractere]
 );
 
-function criarQr(codigo){
-  const link =
-    `https://saulohenry29.github.io/sistemaBDR/etiqueta.html?id=${encodeURIComponent(codigo)}`;
 
-  return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(link)}`;
-}
 
-function criarModelo(patrimonio){
+function criarModelo(patrimonio, qrDataURL){
   const codigo =
     patrimonio?.codigo_qr ||
     patrimonio?.codigo_bem ||
@@ -347,7 +345,7 @@ function criarModelo(patrimonio){
           <img
             class="qr"
             data-el="qr"
-            src="${criarQr(codigo)}"
+            src="${qrDataURL}"
             alt="QR ${esc(codigo)}"
           >
         </div>
@@ -453,10 +451,14 @@ async function carregar(){
     ])
   );
 
+  // Gera todos os QR localmente antes de montar as etiquetas.
+  const qrPorCodigo = await QR.preGerarLista(codigos,{tamanho:220,nivel:"M"});
+
   container.innerHTML = codigos
     .map(codigo =>
       criarModelo(
-        mapa.get(String(codigo)) || {codigo_qr: codigo}
+        mapa.get(String(codigo)) || {codigo_qr: codigo},
+        qrPorCodigo.get(String(codigo))
       )
     )
     .join("");
@@ -470,7 +472,7 @@ async function carregar(){
   await aguardarImagens();
 
   if(params.get("auto") === "1" && !isEmbed){
-    setTimeout(() => window.print(), 250);
+    requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
   }
 }
 

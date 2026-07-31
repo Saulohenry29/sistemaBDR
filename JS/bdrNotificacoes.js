@@ -1,5 +1,5 @@
 /* =========================================================
-   BDR NOTIFICAÇÕES V12.0 - CENTRAL INTELIGENTE
+   BDR NOTIFICAÇÕES V13.0 - SININHO COMO FONTE OFICIAL
    - Sintaxe validada
    - Pendentes separadas de atualizações
    - X fecha sem navegar
@@ -9,6 +9,7 @@
    - Vibração quando suportada
    - Realtime + fallback por intervalo
    - Compatível com Atlas Event Bus
+   - Som disparado somente quando o sininho recebe um ID novo
 ========================================================= */
 (function(){
   'use strict';
@@ -20,7 +21,7 @@
 
   const BDR_NOTIF = {
     __loaded:true,
-    versao:'12.3-toast-verde-sem-duplicidade-patrimonio',
+    versao:'13.0-sininho-fonte-oficial',
     intervaloMs:10000,
     timer:null,
     carregando:false,
@@ -32,8 +33,32 @@
     audioLiberado:false,
     audioCtx:null,
     ultimoAvisoEm:0,
+
+    /*
+     * Controle temporário dos sons já executados.
+     * A mesma notificação pode chegar pelo Realtime, Event Bus e timer.
+     * O ID impede que esses três caminhos reproduzam o áudio repetidamente.
+     */
+    sonsRecentes:new Map(),
+    tempoBloqueioSom:2000,
+
+    /*
+     * Bloqueio global curto para o som de notificação.
+     * Resolve casos em que a mesma ocorrência chega por caminhos diferentes
+     * sem o mesmo ID/assinatura (Realtime, Event Bus ou polling).
+     */
+    somNotificacaoBloqueadoAte:0,
+    janelaGlobalSomMs:3000,
+
     realtimeChannel:null,
     notificacoesCache:[],
+
+    /*
+     * IDs que já foram exibidos pelo sininho nesta sessão.
+     * O áudio só é executado quando um ID realmente novo entra na lista.
+     */
+    notificacoesConhecidas:new Set(),
+
     quantidadeVisivel:5,
     passoMostrarMais:5
   };
@@ -291,7 +316,22 @@
     });
   }
 
-  function tocarSom(){
+  function tocarSom(chaveNotificacao){
+    /*
+     * Som oficial centralizado no Atlas Audio Engine.
+     * Mantém o bip antigo apenas como reserva caso o módulo
+     * atlasAudio.js ainda não esteja carregado.
+     */
+    if(window.AtlasAudio && typeof window.AtlasAudio.notificacao === 'function'){
+      /*
+       * A proteção contra repetição já acontece neste arquivo pelo ID.
+       * Mantemos a chamada sem parâmetros para compatibilidade total
+       * com a versão atual do Atlas Audio Engine.
+       */
+      window.AtlasAudio.notificacao();
+      return;
+    }
+
     if(!BDR_NOTIF.audioLiberado) return;
     if(!BDR_NOTIF.audioCtx || BDR_NOTIF.audioCtx.state !== 'running') return;
 
@@ -360,14 +400,103 @@
     }
   }
 
-  function avisarNovaNotificacao(mensagem){
-    const textoAviso = String(mensagem || "");
+  function criarChaveNotificacao(notificacao){
+    const n = notificacao && typeof notificacao === 'object'
+      ? notificacao
+      : {};
+
+    /*
+     * O ID do banco é a chave principal.
+     * O prefixo evita colisão com a chave alternativa.
+     */
+    if(n.id !== undefined && n.id !== null && String(n.id).trim()){
+      return 'id:' + String(n.id).trim();
+    }
+
+    /*
+     * Reserva para eventos antigos que ainda não enviem o ID.
+     * Usa os principais dados da notificação para reconhecer a repetição.
+     */
+    const assinatura = [
+      n.tipo,
+      n.titulo,
+      n.mensagem,
+      n.created_at
+    ]
+      .map(v => String(v || '').trim())
+      .filter(Boolean)
+      .join('|');
+
+    return assinatura ? 'assinatura:' + assinatura : '';
+  }
+
+  function bloquearSomDuplicado(chave){
+    if(!chave) return false;
+
+    if(BDR_NOTIF.sonsRecentes.has(chave)){
+      return true;
+    }
+
+    BDR_NOTIF.sonsRecentes.set(chave, Date.now());
+
+    setTimeout(() => {
+      BDR_NOTIF.sonsRecentes.delete(chave);
+    }, BDR_NOTIF.tempoBloqueioSom);
+
+    return false;
+  }
+
+  function avisarNovaNotificacao(notificacao){
+    /*
+     * Mantém compatibilidade com chamadas antigas que enviavam somente texto.
+     */
+    const n = notificacao && typeof notificacao === 'object'
+      ? notificacao
+      : { mensagem:String(notificacao || '') };
+
+    const textoAviso = [n.titulo, n.mensagem]
+      .filter(Boolean)
+      .join(' — ') || 'Nova movimentação no Atlas';
+
     const textoNormalizado = textoAviso.toUpperCase();
+    const chave = criarChaveNotificacao(n);
+
+    /*
+     * Proteção 1: bloqueio por ID/assinatura da mesma notificação.
+     */
+    if(bloquearSomDuplicado(chave)){
+      return;
+    }
+
+    /*
+     * Proteção 2: bloqueio global curto.
+     * Mesmo que outra origem entregue o evento sem o mesmo ID,
+     * o áudio não será repetido logo em seguida.
+     *
+     * Em um ERP, várias notificações que chegam juntas produzem apenas
+     * um aviso sonoro; todas continuam aparecendo normalmente no sininho.
+     */
+    const agoraGlobal = Date.now();
+    if(agoraGlobal < BDR_NOTIF.somNotificacaoBloqueadoAte){
+      return;
+    }
+    BDR_NOTIF.somNotificacaoBloqueadoAte =
+      agoraGlobal + BDR_NOTIF.janelaGlobalSomMs;
+
+    /*
+     * Proteção de reserva para eventos muito antigos que não tragam ID
+     * nem dados suficientes para formar uma assinatura.
+     */
+    if(!chave){
+      const agora = Date.now();
+      if(agora - BDR_NOTIF.ultimoAvisoEm < 850) return;
+      BDR_NOTIF.ultimoAvisoEm = agora;
+    }
 
     /*
      * Patrimônio já mostra a confirmação verde local.
-     * A notificação continua registrada no sininho, mas não cria
-     * um segundo popup por cima da confirmação.
+     * Mantemos o som, a vibração e a animação do sininho, mas evitamos
+     * criar um segundo popup por cima da confirmação da própria tela.
      */
     const ehConfirmacaoPatrimonio =
       textoNormalizado.includes("PATRIMÔNIO EXCLUÍDO") ||
@@ -377,18 +506,12 @@
       textoNormalizado.includes("PATRIMÔNIO REATIVADO") ||
       textoNormalizado.includes("PATRIMONIO REATIVADO");
 
-    if(ehConfirmacaoPatrimonio){
-      animarSininho();
-      return;
-    }
-
-    const agora = Date.now();
-    if(agora - BDR_NOTIF.ultimoAvisoEm < 850) return;
-    BDR_NOTIF.ultimoAvisoEm = agora;
-
-    tocarSom();
+    tocarSom(chave);
     vibrar();
     animarSininho();
+
+    if(ehConfirmacaoPatrimonio) return;
+
     mostrarToast(textoAviso);
   }
 
@@ -587,16 +710,36 @@
       if(error) throw error;
 
       const rows = Array.isArray(data) ? data : [];
-      const totalAnterior = BDR_NOTIF.ultimoTotal;
       const naoLidas = rows.filter(notificacaoNaoLida).length;
       const primeiraCarga = !BDR_NOTIF.primeiraCargaConcluida;
+
+      /*
+       * O sininho é a fonte oficial do aviso:
+       * primeiro identificamos quais registros realmente são novos,
+       * depois renderizamos e somente então tocamos uma única vez.
+       */
+      const novas = primeiraCarga
+        ? []
+        : rows.filter(n => {
+            const id = String(n?.id ?? '').trim();
+            return id && !BDR_NOTIF.notificacoesConhecidas.has(id);
+          });
 
       atualizarBadge(naoLidas);
       renderNotificacoes(rows, true);
 
-      if(!primeiraCarga && naoLidas > totalAnterior){
-        const nova = rows[0] || {};
-        avisarNovaNotificacao([nova.titulo,nova.mensagem].filter(Boolean).join(' — '));
+      /*
+       * Atualiza os IDs conhecidos depois que a lista foi exibida.
+       * Mantemos somente os IDs atuais para evitar crescimento indefinido.
+       */
+      BDR_NOTIF.notificacoesConhecidas = new Set(
+        rows
+          .map(n => String(n?.id ?? '').trim())
+          .filter(Boolean)
+      );
+
+      if(novas.length > 0){
+        avisarNovaNotificacao(novas[0]);
       }
 
       BDR_NOTIF.primeiraCargaConcluida = true;
@@ -710,8 +853,12 @@
         }, async payload => {
           const nova = payload?.new || {};
           if(empresaId && nova.empresa_id && String(empresaId) !== String(nova.empresa_id)) return;
+
+          /*
+           * O Realtime apenas solicita a atualização.
+           * Quem decide se existe algo novo e toca o som é o sininho.
+           */
           await carregarNotificacoes();
-          avisarNovaNotificacao([nova.titulo,nova.mensagem].filter(Boolean).join(' — '));
         })
         .subscribe();
     }catch(e){
@@ -752,10 +899,12 @@
 
   function registrarEventBus(){
     try{
-      const tratar = async payload => {
+      const tratar = async () => {
+        /*
+         * O Event Bus não toca áudio diretamente.
+         * Ele apenas atualiza o sininho, que é a fonte oficial.
+         */
         await carregarNotificacoes();
-        const n = payload?.notificacao || payload || {};
-        avisarNovaNotificacao([n.titulo,n.mensagem].filter(Boolean).join(' — '));
       };
 
       if(window.AtlasEvents?.on){
@@ -862,5 +1011,5 @@
   window.bdrMarcarNotificacaoComoLida = marcarNotificacaoComoLida;
   window.bdrMarcarTodasNotificacoesComoLidas = marcarTodasComoLidas;
 
-  console.log('✅ BDR NOTIFICAÇÕES V12.2 carregado - Patrimônio estável + mostrar mais');
+  console.log('✅ BDR NOTIFICAÇÕES V13.0 carregado - sininho é a fonte oficial do som');
 })();
