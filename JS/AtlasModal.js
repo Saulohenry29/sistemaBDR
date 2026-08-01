@@ -10,7 +10,7 @@
 
   if(window.AtlasModal && window.AtlasModal.__loaded) return;
 
-  const AtlasModal = { __loaded:true, versao:"1.2.1-sprint-3.1.5-mobile-fix" };
+  const AtlasModal = { __loaded:true, versao:"1.3-logistica-sem-alertas" };
 
   function esc(v){
     return String(v ?? "")
@@ -279,6 +279,13 @@
     body.querySelector("[data-ok]").onclick = () => fechar(bg);
   };
 
+  AtlasModal.aviso = function(titulo, mensagem){
+    const { bg, body } = criarBase(titulo || "ℹ Aviso", "Atlas");
+    body.innerHTML = `<div class="atlas-info-box">${esc(mensagem || "Confira as informações antes de continuar.")}</div><div class="atlas-modal-actions"><button class="atlas-btn secondary" data-ok>OK</button></div>`;
+    bg.querySelector("[data-atlas-close]").onclick = () => fechar(bg);
+    body.querySelector("[data-ok]").onclick = () => fechar(bg);
+  };
+
   AtlasModal.erro = function(mensagem){
     const { bg, body } = criarBase("⚠ Atenção", "Atlas");
     body.innerHTML = `<div class="atlas-info-box">${esc(mensagem || "Não foi possível concluir a operação.")}</div><div class="atlas-modal-actions"><button class="atlas-btn danger" data-ok>Fechar</button></div>`;
@@ -287,5 +294,5 @@
   };
 
   window.AtlasModal = AtlasModal;
-  console.log("✅ ATLAS MODAL V1.2 carregado - cores corrigidas e recebimento seguro");
+  console.log("✅ ATLAS MODAL V1.3 carregado - retirada e recebimento sem alertas nativos");
 })();

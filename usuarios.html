@@ -271,6 +271,11 @@ input.perm[value="PATRIMONIO_CONFERIR_RELATORIO"] + .slider{
   box-shadow:0 0 0 1px rgba(124,58,237,.16);
 }
 
+
+/* ATLAS USUÁRIOS V4.0 — responsabilidade de transporte */
+.atlas-perm-transporte{position:relative;overflow:hidden}
+.atlas-perm-transporte:before{content:"AÇÃO";position:absolute;right:54px;top:5px;padding:2px 6px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:8px;font-weight:900;letter-spacing:.5px}
+
 </style>
 <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260629-layout-limpo">
 <link rel="stylesheet" href="./CSS/atlas-preferencias-notificacoes.css">
@@ -518,6 +523,11 @@ if(typeof verificarLogin === "function"){ verificarLogin(); }
             <div class="perm-row"><div class="perm-ico green"><i class="fa-regular fa-clipboard"></i></div><div class="perm-text"><b>Conferir mercadoria</b><span>Liberar conferência na chegada.</span></div><label class="switch"><input type="checkbox" class="perm" value="CONFERIR_MERCADORIA"><span class="slider"></span></label></div>
             <div class="perm-row"><div class="perm-ico green"><i class="fa-solid fa-cart-flatbed"></i></div><div class="perm-text"><b>Separar pedido</b><span>Bipar prateleira/patrimônio e finalizar separação.</span></div><label class="switch"><input type="checkbox" class="perm" value="SEPARAR_PEDIDO"><span class="slider"></span></label></div>
             <div class="perm-row"><div class="perm-ico green"><i class="fa-solid fa-truck-ramp-box"></i></div><div class="perm-text"><b>Entregar / enviar material</b><span>Liberar transferência e registrar saída.</span></div><label class="switch"><input type="checkbox" class="perm" value="ENTREGAR_MATERIAL"><span class="slider"></span></label></div>
+            <div class="perm-row atlas-perm-transporte" style="background:linear-gradient(135deg,#eff6ff,#f0fdf4);border-color:#86efac;">
+              <div class="perm-ico" style="background:#dcfce7;color:#15803d;"><i class="fa-solid fa-truck-fast"></i></div>
+              <div class="perm-text"><b style="color:#166534;">Responsável por retirada e transporte</b><span>Recebe a notificação azul, informa motorista/veículo e coloca o pedido em trânsito.</span></div>
+              <label class="switch"><input type="checkbox" class="perm" value="EXPEDICAO_TRANSPORTE"><span class="slider"></span></label>
+            </div>
             <div class="perm-row"><div class="perm-ico gray"><i class="fa-regular fa-square-check"></i></div><div class="perm-text"><b>Aprovar pedidos da origem</b><span>Aprovar solicitações quando o item é da sua obra.</span></div><label class="switch"><input type="checkbox" class="perm" value="APROVAR_PEDIDO_ORIGEM"><span class="slider"></span></label></div>
             <div class="perm-row" style="background:#fff1f2;border-color:#fecaca;"><div class="perm-ico"><i class="fa-solid fa-lock"></i></div><div class="perm-text"><b style="color:#d71920">Gerenciar usuários</b><span>Criar, editar, bloquear e liberar usuários.</span></div><label class="switch"><input type="checkbox" class="perm" value="USUARIOS_PERMISSOES"><span class="slider"></span></label></div>
             <div class="perm-row" style="background:#fff1f2;border-color:#fecaca;"><div class="perm-ico"><i class="fa-solid fa-lock"></i></div><div class="perm-text"><b>Configurações do sistema</b><span>Acesso às configurações avançadas.</span></div><label class="switch"><input type="checkbox" class="perm" value="CONFIGURACOES_VER"><span class="slider"></span></label></div>
@@ -766,5 +776,6 @@ if(typeof window.limparSelecaoPermissao !== "function"){
 })();
 </script>
 
+<script>console.log("✅ ATLAS USUÁRIOS V4.0 carregado - permissão de retirada e transporte");</script>
 </body>
 </html>

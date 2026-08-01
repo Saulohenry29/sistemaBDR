@@ -1,5 +1,5 @@
 /* =========================================================
-   BDR NOTIFICAÇÕES V13.0 - SININHO COMO FONTE OFICIAL
+   BDR NOTIFICAÇÕES V14.0 - CORES POR INTENÇÃO
    - Sintaxe validada
    - Pendentes separadas de atualizações
    - X fecha sem navegar
@@ -21,7 +21,7 @@
 
   const BDR_NOTIF = {
     __loaded:true,
-    versao:'13.1-modo-usuario',
+    versao:'14.0-cores-por-intencao',
     intervaloMs:10000,
     timer:null,
     carregando:false,
@@ -232,7 +232,18 @@
         font-weight:900;
       }
       .notif-item.bdr-notif-info{
-        border-left:4px solid #16a34a;background:#fff;
+        border-left:4px solid #16a34a;
+        background:#fff;
+      }
+
+      .notif-item.bdr-notif-erro{
+        border-left:4px solid #dc2626;
+        background:#fef2f2;
+        cursor:default!important;
+      }
+
+      .notif-item.bdr-notif-erro strong{
+        color:#991b1b;
       }
       .bdr-notif-fechar{
         position:absolute;top:8px;right:8px;width:27px;height:27px;border:0;
@@ -582,12 +593,28 @@
   }
 
   function tipoEhAcao(n){
+    /*
+     * REGRA OFICIAL DO SININHO:
+     * - tem link real: ação azul;
+     * - sem link: atualização informativa;
+     *
+     * O tipo da notificação não decide mais sozinho.
+     */
+    return !!String(n?.link || '').trim();
+  }
+
+  function tipoEhErro(n){
     const tipo = String(n?.tipo || '').toUpperCase();
+
     return [
-      'PEDIDO_CRIADO','PEDIDO_AGUARDANDO_ANALISE','PEDIDO_APROVACAO',
-      'PEDIDO_EM_SEPARACAO','PEDIDO_AGUARDANDO_SEPARACAO',
-      'PEDIDO_AGUARDANDO_RETIRADA','PEDIDO_AGUARDANDO_RECEBIMENTO',
-      'PEDIDO_DIVERGENCIA','PEDIDO_RECEBIDO_DIVERGENCIA'
+      'PATRIMONIO_INATIVADO',
+      'PATRIMONIO_EXCLUIDO',
+      'PEDIDO_RECUSADO',
+      'PEDIDO_DIVERGENCIA',
+      'PEDIDO_RECEBIDO_DIVERGENCIA',
+      'ERRO_SEPARACAO',
+      'ESTOQUE_INSUFICIENTE',
+      'NFE_REJEITADA'
     ].some(x => tipo.includes(x));
   }
 
@@ -602,14 +629,11 @@
   }
 
   function linkSeguro(n){
-    const tipo = String(n?.tipo || '').toUpperCase();
-    const atual = String(n?.link || '').trim();
-    if(atual) return atual;
-    if(tipo.includes('SEPAR')) return 'expedicao.html?aba=separacao';
-    if(tipo.includes('RETIRADA')) return 'expedicao.html?aba=retirada';
-    if(tipo.includes('RECEB') || tipo.includes('TRANSITO')) return 'expedicao.html?aba=transito';
-    if(tipo.includes('APROV') || tipo.includes('CRIADO') || tipo.includes('ANALISE')) return 'expedicao.html?aba=solicitacoes';
-    return '';
+    /*
+     * Nunca inventa link.
+     * Se o banco/gestor enviou null, a notificação é apenas informativa.
+     */
+    return String(n?.link || '').trim();
   }
 
   function renderNotificacoes(rows, manterQuantidade=false){
@@ -640,13 +664,20 @@
 
     function htmlItem(n){
       const acao = tipoEhAcao(n);
+      const erro = !acao && tipoEhErro(n);
       const link = escapeHtml(linkSeguro(n));
       const titulo = escapeHtml(n.titulo || n.tipo || 'Notificação');
       const mensagem = escapeHtml(n.mensagem || '');
       const data = escapeHtml(formatarDataBDR(n.created_at));
 
+      const classeVisual = acao
+        ? 'bdr-notif-acao'
+        : erro
+          ? 'bdr-notif-erro'
+          : 'bdr-notif-info';
+
       return `
-        <div class="notif-item ${acao ? 'bdr-notif-acao' : 'bdr-notif-info'}"
+        <div class="notif-item ${classeVisual}"
              data-id="${escapeHtml(n.id || '')}"
              data-link="${link}">
           <button type="button" class="bdr-notif-fechar" data-fechar-notif title="Marcar como lida e remover">×</button>
@@ -1022,5 +1053,5 @@
   window.bdrMarcarNotificacaoComoLida = marcarNotificacaoComoLida;
   window.bdrMarcarTodasNotificacoesComoLidas = marcarTodasComoLidas;
 
-  console.log('✅ BDR NOTIFICAÇÕES V13.2 carregado - altura automática e preferências por usuário');
+  console.log('✅ BDR NOTIFICAÇÕES V14.0 carregado - azul por link, verde informativa e vermelho para erro');
 })();

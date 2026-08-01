@@ -21,7 +21,7 @@
 
   const Gestor = {
     __loaded:true,
-    versao:"3.0-central-unica-limpa"
+    versao:"3.3-transporte-sem-autonotificacao"
   };
 
 
@@ -32,6 +32,7 @@
     "EXPEDICAO_APROVAR",
     "EXPEDICAO_SEPARAR",
     "EXPEDICAO_ENTREGAR",
+    "EXPEDICAO_TRANSPORTE",
     "APROVAR_PEDIDO_ORIGEM"
   ];
 
@@ -537,6 +538,63 @@
 
 
   /* =========================================================
+     AÇÃO DE RETIRADA / TRANSPORTE
+  ========================================================= */
+  async function notificarRetiradaPedido(pedido, usuarioSeparacao){
+    const empresaId = pedido?.empresa_id || empresaAtualId();
+    const origemId = pedido?.obra_origem_id || null;
+    const destinoId = pedido?.obra_destino_id || pedido?.obra_id || null;
+    const usuarios = await buscarUsuariosEmpresa(empresaId);
+    const executor = usuarioAtual() || {};
+    const executorId = Number(executor.id || executor.usuario_id || 0);
+    const executorNome = upper(
+      executor.nome ||
+      executor.usuario ||
+      usuarioSeparacao ||
+      ""
+    );
+
+    const responsaveis = unicoPorId((usuarios || [])
+      .filter(u => u && u.ativo !== false)
+      .filter(u => !estaBloqueadoExpedicao(u))
+      .filter(u => usuarioTemAcessoObra(u, origemId))
+      .filter(u => possuiAlgumaPermissao(u,[
+        "EXPEDICAO_TRANSPORTE",
+        "EXPEDICAO_ENTREGAR",
+        "ENTREGAR_MATERIAL"
+      ]))
+      .filter(u => possuiAlgumaPermissao(u,[
+        "RECEBER_NOTIFICACOES",
+        "RECEBER_NOTIFICACOES_EXPEDICAO",
+        "RECEBER_NOTIFICACOES_MOVIMENTACOES"
+      ]))
+      /*
+       * Quem concluiu a separação já recebeu a confirmação local.
+       * Não enviamos também a notificação azul para a mesma pessoa.
+       */
+      .filter(u => {
+        const mesmoId =
+          executorId > 0 &&
+          Number(u.id || u.usuario_id || 0) === executorId;
+
+        const nomeDestino = upper(u.nome || u.usuario || "");
+        const mesmoNome =
+          !!executorNome &&
+          !!nomeDestino &&
+          nomeDestino === executorNome;
+
+        return !mesmoId && !mesmoNome;
+      })
+    );
+    const total = await notificarLista(responsaveis,{
+      empresa_id:empresaId,tipo:"PEDIDO_AGUARDANDO_RETIRADA",titulo:"🚚 Pedido pronto para transporte",
+      mensagem:"Pedido " + (pedido?.codigo || "#" + pedido?.id) + " foi separado por " + (usuarioSeparacao || "almoxarifado") + ". Informe motorista, veículo e placa para colocar o pedido em trânsito.",
+      link:"expedicao.html?aba=retirada",pedido_id:pedido?.id || null,obra_origem_id:origemId,obra_destino_id:destinoId
+    });
+    return {ok:total>0,notificacoes:total,destinatarios:responsaveis.map(u=>({id:u.id,nome:u.nome,perfil:u.perfil,obra_id:u.obra_id}))};
+  }
+
+  /* =========================================================
      AVISO INFORMATIVO PARA A OBRA DE ORIGEM
      Usado quando a origem precisa acompanhar o fluxo.
   ========================================================= */
@@ -612,6 +670,7 @@
   Gestor.notificarPedidoCriado = notificarPedidoCriado;
   Gestor.notificarDestinoPedido = notificarDestinoPedido;
   Gestor.notificarSeparacaoPedido = notificarSeparacaoPedido;
+  Gestor.notificarRetiradaPedido = notificarRetiradaPedido;
   Gestor.notificarOrigemPedido = notificarOrigemPedido;
   Gestor.usuarioPodeAtenderQualquerOrigem = usuarioPodeAtenderQualquerOrigem;
   Gestor.usuarioAceitaNotificacoes = usuarioAceitaNotificacoes;
@@ -621,5 +680,7 @@
 
   window.AtlasGestorNotificacoes = Gestor;
 
-  console.log("✅ ATLAS GESTOR NOTIFICAÇÕES V3.0 carregado - central única e regras por papel");
+  console.log("✅ ATLAS GESTOR NOTIFICAÇÕES V3.3 carregado - transporte sem notificar o executor");
 })();
+
+console.log("✅ ATLAS NOTIFICAÇÕES TRANSPORTE V3.3 - executor excluído da notificação azul");

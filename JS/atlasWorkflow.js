@@ -10,7 +10,7 @@
   "use strict";
 
   const AtlasWorkflow = {
-    versao: "3.0-fluxo-limpo"
+    versao: "3.3-transporte-por-permissao"
   };
 
   const STATUS = {
@@ -533,14 +533,28 @@
   }
 
   async function finalizarSeparacao(pedidoId){
+    const atual = await buscarPedido(pedidoId);
+    if(String(atual.status||"").toUpperCase()===STATUS.AGUARDANDO_RETIRADA){
+      return atual;
+    }
+
     const pedido = await alterarStatusPedido(pedidoId, STATUS.AGUARDANDO_RETIRADA, "Separação finalizada. Aguardando motorista/retirada.");
     await atualizarMovimentacoesPedido(pedidoId, {
       status: STATUS.AGUARDANDO_RETIRADA,
       separado_por: nomeUsuario(),
       data_separacao: new Date().toISOString()
     });
-    await notificarSolicitantePedido(pedido, "PEDIDO_AGUARDANDO_RETIRADA", "📦 Pedido aguardando retirada", "Pedido " + (pedido.codigo || "#" + pedido.id) + " foi separado por " + nomeUsuario() + " e aguarda motorista/retirada.", "");
-    tocarConcluido();
+    await notificarSolicitantePedido(
+      pedido,"PEDIDO_AGUARDANDO_RETIRADA","📦 Seu pedido foi separado",
+      "Pedido " + (pedido.codigo || "#" + pedido.id) + " foi separado por " + nomeUsuario() + " e aguarda transporte. Nenhuma ação é necessária.",null
+    );
+    try{
+      if(gestorNotificacoes()?.notificarRetiradaPedido){
+        await gestorNotificacoes().notificarRetiradaPedido(pedido,nomeUsuario());
+      }
+    }catch(e){
+      console.warn("AtlasWorkflow: notificação de retirada/transporte não enviada:",e?.message || e);
+    }
     return pedido;
   }
 
@@ -559,7 +573,6 @@
     });
 
     await notificarSolicitantePedido(pedido, "PEDIDO_EM_TRANSITO", "🛣 Pedido em trânsito", "Pedido " + (pedido.codigo || "#" + pedido.id) + " saiu com motorista " + motorista + ", placa " + placa + ".", "expedicao.html?aba=transito");
-    tocarConcluido();
     return pedido;
   }
 
@@ -603,10 +616,9 @@
         ". Conferência: " +
         (dadosRecebimento?.divergencia ? "com divergência" : "sem divergência") +
         ".",
-      "expedicao.html?aba=historico"
+      null
     );
 
-    tocarConcluido();
     return atualizado;
   }
 
@@ -629,5 +641,5 @@
 
   window.AtlasWorkflow = AtlasWorkflow;
 
-  console.log("✅ ATLAS WORKFLOW V3.0 carregado - fluxo limpo e notificações centralizadas");
+  console.log("✅ ATLAS WORKFLOW V3.3 carregado - separação avisa solicitante e transporte");
 })();

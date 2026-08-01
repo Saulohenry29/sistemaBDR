@@ -570,6 +570,43 @@ function garantirCssCarrinhoAtlas(){
       max-width:290px;
     }
     .atlas-toast.ativo{opacity:1;transform:translateY(0)}
+
+    .atlas-item-voando{
+      position:fixed;
+      z-index:2147483646;
+      width:48px;
+      height:48px;
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#fff;
+      border:2px solid #16a34a;
+      box-shadow:0 14px 34px rgba(15,23,42,.28);
+      font-size:25px;
+      pointer-events:none;
+      transition:left .48s cubic-bezier(.2,.8,.2,1),
+                 top .48s cubic-bezier(.2,.8,.2,1),
+                 transform .48s ease,
+                 opacity .48s ease;
+      transform:scale(1);
+      opacity:1;
+    }
+
+    .atlas-item-voando.chegou{
+      transform:scale(.28) rotate(12deg);
+      opacity:.18;
+    }
+
+    .produto-card.atlas-card-confirmado{
+      animation:atlasCardConfirmado .42s ease-out;
+    }
+
+    @keyframes atlasCardConfirmado{
+      0%{transform:scale(1)}
+      45%{transform:scale(1.035)}
+      100%{transform:scale(1)}
+    }
   `;
   document.head.appendChild(css);
 }
@@ -624,6 +661,54 @@ function animarBotaoItem(origem,id){
     const sel = `.btn-card-action[data-origem="${String(origem).replace(/"/g,'\\"')}"][data-id="${Number(id)}"]`;
     atlasMotionPop(document.querySelector(sel));
   }, 30);
+}
+
+
+function animarItemAteCarrinho(item){
+  try{
+    garantirCssCarrinhoAtlas();
+
+    const seletor =
+      `.btn-card-action[data-origem="${String(item?.origem_tabela || "").replace(/"/g,'\\"')}"]` +
+      `[data-id="${Number(item?.id || 0)}"]`;
+
+    const botaoOrigem = document.querySelector(seletor);
+    const cardOrigem = botaoOrigem?.closest(".produto-card");
+    const carrinhoTopo = document.querySelector(".btn-cart-top");
+
+    if(!botaoOrigem || !carrinhoTopo){
+      animarCarrinhoTopo();
+      return;
+    }
+
+    const origem = botaoOrigem.getBoundingClientRect();
+    const destino = carrinhoTopo.getBoundingClientRect();
+
+    const voador = document.createElement("div");
+    voador.className = "atlas-item-voando";
+    voador.textContent = placeholderIcon(item || {});
+    voador.style.left = (origem.left + origem.width / 2 - 24) + "px";
+    voador.style.top = (origem.top + origem.height / 2 - 24) + "px";
+
+    document.body.appendChild(voador);
+    cardOrigem?.classList.add("atlas-card-confirmado");
+
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        voador.style.left = (destino.left + destino.width / 2 - 24) + "px";
+        voador.style.top = (destino.top + destino.height / 2 - 24) + "px";
+        voador.classList.add("chegou");
+      });
+    });
+
+    setTimeout(()=>{
+      voador.remove();
+      cardOrigem?.classList.remove("atlas-card-confirmado");
+      animarCarrinhoTopo();
+    }, 520);
+  }catch(e){
+    animarCarrinhoTopo();
+  }
 }
 
 
@@ -796,31 +881,35 @@ function acaoItem(origem,id){
 }
 function addCarrinho(item){
   if(itemEstaNoCarrinho(item)) return;
+
+  animarItemAteCarrinho(item);
+
   carrinho.push({...item, tipo_solicitacao:"RETIRADA", quantidade_solicitada:1});
   sincronizarCarrinhoExpedicao();
   renderizarCarrinho();
   renderizarCatalogo();
   animarBotaoItem(item.origem_tabela,item.id);
-  animarCarrinhoTopo();
-  atlasToast("✔ Adicionado ao carrinho<br><small>" + esc(item.nome || item.descricao || "Item") + "</small>");
 }
 function addInteresse(item){
   if(itemEstaNoCarrinho(item)) return;
+
+  animarItemAteCarrinho(item);
+
   carrinho.push({...item, tipo_solicitacao:"INTERESSE", quantidade_solicitada:1});
   sincronizarCarrinhoExpedicao();
   renderizarCarrinho();
   renderizarCatalogo();
   animarBotaoItem(item.origem_tabela,item.id);
-  animarCarrinhoTopo();
-  atlasToast("✔ Adicionado ao carrinho<br><small>" + esc(item.nome || item.descricao || "Item") + "</small>");
 }
 function removerCarrinho(origem,id){
-  carrinho = carrinho.filter(c=>!(c.origem_tabela===origem && Number(c.id)===Number(id)));
+  carrinho = carrinho.filter(c=>!(
+    c.origem_tabela===origem && Number(c.id)===Number(id)
+  ));
+
   sincronizarCarrinhoExpedicao();
   renderizarCarrinho();
   renderizarCatalogo();
   animarCarrinhoTopo();
-  atlasToast("↩ Removido do carrinho");
 }
 function renderizarCarrinho(){
   sincronizarCarrinhoExpedicao();
@@ -2167,10 +2256,59 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
   function nomeObraLog(id){ return typeof nomeObra === "function" ? nomeObra(id) : String(id || "-"); }
   function dataHoraBRLog(v){
     if(!v) return "-";
-    try{ return new Date(v).toLocaleString("pt-BR", {dateStyle:"short", timeStyle:"short"}); }
-    catch(e){ return String(v); }
+
+    try{
+      let textoData = String(v).trim();
+
+      /*
+       * A coluna data_saida_cd é timestamp sem timezone.
+       * Como o Atlas grava usando new Date().toISOString(), o banco pode
+       * devolver UTC sem o "Z". Nesse caso adicionamos o sufixo para impedir
+       * que o navegador interprete 03:37 como horário local.
+       */
+      const possuiFuso = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(textoData);
+
+      if(!possuiFuso){
+        textoData = textoData.replace(" ", "T") + "Z";
+      }
+
+      const data = new Date(textoData);
+
+      if(Number.isNaN(data.getTime())){
+        return String(v);
+      }
+
+      return data.toLocaleString("pt-BR", {
+        timeZone:"America/Cuiaba",
+        dateStyle:"short",
+        timeStyle:"short"
+      });
+    }catch(e){
+      return String(v);
+    }
   }
   function pedidoCurtoLog(p){ return "PED-" + (p?.id || "-"); }
+
+  function avisoAtlasLog(titulo, mensagem){
+    if(window.AtlasModal?.sucesso){
+      window.AtlasModal.sucesso(titulo || "Atlas", mensagem || "Operação concluída.");
+      return;
+    }
+    if(typeof window.atlasToast === "function"){
+      window.atlasToast("✔ " + escLog(mensagem || titulo || "Operação concluída."));
+    }
+  }
+
+  function erroAtlasLog(mensagem){
+    const texto = String(mensagem || "Não foi possível concluir a operação.");
+    if(window.AtlasModal?.erro){
+      window.AtlasModal.erro(texto);
+      return;
+    }
+    if(typeof window.atlasToast === "function"){
+      window.atlasToast("⚠ " + escLog(texto));
+    }
+  }
 
   window.reservar = async function(id){
     if(window.AtlasSeparacaoQR?.abrir){
@@ -2192,7 +2330,7 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
       await carregarTudo();
       if(typeof window.bdrCarregarNotificacoes === "function") await window.bdrCarregarNotificacoes();
     }catch(e){
-      alert("Erro ao finalizar separação: " + (e?.message || e));
+      erroAtlasLog("Erro ao finalizar separação: " + (e?.message || e));
       console.error(e);
     }
   };
@@ -2202,7 +2340,7 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
     if(!id) return;
 
     if(!valor("retMotorista")){
-      alert("Informe o motorista/responsável.");
+      erroAtlasLog("Informe o motorista/responsável.");
       return;
     }
 
@@ -2224,11 +2362,11 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
       }
 
       fecharModalRetirada();
-      alert("Pedido colocado em trânsito.");
+      avisoAtlasLog("🚚 Pedido em trânsito", "Pedido colocado em trânsito com sucesso.");
       await carregarTudo();
       if(typeof window.bdrCarregarNotificacoes === "function") await window.bdrCarregarNotificacoes();
     }catch(e){
-      alert("Erro ao enviar pedido: " + (e?.message || e));
+      erroAtlasLog("Erro ao enviar pedido: " + (e?.message || e));
       console.error(e);
     }
   };
@@ -2242,9 +2380,8 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
         dadosRecebimento = await window.AtlasModal.recebimento(p);
         if(!dadosRecebimento) return;
       }else{
-        const ok = confirm("Confirmar recebimento sem divergência?");
-        if(!ok) return;
-        dadosRecebimento = { divergencia:false, observacao:"Recebido sem divergência." };
+        erroAtlasLog("O componente AtlasModal não foi carregado. Atualize a página e tente novamente.");
+        return;
       }
 
       if(!window.AtlasLogistica?.receberPedido){
@@ -2262,14 +2399,18 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
             : "Patrimônio transferido para o destino e timeline registrada."
         );
       }else{
-        alert(dadosRecebimento.divergencia ? "Recebimento registrado com divergência." : "Recebimento confirmado.");
+        avisoAtlasLog(
+          dadosRecebimento.divergencia ? "⚠ Divergência registrada" : "✔ Recebimento confirmado",
+          dadosRecebimento.divergencia
+            ? "A origem foi notificada e o pedido ficou aguardando conferência."
+            : "Patrimônio transferido para o destino e timeline registrada."
+        );
       }
 
       await carregarTudo();
       if(typeof window.bdrCarregarNotificacoes === "function") await window.bdrCarregarNotificacoes();
     }catch(e){
-      if(window.AtlasModal?.erro) window.AtlasModal.erro("Erro ao confirmar recebimento: " + (e?.message || e));
-      else alert("Erro ao confirmar recebimento: " + (e?.message || e));
+      erroAtlasLog("Erro ao confirmar recebimento: " + (e?.message || e));
       console.error(e);
     }
   };
@@ -2391,6 +2532,60 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
     });
   }
 
+  /*
+   * CONFIRMAÇÃO LOCAL SEGURA
+   * Estas funções ficam no mesmo escopo da aprovação fiscal.
+   * Nunca deixam uma falha visual transformar uma operação concluída
+   * em mensagem de erro.
+   */
+  function mostrarSucessoAprovacaoAtlas(titulo, mensagem){
+    try{
+      if(window.AtlasModal?.sucesso){
+        window.AtlasModal.sucesso(
+          titulo || "✅ Operação concluída",
+          mensagem || "A operação foi realizada com sucesso."
+        );
+        return true;
+      }
+
+      if(typeof window.atlasToast === "function"){
+        window.atlasToast(
+          "✅ " + (mensagem || titulo || "Operação concluída.")
+        );
+        return true;
+      }
+    }catch(e){
+      console.warn(
+        "Atlas Expedição: aprovação concluída, mas a confirmação visual falhou:",
+        e?.message || e
+      );
+    }
+
+    return false;
+  }
+
+  function mostrarErroAprovacaoAtlas(mensagem){
+    const texto = String(
+      mensagem || "Não foi possível concluir a autorização."
+    );
+
+    try{
+      if(window.AtlasModal?.erro){
+        window.AtlasModal.erro(texto);
+        return true;
+      }
+
+      if(typeof window.atlasToast === "function"){
+        window.atlasToast("⚠ " + texto);
+        return true;
+      }
+    }catch(e){
+      console.error("Atlas Expedição:", texto, e);
+    }
+
+    return false;
+  }
+
   async function salvarEscolhaNfeAtlas(pedidoId, exigeNfe){
     if(!window.AtlasFiscal?.definirExigenciaNfe){
       throw new Error("AtlasFiscal não carregado.");
@@ -2416,11 +2611,26 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
   if(typeof autorizarTodosAnterior330 === "function"){
     window.autorizarTodosAtlas = async function(pedidoId){
       const exigeNfe = await perguntarExigeNfeAtlas();
-      if(exigeNfe === null) return;
+      if(exigeNfe === null) return false;
 
-      await autorizarTodosAnterior330(pedidoId);
-      await salvarEscolhaNfeAtlas(pedidoId,exigeNfe);
-      await window.carregarTudo?.();
+      try{
+        await autorizarTodosAnterior330(pedidoId);
+        await salvarEscolhaNfeAtlas(pedidoId, exigeNfe);
+        await window.carregarTudo?.();
+
+        mostrarSucessoAprovacaoAtlas(
+          "✅ Pedido aprovado",
+          "A autorização foi realizada com sucesso. O pedido foi encaminhado para separação."
+        );
+
+        return true;
+      }catch(e){
+        mostrarErroAprovacaoAtlas(
+          "Não foi possível concluir a autorização: " +
+          (e?.message || e)
+        );
+        return false;
+      }
     };
   }
 
@@ -2431,11 +2641,26 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
   if(typeof confirmarParcialAnterior330 === "function"){
     window.confirmarAprovacaoParcialAtlas = async function(pedidoId){
       const exigeNfe = await perguntarExigeNfeAtlas();
-      if(exigeNfe === null) return;
+      if(exigeNfe === null) return false;
 
-      await confirmarParcialAnterior330(pedidoId);
-      await salvarEscolhaNfeAtlas(pedidoId,exigeNfe);
-      await window.carregarTudo?.();
+      try{
+        await confirmarParcialAnterior330(pedidoId);
+        await salvarEscolhaNfeAtlas(pedidoId, exigeNfe);
+        await window.carregarTudo?.();
+
+        mostrarSucessoAprovacaoAtlas(
+          "✅ Aprovação parcial concluída",
+          "A decisão dos itens foi registrada e o pedido foi encaminhado para a próxima etapa."
+        );
+
+        return true;
+      }catch(e){
+        mostrarErroAprovacaoAtlas(
+          "Não foi possível concluir a aprovação parcial: " +
+          (e?.message || e)
+        );
+        return false;
+      }
     };
   }
 
@@ -2584,9 +2809,21 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
   function atlasPerfil(){ return atlasNorm(atlasUsuario()?.perfil); }
   function atlasObraUsuario(){ return Number(atlasUsuario()?.obra_id || 0); }
   function atlasOwnerGlobal(){ return Number(atlasUsuario()?.id) === 1; }
+  function atlasPermissoes(){
+    return atlasNorm(atlasUsuario()?.permissoes).split(/[;,|]/).map(x => x.trim()).filter(Boolean);
+  }
+  function atlasTemPermissao(...permissoes){
+    const atuais = atlasPermissoes();
+    return permissoes.some(p => atuais.includes(atlasNorm(p)));
+  }
   function atlasEhGestor(){ return ["MASTER","ADMIN"].includes(atlasPerfil()); }
   function atlasEhAlmoxarife(){ return ["ALMOXARIFE","ALMOXARIFADO"].includes(atlasPerfil()); }
-  function atlasEquipeOperacional(){ return atlasEhGestor() || atlasEhAlmoxarife(); }
+  function atlasEquipeOperacional(){
+    return atlasEhGestor() || atlasEhAlmoxarife() || atlasTemPermissao("EXPEDICAO_SEPARAR","SEPARAR_PEDIDO");
+  }
+  function atlasEhResponsavelTransporte(){
+    return atlasOwnerGlobal() || atlasTemPermissao("EXPEDICAO_TRANSPORTE","EXPEDICAO_ENTREGAR","ENTREGAR_MATERIAL");
+  }
 
   function atlasPedidoPorId(id){
     const lista = window.pedidos || (typeof pedidos !== "undefined" ? pedidos : []) || [];
@@ -2629,7 +2866,9 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
     return atlasOwnerGlobal() || (atlasEquipeOperacional() && atlasMesmaObraOrigem(p));
   }
 
-  function atlasPodeRetirada(p){ return atlasPodeSeparar(p); }
+  function atlasPodeRetirada(p){
+    return atlasOwnerGlobal() || (atlasEhResponsavelTransporte() && atlasMesmaObraOrigem(p));
+  }
   function atlasPodeNfe(p){ return atlasPodeAutorizar(p); }
   function atlasPodeReceber(p){ return atlasOwnerGlobal() || atlasMesmaObraDestino(p); }
 
@@ -2652,6 +2891,57 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
 
   function atlasStatus(p){ return atlasNorm(p?.status).replaceAll(" ", "_"); }
 
+  function atlasAjustarAbaRetirada(){
+    const podeVerRetirada = atlasEhResponsavelTransporte();
+    const botao = [...document.querySelectorAll(".tab-btn")].find(btn => {
+      const onclick = btn.getAttribute("onclick") || "";
+      return onclick.includes("'retirada'") || onclick.includes('"retirada"');
+    });
+    const secao = document.getElementById("tab-retirada");
+    if(botao){ botao.style.display = podeVerRetirada ? "" : "none"; botao.setAttribute("aria-hidden", podeVerRetirada ? "false" : "true"); }
+    if(secao){ secao.style.display = podeVerRetirada ? "" : "none"; secao.setAttribute("aria-hidden", podeVerRetirada ? "false" : "true"); }
+  }
+
+  function atlasAjustarAbaAprovacao(){
+    const podeVerAprovacao = atlasOwnerGlobal() || atlasEhGestor();
+
+    const botao = [...document.querySelectorAll(".tab-btn")]
+      .find(btn => {
+        const onclick = btn.getAttribute("onclick") || "";
+        return onclick.includes("'solicitacoes'") ||
+               onclick.includes('"solicitacoes"');
+      });
+
+    const secao = document.getElementById("tab-solicitacoes");
+
+    if(botao){
+      botao.style.display = podeVerAprovacao ? "" : "none";
+      botao.setAttribute("aria-hidden", podeVerAprovacao ? "false" : "true");
+    }
+
+    if(secao){
+      secao.style.display = podeVerAprovacao ? "" : "none";
+      secao.setAttribute("aria-hidden", podeVerAprovacao ? "false" : "true");
+    }
+
+    /*
+     * Se um usuário sem permissão entrou por URL ou ficou com a aba
+     * ativa no navegador, volta automaticamente ao Catálogo.
+     */
+    if(!podeVerAprovacao && secao?.classList.contains("active")){
+      const botaoCatalogo = [...document.querySelectorAll(".tab-btn")]
+        .find(btn => {
+          const onclick = btn.getAttribute("onclick") || "";
+          return onclick.includes("'catalogo'") ||
+                 onclick.includes('"catalogo"');
+        });
+
+      if(typeof window.abrirAba === "function"){
+        window.abrirAba("catalogo", botaoCatalogo || null);
+      }
+    }
+  }
+
   function atlasListaEscopo(id, arr, vazio){
     const el = document.getElementById(id);
     if(!el) return;
@@ -2664,15 +2954,26 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
 
   /* Cada aba recebe somente os pedidos que cabem ao usuário atual. */
   window.renderizarPedidos = renderizarPedidos = function(){
+    atlasAjustarAbaAprovacao();
+    atlasAjustarAbaRetirada();
+
     const todos = (window.pedidos || (typeof pedidos !== "undefined" ? pedidos : []) || [])
       .filter(atlasPodeAcompanhar);
 
     const solicitacoes = todos.filter(p => {
       const st = atlasStatus(p);
-      if(!["SOLICITADO","AGUARDANDO_AUTORIZACAO"].includes(st)) return false;
-      if(atlasOwnerGlobal()) return true;
-      if(atlasPodeAutorizar(p)) return true;
-      return atlasPedidoDoUsuario(p);
+
+      if(!["SOLICITADO","AGUARDANDO_AUTORIZACAO"].includes(st)){
+        return false;
+      }
+
+      /*
+       * REGRA OFICIAL ATLAS:
+       * o solicitante não entra na fila de aprovação do próprio pedido.
+       * A aba Solicitações é exclusiva de quem realmente pode decidir:
+       * OWNER global ou MASTER/ADMIN da obra de origem.
+       */
+      return atlasPodeAutorizar(p);
     });
 
     const separacao = todos.filter(p =>
@@ -2694,8 +2995,11 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
       "NEGADO","RECEBIDO_COM_DIVERGENCIA"
     ].includes(atlasStatus(p)));
 
-    atlasListaEscopo("listaSolicitacoes", solicitacoes,
-      atlasEhGestor() ? "Nenhuma solicitação da sua obra aguardando autorização." : "Nenhuma solicitação sua aguardando andamento.");
+    atlasListaEscopo(
+      "listaSolicitacoes",
+      solicitacoes,
+      "Nenhuma solicitação da sua obra aguardando autorização."
+    );
     atlasListaEscopo("listaSeparacao", separacao,
       "Nenhum pedido da sua obra aguardando separação.");
     atlasListaEscopo("listaRetirada", retirada,
@@ -2708,8 +3012,15 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
 
   function atlasNegarAcao(msg){
     const texto = msg || "Esta etapa pertence à equipe da obra de origem do pedido.";
-    if(typeof window.atlasToast === "function") window.atlasToast("🔒 " + texto);
-    else alert(texto);
+
+    if(window.AtlasModal?.erro){
+      window.AtlasModal.erro(texto);
+    }else if(typeof window.atlasToast === "function"){
+      window.atlasToast("🔒 " + texto);
+    }else{
+      console.warn("Atlas Expedição:", texto);
+    }
+
     return false;
   }
 
@@ -2734,7 +3045,7 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
     atlasProtegerFuncao("abrirAprovacaoParcialAtlas", atlasPodeAutorizar, "Somente MASTER/ADMIN da obra de origem pode decidir os itens.");
     atlasProtegerFuncao("confirmarAprovacaoParcialAtlas", atlasPodeAutorizar, "Somente MASTER/ADMIN da obra de origem pode decidir os itens.");
     atlasProtegerFuncao("reservar", atlasPodeSeparar, "Somente a equipe da obra de origem pode concluir a separação.");
-    atlasProtegerFuncao("abrirRetirada", atlasPodeRetirada, "Somente a equipe da obra de origem pode liberar a retirada.");
+    atlasProtegerFuncao("abrirRetirada", atlasPodeRetirada, "Somente o responsável por retirada e transporte da obra de origem pode executar esta etapa.");
     atlasProtegerFuncao("abrirRegistroNfeAtlas", atlasPodeNfe, "Somente MASTER/ADMIN da obra de origem pode registrar a NF-e.");
     atlasProtegerFuncao("confirmarRecebimentoAtlas", atlasPodeReceber, "Somente a obra de destino pode confirmar o recebimento.");
 
@@ -3095,3 +3406,45 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
   // Exporta para possíveis integrações futuras.
   window.atlasAtualizarOpcoesFiltrosCatalogo = atlasAtualizarOpcoesFiltros;
 })();
+
+
+/* =========================================================
+   ATLAS EXPEDIÇÃO — ACABAMENTO LOGÍSTICO V3.6
+   - sem alert()/confirm() nativos no fluxo de retirada/recebimento;
+   - mensagens pelo AtlasModal;
+   - notificações seguem a intenção definida no Workflow.
+========================================================= */
+console.log("✅ ATLAS EXPEDIÇÃO ACABAMENTO V3.6 carregado - logística sem alertas nativos");
+
+console.log("✅ ATLAS CARRINHO VISUAL V3.7 carregado - item voando até o carrinho");
+
+
+/* =========================================================
+   ATLAS EXPEDIÇÃO — SEGURANÇA DE APROVAÇÃO V3.8
+   - solicitante não vê o próprio pedido na fila de aprovação;
+   - aba Solicitações oculta para perfis não gestores;
+   - ações continuam protegidas por pedido e obra de origem.
+========================================================= */
+console.log("✅ ATLAS EXPEDIÇÃO SEGURANÇA V3.8 carregada - aprovação somente para responsáveis da origem");
+
+console.log("✅ ATLAS EXPEDIÇÃO V3.9 carregada - retirada por permissão EXPEDICAO_TRANSPORTE");
+
+/* =========================================================
+   ATLAS EXPEDIÇÃO V4.0 — CONFIRMAÇÃO DE APROVAÇÃO
+========================================================= */
+console.log("✅ ATLAS EXPEDIÇÃO V4.0 carregada - confirmação visual após aprovação");
+
+/* =========================================================
+   ATLAS EXPEDIÇÃO V4.1 — CONFIRMAÇÃO SEGURA
+   - sucesso verde somente quando a autorização conclui;
+   - erro somente quando a operação realmente falha;
+   - correção de escopo das funções visuais.
+========================================================= */
+console.log("✅ ATLAS EXPEDIÇÃO V4.1 carregada - confirmação de aprovação corrigida");
+
+/* =========================================================
+   ATLAS EXPEDIÇÃO V4.2 — HORÁRIO LOCAL CORRETO
+   - interpreta timestamp sem timezone como UTC;
+   - exibe saída no fuso America/Cuiaba.
+========================================================= */
+console.log("✅ ATLAS EXPEDIÇÃO V4.2 carregada - horário de saída corrigido");

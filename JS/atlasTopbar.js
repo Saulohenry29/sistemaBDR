@@ -1,5 +1,5 @@
 /* =========================================================
-   ATLAS SaaS - CONTROLADOR OFICIAL DE TOPBAR V1.3
+   ATLAS SaaS - CONTROLADOR OFICIAL DE TOPBAR V1.4
    Arquivo: JS/atlasTopbar.js
 
    CORREÇÃO V1.3
@@ -54,6 +54,7 @@
       portal = document.createElement("div");
       portal.id = "atlasOverlayPortal";
       portal.setAttribute("aria-hidden", "true");
+      portal.setAttribute("inert", "");
       document.body.appendChild(portal);
     }
 
@@ -205,6 +206,25 @@
     document.querySelector(".notif-badge")?.classList.remove("bdr-badge-pulse");
 
     const {activeButton, activeDropdown} = state;
+    const portal = getPortal();
+
+    /*
+     * ACESSIBILIDADE:
+     * tira o foco de qualquer botão dentro do dropdown ANTES
+     * de aplicar aria-hidden/inert. Isso elimina o aviso:
+     * "Blocked aria-hidden ... descendant retained focus".
+     */
+    try{
+      const focado = document.activeElement;
+
+      if(
+        focado instanceof HTMLElement &&
+        activeDropdown &&
+        activeDropdown.contains(focado)
+      ){
+        focado.blur();
+      }
+    }catch(e){}
 
     if(activeDropdown){
       normalizeOpenClass(activeDropdown, false);
@@ -217,19 +237,19 @@
       activeDropdown.style.removeProperty("width");
     }
 
+    portal.setAttribute("aria-hidden", "true");
+    portal.setAttribute("inert", "");
+
     if(activeButton){
       activeButton.setAttribute("aria-expanded", "false");
 
       if(restoreFocus){
-        /* Removido para evitar o cursor (caret) piscando */
+        /*
+         * Mantemos sem focus() automático para não voltar
+         * o cursor piscando no botão do sininho.
+         */
       }
     }
-
-    try{
-      if(document.activeElement instanceof HTMLElement){
-        document.activeElement.blur();
-      }
-    }catch(e){}
 
     state.activeButton = null;
     state.activeDropdown = null;
@@ -244,6 +264,11 @@
     }
 
     closeActive();
+
+    const portal = getPortal();
+    portal.removeAttribute("inert");
+    portal.setAttribute("aria-hidden", "false");
+
     moveToPortal(dropdown);
     normalizeOpenClass(dropdown, true);
 
@@ -452,12 +477,17 @@
   };
 
   window.AtlasTopbar = Object.freeze({
+    versao: "1.4-acessibilidade-focus-inert",
     init,
     close: closeActive,
     refresh: normalizeMarkup,
     position: positionDropdown,
     getZoom: getBodyZoom
   });
+
+  console.log(
+    "✅ ATLAS TOPBAR V1.4 carregado - foco e aria-hidden corrigidos"
+  );
 
   if(document.readyState === "loading"){
     document.addEventListener(
