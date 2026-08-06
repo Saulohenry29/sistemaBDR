@@ -1136,6 +1136,7 @@ const ATLAS_NOMES_PATRIMONIO_PADRAO = [
 ];
 
 let atlasIndiceSugestaoPatrimonio = -1;
+let atlasCatalogoGlobalPatrimonio = [];
 
 function atlasNormalizarTextoSugestao(texto){
   return String(texto || "")
@@ -1145,66 +1146,104 @@ function atlasNormalizarTextoSugestao(texto){
     .replace(/[\u0300-\u036f]/g,"");
 }
 
+function atlasChaveCatalogoPatrimonio(item){
+  return [item?.nome_bem,item?.marca,item?.modelo]
+    .map(atlasNormalizarTextoSugestao)
+    .join('|');
+}
+
+async function atlasCarregarCatalogoGlobalPatrimonio(){
+  try{
+    if(!db()) return;
+    const {data,error}=await db()
+      .from('patrimonio')
+      .select('nome_bem,marca,modelo')
+      .neq('ativo',false)
+      .limit(5000);
+
+    if(error) throw error;
+
+    const mapa=new Map();
+    (data||[]).forEach(item=>{
+      const nome=String(item?.nome_bem||'').trim();
+      if(!nome) return;
+      const registro={
+        nome_bem:nome.toUpperCase(),
+        marca:String(item?.marca||'').trim().toUpperCase(),
+        modelo:String(item?.modelo||'').trim().toUpperCase()
+      };
+      const chave=atlasChaveCatalogoPatrimonio(registro);
+      if(chave && !mapa.has(chave)) mapa.set(chave,registro);
+    });
+    atlasCatalogoGlobalPatrimonio=[...mapa.values()]
+      .sort((a,b)=>a.nome_bem.localeCompare(b.nome_bem,'pt-BR'));
+  }catch(e){
+    console.warn('Atlas Patrimônio: catálogo global indisponível; usando dados locais.',e?.message||e);
+    atlasCatalogoGlobalPatrimonio=[];
+  }
+}
+
 function atlasCatalogoNomesPatrimonio(){
-  const nomesBanco = (window.patrimonios || patrimonios || [])
-    .map(p => String(p?.nome_bem || "").trim())
-    .filter(Boolean);
+  const locais=(window.patrimonios||patrimonios||[]).map(p=>({
+    nome_bem:String(p?.nome_bem||'').trim().toUpperCase(),
+    marca:String(p?.marca||'').trim().toUpperCase(),
+    modelo:String(p?.modelo||'').trim().toUpperCase()
+  })).filter(p=>p.nome_bem);
 
-  const mapa = new Map();
-
-  [...ATLAS_NOMES_PATRIMONIO_PADRAO,...nomesBanco].forEach(nome=>{
-    const chave = atlasNormalizarTextoSugestao(nome);
-    if(chave && !mapa.has(chave)){
-      mapa.set(chave,String(nome).toUpperCase());
-    }
+  const padrao=ATLAS_NOMES_PATRIMONIO_PADRAO.map(nome=>({nome_bem:nome,marca:'',modelo:''}));
+  const mapa=new Map();
+  [...padrao,...atlasCatalogoGlobalPatrimonio,...locais].forEach(item=>{
+    const chave=atlasChaveCatalogoPatrimonio(item);
+    if(chave && !mapa.has(chave)) mapa.set(chave,item);
   });
-
-  return Array.from(mapa.values()).sort((a,b)=>a.localeCompare(b,"pt-BR"));
+  return [...mapa.values()];
 }
 
 function atlasAtualizarSugestoesPatrimonio(){
-  const input = document.getElementById("nome_bem");
-  const lista = document.getElementById("atlasSugestoesPatrimonio");
-  if(!input || !lista) return;
+  const input=document.getElementById('nome_bem');
+  const lista=document.getElementById('atlasSugestoesPatrimonio');
+  if(!input||!lista) return;
 
-  const termo = atlasNormalizarTextoSugestao(input.value);
-  atlasIndiceSugestaoPatrimonio = -1;
+  const termo=atlasNormalizarTextoSugestao(input.value);
+  atlasIndiceSugestaoPatrimonio=-1;
+  if(termo.length<2){atlasFecharSugestoesPatrimonio();return;}
 
-  if(termo.length < 2){
-    atlasFecharSugestoesPatrimonio();
-    return;
-  }
+  const sugestoes=atlasCatalogoNomesPatrimonio()
+    .filter(item=>[item.nome_bem,item.marca,item.modelo]
+      .some(v=>atlasNormalizarTextoSugestao(v).includes(termo)))
+    .slice(0,10);
 
-  const sugestoes = atlasCatalogoNomesPatrimonio()
-    .filter(nome=>atlasNormalizarTextoSugestao(nome).includes(termo))
-    .slice(0,8);
+  if(!sugestoes.length){atlasFecharSugestoesPatrimonio();return;}
 
-  if(!sugestoes.length){
-    atlasFecharSugestoesPatrimonio();
-    return;
-  }
+  lista.innerHTML=sugestoes.map((item,indice)=>{
+    const dados=encodeURIComponent(JSON.stringify(item));
+    const detalhe=[item.marca,item.modelo].filter(Boolean).join(' • ');
+    return `<button type="button" class="atlas-sugestao" data-indice="${indice}"
+      onmousedown="event.preventDefault(); atlasEscolherSugestaoPatrimonioDados('${dados}')">
+      ${item.nome_bem}
+      <small>${detalhe||'Nome padronizado do catálogo'}</small>
+    </button>`;
+  }).join('');
+  lista.classList.add('ativo');
+}
 
-  lista.innerHTML = sugestoes.map((nome,indice)=>`
-    <button type="button"
-            class="atlas-sugestao"
-            data-indice="${indice}"
-            onmousedown="event.preventDefault(); atlasEscolherSugestaoPatrimonio('${nome.replaceAll("'","\\'")}')">
-      ${nome}
-      <small>Toque, pressione Enter ou Tab para usar</small>
-    </button>
-  `).join("");
-
-  lista.classList.add("ativo");
+function atlasEscolherSugestaoPatrimonioDados(dadosCodificados){
+  let item=null;
+  try{item=JSON.parse(decodeURIComponent(dadosCodificados));}catch(e){}
+  if(!item) return;
+  const input=document.getElementById('nome_bem');
+  if(input) input.value=String(item.nome_bem||'').toUpperCase();
+  const marca=document.getElementById('marca');
+  const modelo=document.getElementById('modelo');
+  if(marca && item.marca) marca.value=String(item.marca).toUpperCase();
+  if(modelo && item.modelo) modelo.value=String(item.modelo).toUpperCase();
+  atlasFecharSugestoesPatrimonio();
+  input?.focus();
+  window.AtlasPatrimonioLote?.resetar?.();
 }
 
 function atlasEscolherSugestaoPatrimonio(nome){
-  const input = document.getElementById("nome_bem");
-  if(input){
-    input.value = String(nome || "").toUpperCase();
-    input.focus();
-  }
-  atlasFecharSugestoesPatrimonio();
-  window.AtlasPatrimonioLote?.resetar();
+  atlasEscolherSugestaoPatrimonioDados(encodeURIComponent(JSON.stringify({nome_bem:nome,marca:'',modelo:''})));
 }
 
 function atlasFecharSugestoesPatrimonio(){
@@ -1640,120 +1679,75 @@ async function bdrBaseDuplicidadePatrimonio(){
   }
 }
 
-async function bdrVerificarDuplicidadePatrimonio(dados, opcoes={}){
-  const lista = await bdrBaseDuplicidadePatrimonio();
-  const bloqueios = [];
-  const alertas = [];
+async function bdrVerificarDuplicidadePatrimonio(dados,opcoes={}){
+  const lista=await bdrBaseDuplicidadePatrimonio();
+  const bloqueios=[];
+  const alertas=[];
+  const tipo=String(dados.tipo_item||'').toUpperCase();
 
-  const nomeNovo = bdrNormalizarComparacao(dados.nome_bem);
-  const marcaNova = bdrNormalizarComparacao(dados.marca);
-  const modeloNovo = bdrNormalizarComparacao(dados.modelo);
-  const serieNova = bdrNormalizarComparacao(dados.numero_serie);
-  const tipoNovo = String(dados.tipo_item || "").toUpperCase();
-  const obraNova = String(dados.obra_id || "");
+  const igual=(a,b)=>bdrMesmoValor(a,b);
+  const camposIguais=(p)=>
+    igual(dados.nome_bem,p.nome_bem) &&
+    igual(dados.marca,p.marca) &&
+    igual(dados.modelo,p.modelo) &&
+    igual(dados.numero_serie,p.numero_serie);
 
-  (lista || []).forEach(p => {
-    if(!p || p.ativo === false) return;
-    if(dados.id && String(p.id) === String(dados.id)) return;
+  (lista||[]).forEach(p=>{
+    if(!p||p.ativo===false) return;
+    if(dados.id && String(p.id)===String(dados.id)) return;
 
-    if(tipoNovo === "VEICULO"){
-      if(bdrMesmoValor(dados.placa, p.placa)){
-        bloqueios.push({motivo:"PLACA já cadastrada", patrimonio:p});
-      }
-
-      if(bdrMesmoValor(dados.renavam, p.renavam)){
-        bloqueios.push({motivo:"RENAVAM já cadastrado", patrimonio:p});
-      }
-
-      if(bdrMesmoValor(dados.chassi, p.chassi)){
-        bloqueios.push({motivo:"CHASSI já cadastrado", patrimonio:p});
-      }
-
+    if(tipo==='VEICULO'){
+      if(igual(dados.placa,p.placa)) bloqueios.push({motivo:'PLACA já cadastrada',patrimonio:p});
+      if(igual(dados.renavam,p.renavam)) bloqueios.push({motivo:'RENAVAM já cadastrado',patrimonio:p});
+      if(igual(dados.chassi,p.chassi)) bloqueios.push({motivo:'CHASSI já cadastrado',patrimonio:p});
       return;
     }
 
-    const nomeIgual = nomeNovo && nomeNovo === bdrNormalizarComparacao(p.nome_bem);
-    const marcaIgual = marcaNova && marcaNova === bdrNormalizarComparacao(p.marca);
-    const modeloIgual = modeloNovo && modeloNovo === bdrNormalizarComparacao(p.modelo);
-    const serieIgual = serieNova && serieNova === bdrNormalizarComparacao(p.numero_serie);
-    const mesmaObra = !obraNova || String(p.obra_id || "") === obraNova;
+    const quatroIguais=camposIguais(p);
+    const codigoAntigoInformado=!bdrCampoVazioOuGenerico(dados.codigo_antigo);
+    const codigoAntigoIgual=codigoAntigoInformado && igual(dados.codigo_antigo,p.codigo_antigo);
 
-    if(nomeIgual && marcaIgual && modeloIgual && serieIgual){
-      alertas.push({
-        motivo:"Nome, marca, modelo e número de série iguais",
-        patrimonio:p
-      });
-    }else if(serieIgual){
-      alertas.push({
-        motivo:"Número de série já encontrado",
-        patrimonio:p
-      });
-    }else if(nomeIgual && marcaIgual && modeloIgual && mesmaObra){
-      alertas.push({
-        motivo:"Nome, marca e modelo iguais na mesma obra",
-        patrimonio:p
-      });
+    // Bloqueio somente quando há certeza máxima: os quatro dados + código antigo.
+    if(quatroIguais && codigoAntigoIgual){
+      bloqueios.push({motivo:'Nome, marca, modelo, série e código antigo já cadastrados',patrimonio:p});
+      return;
     }
 
-    if(bdrMesmoValor(dados.codigo_antigo, p.codigo_antigo)){
-      alertas.push({
-        motivo:"Código antigo/legado já encontrado",
-        patrimonio:p
-      });
+    // Máquina recebe alerta forte quando nome, marca, modelo e série coincidem.
+    if((tipo==='MAQUINA'||tipo==='MAQUINA_PESADA') && quatroIguais){
+      alertas.push({motivo:'Máquina com nome, marca, modelo e série iguais',patrimonio:p});
+      return;
+    }
+
+    if(quatroIguais){
+      alertas.push({motivo:'Nome, marca, modelo e número de série iguais',patrimonio:p});
+    }else if(codigoAntigoIgual){
+      alertas.push({motivo:'Código antigo já encontrado em outro patrimônio',patrimonio:p});
+    }else if(igual(dados.numero_serie,p.numero_serie)){
+      alertas.push({motivo:'Número de série já encontrado; confirme os demais dados',patrimonio:p});
     }
   });
 
-  const unicosBloqueio = [];
-  const vistosBloqueio = new Set();
+  const unicos=(itens)=>{
+    const vistos=new Set();
+    return itens.filter(item=>{
+      const chave=`${item.motivo}-${item.patrimonio?.id}`;
+      if(vistos.has(chave)) return false;
+      vistos.add(chave);return true;
+    });
+  };
 
-  bloqueios.forEach(item => {
-    const chave = `${item.motivo}-${item.patrimonio?.id}`;
-
-    if(!vistosBloqueio.has(chave)){
-      vistosBloqueio.add(chave);
-      unicosBloqueio.push(item);
-    }
-  });
-
-  const unicosAlerta = [];
-  const vistosAlerta = new Set();
-
-  alertas.forEach(item => {
-    const chave = `${item.motivo}-${item.patrimonio?.id}`;
-
-    if(!vistosAlerta.has(chave)){
-      vistosAlerta.add(chave);
-      unicosAlerta.push(item);
-    }
-  });
-
-  if(unicosBloqueio.length){
-    const msg = unicosBloqueio.slice(0,5).map(item =>
-      `🚫 ${item.motivo}\n${bdrResumoPatrimonioDuplicado(item.patrimonio)}`
-    ).join("\n\n");
-
-    alert(
-      "Veículo duplicado encontrado.\n\n" +
-      msg +
-      "\n\nPlaca, RENAVAM e chassi não podem se repetir."
-    );
-
+  const b=unicos(bloqueios),a=unicos(alertas);
+  if(b.length){
+    const msg=b.slice(0,5).map(item=>`🚫 ${item.motivo}\n${bdrResumoPatrimonioDuplicado(item.patrimonio)}\nSérie: ${item.patrimonio?.numero_serie||'-'}\nCódigo antigo: ${item.patrimonio?.codigo_antigo||'-'}`).join('\n\n');
+    alert('Cadastro bloqueado porque todos os identificadores coincidem.\n\n'+msg);
     return false;
   }
 
-  if(unicosAlerta.length && opcoes.confirmar !== false){
-    const msg = unicosAlerta.slice(0,5).map(item =>
-      `⚠️ ${item.motivo}\n${bdrResumoPatrimonioDuplicado(item.patrimonio)}\n` +
-      `Série: ${item.patrimonio?.numero_serie || "-"}`
-    ).join("\n\n");
-
-    return await bdrConfirmarAtlas(
-      "Possível patrimônio duplicado encontrado:\n\n" +
-      msg +
-      "\n\nDeseja cadastrar mesmo assim?"
-    );
+  if(a.length && opcoes.confirmar!==false){
+    const msg=a.slice(0,5).map(item=>`⚠️ ${item.motivo}\n${bdrResumoPatrimonioDuplicado(item.patrimonio)}\nSérie: ${item.patrimonio?.numero_serie||'-'}\nCódigo antigo: ${item.patrimonio?.codigo_antigo||'-'}`).join('\n\n');
+    return await bdrConfirmarAtlas('Possível duplicidade encontrada:\n\n'+msg+'\n\nOs dados não são suficientes para bloquear. Deseja cadastrar mesmo assim?');
   }
-
   return true;
 }
 
@@ -4222,6 +4216,7 @@ async function iniciar(){
   }
 
   await carregarPatrimonios();
+  await atlasCarregarCatalogoGlobalPatrimonio();
   await carregarManutencoesPatrimonio();
   aplicarPermissoesTela();
 
@@ -4299,3 +4294,4 @@ setInterval(async () => {
 }, 30000);
 
 iniciar();
+console.log("✅ ATLAS PATRIMÔNIO V4.0 carregado - catálogo global nome, marca e modelo + duplicidade inteligente");

@@ -775,3 +775,5 @@ window.bdrOwnerSetFiltroStatus = bdrOwnerSetFiltroStatus;
     };
   }
 })();
+
+console.log("✅ ATLAS OWNER REGRA OFICIAL - somente usuário ID 1");

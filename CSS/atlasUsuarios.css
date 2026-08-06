@@ -1,0 +1,1545 @@
+
+/* =========================================================
+   ATLAS USUÁRIOS — CONTEÚDO OFICIAL
+   Arquivo fixo: CSS/atlasUsuarios.css
+
+   IMPORTANTE:
+   - Menu: CSS/layout-bdr.css + CSS/bdr-fix-menu-final.css
+   - Topo: CSS/atlas-topbar.css
+   - Este arquivo NÃO altera menu, sininho, usuário ou topbar.
+========================================================= */
+
+:root{
+  --usuarios-vermelho:#b5121b;
+  --usuarios-vermelho-escuro:#8f0e15;
+  --usuarios-fundo:#eef2f7;
+  --usuarios-card:#ffffff;
+  --usuarios-borda:#dde4ec;
+  --usuarios-texto:#172033;
+  --usuarios-muted:#64748b;
+  --usuarios-verde:#15803d;
+  --usuarios-azul:#1d4ed8;
+  --usuarios-sombra:0 8px 24px rgba(15,23,42,.07);
+}
+
+*{box-sizing:border-box}
+
+/* O atributo hidden precisa vencer qualquer display do componente. */
+.atlas-users-main [hidden]{
+  display:none!important;
+}
+
+body{
+  background:var(--usuarios-fundo);
+  color:var(--usuarios-texto);
+}
+
+/* =========================================================
+   ESTRUTURA — aproveita toda a altura abaixo do topo
+========================================================= */
+.atlas-users-main{
+  display:flex!important;
+  flex-direction:column!important;
+  height:100vh!important;
+  min-height:100vh!important;
+  padding:12px!important;
+  overflow:hidden!important;
+}
+
+.atlas-users-main > .bdr-topbar{
+  flex:0 0 auto;
+}
+
+/*
+  Não define altura, padding ou posição do topbar.
+  Tudo vem de CSS/atlas-topbar.css.
+*/
+
+.atlas-users-workspace{
+  flex:1 1 auto!important;
+  display:grid!important;
+  grid-template-columns:minmax(440px,35%) minmax(0,65%)!important;
+  gap:12px!important;
+  min-height:0!important;
+  width:100%!important;
+  padding:0!important;
+  overflow:hidden!important;
+}
+
+.atlas-users-list-panel,
+.atlas-user-detail-panel{
+  min-width:0;
+  min-height:0;
+  height:100%;
+  overflow:hidden;
+  border:1px solid var(--usuarios-borda);
+  border-radius:16px;
+  background:var(--usuarios-card);
+  box-shadow:var(--usuarios-sombra);
+}
+
+.atlas-users-list-panel{
+  display:flex;
+  flex-direction:column;
+  padding:15px;
+}
+
+.atlas-user-detail-panel{
+  display:flex;
+  flex-direction:column;
+}
+
+#conteudoUsuario{
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  height:100%;
+}
+
+/* =========================================================
+   LISTA DE USUÁRIOS
+========================================================= */
+.atlas-panel-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:13px;
+}
+
+.atlas-panel-title h2{
+  margin:0;
+  color:#111827;
+  font-size:18px;
+  font-weight:900;
+}
+
+.atlas-panel-title span{
+  display:block;
+  margin-top:3px;
+  color:var(--usuarios-muted);
+  font-size:11px;
+  font-weight:700;
+}
+
+.atlas-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-height:38px;
+  padding:0 14px;
+  border:1px solid transparent;
+  border-radius:10px;
+  font-size:12px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.atlas-btn.primary{
+  background:linear-gradient(135deg,#d40712,var(--usuarios-vermelho));
+  color:#fff;
+}
+
+.atlas-btn.dark{
+  background:#122238;
+  color:#fff;
+}
+
+.atlas-btn.light{
+  border-color:#d7dee8;
+  background:#fff;
+  color:#334155;
+}
+
+.atlas-btn.small{
+  min-height:32px;
+  padding:0 10px;
+  font-size:11px;
+}
+
+.atlas-btn:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+}
+
+.atlas-search{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-height:42px;
+  padding:0 12px;
+  border:1px solid #d7dee8;
+  border-radius:11px;
+  background:#fff;
+}
+
+.atlas-search i{
+  color:#0f2238;
+}
+
+.atlas-search input{
+  width:100%;
+  min-width:0;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:#172033;
+  font-size:13px;
+}
+
+.atlas-filter-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr .78fr;
+  gap:9px;
+  margin:11px 0;
+}
+
+.atlas-filter-grid select{
+  width:100%;
+  min-width:0;
+  height:39px;
+  padding:0 10px;
+  border:1px solid #d7dee8;
+  border-radius:10px;
+  background:#fff;
+  color:#172033;
+  font-size:12px;
+}
+
+.atlas-users-table-head,
+.atlas-user-row{
+    display:grid;
+    grid-template-columns:minmax(160px,1.4fr) 75px minmax(100px,.9fr) 60px;
+    gap:6px;
+    width:100%;
+}
+
+.atlas-users-table-head{
+  flex:0 0 auto;
+  padding:9px 8px;
+  color:#526074;
+  font-size:10px;
+  font-weight:900;
+  text-transform:uppercase;
+}
+
+.atlas-users-list{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+}
+
+.atlas-user-row{
+  position:relative;
+  min-height:60px;
+  padding:9px 8px;
+  border-top:1px solid #edf1f5;
+  border-radius:10px;
+  cursor:pointer;
+  transition:.14s ease;
+}
+
+.atlas-user-row:hover{
+  background:#f8fafc;
+  transform:translateX(2px);
+}
+
+.atlas-user-row.selected{
+  border:1px solid #ef8f95;
+  background:#fff4f4;
+  box-shadow:0 6px 15px rgba(181,18,27,.08);
+}
+
+.atlas-user-cell{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+
+.atlas-user-cell > div:last-child{
+  min-width:0;
+}
+
+.atlas-user-cell strong,
+.atlas-user-cell small{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.atlas-user-cell strong{
+  color:#111827;
+  font-size:11px;
+  font-weight:900;
+}
+
+.atlas-user-cell small{
+  margin-top:3px;
+  color:var(--usuarios-muted);
+  font-size:9px;
+}
+
+.atlas-avatar{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 auto;
+  border-radius:50%;
+  background:linear-gradient(135deg,#7e22ce,#a21caf);
+  color:#fff;
+  font-weight:900;
+}
+
+.atlas-avatar.row{
+  width:36px;
+  height:36px;
+  font-size:11px;
+}
+
+.atlas-avatar.selected{
+  width:64px;
+  height:64px;
+  font-size:23px;
+}
+
+.atlas-profile-badge,
+.atlas-status{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  max-width:100%;
+  min-height:24px;
+  padding:4px 7px;
+  overflow:hidden;
+  border-radius:6px;
+  font-size:9px;
+  font-weight:900;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.atlas-profile-badge{
+  background:#e8f0ff;
+  color:#185ab5;
+}
+
+.atlas-status.active{
+  background:#d9f6df;
+  color:#157033;
+}
+
+.atlas-status.inactive{
+  background:#fee2e2;
+  color:#b42318;
+}
+
+.atlas-work-cell{
+  overflow:hidden;
+  color:#334155;
+  font-size:10px;
+  line-height:1.35;
+  text-overflow:ellipsis;
+}
+
+/* =========================================================
+   PAGINAÇÃO — números visíveis e página ativa
+========================================================= */
+.atlas-pagination{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  min-height:47px;
+  padding:10px 0 0;
+}
+
+.atlas-pagination button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:34px;
+  height:34px;
+  padding:0 9px;
+  border:1px solid #d7dee8;
+  border-radius:9px;
+  background:#fff;
+  color:#334155;
+  font-size:12px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.atlas-pagination button:hover:not(:disabled){
+  border-color:#f0a5aa;
+  background:#fff1f2;
+  color:var(--usuarios-vermelho);
+}
+
+.atlas-pagination button.active{
+  border-color:var(--usuarios-vermelho);
+  background:var(--usuarios-vermelho);
+  color:#fff;
+  box-shadow:0 6px 14px rgba(181,18,27,.2);
+}
+
+.atlas-pagination button:disabled{
+  opacity:.4;
+  cursor:not-allowed;
+}
+
+/* =========================================================
+   PAINEL DIREITO
+========================================================= */
+.atlas-no-selection{
+  display:flex;
+  flex:1 1 auto;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:0;
+  padding:28px;
+  text-align:center;
+  color:var(--usuarios-muted);
+}
+
+.atlas-no-selection i{
+  color:#d2d9e3;
+  font-size:48px;
+}
+
+.atlas-no-selection h2{
+  margin:15px 0 7px;
+  color:#64748b;
+  font-size:19px;
+}
+
+.atlas-no-selection p{
+  margin:0;
+  font-size:12px;
+}
+
+.atlas-selected-header{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  padding:20px 22px 15px;
+}
+
+.atlas-selected-main{
+  display:flex;
+  align-items:center;
+  gap:15px;
+  min-width:0;
+}
+
+.atlas-selected-main h2{
+  margin:0;
+  color:#111827;
+  font-size:20px;
+}
+
+.atlas-selected-main p{
+  margin:5px 0;
+  color:var(--usuarios-muted);
+  font-size:11px;
+}
+
+.atlas-selected-meta{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(110px,1fr));
+  gap:16px;
+}
+
+.atlas-selected-meta > div{
+  min-width:0;
+  padding-left:16px;
+  border-left:1px solid var(--usuarios-borda);
+}
+
+.atlas-selected-meta small,
+.atlas-selected-meta strong{
+  display:block;
+}
+
+.atlas-selected-meta small{
+  margin-bottom:5px;
+  color:var(--usuarios-muted);
+  font-size:9px;
+}
+
+.atlas-selected-meta strong{
+  overflow-wrap:anywhere;
+  color:#172033;
+  font-size:11px;
+  line-height:1.35;
+}
+
+/* Abas horizontais no padrão de etapas */
+.atlas-tabs.excel-tabs{
+  flex:0 0 auto;
+  display:flex;
+  align-items:flex-end;
+  gap:2px;
+  overflow-x:auto;
+  padding:6px 12px 0;
+  border-top:1px solid var(--usuarios-borda);
+  border-bottom:1px solid var(--usuarios-borda);
+  background:#f8fafc;
+}
+
+.excel-tabs .atlas-tab{
+  position:relative;
+  flex:0 0 auto;
+  min-height:42px;
+  padding:10px 15px;
+  border:1px solid transparent;
+  border-bottom:0;
+  border-radius:9px 9px 0 0;
+  background:transparent;
+  color:#64748b;
+  font-size:12px;
+  font-weight:900;
+  white-space:nowrap;
+  cursor:pointer;
+}
+
+.excel-tabs .atlas-tab:hover{
+  background:#fff1f2;
+  color:#991b1b;
+}
+
+.excel-tabs .atlas-tab.active{
+  bottom:-1px;
+  border-color:var(--usuarios-borda);
+  background:#fff;
+  color:#991b1b;
+}
+
+.atlas-tab-scroll-area{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  background:#fff;
+}
+
+.atlas-tab-content{
+  display:none;
+  padding:16px;
+}
+
+.atlas-tab-content.active{
+  display:block;
+}
+
+.atlas-data-hero{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:13px;
+  padding:12px 14px;
+  border:1px solid var(--usuarios-borda);
+  border-left:4px solid var(--usuarios-vermelho);
+  border-radius:12px;
+  background:linear-gradient(135deg,#fff,#f8fafc);
+}
+
+.atlas-data-hero h3{
+  margin:0;
+  color:#111827;
+  font-size:15px;
+}
+
+.atlas-data-hero p{
+  margin:4px 0 0;
+  color:var(--usuarios-muted);
+  font-size:10px;
+}
+
+.atlas-step-badge{
+  flex:0 0 auto;
+  padding:6px 10px;
+  border:1px solid #fecaca;
+  border-radius:999px;
+  background:#fff1f2;
+  color:#991b1b;
+  font-size:9px;
+  font-weight:900;
+}
+
+.atlas-selected-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:9px;
+  margin-bottom:13px;
+}
+
+.atlas-data-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+
+.atlas-data-card,
+.atlas-module-card,
+.atlas-mode-card{
+  min-width:0;
+  padding:13px;
+  border:1px solid var(--usuarios-borda);
+  border-radius:12px;
+  background:#fff;
+}
+
+.atlas-data-card small{
+  display:block;
+  margin-bottom:5px;
+  color:var(--usuarios-muted);
+  font-size:9px;
+  font-weight:800;
+}
+
+.atlas-data-card strong{
+  display:block;
+  overflow-wrap:anywhere;
+  color:#0f172a;
+  font-size:12px;
+}
+
+.atlas-master-switch{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+  padding:13px 15px;
+  border:1px solid var(--usuarios-borda);
+  border-radius:12px;
+}
+
+.atlas-master-switch strong,
+.atlas-master-switch span{
+  display:block;
+}
+
+.atlas-master-switch span{
+  margin-top:3px;
+  color:var(--usuarios-muted);
+  font-size:10px;
+}
+
+.atlas-switch{
+  position:relative;
+  display:inline-flex;
+  flex:0 0 auto;
+  width:37px;
+  height:21px;
+}
+
+.atlas-switch input{
+  display:none;
+}
+
+.atlas-switch span{
+  position:absolute;
+  inset:0;
+  border-radius:999px;
+  background:#aeb8c6;
+  transition:.15s;
+}
+
+.atlas-switch span::after{
+  content:"";
+  position:absolute;
+  top:2px;
+  left:2px;
+  width:17px;
+  height:17px;
+  border-radius:50%;
+  background:#fff;
+  transition:.15s;
+}
+
+.atlas-switch input:checked + span{
+  background:var(--usuarios-vermelho);
+}
+
+.atlas-switch input:checked + span::after{
+  transform:translateX(16px);
+}
+
+.atlas-module-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:11px;
+}
+
+.atlas-module-card h3{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin:0 0 9px;
+  font-size:12px;
+}
+
+.atlas-permission-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  min-height:38px;
+  padding:7px 0;
+  border-top:1px solid #f0f3f6;
+}
+
+.atlas-permission-row label{
+  font-size:10px;
+  line-height:1.3;
+}
+
+.atlas-permission-row small{
+  display:block;
+  margin-top:2px;
+  color:var(--usuarios-muted);
+  font-size:8px;
+}
+
+.atlas-auto-tag{
+  padding:2px 5px;
+  border-radius:4px;
+  background:#eaf2ff;
+  color:#175cd3;
+  font-size:7px;
+  font-weight:900;
+}
+
+.atlas-notif-intro{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:14px;
+  margin-bottom:13px;
+  padding:13px 15px;
+  border:1px solid var(--usuarios-borda);
+  border-radius:12px;
+}
+
+.atlas-bell-circle{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:46px;
+  height:46px;
+  border-radius:50%;
+  background:#fff0f1;
+  color:var(--usuarios-vermelho);
+  font-size:19px;
+}
+
+.atlas-notif-intro p{
+  margin:4px 0 0;
+  color:var(--usuarios-muted);
+  font-size:10px;
+  line-height:1.45;
+}
+
+.atlas-mode-summary{
+  padding-left:16px;
+  border-left:1px solid var(--usuarios-borda);
+}
+
+.atlas-mode-summary small,
+.atlas-mode-summary strong{
+  display:block;
+}
+
+.atlas-mode-summary small{
+  color:var(--usuarios-muted);
+  font-size:9px;
+}
+
+.atlas-mode-summary strong{
+  margin:4px 0 7px;
+  font-size:12px;
+}
+
+.atlas-mode-card{
+  margin-top:11px;
+}
+
+.atlas-mode-card h3{
+  margin:0 0 8px;
+  font-size:12px;
+}
+
+.atlas-mode-card label{
+  display:flex;
+  align-items:flex-start;
+  gap:9px;
+  padding:7px 0;
+}
+
+.atlas-mode-card strong,
+.atlas-mode-card small{
+  display:block;
+}
+
+.atlas-mode-card strong{
+  font-size:10px;
+}
+
+.atlas-mode-card small{
+  margin-top:2px;
+  color:var(--usuarios-muted);
+  font-size:8px;
+}
+
+.atlas-work-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:9px;
+  margin-bottom:10px;
+}
+
+.atlas-work-toolbar > .atlas-search{
+  flex:1;
+}
+
+.atlas-work-toolbar > div:last-child{
+  display:flex;
+  gap:7px;
+}
+
+.atlas-work-list.inline{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;
+  max-height:none;
+  padding:0;
+  overflow:visible;
+}
+
+.atlas-work-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-height:43px;
+  padding:9px 10px;
+  border:1px solid var(--usuarios-borda);
+  border-radius:10px;
+  font-size:11px;
+}
+
+.atlas-work-row input{
+  width:17px;
+  height:17px;
+  accent-color:var(--usuarios-vermelho);
+}
+
+.atlas-history-timeline{
+  display:grid;
+  gap:9px;
+}
+
+.atlas-history-item{
+  display:grid;
+  grid-template-columns:37px 1fr;
+  gap:10px;
+  align-items:start;
+  padding:11px;
+  border:1px solid var(--usuarios-borda);
+  border-radius:11px;
+}
+
+.atlas-history-icon{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:37px;
+  height:37px;
+  border-radius:50%;
+  background:#fff1f2;
+  color:var(--usuarios-vermelho);
+}
+
+.atlas-history-item strong{
+  display:block;
+  font-size:12px;
+}
+
+.atlas-history-item span{
+  display:block;
+  margin-top:3px;
+  color:var(--usuarios-muted);
+  font-size:10px;
+}
+
+.atlas-save-footer{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 16px;
+  border-top:1px solid var(--usuarios-borda);
+  background:#fff;
+}
+
+.atlas-save-footer > span{
+  color:var(--usuarios-muted);
+  font-size:10px;
+}
+
+.atlas-save-footer > div{
+  display:flex;
+  gap:9px;
+}
+
+/* =========================================================
+   MODAIS E PERFIS
+========================================================= */
+.atlas-modal-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:100000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background:rgba(15,31,51,.62);
+}
+
+.atlas-modal-backdrop[hidden]{
+  display:none!important;
+}
+
+.atlas-modal{
+  width:min(620px,96vw);
+  max-height:92vh;
+  overflow:auto;
+  border-radius:15px;
+  background:#fff;
+  box-shadow:0 30px 80px rgba(15,31,51,.3);
+}
+
+.atlas-modal.wide{
+  width:min(850px,96vw);
+}
+
+.atlas-modal header,
+.atlas-modal footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px 17px;
+  border-bottom:1px solid var(--usuarios-borda);
+}
+
+.atlas-modal footer{
+  justify-content:flex-end;
+  gap:9px;
+  border-top:1px solid var(--usuarios-borda);
+  border-bottom:0;
+}
+
+.atlas-modal h2{
+  margin:0;
+  color:var(--usuarios-vermelho);
+  font-size:17px;
+}
+
+.atlas-modal header button{
+  width:32px;
+  height:32px;
+  border:0;
+  border-radius:9px;
+  background:#fee2e2;
+  color:var(--usuarios-vermelho);
+  cursor:pointer;
+}
+
+.atlas-form-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  padding:17px;
+}
+
+.atlas-form-grid label{
+  font-size:10px;
+  font-weight:900;
+}
+
+.atlas-form-grid input,
+.atlas-form-grid select{
+  display:block;
+  width:100%;
+  height:39px;
+  margin-top:5px;
+  padding:0 10px;
+  border:1px solid #d7dee8;
+  border-radius:9px;
+}
+
+.atlas-modal-help{
+  padding:0 17px;
+  color:var(--usuarios-muted);
+  font-size:11px;
+}
+
+.atlas-profile-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:11px;
+  padding:17px;
+}
+
+.atlas-profile-card{
+  padding:14px;
+  border:1px solid var(--usuarios-borda);
+  border-radius:11px;
+}
+
+.atlas-profile-card:hover{
+  border-color:#ef9ca1;
+  background:#fff8f8;
+}
+
+.atlas-profile-card h3{
+  margin:7px 0 4px;
+  font-size:12px;
+}
+
+.atlas-profile-card p{
+  min-height:28px;
+  color:var(--usuarios-muted);
+  font-size:9px;
+}
+
+.atlas-profile-card .actions{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:7px;
+}
+
+.atlas-profile-card button{
+  padding:7px 10px;
+  border:0;
+  border-radius:7px;
+  background:var(--usuarios-vermelho);
+  color:#fff;
+  cursor:pointer;
+}
+
+.atlas-profile-card .edit-profile{
+  border:1px solid #f3b2b6;
+  background:#fff;
+  color:var(--usuarios-vermelho);
+}
+
+.atlas-toast{
+  position:fixed;
+  top:18px;
+  left:50%;
+  z-index:200000;
+  padding:12px 16px;
+  border:1px solid #8ce6a7;
+  border-left:5px solid #16a34a;
+  border-radius:11px;
+  background:#effcf3;
+  box-shadow:0 15px 40px rgba(22,163,74,.2);
+  font-size:12px;
+  font-weight:900;
+  opacity:0;
+  transform:translate(-50%,-15px);
+  transition:.2s;
+}
+
+.atlas-toast.show{
+  opacity:1;
+  transform:translate(-50%,0);
+}
+
+/* =========================================================
+   RESPONSIVO
+========================================================= */
+@media(max-width:1350px){
+  .atlas-users-workspace{
+    grid-template-columns:minmax(390px,36%) minmax(0,64%)!important;
+  }
+
+  .atlas-module-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .atlas-selected-meta{
+    grid-template-columns:1fr;
+    gap:5px;
+  }
+}
+
+@media(max-width:1200px){
+  html,
+  body{
+    height:auto!important;
+    overflow-y:auto!important;
+  }
+
+  .atlas-users-main{
+    height:auto!important;
+    min-height:100vh!important;
+    padding:8px 8px 96px!important;
+    overflow:visible!important;
+  }
+
+  .atlas-users-workspace{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    height:auto!important;
+    overflow:visible!important;
+  }
+
+  .atlas-users-list-panel,
+  .atlas-user-detail-panel{
+    height:auto;
+    min-height:570px;
+  }
+
+  .atlas-users-list{
+    max-height:620px;
+  }
+
+  #conteudoUsuario{
+    height:auto;
+  }
+
+  .atlas-tab-scroll-area{
+    overflow:visible;
+  }
+
+  .atlas-users-table-head{
+    display:none;
+  }
+
+  .atlas-user-row{
+    grid-template-columns:1fr .72fr;
+  }
+
+  .atlas-user-row .atlas-work-cell{
+    display:none;
+  }
+}
+
+@media(max-width:650px){
+  .atlas-filter-grid,
+  .atlas-data-grid,
+  .atlas-module-grid,
+  .atlas-work-list.inline,
+  .atlas-form-grid,
+  .atlas-profile-grid{
+    grid-template-columns:1fr;
+  }
+
+  .atlas-selected-header{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .atlas-selected-meta{
+    width:100%;
+  }
+
+  .atlas-selected-meta > div{
+    padding:8px 0 0;
+    border-top:1px solid var(--usuarios-borda);
+    border-left:0;
+  }
+
+  .atlas-notif-intro{
+    grid-template-columns:auto 1fr;
+  }
+
+  .atlas-mode-summary{
+    grid-column:1/-1;
+    padding:10px 0 0;
+    border-top:1px solid var(--usuarios-borda);
+    border-left:0;
+  }
+
+  .atlas-work-toolbar{
+    align-items:stretch;
+    flex-direction:column;
+  }
+
+  .atlas-save-footer{
+    align-items:stretch;
+    flex-direction:column;
+  }
+
+  .atlas-save-footer > div{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+}
+
+/* =========================================================
+   ATLAS USUÁRIOS — CORREÇÃO DEFINITIVA DE ALTURA
+   Mantém menu e topbar nos arquivos oficiais.
+   Faz o módulo preencher toda a área útil da tela.
+========================================================= */
+
+/*
+  DESKTOP
+  O conteúdo fica preso entre:
+  - o menu lateral à esquerda;
+  - o topo da janela;
+  - o final real da janela.
+*/
+@media (min-width:1201px){
+
+  html,
+  body{
+    width:100%!important;
+    height:100%!important;
+    min-height:0!important;
+    overflow:hidden!important;
+  }
+
+  .app-layout{
+    width:100%!important;
+    height:100vh!important;
+    height:100dvh!important;
+    min-height:0!important;
+    overflow:hidden!important;
+  }
+
+  /*
+    O menu oficial ocupa aproximadamente 68px.
+    O módulo começa depois dele e termina no final da janela.
+  */
+  .bdr-main.atlas-users-main{
+    position:fixed!important;
+    inset:0 0 0 68px!important;
+
+    display:flex!important;
+    flex-direction:column!important;
+
+    width:auto!important;
+    max-width:none!important;
+
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+
+    margin:0!important;
+    padding:12px!important;
+
+    overflow:hidden!important;
+  }
+
+  .bdr-main.atlas-users-main > .bdr-topbar{
+    flex:0 0 auto!important;
+    width:100%!important;
+    margin:0 0 10px!important;
+  }
+
+  .bdr-main.atlas-users-main > .atlas-users-workspace{
+    flex:1 1 0!important;
+
+    display:grid!important;
+    grid-template-columns:minmax(440px,35%) minmax(0,65%)!important;
+
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+
+    margin:0!important;
+    padding:0!important;
+
+    overflow:hidden!important;
+  }
+
+  .atlas-users-list-panel,
+  .atlas-user-detail-panel{
+    align-self:stretch!important;
+
+    width:auto!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+
+    margin:0!important;
+
+    overflow:hidden!important;
+  }
+
+  .atlas-users-list-panel{
+    display:flex!important;
+    flex-direction:column!important;
+  }
+
+  .atlas-users-list{
+    flex:1 1 0!important;
+
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+
+    overflow-y:auto!important;
+  }
+
+  .atlas-user-detail-panel{
+    display:flex!important;
+    flex-direction:column!important;
+  }
+
+  #semUsuario{
+    flex:1 1 0!important;
+    min-height:0!important;
+  }
+
+  #conteudoUsuario{
+    flex:1 1 0!important;
+
+    display:flex!important;
+    flex-direction:column!important;
+
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+
+    overflow:hidden!important;
+  }
+
+  #conteudoUsuario[hidden]{
+    display:none!important;
+  }
+
+  .atlas-tab-scroll-area{
+    flex:1 1 0!important;
+
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+
+    overflow-y:auto!important;
+  }
+
+  .atlas-save-footer{
+    flex:0 0 auto!important;
+    position:relative!important;
+    inset:auto!important;
+    margin:0!important;
+  }
+}
+
+/*
+  TELAS MENORES
+  Mantém rolagem normal e o menu mobile oficial.
+*/
+@media (max-width:1200px){
+
+  html,
+  body{
+    min-height:100%!important;
+  }
+
+  .bdr-main.atlas-users-main{
+    position:relative!important;
+    inset:auto!important;
+
+    width:auto!important;
+    height:auto!important;
+    min-height:100vh!important;
+    min-height:100dvh!important;
+
+    margin:0!important;
+  }
+}
+
+/* Evita rolagem horizontal */
+.atlas-users-list-panel{
+    overflow-x:hidden;
+}
+
+.atlas-users-list{
+    overflow-x:hidden;
+}
+
+.atlas-user-row{
+    overflow:hidden;
+}
+
+.atlas-user-cell{
+    min-width:0;
+}
+
+.atlas-user-cell strong,
+.atlas-user-cell small,
+.atlas-work-cell{
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+/* =========================================================
+   ATLAS USUÁRIOS — MODO DE AVISO COMPACTO
+========================================================= */
+.atlas-modo-aviso-card{
+  margin-top:12px;
+  padding:14px;
+  border:1px solid var(--usuarios-borda);
+  border-radius:12px;
+  background:#fff;
+}
+
+.atlas-modo-aviso-topo{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+
+.atlas-modo-aviso-topo > div{
+  min-width:0;
+}
+
+.atlas-modo-aviso-topo strong,
+.atlas-modo-aviso-topo small{
+  display:block;
+}
+
+.atlas-modo-aviso-topo strong{
+  color:#172033;
+  font-size:12px;
+}
+
+.atlas-modo-aviso-topo small{
+  margin-top:3px;
+  color:var(--usuarios-muted);
+  font-size:9px;
+}
+
+.atlas-modo-opcoes{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+
+.atlas-modo-opcao{
+  position:relative;
+  display:block;
+  min-width:0;
+  cursor:pointer;
+}
+
+.atlas-modo-opcao > input{
+  position:absolute;
+  width:1px;
+  height:1px;
+  opacity:0;
+  pointer-events:none;
+}
+
+.atlas-modo-conteudo{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-height:72px;
+  height:100%;
+  padding:11px 12px;
+  border:1px solid #dbe3ec;
+  border-radius:11px;
+  background:#fff;
+  transition:border-color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+
+.atlas-modo-opcao:hover .atlas-modo-conteudo{
+  border-color:#ef9ca1;
+  background:#fff8f8;
+}
+
+.atlas-modo-opcao > input:focus-visible + .atlas-modo-conteudo{
+  outline:2px solid rgba(181,18,27,.24);
+  outline-offset:2px;
+}
+
+.atlas-modo-opcao > input:checked + .atlas-modo-conteudo{
+  border-color:var(--usuarios-vermelho);
+  background:#fff1f2;
+  box-shadow:0 0 0 2px rgba(181,18,27,.08);
+}
+
+.atlas-modo-icone{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 38px;
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  background:#f1f5f9;
+  color:#64748b;
+  font-size:15px;
+}
+
+.atlas-modo-opcao > input:checked + .atlas-modo-conteudo .atlas-modo-icone{
+  background:#fee2e2;
+  color:var(--usuarios-vermelho);
+}
+
+.atlas-modo-conteudo > span:last-child{
+  min-width:0;
+}
+
+.atlas-modo-conteudo strong,
+.atlas-modo-conteudo small{
+  display:block;
+}
+
+.atlas-modo-conteudo strong{
+  color:#172033;
+  font-size:11px;
+}
+
+.atlas-modo-conteudo small{
+  margin-top:4px;
+  color:var(--usuarios-muted);
+  font-size:9px;
+  line-height:1.3;
+}
+
+/* O modelo novo substitui o card vertical antigo. */
+.atlas-mode-card{
+  display:none!important;
+}
+
+@media(max-width:900px){
+  .atlas-modo-opcoes{
+    grid-template-columns:1fr;
+  }
+}
+
+@media(max-width:650px){
+  .atlas-modo-aviso-topo{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .atlas-modo-aviso-topo .atlas-btn{
+    width:100%;
+  }
+}

@@ -190,17 +190,17 @@ async function fazerLogin(){
     const usuario = await buscarUsuarioLoginBDR(login);
 
     if(!usuario){
-      mostrarMensagem("Usuário não encontrado.");
+      mostrarMensagem("Usuário ou senha inválidos.");
       return;
     }
 
     if(usuario.ativo === false || String(usuario.ativo).toLowerCase() === "false"){
-      mostrarMensagem("Usuário inativo. Procure o administrador.");
+      mostrarMensagem("Usuário ou senha inválidos.");
       return;
     }
 
     if(String(usuario.senha || "") !== String(senha)){
-      mostrarMensagem("Senha incorreta.");
+      mostrarMensagem("Usuário ou senha inválidos.");
       return;
     }
 

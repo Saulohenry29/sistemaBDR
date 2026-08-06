@@ -45,6 +45,52 @@
 
 
 <!-- ATLAS: visual oficial da Topbar -->
+
+<style>
+/* =========================================================
+   ATLAS ETIQUETA INDIVIDUAL RÁPIDA V1
+   A prévia só aparece depois que configuração, dados e QR estão prontos.
+========================================================= */
+#modalEtiquetaBg .bdr-etiqueta-preview-area{
+  position:relative;
+  min-height:245px;
+  overflow:hidden;
+}
+
+#modalEtiquetaBg .bdr-etiqueta-frame{
+  opacity:1;
+  transition:opacity .14s ease;
+}
+
+#modalEtiquetaBg.atlas-etiqueta-carregando .bdr-etiqueta-frame{
+  opacity:0;
+  pointer-events:none;
+}
+
+#modalEtiquetaBg.atlas-etiqueta-carregando .bdr-etiqueta-preview-area::after{
+  content:"Preparando etiqueta...";
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#eef3f8;
+  color:#475569;
+  font-size:13px;
+  font-weight:900;
+  letter-spacing:.01em;
+}
+
+#modalEtiquetaBg.atlas-etiqueta-pronta .bdr-etiqueta-frame{
+  opacity:1;
+}
+
+#statusEtiquetaOficial.pronto{
+  color:#166534!important;
+  font-weight:900!important;
+}
+</style>
+
 </head>
 <body>
 <!-- ===================================== -->
@@ -259,11 +305,18 @@
       </div>
     </div>
 
-    <label class="atlas-lote-sem-serie">
-      <input id="atlasLoteSemSerie" type="checkbox">
-      <span class="atlas-lote-check-caixa" aria-hidden="true"></span>
-      <span>Itens sem número de série</span>
-    </label>
+    <div class="atlas-lote-modos">
+      <label class="atlas-lote-sem-serie">
+        <input id="atlasLoteSemSerie" type="checkbox">
+        <span class="atlas-lote-check-caixa" aria-hidden="true"></span>
+        <span>Itens sem número de série</span>
+      </label>
+      <label class="atlas-lote-sem-serie">
+        <input id="atlasLoteMesmoNumero" type="checkbox">
+        <span class="atlas-lote-check-caixa" aria-hidden="true"></span>
+        <span>Todos com o mesmo número de série</span>
+      </label>
+    </div>
 
     <div id="atlasLoteComSerie">
       <div class="atlas-editor-series">
@@ -284,9 +337,9 @@
     </div>
 
     <div id="atlasLoteSemSerieCampos" hidden>
-      <label for="atlasLoteQuantidade">Quantidade</label>
+      <label id="atlasLoteQuantidadeRotulo" for="atlasLoteQuantidade">Quantidade</label>
       <input id="atlasLoteQuantidade" type="number" min="2" max="200" value="2" inputmode="numeric">
-      <small>Os números de série poderão ser adicionados depois.</small>
+      <small id="atlasLoteQuantidadeAjuda">Os números de série poderão ser adicionados depois.</small>
     </div>
   </section>
 </template>
@@ -527,6 +580,7 @@
 <script src="./JS/patrimonio/patrimonio-etiquetas-lote.js?v=20260726-v1"></script>
 <script src="./JS/atlasGestorNotificacoes.js?v=20260728-patrimonio"></script>
 <script src="./JS/patrimonio/patrimonio.js?v=20260728-reativacao-v1"></script>
+<script src="./JS/patrimonio/patrimonio-etiqueta-individual.js?v=20260804-v1"></script>
 <script src="./JS/bdrUppercase.js"></script>
 <script src="./JS/patrimonio/patrimonio-permissoes.js?v=20260725-v1"></script>
 <script src="./JS/bdrMenuMobileAtivo.js?v=20260702-3"></script>
