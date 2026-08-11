@@ -1274,18 +1274,47 @@ button{
 }
 
 /* =========================================================
-   BDR FIX SCROLL PWA / DASHBOARD
-   Corrige rolagem travada no PWA, navegador e touchpad
+   ROLAGEM E CONTENÇÃO RESPONSIVA — PADRÃO ATLAS / BDR
+
+   Regra:
+   - a página principal rola somente no eixo vertical;
+   - componentes internos podem ter sua própria rolagem horizontal
+     quando isso for necessário (menu inferior, tabela, carrossel);
+   - evita o "balanço" da página para esquerda/direita no celular/PWA.
 ========================================================= */
 
 html,
 body{
+  width:100%;
+  max-width:100%;
   min-height:100%;
   height:auto !important;
+
   overflow-y:auto !important;
-  overflow-x:hidden !important;
-  overscroll-behavior-y:auto !important;
-  -webkit-overflow-scrolling:touch !important;
+  overflow-x:hidden !important; /* fallback */
+  overflow-x:clip !important;
+
+  overscroll-behavior-x:none;
+  overscroll-behavior-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+
+.app-layout,
+.bdr-app,
+.bdr-main,
+main,
+.content{
+  min-width:0 !important;
+  max-width:100% !important;
+}
+
+.app-layout,
+.bdr-app{
+  min-height:100vh;
+  height:auto !important;
+  overflow-x:hidden !important; /* fallback */
+  overflow-x:clip !important;
+  overflow-y:visible !important;
 }
 
 .bdr-main,
@@ -1293,108 +1322,81 @@ main,
 .content{
   min-height:100vh;
   height:auto !important;
-  overflow:visible !important;
+  overflow-x:hidden !important; /* fallback */
+  overflow-x:clip !important;
+  overflow-y:visible !important;
 }
 
-.app-layout,
-.bdr-app{
-  min-height:100vh;
-  height:auto !important;
-  overflow:visible !important;
-}
-
-/* Evita que cards/grids travem a rolagem */
+/* Filhos não podem empurrar a largura da página. */
+.bdr-main > *,
+.content > *,
 .card,
 .dashboard-grid,
 .left-stack,
 .right-stack{
-  overflow:visible !important;
+  min-width:0;
+  max-width:100%;
 }
 
-/* Mobile/PWA: garante espaço para menu inferior */
+/* Mídia nunca deve aumentar a largura do documento. */
+img,
+video,
+canvas,
+svg{
+  max-width:100%;
+}
 
 /* =========================================================
-   BDR RESPONSIVO OFICIAL - MENU INFERIOR MOBILE/TABLET
-   Local: CSS/layout-bdr.css
-
-   =========================================================
-   ✅ ONDE MEXER NO TAMANHO DO MENU MOBILE
-   =========================================================
-
-   1) ALTURA DA FAIXA ESCURA DO MENU:
-      --bdr-mobile-menu-altura
-
-      Exemplo:
-      64px = mais baixo / estreito
-      70px = padrão atual
-      78px = mais alto
-
-   2) TAMANHO DOS BOTÕES:
-      --bdr-mobile-menu-btn
-
-      Exemplo:
-      44px = menor
-      48px = padrão atual
-      54px = maior
-
-   3) TAMANHO DOS ÍCONES:
-      --bdr-mobile-menu-icone
-
-      Exemplo:
-      17px = menor
-      18px = padrão atual
-      21px = maior
-
-   4) ESPAÇO ENTRE OS BOTÕES:
-      --bdr-mobile-menu-gap
-
-      Exemplo:
-      6px = mais junto
-      8px = padrão atual
-      12px = mais separado
-
-   5) ESPAÇO DO CONTEÚDO ACIMA DO MENU:
-      --bdr-mobile-content-bottom
-
-      Aumente se o último card ficar escondido atrás do menu.
-
-   COMPORTAMENTO:
-   - Desktop/notebook acima de 1200px NÃO MUDA.
-   - Tablet/celular até 1200px usa menu inferior.
-   - Se couber todos os botões, ficam CENTRALIZADOS.
-   - Se não couber, continua podendo arrastar para o lado.
+   CONTENÇÃO MOBILE / PWA
 ========================================================= */
+@media(max-width:1200px){
+  html,
+  body{
+    touch-action:pan-y pinch-zoom;
+  }
 
-html,
-body{
-  min-height:100%;
-  height:auto !important;
-  overflow-y:auto !important;
-  overflow-x:hidden !important;
-  overscroll-behavior-y:auto !important;
-  -webkit-overflow-scrolling:touch !important;
-}
+  .bdr-main,
+  main,
+  .content{
+    width:100% !important;
+    max-width:100% !important;
+    touch-action:pan-y pinch-zoom;
+  }
 
-.bdr-main,
-main,
-.content{
-  min-height:100vh;
-  height:auto !important;
-  overflow:visible !important;
-}
+  /*
+    Elementos que realmente precisam rolar para o lado continuam
+    responsáveis por sua própria rolagem.
+  */
+  .bdr-sidebar,
+  .bdr-menu,
+  [data-horizontal-scroll="true"],
+  .table-scroll,
+  .table-responsive{
+    touch-action:pan-x pinch-zoom;
+  }
 
-.app-layout,
-.bdr-app{
-  min-height:100vh;
-  height:auto !important;
-  overflow:visible !important;
-}
+  /*
+    Contenção segura para os padrões de modal já existentes no sistema.
+    Não muda aparência; apenas impede o modal de ultrapassar o viewport.
+  */
+  .modal-bg,
+  .modal-overlay,
+  .triagem-modal-bg,
+  .atlas-manut-modal-bg,
+  .atlas-conf-modal-bg{
+    max-width:100%;
+    overflow-x:hidden;
+  }
 
-.card,
-.dashboard-grid,
-.left-stack,
-.right-stack{
-  overflow:visible !important;
+  .modal,
+  .modal-card,
+  .modal-side,
+  .triagem-modal,
+  .atlas-manut-modal,
+  .atlas-conf-modal{
+    min-width:0 !important;
+    max-width:100% !important;
+  }
 }
 
 /* =========================================================

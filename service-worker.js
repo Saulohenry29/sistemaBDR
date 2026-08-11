@@ -1,5 +1,5 @@
 /* BDR ERP - Service Worker V4 SAFE OFFLINE */
-const BDR_CACHE_VERSION = "bdr-erp-v4.0.6-response-clone-safe";
+const BDR_CACHE_VERSION = "bdr-erp-manut-mobile-polida-20260811";
 
 const BDR_ASSETS = [
   "./",
