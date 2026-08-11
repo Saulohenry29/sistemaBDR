@@ -1,5 +1,5 @@
 /* =========================================================
-   ATLAS SaaS - CONTROLADOR OFICIAL DE TOPBAR V1.4
+   ATLAS SaaS - CONTROLADOR OFICIAL DE TOPBAR
    Arquivo: JS/atlasTopbar.js
 
    CORREÇÃO V1.3
@@ -477,16 +477,17 @@
   };
 
   window.AtlasTopbar = Object.freeze({
-    versao: "1.4-acessibilidade-focus-inert",
+    versao: "padrao-unico",
     init,
     close: closeActive,
+    closeAll: closeActive,
     refresh: normalizeMarkup,
     position: positionDropdown,
     getZoom: getBodyZoom
   });
 
   console.log(
-    "✅ ATLAS TOPBAR V1.4 carregado - foco e aria-hidden corrigidos"
+    "✅ ATLAS TOPBAR carregado - padrão único de usuário e notificações"
   );
 
   if(document.readyState === "loading"){

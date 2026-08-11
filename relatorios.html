@@ -1416,79 +1416,73 @@ button,
   </div>
 
  <!-- MENU PRINCIPAL FIXO -->
- <nav class="bdr-menu">
-
-  <!-- DASHBOARD -->
-  <button class="bdr-menu-btn" data-tip="Dashboard" onclick="ir('dashboard.html')" data-permissao="DASHBOARD_VER">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-chart-simple"></i>
-    </span>
-  </button>
-
-  <!-- ENTRADA -->
-  <button class="bdr-menu-btn" data-tip="Entrada" onclick="ir('entrada.html')" data-permissao="ENTRADA_VER">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-arrow-down-wide-short"></i>
-    </span>
-  </button>
-
-  <!-- TRIAGEM -->
-  <button class="bdr-menu-btn" data-tip="Triagem" onclick="ir('triagem.html')" data-permissao="TRIAGEM_VER">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-vials"></i>
-    </span>
-  </button>
-
-  <!-- Estoque -->
-  <button class="bdr-menu-btn" data-tip="Estoque" onclick="ir('estoque.html')" data-permissao="ESTOQUE_VER">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-boxes-stacked"></i>
-    </span>
-  </button>
-
-  <!-- PATRIMÔNIO -->
-  <button class="bdr-menu-btn" data-tip="Patrimônio" onclick="ir('patrimonio.html')" data-permissao="PATRIMONIO_VER">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-tags"></i>
-    </span>
-  </button>
-
-  <!-- EXPEDIÇÃO -->
-   <button class="bdr-menu-btn " data-tip="Expedição" onclick="ir('expedicao.html')" data-permissao="EXPEDICAO_VER">
-     <span class="bdr-menu-icon">
-       <i class="fa-solid fa-truck-fast"></i>
-      </span>
-    </button>
-
-    <!-- MOVIMENTAÇÕES -->
-  <button data-permissao="MOVIMENTACOES_VER" class="bdr-menu-btn" data-tip="Movimentações" onclick="ir('movimentacoes.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-right-left"></i>
-    </span>
-  </button>
-
-  
-  <!-- RELATÓRIOS -->
-  <button class="bdr-menu-btn active" data-tip="Relatórios" onclick="ir('relatorios.html')" data-permissao="RELATORIOS_VER">
-    <span class="bdr-menu-icon">
-      <i class="fa-regular fa-file-lines"></i>
-    </span>
-  </button>
-
-  <!-- EMPRESAS -->
-  <button class="bdr-menu-btn" data-tip="Empresas" onclick="ir('empresa.html')" data-permissao="EMPRESAS_VER">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-building"></i>
-    </span>
-  </button>
-
-  <!-- USUÁRIOS -->
-  <button class="bdr-menu-btn" data-tip="Usuários" onclick="ir('usuarios.html')" data-permissao="USUARIOS_VER">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-users"></i>
-    </span>
-  </button>
-
+<nav class="bdr-menu">
+<!-- DASHBOARD -->
+<button class="bdr-menu-btn" data-permissao="DASHBOARD_VER" data-tip="Dashboard" onclick="ir('dashboard.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-chart-simple"></i>
+</span>
+</button>
+<!-- ENTRADA -->
+<button class="bdr-menu-btn" data-permissao="ENTRADA_VER" data-tip="Entrada" onclick="ir('entrada.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-arrow-down-wide-short"></i>
+</span>
+</button>
+<!-- TRIAGEM -->
+<button class="bdr-menu-btn" data-permissao="TRIAGEM_VER" data-tip="Triagem" onclick="ir('triagem.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-vials"></i>
+</span>
+</button>
+<!-- Estoque -->
+<button class="bdr-menu-btn" data-permissao="ESTOQUE_VER" data-tip="Estoque" onclick="ir('estoque.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-boxes-stacked"></i>
+</span>
+</button>
+<!-- PATRIMÔNIO -->
+<button class="bdr-menu-btn" data-permissao="PATRIMONIO_VER" data-tip="Patrimônio" onclick="ir('patrimonio.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-tags"></i>
+</span>
+</button>
+<!-- MANUTENÇÃO -->
+<button class="bdr-menu-btn" data-permissao="PATRIMONIO_VER" data-tip="Manutenção" onclick="ir('manutencao.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-screwdriver-wrench"></i>
+</span>
+</button>
+<!-- EXPEDIÇÃO -->
+<button class="bdr-menu-btn" data-permissao="EXPEDICAO_VER" data-tip="Expedição" onclick="ir('expedicao.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-truck-fast"></i>
+</span>
+</button>
+<!-- MOVIMENTAÇÕES -->
+<button class="bdr-menu-btn" data-permissao="MOVIMENTACOES_VER" data-tip="Movimentações" onclick="ir('movimentacoes.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-right-left"></i>
+</span>
+</button>
+<!-- RELATÓRIOS -->
+<button class="bdr-menu-btn active" data-permissao="RELATORIOS_VER" data-tip="Relatórios" onclick="ir('relatorios.html')">
+<span class="bdr-menu-icon">
+<i class="fa-regular fa-file-lines"></i>
+</span>
+</button>
+<!-- EMPRESAS -->
+<button class="bdr-menu-btn" data-permissao="EMPRESAS_VER" data-tip="Empresas" onclick="ir('empresa.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-building"></i>
+</span>
+</button>
+<!-- USUÁRIOS -->
+<button class="bdr-menu-btn" data-permissao="USUARIOS_VER" data-tip="Usuários" onclick="ir('usuarios.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-users"></i>
+</span>
+</button>
 </nav>
 
 </aside>
@@ -1514,7 +1508,7 @@ button,
 
   <div class="bdr-top-actions">
     <div class="notif-wrap">
-      <button class="notif-btn" type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="toggleNotificacoes(event); this.blur();" title="Notificações">
+      <button class="notif-btn" data-atlas-toggle="notifications" type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="toggleNotificacoes(event); this.blur();" title="Notificações">
         <i class="fa-regular fa-bell"></i>
         <span id="notifBadge" class="notif-badge">0</span>
       </button>
@@ -1527,7 +1521,7 @@ button,
       </div>
     </div>
 
-    <div class="user-menu" onclick="toggleMenuUsuario(event)">
+    <div class="user-menu" data-atlas-toggle="user">
       <div class="user-mini">
         <b id="usuarioNome" tabindex="-1">Olá, -</b>
         <small id="usuarioPerfil" tabindex="-1">-</small>
@@ -1535,14 +1529,13 @@ button,
       <div class="avatar"><i class="fa-solid fa-user"></i></div>
 
       <div id="dropdownUser" class="dropdown-user">
-        <button type="button" onclick="ir('usuarios.html'); event.stopPropagation();">
-          <i class="fa-solid fa-user-gear"></i> Meu perfil / usuários
-        </button>
-
-        <button type="button" class="logout-btn" onclick="logout(); event.stopPropagation();">
+            <button type="button" onclick="location.href='MinhaConta/minha-conta.html';event.stopPropagation()">
+              <i class="fa-solid fa-circle-user"></i> Minha conta
+            </button>
+            <button type="button" class="logout-btn" onclick="logout(); event.stopPropagation();">
           <i class="fa-solid fa-right-from-bracket"></i> Sair do sistema
         </button>
-      </div>
+          </div>
     </div>
   </div>
 </div>
@@ -1932,8 +1925,9 @@ Importar Excel/CSV</h3>
 <script src="./JS/supabaseClient.js"></script>
 <script src="./JS/bdrCore.js"></script>
 <script src="./JS/bdrNotificacoes.js"></script>
+<script src="JS/atlasTopbar.js"></script>
 <script src="./JS/bdrMenuPermissoes.js"></script>
-<script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260629-2"></script>
+<script src="./JS/atlasControleAcesso.js?v=20260629-2"></script>
 
 
 <div id="modalConferenciaPatrimonial" class="atlas-conf-modal-bg" aria-hidden="true">

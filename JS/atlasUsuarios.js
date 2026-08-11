@@ -10,14 +10,78 @@
   const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
   const current=()=>{try{return JSON.parse(localStorage.getItem("usuario_logado")||localStorage.getItem("usuarioLogado")||"null")}catch{return null}};
   const currentIsOwner=()=>Number(current()?.id)===OWNER_ID;
-  const permsOf=u=>new Set(String(u?.permissoes||"").split(",").map(x=>x.trim()).filter(Boolean));
+  const LEGACY_MODULE_MAP={
+    DASHBOARD:"DASHBOARD_VER",
+    ENTRADA:"ENTRADA_VER",
+    TRIAGEM:"TRIAGEM_VER",
+    ESTOQUE:"ESTOQUE_VER",
+    PATRIMONIO:"PATRIMONIO_VER",
+    EXPEDICAO:"EXPEDICAO_VER",
+    RELATORIOS:"RELATORIOS_VER",
+    MOVIMENTACOES:"MOVIMENTACOES_VER",
+    EMPRESAS:"EMPRESAS_VER",
+    USUARIOS:"USUARIOS_VER",
+    CONFIGURACOES:"CONFIGURACOES_VER"
+  };
+  const LEGACY_MODULE_TOKENS=new Set(Object.keys(LEGACY_MODULE_MAP));
+
+  const permsOf=u=>new Set(
+    String(u?.permissoes||"")
+      .split(",")
+      .map(x=>x.trim())
+      .filter(Boolean)
+      .filter(x=>!LEGACY_MODULE_TOKENS.has(norm(x)))
+  );
+
+  function normalizarPermissoesPerfilRapido(valor){
+    const saida=new Set();
+
+    String(valor||"")
+      .split(",")
+      .map(x=>x.trim())
+      .filter(Boolean)
+      .forEach(item=>{
+        const chave=norm(item);
+        saida.add(LEGACY_MODULE_MAP[chave]||item);
+      });
+
+    return [...saida];
+  }
   const initials=n=>String(n||"U").split(/\s+/).slice(0,2).map(x=>x[0]).join("").toUpperCase();
   const workText=id=>{const w=STATE.works.find(x=>String(x.id)===String(id));return w?`${w.codigo_obra||w.codigo||"-"} - ${w.nome||"-"}`:"Sem obra principal"};
-  const canManage=()=>currentIsOwner()||permsOf(current()).has("USUARIOS_PERMISSOES")||permsOf(current()).has("USUARIOS_EDITAR");
+  const currentId=()=>Number(current()?.id||0);
+  const hasCurrentPerm=perm=>permsOf(current()).has(perm);
+
+  /*
+    Responsabilidades separadas:
+    - USUARIOS_EDITAR: dados cadastrais de OUTROS usuários.
+    - USUARIOS_PERMISSOES: permissões/obras de OUTROS usuários.
+    - Ninguém, exceto OWNER ID 1, eleva o próprio acesso.
+  */
+  const canEditUsers=()=>currentIsOwner()||hasCurrentPerm("USUARIOS_EDITAR");
+  const canManagePermissions=()=>currentIsOwner()||hasCurrentPerm("USUARIOS_PERMISSOES");
+  const isOwnSelected=()=>Number(STATE.selected?.id||0)===currentId();
+  const selectedIsOwner=()=>Number(STATE.selected?.id||0)===OWNER_ID;
+  const canEditSelected=()=>currentIsOwner()||(canEditUsers()&&!isOwnSelected()&&!selectedIsOwner());
+  const canManageSelectedAccess=()=>currentIsOwner()||(canManagePermissions()&&!isOwnSelected()&&!selectedIsOwner());
+  const canCreateUsers=()=>currentIsOwner()||hasCurrentPerm("USUARIOS_CRIAR");
+
+  /*
+    Preferências pessoais:
+    - o próprio usuário pode ajustar somente suas notificações;
+    - permissões, perfil e obras continuam protegidos;
+    - administradores autorizados podem ajustar notificações de terceiros.
+  */
+  const canManageSelectedNotifications=()=>
+    currentIsOwner() ||
+    isOwnSelected() ||
+    canManageSelectedAccess();
+
+  const canManage=()=>canEditSelected()||canManageSelectedAccess();
 
   const PERMISSION_MODULES=[
     {id:"GERAL",title:"🧭 Acesso geral",items:[["DASHBOARD_VER","Dashboard"],["RELATORIOS_VER","Relatórios"],["VALORES_VER","Ver valores"]]},
-    {id:"PATRIMONIO",title:"📦 Patrimônio",items:[["PATRIMONIO_VER","Acessar patrimônio"],["PATRIMONIO_CRIAR","Cadastrar"],["PATRIMONIO_EDITAR","Editar dados"],["PATRIMONIO_MOVIMENTAR","Movimentar"],["PATRIMONIO_IMPRIMIR","Imprimir etiquetas"],["PATRIMONIO_EXCLUIR","Excluir/inativar"],["CONFIGURAR_ETIQUETAS","Configurar etiquetas"]]},
+    {id:"PATRIMONIO",title:"📦 Patrimônio",items:[["PATRIMONIO_VER","Visualizar / consultar"],["PATRIMONIO_CRIAR","Cadastrar"],["PATRIMONIO_EDITAR","Editar dados"],["PATRIMONIO_MOVIMENTAR","Movimentar"],["PATRIMONIO_IMPRIMIR","Imprimir etiquetas"],["PATRIMONIO_EXCLUIR","Excluir/inativar"],["CONFIGURAR_ETIQUETAS","Configurar etiquetas"]]},
     {id:"EXPEDICAO",title:"🚚 Expedição",items:[["EXPEDICAO_VER","Acessar expedição"],["SOLICITAR_MATERIAL","Novo pedido"],["APROVAR_PEDIDO_ORIGEM","Aprovar ou recusar"],["SEPARAR_PEDIDO","Separar pedido"],["EXPEDICAO_TRANSPORTE","Retirada e transporte"],["ENTREGAR_MATERIAL","Entregar/enviar"],["CONFERIR_MERCADORIA","Receber e conferir"]]},
     {id:"ESTOQUE",title:"📚 Estoque / Entrada",items:[["ESTOQUE_VER","Acessar estoque"],["ESTOQUE_ENTRADA","Entrada"],["ESTOQUE_SAIDA","Saída"],["ESTOQUE_TRANSFERIR","Transferir"],["ENTRADA_VER","Tela de entrada"],["TRIAGEM_VER","Triagem"]]},
     {id:"EMPRESAS",title:"🏢 Empresas / Obras",items:[["EMPRESAS_VER","Visualizar"],["EMPRESAS_CRIAR","Criar"],["EMPRESAS_EDITAR","Editar"],["EMPRESAS_INATIVAR","Inativar/reativar"],["EMPRESAS_EXCLUIR","Excluir"]]},
@@ -40,7 +104,15 @@
 
   function toast(msg){let t=$("#atlasUsersToast");if(!t){t=document.createElement("div");t.id="atlasUsersToast";t.className="atlas-toast";document.body.appendChild(t)}t.textContent=msg;t.classList.add("show");clearTimeout(global.__uToast);global.__uToast=setTimeout(()=>t.classList.remove("show"),3200)}
   function modal(id,open){const el=$("#"+id);if(el)el.hidden=!open}
-  function setDirty(v=true){STATE.dirty=v;$("#pendingChangesText").textContent=v?"Alterações ainda não salvas":"Nenhuma alteração pendente";$("#btnSalvarPermissoes").disabled=!STATE.selected||!canManage()}
+  function setDirty(v=true){
+    STATE.dirty=v;
+    $("#pendingChangesText").textContent=v?"Alterações ainda não salvas":"Nenhuma alteração pendente";
+    if($("#btnSalvarPermissoes")){
+      $("#btnSalvarPermissoes").disabled=
+        !STATE.selected ||
+        !(canManageSelectedAccess() || isOwnSelected());
+    }
+  }
 
   async function loadSafe(table,order="nome"){try{const r=await db().from(table).select("*").order(order);if(r.error)throw r.error;return r.data||[]}catch(e){console.warn("Atlas Usuários:",table,e.message||e);return[]}}
   async function load(){if(!db())throw new Error("Supabase não carregado.");STATE.users=await loadSafe("usuarios_sistema","nome");if(!STATE.users.length){STATE.table="usuarios";STATE.users=await loadSafe("usuarios","nome")}STATE.works=await loadSafe("obras","nome");STATE.companies=await loadSafe("empresas","nome");STATE.profiles=await loadSafe("perfis_rapidos","id");STATE.profiles=STATE.profiles.filter(p=>p.ativo!==false);fillFilters();renderUsers();renderProfiles();document.documentElement.classList.remove("atlas-users-loading")}
@@ -290,6 +362,12 @@
       });
 
       renderUsers();
+
+      if($("#btnEditarUsuario")) $("#btnEditarUsuario").disabled=!canEditSelected();
+      if($("#btnPerfilRapido")) $("#btnPerfilRapido").disabled=!canManageSelectedAccess();
+
+      atualizarVisibilidadeAbasUsuario();
+
       activateTab("dados");
       setDirty(false);
 
@@ -320,12 +398,69 @@
     }
   }
 
-  function moduleHtml(m){return `<section class="atlas-module-card"><h3><span>${m.title}</span><label class="atlas-switch"><input type="checkbox" class="module-master" data-module="${m.id}"><span></span></label></h3>${m.items.map(([p,l])=>`<div class="atlas-permission-row"><label>${esc(l)}</label><label class="atlas-switch"><input type="checkbox" class="permission-toggle" value="${p}" ${STATE.draft.permissions.has(p)?"checked":""}><span></span></label></div>`).join("")}</section>`}
-  function renderPermissions(){$("#permissionModules").innerHTML=PERMISSION_MODULES.map(moduleHtml).join("");syncModuleMasters();$("#switchTodasPermissoes").checked=$$(".permission-toggle").length>0&&$$(".permission-toggle").every(x=>x.checked)}
+  function atualizarVisibilidadeAbasUsuario(){
+    if(!STATE.selected) return;
+
+    const podeGerenciarAcesso = canManageSelectedAccess();
+    const proprio = isOwnSelected() && !currentIsOwner();
+
+    const tabPermissoes = $('.atlas-tab[data-tab="permissoes"]');
+    const tabObras = $('.atlas-tab[data-tab="obras"]');
+
+    /*
+      Não mostramos opções de acesso para quem não pode administrá-las.
+      Isso evita expor permissões que o próprio usuário não pode alterar.
+    */
+    if(tabPermissoes) tabPermissoes.hidden = !podeGerenciarAcesso;
+    if(tabObras) tabObras.hidden = !podeGerenciarAcesso;
+
+    if($("#tabPermissoes")) $("#tabPermissoes").hidden = !podeGerenciarAcesso;
+    if($("#tabObras")) $("#tabObras").hidden = !podeGerenciarAcesso;
+
+    /*
+      Na própria conta, dados estruturais não são alterados por aqui.
+      Mantemos troca de senha e preferências de notificação.
+    */
+    if($("#btnEditarUsuario")) $("#btnEditarUsuario").hidden = proprio;
+    if($("#btnPerfilRapido")) $("#btnPerfilRapido").hidden = proprio || !podeGerenciarAcesso;
+
+    if($("#btnTrocarSenha")){
+      $("#btnTrocarSenha").hidden = false;
+      $("#btnTrocarSenha").disabled = false;
+    }
+
+    if(proprio){
+      const abaAtiva = $('.atlas-tab.active')?.dataset?.tab;
+      if(abaAtiva === "permissoes" || abaAtiva === "obras"){
+        activateTab("dados");
+      }
+    }
+  }
+
+  function moduleHtml(m){
+    const bloqueado=!canManageSelectedAccess();
+    return `<section class="atlas-module-card"><h3><span>${m.title}</span><label class="atlas-switch"><input type="checkbox" class="module-master" data-module="${m.id}" ${bloqueado?"disabled":""}><span></span></label></h3>${m.items.map(([p,l])=>`<div class="atlas-permission-row"><label>${esc(l)}</label><label class="atlas-switch"><input type="checkbox" class="permission-toggle" value="${p}" ${STATE.draft.permissions.has(p)?"checked":""} ${bloqueado?"disabled":""}><span></span></label></div>`).join("")}</section>`;
+  }
+
+  function renderPermissions(){
+    $("#permissionModules").innerHTML=PERMISSION_MODULES.map(moduleHtml).join("");
+    syncModuleMasters();
+
+    const geral=$("#switchTodasPermissoes");
+    if(geral){
+      geral.checked=$$(".permission-toggle").length>0&&$$(".permission-toggle").every(x=>x.checked);
+      geral.disabled=!canManageSelectedAccess();
+    }
+  }
   function syncModuleMasters(){PERMISSION_MODULES.forEach(m=>{const items=m.items.map(x=>x[0]);const master=$(`.module-master[data-module="${m.id}"]`);if(master)master.checked=items.every(p=>STATE.draft.permissions.has(p))})}
 
   function operationalPermissions(){const ps=STATE.draft.permissions;return OPERATIONAL_NOTIFS.map(n=>({...n,active:n.perm.some(p=>ps.has(p))}))}
-  function renderNotifications(){const operational={id:"EXPEDICAO",title:"🚚 Expedição — automática pelo papel",items:operationalPermissions()};const opHtml=`<section class="atlas-module-card"><h3><span>${operational.title}</span><span class="atlas-auto-tag">AUTOMÁTICA</span></h3>${operational.items.map(i=>`<div class="atlas-permission-row auto"><label>${esc(i.label)}<small>${i.active?"Ativa pela função do usuário":"Não aplicável ao papel atual"}</small></label><label class="atlas-switch"><input type="checkbox" disabled ${i.active?"checked":""}><span></span></label></div>`).join("")}</section>`;const opt=OPTIONAL_NOTIFS.map(m=>`<section class="atlas-module-card"><h3><span>${m.title}</span><label class="atlas-switch"><input class="notif-module-master" data-notif-module="${m.id}" type="checkbox"><span></span></label></h3>${m.items.map(([p,l])=>`<div class="atlas-permission-row"><label>${esc(l)}</label><label class="atlas-switch"><input class="notification-toggle" type="checkbox" value="${p}" ${STATE.draft.permissions.has(p)?"checked":""}><span></span></label></div>`).join("")}</section>`).join("");$("#notificationModules").innerHTML=opHtml+opt;const mode=["NOTIF_MODO_SOM","NOTIF_MODO_VISUAL","NOTIF_MODO_SILENCIOSO"].find(x=>STATE.draft.permissions.has(x))||"NOTIF_MODO_SOM";const radio=$(`input[name="notificationMode"][value="${mode}"]`);if(radio)radio.checked=true;$("#modoAtualTexto").textContent=mode==="NOTIF_MODO_SOM"?"Som e aviso":mode==="NOTIF_MODO_VISUAL"?"Apenas aviso":"Silencioso";OPTIONAL_NOTIFS.forEach(m=>{const master=$(`.notif-module-master[data-notif-module="${m.id}"]`);if(master)master.checked=m.items.every(([p])=>STATE.draft.permissions.has(p))})}
+  function renderNotifications(){
+    const bloqueado = !canManageSelectedNotifications();
+    const operational={id:"EXPEDICAO",title:"🚚 Expedição — automática pelo papel",items:operationalPermissions()};const opHtml=`<section class="atlas-module-card"><h3><span>${operational.title}</span><span class="atlas-auto-tag">AUTOMÁTICA</span></h3>${operational.items.map(i=>`<div class="atlas-permission-row auto"><label>${esc(i.label)}<small>${i.active?"Ativa pela função do usuário":"Não aplicável ao papel atual"}</small></label><label class="atlas-switch"><input type="checkbox" disabled ${i.active?"checked":""}><span></span></label></div>`).join("")}</section>`;const opt=OPTIONAL_NOTIFS.map(m=>`<section class="atlas-module-card"><h3><span>${m.title}</span><label class="atlas-switch"><input class="notif-module-master" data-notif-module="${m.id}" type="checkbox" ${bloqueado?"disabled":""}><span></span></label></h3>${m.items.map(([p,l])=>`<div class="atlas-permission-row"><label>${esc(l)}</label><label class="atlas-switch"><input class="notification-toggle" type="checkbox" value="${p}" ${STATE.draft.permissions.has(p)?"checked":""} ${bloqueado?"disabled":""}><span></span></label></div>`).join("")}</section>`).join("");$("#notificationModules").innerHTML=opHtml+opt;const mode=["NOTIF_MODO_SOM","NOTIF_MODO_VISUAL","NOTIF_MODO_SILENCIOSO"].find(x=>STATE.draft.permissions.has(x))||"NOTIF_MODO_SOM";const radio=$(`input[name="notificationMode"][value="${mode}"]`);
+    if(radio) radio.checked=true;
+    $$('input[name="notificationMode"]').forEach(r=>r.disabled=bloqueado);
+    $("#modoAtualTexto").textContent=mode==="NOTIF_MODO_SOM"?"Som e aviso":mode==="NOTIF_MODO_VISUAL"?"Apenas aviso":"Silencioso";OPTIONAL_NOTIFS.forEach(m=>{const master=$(`.notif-module-master[data-notif-module="${m.id}"]`);if(master)master.checked=m.items.every(([p])=>STATE.draft.permissions.has(p))})}
 
   function renderSummary(){
     if(!STATE.draft) return;
@@ -350,20 +485,241 @@
   }
 
   function updatePerm(value,checked){checked?STATE.draft.permissions.add(value):STATE.draft.permissions.delete(value);setDirty();renderNotifications();renderSummary()}
-  function applyProfile(profile){const list=String(profile.permissoes||"").split(",").map(x=>x.trim()).filter(Boolean);STATE.draft.permissions=new Set(list);STATE.draft.perfil_rapido=profile.nome;STATE.draft.perfil=profile.nome;$("#selectedProfile").textContent=profile.nome;renderPermissions();renderNotifications();renderSummary();setDirty();modal("modalPerfis",false);toast(`Perfil ${profile.nome} carregado na tela. Clique em Salvar Permissões.`)}
+  function applyProfile(profile){
+    /*
+      Perfis rápidos antigos podem conter nomes de módulos legados.
+      Ao APLICAR o modelo, convertemos para o padrão explícito *_VER.
+    */
+    const list=normalizarPermissoesPerfilRapido(profile.permissoes);
+    STATE.draft.permissions=new Set(list);
+    STATE.draft.perfil_rapido=profile.nome;
+    STATE.draft.perfil=profile.nome;
+    $("#selectedProfile").textContent=profile.nome;
+    renderPermissions();
+    renderNotifications();
+    renderSummary();
+    setDirty();
+    modal("modalPerfis",false);
+    toast(`Perfil ${profile.nome} carregado na tela. Clique em Salvar Permissões.`);
+  }
 
 
   function activateTab(nome){$$('.atlas-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===nome));$$('.atlas-tab-content').forEach(x=>x.classList.remove('active'));const alvo=$('#tab'+nome.charAt(0).toUpperCase()+nome.slice(1));if(alvo)alvo.classList.add('active');const area=$('.atlas-tab-scroll-area');if(area)area.scrollTop=0}
   function renderData(){if(!STATE.selected)return;const u=STATE.draft||STATE.selected;const itens=[['Nome completo',u.nome||'-'],['Usuário',u.usuario||'-'],['E-mail',u.email||'Não informado'],['Perfil',u.perfil||'-'],['Empresa',u.empresa_id||'-'],['Obra principal',workText(u.obra_id)],['Status',u.ativo===false?'INATIVO':'ATIVO'],['Perfil rápido',u.perfil_rapido||'Personalizado']];const el=$('#dataSummary');if(el)el.innerHTML=itens.map(([a,b])=>`<div class="atlas-data-card"><small>${esc(a)}</small><strong>${esc(b)}</strong></div>`).join('')}
-  function renderWorksInline(){const box=$('#listaObrasInline');if(!box)return;const termo=norm($('#buscaObrasInline')?.value||'');box.innerHTML=STATE.works.filter(w=>norm(workText(w.id)).includes(termo)).map(w=>`<label class="atlas-work-row"><input class="work-inline-check" type="checkbox" value="${w.id}" ${STATE.worksDraft.has(String(w.id))?'checked':''}><span>${esc(workText(w.id))}</span></label>`).join('')||'<div class="atlas-empty">Nenhuma obra encontrada.</div>'}
+  function renderWorksInline(){
+    const box=$('#listaObrasInline');
+    if(!box)return;
+
+    const termo=norm($('#buscaObrasInline')?.value||'');
+    const bloqueado=!canManageSelectedAccess();
+
+    box.innerHTML=STATE.works
+      .filter(w=>norm(workText(w.id)).includes(termo))
+      .map(w=>`<label class="atlas-work-row"><input class="work-inline-check" type="checkbox" value="${w.id}" ${STATE.worksDraft.has(String(w.id))?'checked':''} ${bloqueado?'disabled':''}><span>${esc(workText(w.id))}</span></label>`)
+      .join('')||'<div class="atlas-empty">Nenhuma obra encontrada.</div>';
+
+    if($("#btnMarcarObrasInline")) $("#btnMarcarObrasInline").disabled=bloqueado;
+    if($("#btnDesmarcarObrasInline")) $("#btnDesmarcarObrasInline").disabled=bloqueado;
+  }
   function renderHistory(){const u=STATE.selected;if(!u)return;const rows=[['fa-user-plus','Cadastro criado',u.created_at?new Date(u.created_at).toLocaleString('pt-BR'):'Data não informada'],['fa-pen-to-square','Última atualização',u.updated_at?new Date(u.updated_at).toLocaleString('pt-BR'):'Data não informada'],['fa-right-to-bracket','Último acesso',u.ultimo_acesso?new Date(u.ultimo_acesso).toLocaleString('pt-BR'):'Ainda não registrado'],['fa-user-shield','Perfil atual',u.perfil||'-'],['fa-building','Obra principal',workText(u.obra_id)]];const el=$('#historyTimeline');if(el)el.innerHTML=rows.map(([i,t,d])=>`<div class="atlas-history-item"><div class="atlas-history-icon"><i class="fa-solid ${i}"></i></div><div><strong>${esc(t)}</strong><span>${esc(d)}</span></div></div>`).join('')}
   function renderProfiles(){const owner=currentIsOwner();$("#quickProfiles").innerHTML=STATE.profiles.length?STATE.profiles.map(p=>`<article class="atlas-profile-card" data-profile-id="${p.id}"><i class="fa-solid fa-user-shield"></i><h3>${esc(p.nome)}</h3><p>${esc(p.descricao||"Perfil rápido")}</p><div class="actions"><button class="apply-profile" data-profile-id="${p.id}">Aplicar</button>${owner?`<button class="edit-profile" data-profile-id="${p.id}">Editar</button>`:""}</div></article>`).join(""):'<div class="atlas-empty">Nenhum perfil rápido encontrado.</div>'}
 
 
-  async function savePermissions(){if(!STATE.selected||!canManage())return;const p=new Set(STATE.draft.permissions);p.add("RECEBER_NOTIFICACOES");OPERATIONAL_NOTIFS.forEach(n=>{if(n.perm.some(x=>p.has(x)))p.add(n.notif);else p.delete(n.notif)});["NOTIF_EXPEDICAO"].forEach(x=>{if(OPERATIONAL_NOTIFS.some(n=>p.has(n.notif)))p.add(x)});const modes=["NOTIF_MODO_SOM","NOTIF_MODO_VISUAL","NOTIF_MODO_SILENCIOSO"];if(!modes.some(x=>p.has(x)))p.add("NOTIF_MODO_SOM");const payload={permissoes:[...p].join(","),perfil:STATE.draft.perfil||STATE.selected.perfil||"OPERADOR",perfil_rapido:STATE.draft.perfil_rapido||null,obras_liberadas:[...STATE.worksDraft].join(","),updated_at:new Date().toISOString()};const r=await db().from(STATE.table).update(payload).eq("id",STATE.selected.id).select();if(r.error){alert("Erro ao salvar: "+r.error.message);return}Object.assign(STATE.selected,payload);Object.assign(STATE.draft,payload,{permissions:p});const idx=STATE.users.findIndex(x=>Number(x.id)===Number(STATE.selected.id));if(idx>=0)Object.assign(STATE.users[idx],payload);if(Number(current()?.id)===Number(STATE.selected.id)){const u={...current(),...payload};localStorage.setItem("usuario_logado",JSON.stringify(u));localStorage.setItem("usuarioLogado",JSON.stringify(u))}setDirty(false);renderUsers();renderPermissions();renderNotifications();renderSummary();renderData();renderWorksInline();renderHistory();toast("Permissões, notificações e obras salvas com sucesso.")}
+  async function savePermissions(){
+    if(!STATE.selected) return;
+
+    /*
+      PRÓPRIA CONTA:
+      salva somente preferências de notificação.
+      Mesmo que alguém tente manipular o front-end pelo Console,
+      permissões, perfil e obras são reconstruídos a partir do registro atual.
+    */
+    if(isOwnSelected() && !currentIsOwner()){
+      const atuais = permsOf(STATE.selected);
+      const notificacoesEditaveis = new Set([
+        ...OPTIONAL_NOTIFS.flatMap(m=>m.items.map(([p])=>p)),
+        "NOTIF_MODO_SOM",
+        "NOTIF_MODO_VISUAL",
+        "NOTIF_MODO_SILENCIOSO"
+      ]);
+
+      const p = new Set(
+        [...atuais].filter(x=>!notificacoesEditaveis.has(x))
+      );
+
+      OPTIONAL_NOTIFS
+        .flatMap(m=>m.items)
+        .forEach(([notif])=>{
+          if(STATE.draft.permissions.has(notif)) p.add(notif);
+        });
+
+      const modes=[
+        "NOTIF_MODO_SOM",
+        "NOTIF_MODO_VISUAL",
+        "NOTIF_MODO_SILENCIOSO"
+      ];
+
+      const mode=
+        modes.find(x=>STATE.draft.permissions.has(x)) ||
+        "NOTIF_MODO_SOM";
+
+      modes.forEach(x=>p.delete(x));
+      p.add(mode);
+      p.add("RECEBER_NOTIFICACOES");
+
+      /*
+        Notificações operacionais continuam automáticas:
+        são recalculadas a partir das permissões reais do usuário.
+      */
+      OPERATIONAL_NOTIFS.forEach(n=>{
+        if(n.perm.some(x=>p.has(x))) p.add(n.notif);
+        else p.delete(n.notif);
+      });
+
+      if(OPERATIONAL_NOTIFS.some(n=>p.has(n.notif))){
+        p.add("NOTIF_EXPEDICAO");
+      }else{
+        p.delete("NOTIF_EXPEDICAO");
+      }
+
+      const payload={
+        permissoes:[...p].join(","),
+        updated_at:new Date().toISOString()
+      };
+
+      const r=await db()
+        .from(STATE.table)
+        .update(payload)
+        .eq("id",STATE.selected.id)
+        .select();
+
+      if(r.error){
+        alert("Erro ao salvar preferências: "+r.error.message);
+        return;
+      }
+
+      Object.assign(STATE.selected,payload);
+      Object.assign(STATE.draft,payload,{permissions:p});
+
+      const idx=STATE.users.findIndex(
+        x=>Number(x.id)===Number(STATE.selected.id)
+      );
+      if(idx>=0) Object.assign(STATE.users[idx],payload);
+
+      const u={...current(),...payload};
+      localStorage.setItem("usuario_logado",JSON.stringify(u));
+      localStorage.setItem("usuarioLogado",JSON.stringify(u));
+
+      setDirty(false);
+      renderNotifications();
+      renderSummary();
+      renderData();
+      toast("Preferências de notificações salvas.");
+      return;
+    }
+
+    /*
+      ADMINISTRAÇÃO DE ACESSO:
+      somente quem possui autorização para gerenciar o usuário selecionado.
+    */
+    if(!canManageSelectedAccess()){
+      alert("Você não possui permissão para gerenciar acessos deste usuário.");
+      return;
+    }
+
+    const p=new Set(
+      [...STATE.draft.permissions].filter(x=>!LEGACY_MODULE_TOKENS.has(norm(x)))
+    );
+
+    p.add("RECEBER_NOTIFICACOES");
+
+    OPERATIONAL_NOTIFS.forEach(n=>{
+      if(n.perm.some(x=>p.has(x))) p.add(n.notif);
+      else p.delete(n.notif);
+    });
+
+    if(OPERATIONAL_NOTIFS.some(n=>p.has(n.notif))){
+      p.add("NOTIF_EXPEDICAO");
+    }else{
+      p.delete("NOTIF_EXPEDICAO");
+    }
+
+    const modes=[
+      "NOTIF_MODO_SOM",
+      "NOTIF_MODO_VISUAL",
+      "NOTIF_MODO_SILENCIOSO"
+    ];
+    if(!modes.some(x=>p.has(x))) p.add("NOTIF_MODO_SOM");
+
+    const payload={
+      permissoes:[...p].join(","),
+      perfil:STATE.draft.perfil||STATE.selected.perfil||"OPERADOR",
+      perfil_rapido:STATE.draft.perfil_rapido||null,
+      obras_liberadas:[...STATE.worksDraft].join(","),
+      updated_at:new Date().toISOString()
+    };
+
+    const r=await db()
+      .from(STATE.table)
+      .update(payload)
+      .eq("id",STATE.selected.id)
+      .select();
+
+    if(r.error){
+      alert("Erro ao salvar: "+r.error.message);
+      return;
+    }
+
+    Object.assign(STATE.selected,payload);
+    Object.assign(STATE.draft,payload,{permissions:p});
+
+    const idx=STATE.users.findIndex(
+      x=>Number(x.id)===Number(STATE.selected.id)
+    );
+    if(idx>=0) Object.assign(STATE.users[idx],payload);
+
+    if(Number(current()?.id)===Number(STATE.selected.id)){
+      const u={...current(),...payload};
+      localStorage.setItem("usuario_logado",JSON.stringify(u));
+      localStorage.setItem("usuarioLogado",JSON.stringify(u));
+    }
+
+    setDirty(false);
+    renderUsers();
+    renderPermissions();
+    renderNotifications();
+    renderSummary();
+    renderData();
+    renderWorksInline();
+    renderHistory();
+    toast("Permissões, notificações e obras salvas com sucesso.");
+  }
 
   function openUserModal(user=null,focusPassword=false){if(user&&Number(user.id)===OWNER_ID&&!currentIsOwner())return;$("#formId").value=user?.id||"";$("#formNome").value=user?.nome||"";$("#formUsuario").value=user?.usuario||"";$("#formEmail").value=user?.email||"";$("#formPerfil").value=user?.perfil||$("#formPerfil option")?.value||"OPERADOR";$("#formEmpresa").value=user?.empresa_id||"";$("#formObra").value=user?.obra_id||"";$("#formAtivo").value=String(user?.ativo!==false);$("#formSenha").value="";$("#modalUsuarioTitulo").textContent=user?"Editar usuário":"Novo usuário";modal("modalUsuario",true);if(focusPassword)setTimeout(()=>$("#formSenha").focus(),80)}
-  async function saveUser(){const id=$("#formId").value;const payload={nome:$("#formNome").value.trim(),usuario:$("#formUsuario").value.trim(),email:$("#formEmail").value.trim()||null,perfil:$("#formPerfil").value,empresa_id:$("#formEmpresa").value?Number($("#formEmpresa").value):null,obra_id:$("#formObra").value?Number($("#formObra").value):null,ativo:$("#formAtivo").value==="true",updated_at:new Date().toISOString()};const senha=$("#formSenha").value.trim();if(!payload.nome||!payload.usuario){alert("Informe nome e usuário.");return}if(senha)Object.assign(payload,{senha,senha_temporaria:true,senha_provisoria:true,trocar_senha:true});let r;if(id)r=await db().from(STATE.table).update(payload).eq("id",id).select();else{if(!senha){alert("Informe uma senha provisória para o novo usuário.");return}const prof=STATE.profiles.find(p=>norm(p.nome)===norm(payload.perfil));Object.assign(payload,{permissoes:prof?.permissoes||"",perfil_rapido:prof?.nome||payload.perfil});r=await db().from(STATE.table).insert([payload]).select()}if(r.error){alert("Erro ao salvar usuário: "+r.error.message);return}modal("modalUsuario",false);await load();const saved=Array.isArray(r.data)?r.data[0]:r.data;if(saved?.id)selectUser(saved.id);toast("Usuário salvo com sucesso.")}
+  async function saveUser(){
+    const id=$("#formId").value;
+
+    if(id && Number(id)===currentId() && !currentIsOwner()){
+      alert("Por segurança, alterações da sua própria conta devem usar as opções pessoais do sistema.");
+      return;
+    }
+
+    if(id && Number(id)===OWNER_ID && !currentIsOwner()){
+      alert("O usuário OWNER não pode ser alterado.");
+      return;
+    }
+
+    if(id && !canEditSelected()){
+      alert("Você não possui permissão para editar este usuário.");
+      return;
+    }
+
+    if(!id && !canCreateUsers()){
+      alert("Você não possui permissão para criar usuários.");
+      return;
+    }
+
+    const payload={nome:$("#formNome").value.trim(),usuario:$("#formUsuario").value.trim(),email:$("#formEmail").value.trim()||null,perfil:$("#formPerfil").value,empresa_id:$("#formEmpresa").value?Number($("#formEmpresa").value):null,obra_id:$("#formObra").value?Number($("#formObra").value):null,ativo:$("#formAtivo").value==="true",updated_at:new Date().toISOString()};const senha=$("#formSenha").value.trim();if(!payload.nome||!payload.usuario){alert("Informe nome e usuário.");return}if(senha)Object.assign(payload,{senha,senha_temporaria:true,senha_provisoria:true,trocar_senha:true});let r;if(id)r=await db().from(STATE.table).update(payload).eq("id",id).select();else{if(!senha){alert("Informe uma senha provisória para o novo usuário.");return}const prof=STATE.profiles.find(p=>norm(p.nome)===norm(payload.perfil));Object.assign(payload,{permissoes:prof?.permissoes||"",perfil_rapido:prof?.nome||payload.perfil});r=await db().from(STATE.table).insert([payload]).select()}if(r.error){alert("Erro ao salvar usuário: "+r.error.message);return}modal("modalUsuario",false);await load();const saved=Array.isArray(r.data)?r.data[0]:r.data;if(saved?.id)selectUser(saved.id);toast("Usuário salvo com sucesso.")}
 
   async function testAudio(){
     if(!global.AtlasAudio){
@@ -436,7 +792,13 @@
 
     if($("#btnNovoUsuario"))$("#btnNovoUsuario").onclick=()=>openUserModal();
     if($("#btnEditarUsuario"))$("#btnEditarUsuario").onclick=()=>openUserModal(STATE.selected);
-    if($("#btnTrocarSenha"))$("#btnTrocarSenha").onclick=()=>openUserModal(STATE.selected,true);
+    if($("#btnTrocarSenha"))$("#btnTrocarSenha").onclick=()=>{
+      if(isOwnSelected() && !currentIsOwner()){
+        location.href="alterar-senha.html";
+        return;
+      }
+      openUserModal(STATE.selected,true);
+    };
     if($("#btnPerfilRapido"))$("#btnPerfilRapido").onclick=()=>modal("modalPerfis",true);
     if($("#btnSalvarUsuario"))$("#btnSalvarUsuario").onclick=saveUser;
     if($("#btnSalvarModeloPerfil"))$("#btnSalvarModeloPerfil").onclick=saveProfileModel;
@@ -453,6 +815,8 @@
     });
 
     $("#permissionModules")?.addEventListener("change",event=>{
+      if(!canManageSelectedAccess()) return;
+
       if(event.target.classList.contains("permission-toggle")){
         updatePerm(event.target.value,event.target.checked);
       }
@@ -476,6 +840,7 @@
 
     if($("#switchTodasPermissoes")){
       $("#switchTodasPermissoes").onchange=event=>{
+        if(!canManageSelectedAccess()) return;
         PERMISSION_MODULES.flatMap(modulo=>modulo.items).forEach(([permission])=>{
           event.target.checked
             ? STATE.draft.permissions.add(permission)
@@ -490,6 +855,8 @@
     }
 
     $("#notificationModules")?.addEventListener("change",event=>{
+      if(!canManageSelectedNotifications()) return;
+
       if(event.target.classList.contains("notification-toggle")){
         updatePerm(event.target.value,event.target.checked);
       }
@@ -512,6 +879,7 @@
 
     $$('input[name="notificationMode"]').forEach(radio=>{
       radio.onchange=()=>{
+        if(!canManageSelectedNotifications()) return;
         ["NOTIF_MODO_SOM","NOTIF_MODO_VISUAL","NOTIF_MODO_SILENCIOSO"]
           .forEach(item=>STATE.draft.permissions.delete(item));
 
@@ -537,6 +905,7 @@
 
     $("#listaObrasInline")?.addEventListener("change",event=>{
       if(!event.target.classList.contains("work-inline-check"))return;
+      if(!canManageSelectedAccess()) return;
 
       event.target.checked
         ? STATE.worksDraft.add(event.target.value)
@@ -549,6 +918,7 @@
 
     if($("#btnMarcarObrasInline")){
       $("#btnMarcarObrasInline").onclick=()=>{
+        if(!canManageSelectedAccess()) return;
         STATE.worksDraft=new Set(STATE.works.map(work=>String(work.id)));
         STATE.draft.obras_liberadas=[...STATE.worksDraft].join(",");
         renderWorksInline();
@@ -559,6 +929,7 @@
 
     if($("#btnDesmarcarObrasInline")){
       $("#btnDesmarcarObrasInline").onclick=()=>{
+        if(!canManageSelectedAccess()) return;
         STATE.worksDraft.clear();
         STATE.draft.obras_liberadas="";
         renderWorksInline();
@@ -581,7 +952,7 @@
 
     if(nome)nome.textContent="Olá, "+(user?.nome||"Usuário");
     if(perfil)perfil.textContent=user?.perfil||"-";
-    if(!canManage()&&$("#btnNovoUsuario"))$("#btnNovoUsuario").hidden=true;
+    if($("#btnNovoUsuario")) $("#btnNovoUsuario").hidden=!canCreateUsers();
   }
 
   async function init(){initTop();bind();try{await load()}catch(e){document.documentElement.classList.remove("atlas-users-loading");alert(e.message||"Não foi possível carregar usuários.")}}

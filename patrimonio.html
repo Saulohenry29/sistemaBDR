@@ -17,6 +17,7 @@
 <link href="./CSS/atlas-topbar.css?v=20260724-padrao-profissional-v1" rel="stylesheet"/><link href="./CSS/patrimonio-lote.css?v=20260727-alinhamento-dinamico" rel="stylesheet"/>
 <link href="./CSS/patrimonio-etiquetas-lote.css?v=20260726-v1" rel="stylesheet"/>
 <link href="./CSS/patrimonio.css?v=20260727-layout-final" rel="stylesheet"/>
+<link href="./CSS/atlasManutencao.css?v=20260807-fluxo-simplificado" rel="stylesheet"/>
 <script src="./JS/atlasDialog.js?v=20260724-padrao-profissional-v1"></script>
 
 <!-- =========================================================
@@ -40,6 +41,7 @@
      substitua somente o arquivo bdrNotificacoes.js.
 ========================================================= -->
 <script src="./JS/bdrNotificacoes.js"></script>
+<script src="JS/atlasTopbar.js"></script>
 <!-- Ícones profissionais do menu -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet"/>
 
@@ -140,6 +142,12 @@
 <i class="fa-solid fa-tags"></i>
 </span>
 </button>
+<!-- MANUTENÇÃO -->
+<button class="bdr-menu-btn" data-permissao="PATRIMONIO_VER" data-tip="Manutenção" onclick="ir('manutencao.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-screwdriver-wrench"></i>
+</span>
+</button>
 <!-- EXPEDIÇÃO -->
 <button class="bdr-menu-btn" data-permissao="EXPEDICAO_VER" data-tip="Expedição" onclick="ir('expedicao.html')">
 <span class="bdr-menu-icon">
@@ -202,13 +210,13 @@
 </div>
 <div class="avatar"><i class="fa-solid fa-user"></i></div>
 <div class="dropdown-user" id="dropdownUser">
-<button data-permissao="USUARIOS_VER" onclick="ir('usuarios.html'); event.stopPropagation();" type="button">
-<i class="fa-solid fa-user-gear"></i> Meu perfil / usuários
-        </button>
-<button class="logout-btn" onclick="logout(); event.stopPropagation();" type="button">
+            <button type="button" onclick="location.href='MinhaConta/minha-conta.html';event.stopPropagation()">
+              <i class="fa-solid fa-circle-user"></i> Minha conta
+            </button>
+            <button class="logout-btn" onclick="logout(); event.stopPropagation();" type="button">
 <i class="fa-solid fa-right-from-bracket"></i> Sair do sistema
         </button>
-</div>
+          </div>
 </div>
 </div>
 </div>
@@ -425,7 +433,7 @@
 <div class="acoes">
 <button class="btn-ok acao-movimentar" onclick="alterarStatus('ESTOQUE')">📦 Voltar Estoque</button>
 <button class="btn-blue acao-movimentar" onclick="alterarStatus('EM_USO')">✅ Colocar Em Uso</button>
-<button class="btn-orange acao-movimentar acao-manutencao" onclick="alterarStatus('MANUTENCAO')">🛠 Manutenção</button>
+<button class="btn-orange acao-movimentar acao-manutencao" onclick="AtlasManutencao.abrir(patrimonioSelecionado)">🛠 Manutenção</button>
 <button class="acao-movimentar" onclick="trocarObra()">🔁 Trocar Setor</button>
 <button class="btn-gray acao-movimentar" onclick="alterarStatus('BAIXADO')">⬇️ Baixar</button>
 <button class="btn-dark acao-imprimir" onclick="imprimirEtiqueta()">🖨 Etiqueta</button>
@@ -568,7 +576,7 @@
 <script src="./JS/supabaseClient.js"></script>
 <script src="./JS/bdrCore.js"></script>
 <script src="./JS/bdrMenuPermissoes.js"></script>
-<script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260629-padrao-unico"></script>
+<script src="./JS/atlasControleAcesso.js?v=20260629-padrao-unico"></script>
 <script src="./JS/offlineQueue.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <!-- bdrLocalCache removido nesta tela offline-first -->
@@ -579,6 +587,8 @@
 <script src="./JS/patrimonio/patrimonio-lote.js?v=20260727-alinhamento-dinamico"></script>
 <script src="./JS/patrimonio/patrimonio-etiquetas-lote.js?v=20260726-v1"></script>
 <script src="./JS/atlasGestorNotificacoes.js?v=20260728-patrimonio"></script>
+<script src="./JS/atlasWorkflowManutencao.js?v=20260807-fluxo-simplificado"></script>
+<script src="./JS/atlasManutencao.js?v=20260807-fluxo-simplificado"></script>
 <script src="./JS/patrimonio/patrimonio.js?v=20260728-reativacao-v1"></script>
 <script src="./JS/patrimonio/patrimonio-etiqueta-individual.js?v=20260804-v1"></script>
 <script src="./JS/bdrUppercase.js"></script>
@@ -596,6 +606,5 @@
 </div>
 <script src="./JS/atlasOwnerMode.js"></script>
 <!-- ATLAS: controlador oficial da Topbar (último script da página) -->
-<script src="./JS/atlasTopbar.js?v=20260728-v1-3-scroll-interno"></script>
 </body>
 </html>

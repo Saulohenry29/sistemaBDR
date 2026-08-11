@@ -191,9 +191,11 @@ label{display:block;margin-bottom:5px;font-weight:900;color:#374151;font-size:12
         <div class="user-mini"><b id="usuarioNome" tabindex="-1">Olá, -</b><small id="usuarioPerfil" tabindex="-1">-</small></div>
         <div class="avatar"><i class="fa-solid fa-user"></i></div>
         <div id="dropdownUser" class="dropdown-user">
-          <button type="button" onclick="ir('usuarios.html'); event.stopPropagation();"><i class="fa-solid fa-user-gear"></i> Meu perfil / usuários</button>
-          <button type="button" class="logout-btn" onclick="logout(); event.stopPropagation();"><i class="fa-solid fa-right-from-bracket"></i> Sair do sistema</button>
-        </div>
+            <button type="button" onclick="location.href='MinhaConta/minha-conta.html';event.stopPropagation()">
+              <i class="fa-solid fa-circle-user"></i> Minha conta
+            </button>
+            <button type="button" class="logout-btn" onclick="logout(); event.stopPropagation();"><i class="fa-solid fa-right-from-bracket"></i> Sair do sistema</button>
+          </div>
       </div>
     </div>
   </div>

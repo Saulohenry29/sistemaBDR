@@ -1,0 +1,510 @@
+/* =========================================================
+   ATLAS MANUTENÇÃO — VISUAL OFICIAL
+   Este arquivo não altera menu nem topbar.
+========================================================= */
+:root{
+  --am-red:#b5121b;--am-red-dark:#8f0e15;--am-navy:#11243a;--am-bg:#edf2f7;
+  --am-card:#fff;--am-line:#dbe3ec;--am-text:#172033;--am-muted:#64748b;
+  --am-green:#16803b;--am-orange:#d97706;--am-blue:#2563eb;
+}
+*{box-sizing:border-box}
+.atlas-manut-toast{position:fixed;left:50%;top:18px;z-index:300000;transform:translate(-50%,-15px);opacity:0;padding:12px 16px;border-radius:11px;background:#effcf3;border:1px solid #9ae6ad;border-left:5px solid #16a34a;box-shadow:0 16px 38px rgba(15,23,42,.2);font-weight:900;font-size:12px;transition:.2s}
+.atlas-manut-toast.show{opacity:1;transform:translate(-50%,0)}.atlas-manut-toast.danger{background:#fff1f2;border-color:#fecdd3;border-left-color:#dc2626;color:#991b1b}
+.atlas-manut-modal-bg{position:fixed;inset:0;z-index:150000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.64);backdrop-filter:blur(2px)}
+.atlas-manut-modal{width:min(900px,96vw);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;border-radius:17px;background:#fff;box-shadow:0 30px 90px rgba(0,0,0,.28)}
+.atlas-manut-modal-head{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--am-line);background:linear-gradient(135deg,#fff,#fff5f5)}
+.atlas-manut-modal-head h2{margin:0;color:var(--am-red);font-size:18px}.atlas-manut-modal-head small{display:block;margin-top:3px;color:var(--am-muted);font-size:10px;font-weight:700}
+.atlas-manut-close{width:34px;height:34px;border:0;border-radius:9px;background:#fee2e2;color:var(--am-red);font-size:22px;font-weight:900;cursor:pointer}
+.atlas-manut-modal-body{padding:17px;overflow-y:auto}.atlas-manut-modal-foot{display:flex;justify-content:flex-end;gap:9px;padding:13px 17px;border-top:1px solid var(--am-line);background:#fafcff}
+.atlas-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:0 14px;border:1px solid transparent;border-radius:10px;font-size:11px;font-weight:900;cursor:pointer}
+.atlas-btn.primary{background:linear-gradient(135deg,#dc101b,var(--am-red));color:#fff}.atlas-btn.dark{background:var(--am-navy);color:#fff}.atlas-btn.light{border-color:#d7dee8;background:#fff;color:#334155}.atlas-btn.success{background:#17863d;color:#fff}.atlas-btn.warning{background:#f59e0b;color:#fff}.atlas-btn.danger{background:#dc2626;color:#fff}.atlas-btn:disabled{opacity:.55;cursor:not-allowed}
+.atlas-manut-patrimonio-resumo{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:13px}.atlas-manut-patrimonio-resumo>div{padding:11px;border:1px solid var(--am-line);border-radius:11px;background:#f8fafc;min-width:0}.atlas-manut-patrimonio-resumo small,.atlas-manut-patrimonio-resumo strong{display:block}.atlas-manut-patrimonio-resumo small{color:var(--am-muted);font-size:9px}.atlas-manut-patrimonio-resumo strong{margin-top:4px;overflow-wrap:anywhere;font-size:11px;color:#0f172a}
+.atlas-manut-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.atlas-manut-form-grid label{display:block;color:#334155;font-size:10px;font-weight:900}.atlas-manut-form-grid label.wide{grid-column:1/-1}.atlas-manut-form-grid input,.atlas-manut-form-grid select,.atlas-manut-form-grid textarea{display:block;width:100%;margin-top:5px;padding:10px 11px;border:1px solid #d4dde7;border-radius:9px;background:#fff;color:#172033;font:inherit;font-weight:600;outline:none}.atlas-manut-form-grid textarea{min-height:78px;resize:vertical}.atlas-manut-form-grid input:focus,.atlas-manut-form-grid select:focus,.atlas-manut-form-grid textarea:focus{border-color:#df6b72;box-shadow:0 0 0 3px rgba(181,18,27,.08)}
+.atlas-manut-note{margin-top:12px;padding:10px 12px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;color:#1e3a8a;font-size:10px;font-weight:700;line-height:1.45}
+.atlas-manut-existing,.atlas-link-box{display:flex;align-items:center;gap:13px;padding:14px;border:1px solid var(--am-line);border-radius:12px;background:#f8fafc}.atlas-manut-existing h3,.atlas-link-box h3{margin:0 0 4px;font-size:14px}.atlas-manut-existing p,.atlas-link-box p{margin:2px 0;color:var(--am-muted);font-size:10px}.atlas-manut-icon,.atlas-link-icon{display:flex;align-items:center;justify-content:center;flex:0 0 48px;width:48px;height:48px;border-radius:50%;background:#fff0f1;font-size:22px}
+.atlas-link-input{width:100%;margin:12px 0;padding:11px;border:1px solid #cbd5e1;border-radius:9px;background:#f8fafc;font-size:11px}.atlas-share-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.atlas-share{min-height:42px;border:0;border-radius:10px;color:#fff;font-weight:900;cursor:pointer}.atlas-share.whatsapp{background:#168c4b}.atlas-share.email{background:#2563eb}.atlas-share.copy{background:#334155}
+/* Central */
+.atlas-manut-page{display:flex;flex-direction:column;min-height:100vh;background:var(--am-bg)}
+.atlas-manut-main{display:flex!important;flex-direction:column!important;height:117.647dvh!important;min-height:117.647dvh!important;overflow:hidden!important;padding:12px!important}.atlas-manut-main>.bdr-topbar{flex:0 0 auto;margin-bottom:10px!important}
+.atlas-manut-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;flex:0 0 auto;margin-bottom:10px}.atlas-manut-kpi{padding:11px 13px;border:1px solid var(--am-line);border-left:4px solid var(--am-red);border-radius:12px;background:#fff;box-shadow:0 5px 16px rgba(15,23,42,.05)}.atlas-manut-kpi strong,.atlas-manut-kpi span{display:block}.atlas-manut-kpi strong{font-size:20px;color:#0f172a}.atlas-manut-kpi span{margin-top:3px;color:#526074;font-size:9px;font-weight:800}
+#atlasManutencaoApp{flex:1 1 0;min-height:0;display:grid;grid-template-columns:minmax(440px,38%) minmax(0,62%);gap:10px;overflow:hidden}.atlas-manut-pane{min-height:0;border:1px solid var(--am-line);border-radius:14px;background:#fff;box-shadow:0 7px 22px rgba(15,23,42,.06);overflow:hidden}.atlas-manut-pane.left{display:flex;flex-direction:column;padding:12px}.atlas-manut-toolbar{display:grid;grid-template-columns:1fr 180px auto;gap:7px;margin-bottom:9px}.atlas-manut-toolbar input,.atlas-manut-toolbar select{min-width:0;height:38px;padding:0 10px;border:1px solid #d7dee8;border-radius:9px;background:#fff}.atlas-manut-toolbar button{height:38px;border:0;border-radius:9px;background:#f1f5f9;cursor:pointer}
+#manutLista{flex:1 1 0;min-height:0;overflow-y:auto;padding-right:3px}.atlas-manut-row{display:grid;grid-template-columns:110px minmax(150px,1.2fr) 135px 120px 48px;gap:8px;align-items:center;width:100%;min-height:70px;padding:9px;border:0;border-bottom:1px solid #edf1f5;background:#fff;text-align:left;cursor:pointer}.atlas-manut-row:hover{background:#f8fafc}.atlas-manut-row.selected{border:1px solid #ef9ca1;border-radius:10px;background:#fff4f4}.atlas-manut-row strong,.atlas-manut-row small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.atlas-manut-row strong{font-size:10px;color:#172033}.atlas-manut-row small{margin-top:3px;font-size:8px;color:var(--am-muted)}.atlas-manut-row .open{padding:7px;border-radius:7px;background:#eff6ff;color:#1d4ed8;text-align:center;font-size:9px;font-weight:900}.atlas-manut-row .valor{text-align:right}
+.atlas-manut-status{display:inline-flex;align-items:center;justify-content:center;padding:5px 7px;border-radius:999px;font-size:8px;font-weight:900;white-space:nowrap}.atlas-manut-status.neutral{background:#edf2f7;color:#475569}.atlas-manut-status.ok{background:#dcfce7;color:#166534}.atlas-manut-status.warning{background:#fef3c7;color:#92400e}.atlas-manut-status.danger{background:#fee2e2;color:#991b1b}.atlas-manut-status.active{background:#dbeafe;color:#1d4ed8}
+.atlas-manut-pane.right{display:flex;flex-direction:column}.atlas-manut-detail-empty,.atlas-manut-empty{display:flex;height:100%;flex-direction:column;align-items:center;justify-content:center;color:#64748b;text-align:center}.atlas-manut-empty i{font-size:38px;color:#cbd5e1}.atlas-manut-empty h3{margin:10px 0 3px}.atlas-manut-empty p{font-size:10px}.atlas-manut-detail{height:100%;overflow-y:auto}
+#manutDetalhe{height:100%;overflow-y:auto;padding:14px}.atlas-manut-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding-bottom:12px;border-bottom:1px solid var(--am-line)}.atlas-manut-detail-head h2{margin:7px 0 3px;font-size:17px}.atlas-manut-detail-head p{margin:0;color:var(--am-muted);font-size:10px}.atlas-manut-detail-value{text-align:right}.atlas-manut-detail-value small,.atlas-manut-detail-value strong{display:block}.atlas-manut-detail-value small{font-size:9px;color:var(--am-muted)}.atlas-manut-detail-value strong{margin-top:4px;font-size:20px;color:var(--am-red)}.atlas-manut-actions{display:flex;flex-wrap:wrap;gap:7px;padding:11px 0}.atlas-manut-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.atlas-manut-card{padding:13px;border:1px solid var(--am-line);border-radius:12px;background:#fff}.atlas-manut-card h3{margin:0 0 8px;font-size:12px}.atlas-manut-line{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid #f1f5f9;font-size:9px}.atlas-manut-line span{color:var(--am-muted)}.atlas-manut-line strong{text-align:right;overflow-wrap:anywhere}.atlas-manut-total{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:10px;border-top:2px solid #fecaca;color:var(--am-red);font-weight:900}.atlas-manut-noquote{padding:18px 8px;color:#64748b;text-align:center;font-size:10px}.atlas-manut-history{margin-top:10px}.atlas-manut-history-row{display:grid;grid-template-columns:14px 1fr;gap:8px;padding:8px 0;border-top:1px solid #f1f5f9}.atlas-manut-history-row .dot{width:9px;height:9px;margin-top:3px;border-radius:50%;background:var(--am-red)}.atlas-manut-history-row strong,.atlas-manut-history-row small{display:block}.atlas-manut-history-row strong{font-size:10px}.atlas-manut-history-row small{margin-top:3px;color:var(--am-muted);font-size:8px;line-height:1.4}.atlas-manut-setup{grid-column:1/-1;padding:24px;border:1px solid #fecaca;border-radius:14px;background:#fff1f2;color:#991b1b}
+@media(max-width:900px){.atlas-manut-kpis{grid-template-columns:repeat(3,1fr)}#atlasManutencaoApp{grid-template-columns:1fr}.atlas-manut-main{height:auto!important;min-height:100vh;overflow:visible!important}#atlasManutencaoApp{overflow:visible}.atlas-manut-pane{min-height:520px}.atlas-manut-row{grid-template-columns:100px 1fr 130px 95px 42px}}
+@media(max-width:700px){.atlas-manut-patrimonio-resumo,.atlas-manut-form-grid,.atlas-manut-detail-grid,.atlas-share-grid,.atlas-manut-kpis{grid-template-columns:1fr}.atlas-manut-patrimonio-resumo{grid-template-columns:1fr 1fr}.atlas-manut-form-grid label.wide{grid-column:auto}.atlas-manut-row{grid-template-columns:90px 1fr 105px}.atlas-manut-row .valor,.atlas-manut-row .open{display:none}.atlas-manut-toolbar{grid-template-columns:1fr}.atlas-manut-detail-head{flex-direction:column}.atlas-manut-detail-value{text-align:left}}
+
+
+/* =========================================================
+   ATLAS MANUTENÇÃO — DIÁLOGOS PADRÃO
+========================================================= */
+.atlas-manut-confirm{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:8px 2px;
+}
+.atlas-manut-confirm-icon{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:#ecfdf5;
+  color:#047857;
+  font-weight:900;
+  font-size:20px;
+  flex:0 0 42px;
+}
+.atlas-manut-confirm h3{
+  margin:0 0 5px;
+  color:#172033;
+}
+.atlas-manut-confirm p{
+  margin:0;
+  color:#64748b;
+}
+.atlas-manut-dialog-label{
+  display:block;
+  font-weight:800;
+  color:#334155;
+}
+.atlas-manut-dialog-label textarea{
+  width:100%;
+  min-height:105px;
+  box-sizing:border-box;
+  margin-top:8px;
+  padding:11px 12px;
+  border:1px solid #cbd5e1;
+  border-radius:10px;
+  resize:vertical;
+  font:inherit;
+  color:#172033;
+  background:#fff;
+}
+.atlas-manut-dialog-label textarea:focus{
+  outline:none;
+  border-color:#b5121b;
+  box-shadow:0 0 0 3px rgba(181,18,27,.08);
+}
+.atlas-manut-toast.warning{
+  border-left-color:#f59e0b;
+}
+
+
+/* =========================================================
+   ATLAS MANUTENÇÃO — FLUXO SIMPLIFICADO / RECEBIMENTO
+========================================================= */
+.atlas-manut-inline-warning{
+  display:inline-flex;
+  align-items:center;
+  min-height:36px;
+  padding:8px 12px;
+  border:1px solid #f59e0b;
+  border-radius:9px;
+  background:#fffbeb;
+  color:#92400e;
+  font-weight:800;
+  font-size:12px;
+}
+
+.atlas-manut-provider-approved{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  margin-bottom:14px;
+  padding:12px;
+  border:1px solid #bbf7d0;
+  background:#f0fdf4;
+  border-radius:12px;
+}
+.atlas-manut-provider-approved-icon{
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:#dcfce7;
+  font-size:20px;
+  flex:0 0 42px;
+}
+.atlas-manut-provider-approved h3{margin:0 0 3px;color:#166534}
+.atlas-manut-provider-approved p{margin:0;color:#64748b}
+
+.atlas-manut-receipt-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-bottom:14px;
+}
+.atlas-manut-receipt-section{
+  padding:12px;
+  border:1px solid #e2e8f0;
+  border-radius:12px;
+  background:#fff;
+}
+.atlas-manut-receipt-section h3{
+  margin:0 0 10px;
+  color:#172033;
+}
+.atlas-manut-radio-card{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  padding:10px;
+  margin:7px 0;
+  border:1px solid #e2e8f0;
+  border-radius:10px;
+  cursor:pointer;
+  background:#fff;
+}
+.atlas-manut-radio-card:hover{
+  border-color:#fecaca;
+  background:#fffafa;
+}
+.atlas-manut-radio-card input{
+  margin-top:3px;
+  accent-color:#b5121b;
+}
+.atlas-manut-radio-card span{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.atlas-manut-radio-card strong{color:#172033}
+.atlas-manut-radio-card small{color:#64748b;line-height:1.35}
+#atlasRecebimentoOutraObra{margin-top:10px}
+#atlasRecebimentoObra{
+  width:100%;
+  margin-top:7px;
+  padding:10px;
+  border:1px solid #cbd5e1;
+  border-radius:9px;
+  background:#fff;
+}
+@media(max-width:760px){
+  .atlas-manut-receipt-grid{grid-template-columns:1fr}
+}
+
+
+/* =========================================================
+   ATLAS MANUTENÇÃO V1.6
+   Central compacta + paginação + orçamento permanente
+========================================================= */
+
+/* O painel esquerdo termina depois da lista/paginação.
+   Não estica até o final do painel direito. */
+.atlas-manut-pane.left{
+  align-self:start;
+  height:auto;
+  min-height:0;
+}
+
+#manutLista{
+  flex:0 0 auto;
+  min-height:0;
+  overflow:visible;
+  padding-right:0;
+}
+
+/* Paginação */
+.atlas-manut-pagination{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  min-height:44px;
+  padding:10px 4px 2px;
+  border-top:1px solid #edf1f5;
+}
+
+.atlas-manut-page-info{
+  color:#64748b;
+  font-size:9px;
+  font-weight:800;
+  white-space:nowrap;
+}
+
+.atlas-manut-page-buttons{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:5px;
+}
+
+.atlas-manut-page-btn{
+  min-width:30px;
+  height:30px;
+  padding:0 8px;
+  border:1px solid #dbe3ec;
+  border-radius:8px;
+  background:#fff;
+  color:#334155;
+  font-size:10px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.atlas-manut-page-btn:hover:not(:disabled):not(.active){
+  background:#f8fafc;
+  border-color:#cbd5e1;
+}
+
+.atlas-manut-page-btn.active{
+  border-color:#b5121b;
+  background:#b5121b;
+  color:#fff;
+  box-shadow:0 5px 12px rgba(181,18,27,.16);
+}
+
+.atlas-manut-page-btn:disabled{
+  opacity:.38;
+  cursor:not-allowed;
+}
+
+.atlas-manut-page-btn.nav{
+  font-size:17px;
+  line-height:1;
+}
+
+.atlas-manut-page-dots{
+  min-width:20px;
+  text-align:center;
+  color:#94a3b8;
+  font-weight:900;
+}
+
+/* Visualização permanente do orçamento */
+.atlas-manut-budget-head{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin-bottom:12px;
+}
+
+.atlas-manut-budget-head>div{
+  padding:10px 12px;
+  border:1px solid #e2e8f0;
+  border-radius:10px;
+  background:#f8fafc;
+  min-width:0;
+}
+
+.atlas-manut-budget-head small,
+.atlas-manut-budget-head strong{
+  display:block;
+}
+
+.atlas-manut-budget-head small{
+  color:#64748b;
+  font-size:9px;
+}
+
+.atlas-manut-budget-head strong{
+  margin-top:3px;
+  color:#172033;
+  font-size:10px;
+  overflow-wrap:anywhere;
+}
+
+.atlas-manut-budget-section{
+  margin-top:10px;
+  padding:12px;
+  border:1px solid #e2e8f0;
+  border-radius:11px;
+  background:#fff;
+}
+
+.atlas-manut-budget-section h3{
+  margin:0 0 8px;
+  color:#172033;
+  font-size:12px;
+}
+
+.atlas-manut-budget-table-wrap{
+  overflow-x:auto;
+}
+
+.atlas-manut-budget-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:9px;
+}
+
+.atlas-manut-budget-table th,
+.atlas-manut-budget-table td{
+  padding:8px;
+  border-bottom:1px solid #edf1f5;
+  text-align:left;
+}
+
+.atlas-manut-budget-table th{
+  color:#64748b;
+  font-size:8px;
+  text-transform:uppercase;
+}
+
+.atlas-manut-budget-empty{
+  color:#94a3b8;
+  text-align:center!important;
+}
+
+.atlas-manut-budget-total{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  margin-top:10px;
+  padding-top:10px;
+  border-top:2px solid #fecaca;
+  color:#b5121b;
+  font-weight:900;
+}
+
+.atlas-manut-budget-total strong{
+  font-size:20px;
+}
+
+/* Evita que a versão de 1 coluna em telas menores volte a
+   forçar altura mínima exagerada no painel esquerdo. */
+@media(max-width:900px){
+  .atlas-manut-pane.left{
+    min-height:0;
+  }
+}
+
+@media(max-width:700px){
+  .atlas-manut-pagination{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .atlas-manut-page-buttons{
+    width:100%;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+
+  .atlas-manut-budget-head{
+    grid-template-columns:1fr;
+  }
+}
+
+
+/* =========================================================
+   ATLAS MANUTENÇÃO V1.8 — ACABAMENTO DA CENTRAL
+   Mantém os dois painéis preenchendo toda a altura disponível.
+========================================================= */
+
+/*
+  A V1.6 deixou o painel esquerdo compacto.
+  Aqui voltamos ao comportamento desejado:
+  painel esquerdo e direito com a MESMA altura.
+*/
+#atlasManutencaoApp{
+  align-items:stretch !important;
+}
+
+.atlas-manut-pane.left,
+.atlas-manut-pane.right{
+  align-self:stretch !important;
+  height:100% !important;
+  min-height:0 !important;
+}
+
+/*
+  A lista ocupa o espaço livre.
+  Quando houver poucas ordens, o espaço permanece dentro do painel
+  e a paginação/contador fica no rodapé, como nas outras telas Atlas.
+*/
+#manutLista{
+  flex:1 1 0 !important;
+  min-height:0 !important;
+  overflow-y:auto !important;
+  padding-right:3px !important;
+}
+
+/* Rodapé da lista */
+.atlas-manut-pagination{
+  flex:0 0 auto !important;
+  margin-top:auto !important;
+  min-height:46px;
+  padding:10px 4px 2px;
+  background:#fff;
+}
+
+/* O detalhe da direita também aproveita toda a altura disponível */
+#manutDetalhe,
+.atlas-manut-detail{
+  height:100% !important;
+  min-height:0 !important;
+}
+
+/*
+  Em desktop, evita que alguma regra anterior volte a encolher
+  somente o painel esquerdo.
+*/
+@media(min-width:1251px){
+  .atlas-manut-pane.left{
+    height:100% !important;
+    min-height:0 !important;
+  }
+}
+
+/* Em telas menores continua fluindo normalmente */
+@media(max-width:900px){
+  .atlas-manut-pane.left,
+  .atlas-manut-pane.right{
+    height:auto !important;
+  }
+
+  #manutLista{
+    max-height:520px;
+  }
+}
+
+/* =========================================================
+   ATLAS MANUTENÇÃO V2.2 — ALTURA REAL
+   Compensa o zoom global de 0.85 sem alterar o layout-bdr.css.
+========================================================= */
+@media(min-width:901px){
+  body.atlas-manut-page .app-layout{
+    height:117.647dvh !important;
+    min-height:117.647dvh !important;
+    overflow:hidden !important;
+  }
+
+  body.atlas-manut-page .atlas-manut-main{
+    height:117.647dvh !important;
+    min-height:117.647dvh !important;
+    overflow:hidden !important;
+  }
+
+  body.atlas-manut-page #atlasManutencaoApp{
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    height:auto !important;
+    align-items:stretch !important;
+    overflow:hidden !important;
+  }
+
+  body.atlas-manut-page .atlas-manut-pane.left,
+  body.atlas-manut-page .atlas-manut-pane.right{
+    height:100% !important;
+    min-height:0 !important;
+    align-self:stretch !important;
+  }
+
+  body.atlas-manut-page #manutLista{
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    overflow-y:auto !important;
+  }
+
+  body.atlas-manut-page #manutDetalhe{
+    height:100% !important;
+    min-height:0 !important;
+    overflow-y:auto !important;
+  }
+}

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="atlas-saude-acesso-pendente">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>BDR - Saúde do Sistema</title>
+
+  <link href="data:," rel="icon">
+  <link href="../CSS/layout-bdr.css" rel="stylesheet">
+  <link href="../CSS/bdr-fix-menu-final.css" rel="stylesheet">
+  <link href="../CSS/atlas-topbar.css" rel="stylesheet">
+  <link href="./CSS/atlasSaudeSistema.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+
+  <script src="./JS/atlasSeguranca.js"></script>
+  <script src="../JS/atlasAudio/atlasAudio.js"></script>
+  <script src="../JS/bdrNotificacoes.js"></script>
+<script src="../JS/atlasTopbar.js"></script>
+</head>
+
+<body class="atlas-saude-page">
+  <div class="app-layout">
+    <aside class="bdr-sidebar">
+      <div class="bdr-brand">
+        <div class="bdr-brand-icon bdr-logo-menu"></div>
+      </div>
+
+      <nav class="bdr-menu">
+        <button class="bdr-menu-btn" data-permissao="DASHBOARD_VER" data-tip="Dashboard" onclick="ir('dashboard.html')"><span class="bdr-menu-icon"><i class="fa-solid fa-chart-simple"></i></span></button>
+        <button class="bdr-menu-btn" data-permissao="ENTRADA_VER" data-tip="Entrada" onclick="ir('entrada.html')"><span class="bdr-menu-icon"><i class="fa-solid fa-arrow-down-wide-short"></i></span></button>
+        <button class="bdr-menu-btn" data-permissao="TRIAGEM_VER" data-tip="Triagem" onclick="ir('triagem.html')"><span class="bdr-menu-icon"><i class="fa-solid fa-vials"></i></span></button>
+        <button class="bdr-menu-btn" data-permissao="ESTOQUE_VER" data-tip="Estoque" onclick="ir('estoque.html')"><span class="bdr-menu-icon"><i class="fa-solid fa-boxes-stacked"></i></span></button>
+        <button class="bdr-menu-btn" data-permissao="PATRIMONIO_VER" data-tip="Patrimônio" onclick="ir('patrimonio.html')"><span class="bdr-menu-icon"><i class="fa-solid fa-tags"></i></span></button>
+        <button class="bdr-menu-btn" data-permissao="PATRIMONIO_VER" data-tip="Manutenção" onclick="ir('manutencao.html')"><span class="bdr-menu-icon"><i class="fa-solid fa-screwdriver-wrench"></i></span></button>
+        <button class="bdr-menu-btn" data-permissao="EXPEDICAO_VER" data-tip="Expedição" onclick="ir('expedicao.html')"><span class="bdr-menu-icon"><i class="fa-solid fa-truck-fast"></i></span></button>
+        <button class="bdr-menu-btn" data-permissao="MOVIMENTACOES_VER" data-tip="Movimentações" onclick="ir('movimentacoes.html')"><span class="bdr-menu-icon"><i class="fa-solid fa-right-left"></i></span></button>
+        <button class="bdr-menu-btn" data-permissao="RELATORIOS_VER" data-tip="Relatórios" onclick="ir('relatorios.html')"><span class="bdr-menu-icon"><i class="fa-regular fa-file-lines"></i></span></button>
+        <button class="bdr-menu-btn" data-permissao="EMPRESAS_VER" data-tip="Empresas" onclick="ir('empresa.html')"><span class="bdr-menu-icon"><i class="fa-solid fa-building"></i></span></button>
+        <button class="bdr-menu-btn" data-permissao="USUARIOS_VER" data-tip="Usuários" onclick="ir('usuarios.html')"><span class="bdr-menu-icon"><i class="fa-solid fa-users"></i></span></button>
+        <button id="bdrMenuSaudeSistema" class="bdr-menu-btn active" data-tip="Saúde do Sistema" aria-label="Saúde do Sistema" type="button"><span class="bdr-menu-icon"><i class="fa-solid fa-heart-pulse"></i></span></button>
+      </nav>
+    </aside>
+
+    <main class="bdr-main atlas-saude-main">
+      <div class="bdr-topbar">
+        <div>
+          <div class="bdr-topbar-title">BDR ERP - Saúde do Sistema</div>
+          <div class="bdr-topbar-sub">Torre de controle técnica do Atlas/BDR.</div>
+        </div>
+
+        <div class="bdr-top-actions">
+          <div class="notif-wrap">
+            <button aria-label="Abrir notificações" class="notif-btn" data-atlas-toggle="notifications" title="Notificações" type="button">
+              <i class="fa-regular fa-bell"></i>
+              <span class="notif-badge" id="notifBadge">0</span>
+            </button>
+            <div class="notif-dropdown" id="notifDropdown" onclick="event.stopPropagation()">
+              <div class="notif-head">🔔 Central de notificações</div>
+              <div class="notif-list" id="notifLista">
+                <div class="notif-item">Nenhuma notificação no momento.</div>
+              </div>
+            </div>
+          </div>
+
+          <div aria-label="Abrir menu do usuário" class="user-menu" data-atlas-toggle="user">
+            <div class="user-mini">
+              <b id="usuarioNome" tabindex="-1">Olá, -</b>
+              <small id="usuarioPerfil" tabindex="-1">-</small>
+            </div>
+            <div class="avatar"><i class="fa-solid fa-user"></i></div>
+            <div class="dropdown-user" id="dropdownUser">
+            <button type="button" onclick="location.href='../MinhaConta/minha-conta.html';event.stopPropagation()">
+              <i class="fa-solid fa-circle-user"></i> Minha conta
+            </button>
+            <button class="logout-btn" onclick="logout();event.stopPropagation()" type="button">
+                <i class="fa-solid fa-right-from-bracket"></i> Sair do sistema
+              </button>
+          </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="atlas-saude-content">
+        <header class="atlas-saude-head">
+          <div>
+            <h1>Saúde do Sistema</h1>
+            <p>Banco, segurança, crescimento e capacidade do Atlas/BDR em uma única tela.</p>
+          </div>
+
+          <div class="atlas-saude-head-actions">
+            <div class="atlas-saude-restricted"><i class="fa-solid fa-lock"></i> Acesso restrito • ID 1</div>
+            <div class="atlas-saude-periodo"><i class="fa-regular fa-clock"></i> Últimas 24 horas</div>
+            <button class="atlas-saude-refresh" id="btnSaudeAtualizar" type="button"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+          </div>
+        </header>
+
+        <div class="atlas-saude-aviso" id="saudeAviso" hidden></div>
+
+        <section class="atlas-saude-grid-kpis" aria-label="Resumo da saúde do sistema">
+          <article class="atlas-saude-kpi" data-estado="success">
+            <div class="atlas-saude-kpi-top">
+              <span class="atlas-saude-kpi-label">Banco de dados</span>
+              <span class="atlas-saude-kpi-icon"><i class="fa-solid fa-database"></i></span>
+            </div>
+            <div>
+              <strong id="saudeBancoTamanho">Carregando...</strong>
+              <p id="saudeBancoSub">Consultando PostgreSQL</p>
+            </div>
+            <small id="saudeBancoAtualizado">—</small>
+          </article>
+
+          <article class="atlas-saude-kpi" data-estado="neutral">
+            <div class="atlas-saude-kpi-top">
+              <span class="atlas-saude-kpi-label">Storage / imagens</span>
+              <span class="atlas-saude-kpi-icon"><i class="fa-regular fa-image"></i></span>
+            </div>
+            <div>
+              <strong id="saudeStorageValor">—</strong>
+              <p id="saudeStorageSub">—</p>
+            </div>
+            <small>Sem credenciais administrativas no navegador</small>
+          </article>
+
+          <article class="atlas-saude-kpi" data-estado="neutral">
+            <div class="atlas-saude-kpi-top">
+              <span class="atlas-saude-kpi-label">Transferência</span>
+              <span class="atlas-saude-kpi-icon"><i class="fa-solid fa-arrow-right-arrow-left"></i></span>
+            </div>
+            <div>
+              <strong id="saudeTransferenciaValor">—</strong>
+              <p id="saudeTransferenciaSub">—</p>
+            </div>
+            <small>Preparado para Edge Function / Management API</small>
+          </article>
+
+          <article class="atlas-saude-kpi" id="saudeCardStatus" data-estado="neutral">
+            <div class="atlas-saude-kpi-top">
+              <span class="atlas-saude-kpi-label">Status geral</span>
+              <span class="atlas-saude-kpi-icon"><i class="fa-solid fa-heart-pulse"></i></span>
+            </div>
+            <div>
+              <strong id="saudeStatusGeral">ANALISANDO</strong>
+              <p id="saudeStatusSub">Aguardando métricas reais.</p>
+            </div>
+            <small>Diagnóstico sem alterar RLS automaticamente</small>
+          </article>
+        </section>
+
+        <section class="atlas-saude-panel atlas-saude-online-panel">
+          <div class="atlas-saude-panel-head">
+            <div>
+              <h2>Usuários online</h2>
+              <p>Presença recente no Atlas • atualização automática</p>
+            </div>
+            <span class="atlas-saude-panel-badge" id="saudeOnlineResumo">0 online</span>
+          </div>
+          <div class="atlas-saude-online-list" id="saudeUsuariosOnline">
+            <div class="atlas-saude-empty compact">
+              <i class="fa-solid fa-users"></i>
+              <strong>Aguardando presença</strong>
+              <span>Os usuários aparecerão aqui enquanto estiverem utilizando o Atlas.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="atlas-saude-grid-main">
+          <article class="atlas-saude-panel">
+            <div class="atlas-saude-panel-head">
+              <div>
+                <h2>Segurança — últimas 24 horas</h2>
+                <p id="saudeSegurancaEstado">Carregando...</p>
+              </div>
+              <span class="atlas-saude-panel-badge">Auditoria</span>
+            </div>
+
+            <div class="atlas-saude-security-grid">
+              <div class="atlas-saude-mini"><span>Logins realizados</span><strong id="saudeLoginsSucesso">—</strong></div>
+              <div class="atlas-saude-mini"><span>Falhas de login</span><strong id="saudeLoginsFalha">—</strong></div>
+              <div class="atlas-saude-mini"><span>Contas bloqueadas</span><strong id="saudeBloqueados">—</strong></div>
+              <div class="atlas-saude-mini"><span>Eventos críticos</span><strong id="saudeEventosCriticos">—</strong></div>
+            </div>
+
+            <div class="atlas-saude-note">Auditoria de login ativa. Falhas, bloqueios temporários e eventos de segurança são registrados para análise técnica.</div>
+          </article>
+
+          <article class="atlas-saude-panel">
+            <div class="atlas-saude-panel-head">
+              <div>
+                <h2>Crescimento do banco</h2>
+                <p>Snapshots diários • últimos 30 dias</p>
+              </div>
+              <span class="atlas-saude-panel-badge" id="saudeCrescimentoResumo">—</span>
+            </div>
+            <div id="saudeGraficoCrescimento"></div>
+          </article>
+
+          <article class="atlas-saude-panel">
+            <div class="atlas-saude-panel-head">
+              <div>
+                <h2>Acessos recentes</h2>
+                <p>Eventos registrados pela auditoria</p>
+              </div>
+              <span class="atlas-saude-panel-badge">ID 1</span>
+            </div>
+            <div class="atlas-saude-access-list" id="saudeAcessosRecentes"></div>
+          </article>
+        </section>
+
+        <section class="atlas-saude-grid-data">
+          <article class="atlas-saude-panel">
+            <div class="atlas-saude-panel-head">
+              <div>
+                <h2>Banco de dados</h2>
+                <p>Métricas reais do schema public</p>
+              </div>
+              <span class="atlas-saude-panel-badge">PostgreSQL</span>
+            </div>
+
+            <div class="atlas-saude-db-grid">
+              <div class="atlas-saude-db-item"><span>Tabelas</span><strong id="saudeTotalTabelas">—</strong></div>
+              <div class="atlas-saude-db-item"><span>Registros estimados</span><strong id="saudeTotalRegistros">—</strong></div>
+              <div class="atlas-saude-db-item"><span>Maior tabela</span><strong id="saudeMaiorTabela">—</strong></div>
+              <div class="atlas-saude-db-item"><span>Registros da maior</span><strong id="saudeMaiorTabelaRegistros">—</strong></div>
+              <div class="atlas-saude-db-item"><span>Tamanho da maior</span><strong id="saudeMaiorTabelaTamanho">—</strong></div>
+              <div class="atlas-saude-db-item"><span>Usuários ativos</span><strong id="saudeUsuariosAtivos">—</strong></div>
+            </div>
+            <div class="atlas-saude-note">Último login conhecido: <strong id="saudeUltimoLogin">—</strong></div>
+          </article>
+
+          <article class="atlas-saude-panel">
+            <div class="atlas-saude-panel-head">
+              <div>
+                <h2>Segurança das tabelas</h2>
+                <p>RLS habilitado no schema public</p>
+              </div>
+              <span class="atlas-saude-panel-badge">Diagnóstico</span>
+            </div>
+
+            <div class="atlas-saude-db-grid">
+              <div class="atlas-saude-db-item"><span>Com RLS</span><strong id="saudeRlsCom">—</strong></div>
+              <div class="atlas-saude-db-item"><span>Sem RLS</span><strong id="saudeRlsSem">—</strong></div>
+              <div class="atlas-saude-db-item"><span>Total monitorado</span><strong id="saudeRlsTotal">—</strong></div>
+              <div class="atlas-saude-db-item"><span>Usuário conectado</span><strong id="saudeUsuarioConectado">—</strong></div>
+            </div>
+
+            <div class="atlas-saude-progress" aria-label="Percentual de tabelas com RLS"><span id="saudeRlsBarra"></span></div>
+            <div class="atlas-saude-progress-label" id="saudeRlsPercentual">—</div>
+            <div class="atlas-saude-note">RLS ativo não significa política perfeita. Esta tela apenas diagnostica; nenhuma política é criada ou alterada automaticamente.</div>
+          </article>
+
+          <article class="atlas-saude-panel">
+            <div class="atlas-saude-panel-head">
+              <div>
+                <h2>Plano e capacidade</h2>
+                <p>Sem limites fictícios ou hardcoded</p>
+              </div>
+              <span class="atlas-saude-panel-badge">Próxima etapa</span>
+            </div>
+
+            <div class="atlas-saude-plan">
+              <div><span>Plano atual</span><strong id="saudePlanoAtual">—</strong></div>
+              <div><span>Limites reais</span><strong id="saudePlanoLimites">—</strong></div>
+              <div><span>Upgrade</span><strong id="saudePlanoUpgrade">—</strong></div>
+            </div>
+            <div class="atlas-saude-note">Storage, egress e billing serão conectados por backend seguro. Nenhum service_role ou token administrativo entra no JavaScript do navegador.</div>
+          </article>
+        </section>
+
+        <section class="atlas-saude-panel">
+          <div class="atlas-saude-panel-head">
+            <div>
+              <h2>Maiores tabelas do Atlas</h2>
+              <p>Ordenadas pelo tamanho total ocupado no PostgreSQL</p>
+            </div>
+            <span class="atlas-saude-panel-badge">Top 10</span>
+          </div>
+
+          <div class="atlas-saude-table-wrap">
+            <table class="atlas-saude-table">
+              <thead>
+                <tr>
+                  <th>Tabela</th>
+                  <th>Registros estimados</th>
+                  <th>Tamanho</th>
+                  <th>RLS</th>
+                </tr>
+              </thead>
+              <tbody id="saudeTabelaCorpo">
+                <tr><td colspan="4" class="atlas-saude-empty-table">Carregando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="atlas-saude-note">Última atualização da tela: <strong id="saudeUltimaAtualizacao">—</strong>. As contagens de registros usam as estatísticas do PostgreSQL e podem ser estimadas.</div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="../JS/supabaseClient.js"></script>
+  <script src="../JS/bdrCore.js"></script>
+  <script src="../JS/bdrMenuPermissoes.js"></script>
+  <script src="../JS/bdr-menu-ocultar-de-verdade.js"></script>
+  <script src="../JS/atlasGestorNotificacoes.js"></script>
+  <script src="../JS/bdrMenuMobileAtivo.js"></script>
+  <script src="./JS/atlasSaudeSistema.js"></script>
+</body>
+</html>

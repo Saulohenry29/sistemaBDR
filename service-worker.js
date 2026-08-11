@@ -1,5 +1,5 @@
 /* BDR ERP - Service Worker V4 SAFE OFFLINE */
-const BDR_CACHE_VERSION = "bdr-erp-v4.0.5-cache-audio-206-safe";
+const BDR_CACHE_VERSION = "bdr-erp-v4.0.6-response-clone-safe";
 
 const BDR_ASSETS = [
   "./",
@@ -9,6 +9,8 @@ const BDR_ASSETS = [
   "./estoque.html",
   "./expedicao.html",
   "./patrimonio.html",
+  "./manutencao.html",
+  "./manutencaobdr-fornecedor.html",
   "./usuarios.html",
   "./relatorios.html",
   "./empresa.html",
@@ -51,6 +53,9 @@ const BDR_ASSETS = [
   "./JS/expedicao.js",
   "./JS/patrimonioService.js",
   "./JS/patrimonio/patrimonio.js",
+  "./JS/atlasWorkflowManutencao.js",
+  "./JS/atlasManutencao.js",
+  "./CSS/atlasManutencao.css",
   "./JS/movimentacao.js",
   "./JS/usuarios.js"
 ];
@@ -71,11 +76,30 @@ async function bdrSalvarRespostaCompletaNoCache(cacheName, request, response){
     // Resposta parcial de áudio/vídeo: não pode entrar no Cache Storage.
     if(response.status === 206) return false;
 
-    // Evita guardar erros, redirecionamentos problemáticos e respostas inválidas.
+    // Evita guardar erros e respostas inválidas.
     if(!response.ok) return false;
 
+    /*
+      IMPORTANTE:
+      O clone precisa acontecer ANTES do primeiro await.
+      Se esperarmos caches.open(), o navegador pode começar a consumir
+      o body da resposta original e response.clone() passa a lançar:
+      "Response body is already used".
+    */
+    let copia;
+    try{
+      copia = response.clone();
+    }catch(errorClone){
+      console.warn(
+        "BDR SW: não foi possível clonar resposta antes do cache:",
+        request.url,
+        errorClone
+      );
+      return false;
+    }
+
     const cache = await caches.open(cacheName);
-    await cache.put(request, response.clone());
+    await cache.put(request, copia);
     return true;
   }catch(error){
     console.warn("BDR SW: resposta não armazenada no cache:", request.url, error);
