@@ -341,27 +341,88 @@ function usuarioTemPermissao(permissao){
 }
 
 function usuarioEhGestao(){
-  return usuarioTemPermissao("USUARIOS") || usuarioTemPermissao("EMPRESAS");
+  /*
+    Compatibilidade com chamadas antigas do Patrimônio.
+    Perfil/cargo, USUARIOS_VER ou EMPRESAS_VER não concedem ações.
+    Somente o usuário ID 1 é absoluto.
+  */
+  return usuarioOwnerBDR();
 }
 
 function usuarioPodeVerTodasObras(){
   /*
-    REGRA OFICIAL BDR V10.7:
-    Patrimônio é visão operacional da própria obra.
-    Quem precisa consultar itens de outras obras deve usar Expedição.
-    Aqui só MASTER/OWNER ou permissão específica de patrimônio vê todas.
+    Escopo amplo também é explícito.
+    Perfil ADMIN/MASTER não libera obras automaticamente.
   */
   const u = usuarioAtual();
   if(!u) return false;
 
   if(usuarioOwnerBDR(u)) return true;
 
-  const perfil = String(u.perfil || "").toUpperCase();
-  if(perfil === "MASTER" || perfil === "OWNER") return true;
-
   const ps = permissoesUsuarioBDR(u);
   return ps.includes("PATRIMONIO_VER_TODAS_OBRAS") ||
-         ps.includes("PATRIMONIO_TODAS_OBRAS");
+         ps.includes("PATRIMONIO_TODAS_OBRAS") ||
+         ps.includes("TODAS_OBRAS_VER");
+}
+
+function obrasPermitidasPatrimonioBDR(usuario = usuarioAtual()){
+  if(!usuario) return [];
+
+  if(usuarioPodeVerTodasObras()){
+    return (obras || []).map(o => Number(o.id)).filter(Number.isFinite);
+  }
+
+  const ids = [];
+
+  const principal = Number(usuario.obra_id);
+  if(Number.isFinite(principal) && principal > 0){
+    ids.push(principal);
+  }
+
+  let liberadas = usuario.obras_liberadas;
+
+  if(typeof liberadas === "string"){
+    const texto = liberadas.trim();
+
+    if(texto){
+      try{
+        const parsed = JSON.parse(texto);
+        liberadas = Array.isArray(parsed) ? parsed : [parsed];
+      }catch(_){
+        liberadas = texto.split(/[,;|]/);
+      }
+    }else{
+      liberadas = [];
+    }
+  }
+
+  if(!Array.isArray(liberadas)){
+    liberadas = liberadas === null || liberadas === undefined ? [] : [liberadas];
+  }
+
+  liberadas
+    .flatMap(item => {
+      if(item && typeof item === "object"){
+        return [item.id, item.obra_id, item.value];
+      }
+      return [item];
+    })
+    .map(v => Number(String(v ?? "").trim()))
+    .filter(id => Number.isFinite(id) && id > 0)
+    .forEach(id => ids.push(id));
+
+  return [...new Set(ids)];
+}
+
+function usuarioPodeVerObraPatrimonioBDR(obraId, usuario = usuarioAtual()){
+  if(!usuario) return false;
+  if(usuarioPodeVerTodasObras()) return true;
+
+  const permitidas = new Set(
+    obrasPermitidasPatrimonioBDR(usuario).map(String)
+  );
+
+  return permitidas.has(String(obraId));
 }
 
 
@@ -370,9 +431,6 @@ function usuarioPodeLancarQualquerObra(){
   if(!u) return false;
 
   if(usuarioOwnerBDR(u)) return true;
-
-  const perfil = String(u.perfil || "").toUpperCase();
-  if(perfil === "MASTER" || perfil === "OWNER") return true;
 
   return usuarioTemPermissao("PATRIMONIO_LANCAR_QUALQUER_OBRA");
 }
@@ -432,8 +490,13 @@ function aplicarRegraObraLancamentoBDR(){
 
 function bloquearPatrimonioSemPermissaoBDR(){
   if(usuarioTemPermissao("PATRIMONIO_VER")) return true;
-  alert("Você não tem permissão para acessar Patrimônio.");
-  window.location.href = "dashboard.html";
+
+  const usuario = usuarioAtual();
+  const destino =
+    window.BDRMenuPermissoes?.primeiraPaginaPermitida?.(usuario) ||
+    "login.html";
+
+  window.location.replace(destino);
   return false;
 }
 
@@ -564,11 +627,34 @@ function preencherFiltroObraPatrimonio(){
   });
 
   const usuario = usuarioAtual();
-  if(usuario && !usuarioPodeVerTodasObras() && usuario.obra_id){
-    filtro.value = usuario.obra_id;
-    filtro.disabled = true;
+
+  if(usuario && !usuarioPodeVerTodasObras()){
+    const permitidas = new Set(
+      obrasPermitidasPatrimonioBDR(usuario).map(String)
+    );
+
+    [...filtro.options].forEach(opcao => {
+      if(!opcao.value) return;
+      opcao.hidden = !permitidas.has(String(opcao.value));
+    });
+
+    if(permitidas.size === 1){
+      filtro.value = [...permitidas][0];
+      filtro.disabled = true;
+      return;
+    }
+
+    filtro.disabled = false;
+
+    if(valorAtual && permitidas.has(String(valorAtual))){
+      filtro.value = valorAtual;
+    }else{
+      filtro.value = "";
+    }
     return;
   }
+
+  filtro.disabled = false;
 
   if(valorAtual && [...filtro.options].some(op => op.value === valorAtual)){
     filtro.value = valorAtual;
@@ -2105,11 +2191,13 @@ async function carregarPatrimonios(){
       );
 
       if(usuario && !usuarioPodeVerTodasObras()){
-        if(usuario.obra_id){
-          dadosCache = dadosCache.filter(p => String(p.obra_id) === String(usuario.obra_id));
-        }else{
-          dadosCache = [];
-        }
+        const permitidas = new Set(
+          obrasPermitidasPatrimonioBDR(usuario).map(String)
+        );
+
+        dadosCache = permitidas.size
+          ? dadosCache.filter(p => permitidas.has(String(p.obra_id)))
+          : [];
       }
 
       patrimonios = dadosCache;
@@ -2127,8 +2215,12 @@ async function carregarPatrimonios(){
     const usuario = usuarioAtual();
 
     if(usuario && !usuarioPodeVerTodasObras()){
-      if(usuario.obra_id){
-        query = query.eq("obra_id", usuario.obra_id);
+      const permitidas = obrasPermitidasPatrimonioBDR(usuario);
+
+      if(permitidas.length === 1){
+        query = query.eq("obra_id", permitidas[0]);
+      }else if(permitidas.length > 1){
+        query = query.in("obra_id", permitidas);
       }else{
         patrimonios = [];
         renderizarPatrimonios();
@@ -2143,8 +2235,14 @@ async function carregarPatrimonios(){
 
     let dados = data || [];
 
-    if(usuario && !usuarioPodeVerTodasObras() && usuario.obra_id){
-      dados = dados.filter(p => String(p.obra_id) === String(usuario.obra_id));
+    if(usuario && !usuarioPodeVerTodasObras()){
+      const permitidas = new Set(
+        obrasPermitidasPatrimonioBDR(usuario).map(String)
+      );
+
+      dados = permitidas.size
+        ? dados.filter(p => permitidas.has(String(p.obra_id)))
+        : [];
     }
 
     patrimonios = dados;
@@ -2167,11 +2265,13 @@ async function carregarPatrimonios(){
     );
 
     if(usuario && !usuarioPodeVerTodasObras()){
-      if(usuario.obra_id){
-        dadosCache = dadosCache.filter(p => String(p.obra_id) === String(usuario.obra_id));
-      }else{
-        dadosCache = [];
-      }
+      const permitidas = new Set(
+        obrasPermitidasPatrimonioBDR(usuario).map(String)
+      );
+
+      dadosCache = permitidas.size
+        ? dadosCache.filter(p => permitidas.has(String(p.obra_id)))
+        : [];
     }
 
     patrimonios = dadosCache;
@@ -2634,8 +2734,9 @@ async function abrirModal(id){
   });
 
   if(botaoReativar){
-    botaoReativar.style.display = inativo ? "" : "none";
-    botaoReativar.disabled = !inativo;
+    const podeReativar = usuarioTemPermissao("PATRIMONIO_EXCLUIR");
+    botaoReativar.style.display = inativo && podeReativar ? "" : "none";
+    botaoReativar.disabled = !inativo || !podeReativar;
   }
 
   document.getElementById("modalBg").style.display = "flex";
@@ -2721,31 +2822,15 @@ function aplicarPermissoesTela(){
 
   if(!usuario) return;
 
-  const podeCadastrar =
-    usuarioEhGestao() ||
-    usuarioTemPermissao("PATRIMONIO_CRIAR");
-
-  const podeMovimentar =
-    usuarioEhGestao() ||
-    usuarioTemPermissao("PATRIMONIO_MOVIMENTAR");
-
-  const podeEditar =
-    usuarioEhGestao() ||
-    usuarioTemPermissao("PATRIMONIO_EDITAR") ||
-    usuarioTemPermissao("PATRIMONIO_CRIAR");
-
-  const podeImprimir =
-    usuarioEhGestao() ||
-    usuarioTemPermissao("PATRIMONIO_IMPRIMIR");
-
-  // Quem já consegue trabalhar/movimentar patrimônio também pode excluí-lo.
-  // A exclusão é lógica: o registro é preservado internamente.
-  const podeExcluir =
-    usuarioEhGestao() ||
-    usuarioTemPermissao("PATRIMONIO_MOVIMENTAR") ||
-    usuarioTemPermissao("PATRIMONIO_EXCLUIR") ||
-    usuarioTemPermissao("PATRIMONIO_EDITAR") ||
-    usuarioTemPermissao("PATRIMONIO_CRIAR");
+  /*
+    Cada ação do Patrimônio é independente.
+    Perfil ADMIN/MASTER e permissões de outros módulos não liberam ações.
+  */
+  const podeCadastrar = usuarioTemPermissao("PATRIMONIO_CRIAR");
+  const podeMovimentar = usuarioTemPermissao("PATRIMONIO_MOVIMENTAR");
+  const podeEditar = usuarioTemPermissao("PATRIMONIO_EDITAR");
+  const podeImprimir = usuarioTemPermissao("PATRIMONIO_IMPRIMIR");
+  const podeExcluir = usuarioTemPermissao("PATRIMONIO_EXCLUIR");
 
   const cardEntrada = document.getElementById("cardEntradaPatrimonio");
   const cardObra = document.getElementById("cardObraLancamento");
@@ -2864,8 +2949,9 @@ async function carregarManutencoesPatrimonio(){
 }
 
 function renderizarAnalyticsManutencao(){
-  const abertas = manutencoesPatrimonio.filter(m => String(m.status || "ABERTA").toUpperCase() !== "FECHADA");
-  const fechadas = manutencoesPatrimonio.filter(m => String(m.status || "").toUpperCase() === "FECHADA");
+  const statusEncerradosAtlas = ["FECHADA","FINALIZADA","CANCELADA","ORCAMENTO_RECUSADO"];
+  const abertas = manutencoesPatrimonio.filter(m => !statusEncerradosAtlas.includes(String(m.status || "ABERTA").toUpperCase()));
+  const fechadas = manutencoesPatrimonio.filter(m => statusEncerradosAtlas.includes(String(m.status || "").toUpperCase()));
   const diasLista = manutencoesPatrimonio.map(m => Number(m.dias_parado || diasEntreDatasBDR(m.data_entrada, m.data_saida))).filter(n => n > 0);
   const mediaDias = diasLista.length ? Math.round(diasLista.reduce((s,n)=>s+n,0) / diasLista.length) : 0;
   const custo = manutencoesPatrimonio.reduce((s,m) => s + Number(m.valor_orcamento || 0), 0);
@@ -2906,9 +2992,10 @@ function renderizarAnalyticsManutencao(){
 }
 
 function manutencaoAbertaDoPatrimonio(id){
+  const encerrados = ["FECHADA","FINALIZADA","CANCELADA","ORCAMENTO_RECUSADO"];
   return manutencoesPatrimonio.find(m =>
     String(m.patrimonio_id) === String(id) &&
-    String(m.status || "ABERTA").toUpperCase() !== "FECHADA"
+    !encerrados.includes(String(m.status || "ABERTA").toUpperCase())
   );
 }
 
@@ -3069,6 +3156,24 @@ async function alterarStatus(novoStatus){
   }
 
   if(statusAtual === "MANUTENCAO" && novoStatus !== "MANUTENCAO"){
+    // Novo fluxo Atlas: se existir ordem estruturada aberta, a saída da
+    // manutenção precisa ser feita pela Central para preservar orçamento,
+    // aprovação, histórico, recebimento e garantia.
+    if(window.AtlasWorkflowManutencao?.abertaPorPatrimonio){
+      try{
+        const ordemAtlas = await window.AtlasWorkflowManutencao.abertaPorPatrimonio(patrimonioSelecionado.id);
+        if(ordemAtlas && String(ordemAtlas.status || "").toUpperCase() !== "ABERTA"){
+          if(confirm(`Existe a ordem ${ordemAtlas.codigo || "#" + ordemAtlas.id} em andamento.\n\nDeseja abrir a Central de Manutenção?`)){
+            location.href = `manutencao.html?id=${ordemAtlas.id}`;
+          }
+          return;
+        }
+      }catch(e){
+        console.warn("Atlas Patrimônio: não foi possível validar a ordem de manutenção.", e);
+      }
+    }
+
+    // Compatibilidade com manutenções antigas já existentes.
     abrirModalFecharManutencao(novoStatus);
     return;
   }
@@ -3401,11 +3506,7 @@ async function atlasNotificarExclusaoPatrimonio({ patrimonio, motivo, usuarioNom
 async function inativarPatrimonio(){
   const usuario = usuarioAtual();
   const podeExcluir =
-    usuarioEhGestao() ||
-    usuarioTemPermissao("PATRIMONIO_MOVIMENTAR") ||
-    usuarioTemPermissao("PATRIMONIO_EXCLUIR") ||
-    usuarioTemPermissao("PATRIMONIO_EDITAR") ||
-    usuarioTemPermissao("PATRIMONIO_CRIAR");
+    usuarioTemPermissao("PATRIMONIO_EXCLUIR");
 
   if(!podeExcluir){
     alert("Você não tem permissão para excluir patrimônio.");
@@ -3545,11 +3646,7 @@ async function atlasNotificarReativacaoPatrimonio({ patrimonio, usuarioNome, obr
 async function reativarPatrimonio(){
   const usuario = usuarioAtual();
   const podeReativar =
-    usuarioEhGestao() ||
-    usuarioTemPermissao("PATRIMONIO_MOVIMENTAR") ||
-    usuarioTemPermissao("PATRIMONIO_EXCLUIR") ||
-    usuarioTemPermissao("PATRIMONIO_EDITAR") ||
-    usuarioTemPermissao("PATRIMONIO_CRIAR");
+    usuarioTemPermissao("PATRIMONIO_EXCLUIR");
 
   if(!podeReativar){
     alert("Você não tem permissão para reativar patrimônio.");

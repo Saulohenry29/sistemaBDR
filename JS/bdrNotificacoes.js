@@ -923,12 +923,32 @@
   }
 
   async function toggleNotificacoes(event){
-    event?.stopPropagation();
+    /*
+     * O AtlasTopbar é o único responsável por abrir/fechar dropdowns.
+     * Este módulo fica responsável somente pelo conteúdo das notificações.
+     */
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+
     const drop = dropdownEl();
     if(!drop) return;
 
-    document.getElementById('dropdownUser')?.classList.remove('ativo');
-    const vaiAbrir = !drop.classList.contains('ativo');
+    if(window.AtlasTopbar){
+      BDR_NOTIF.quantidadeVisivel = BDR_NOTIF.passoMostrarMais;
+      await carregarNotificacoes();
+      renderNotificacoes(BDR_NOTIF.notificacoesCache, true);
+      listaEl()?.scrollTo({ top:0, behavior:'auto' });
+      return;
+    }
+
+    /* Fallback temporário para página antiga sem AtlasTopbar. */
+    document.getElementById('dropdownUser')?.classList.remove('ativo','show');
+    document.getElementById('userDropdown')?.classList.remove('ativo','show');
+
+    const vaiAbrir =
+      !drop.classList.contains('ativo') &&
+      !drop.classList.contains('show');
+
     drop.classList.toggle('ativo', vaiAbrir);
 
     if(vaiAbrir){
@@ -1017,21 +1037,46 @@
     }
 
     const botaoSininho = notifBtnEl();
-    if(botaoSininho && !botaoSininho.dataset.bdrNotifLigado){
+
+    /*
+     * Não criamos um segundo controlador visual no mesmo botão.
+     * AtlasTopbar abre/fecha; bdrNotificacoes atualiza a lista.
+     */
+    if(
+      botaoSininho &&
+      !window.AtlasTopbar &&
+      !botaoSininho.dataset.bdrNotifLigado
+    ){
       botaoSininho.dataset.bdrNotifLigado = '1';
       botaoSininho.addEventListener('click', e => {
         e.preventDefault();
         e.stopPropagation();
-        e.stopImmediatePropagation();
         toggleNotificacoes(e);
-      }, true);
+      });
+    }
+
+    if(
+      botaoSininho &&
+      window.AtlasTopbar &&
+      !botaoSininho.dataset.bdrNotifConteudo
+    ){
+      botaoSininho.dataset.bdrNotifConteudo = '1';
+      botaoSininho.addEventListener('click', async () => {
+        BDR_NOTIF.quantidadeVisivel = BDR_NOTIF.passoMostrarMais;
+        await carregarNotificacoes();
+        renderNotificacoes(BDR_NOTIF.notificacoesCache, true);
+        listaEl()?.scrollTo({ top:0, behavior:'auto' });
+      });
     }
 
     iniciarNotificacoes();
   });
 
   document.addEventListener('click', e => {
-    if(!e.target.closest('.notif-wrap')) dropdownEl()?.classList.remove('ativo');
+    if(window.AtlasTopbar) return;
+    if(!e.target.closest('.notif-wrap')){
+      dropdownEl()?.classList.remove('ativo','show');
+    }
   });
 
   document.addEventListener('visibilitychange', () => {

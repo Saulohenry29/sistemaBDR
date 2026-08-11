@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Atlas - Minha Conta</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="../CSS/layout-bdr.css">
+  <link rel="stylesheet" href="../CSS/atlas-topbar.css">
+  <link rel="stylesheet" href="./CSS/atlasMinhaConta.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../JS/supabaseClient.js"></script>
+
+<div class="app-layout">
+  <aside class="bdr-sidebar">
+    <div class="bdr-brand">
+      <div class="bdr-brand-icon bdr-logo-menu"></div>
+    </div>
+
+    <nav class="bdr-menu">
+      <button class="bdr-menu-btn" data-permissao="DASHBOARD_VER" data-tip="Dashboard" onclick="location.href='../dashboard.html'">
+        <span class="bdr-menu-icon"><i class="fa-solid fa-chart-simple"></i></span>
+      </button>
+      <button class="bdr-menu-btn" data-permissao="ENTRADA_VER" data-tip="Entrada" onclick="location.href='../entrada.html'">
+        <span class="bdr-menu-icon"><i class="fa-solid fa-arrow-down-wide-short"></i></span>
+      </button>
+      <button class="bdr-menu-btn" data-permissao="TRIAGEM_VER" data-tip="Triagem" onclick="location.href='../triagem.html'">
+        <span class="bdr-menu-icon"><i class="fa-solid fa-vials"></i></span>
+      </button>
+      <button class="bdr-menu-btn" data-permissao="ESTOQUE_VER" data-tip="Estoque" onclick="location.href='../estoque.html'">
+        <span class="bdr-menu-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
+      </button>
+      <button class="bdr-menu-btn" data-permissao="PATRIMONIO_VER" data-tip="Patrimônio" onclick="location.href='../patrimonio.html'">
+        <span class="bdr-menu-icon"><i class="fa-solid fa-tags"></i></span>
+      </button>
+      <button class="bdr-menu-btn" data-permissao="PATRIMONIO_VER" data-tip="Manutenção" onclick="location.href='../manutencao.html'">
+        <span class="bdr-menu-icon"><i class="fa-solid fa-screwdriver-wrench"></i></span>
+      </button>
+      <button class="bdr-menu-btn" data-permissao="EXPEDICAO_VER" data-tip="Expedição" onclick="location.href='../expedicao.html'">
+        <span class="bdr-menu-icon"><i class="fa-solid fa-truck-fast"></i></span>
+      </button>
+      <button class="bdr-menu-btn" data-permissao="MOVIMENTACOES_VER" data-tip="Movimentações" onclick="location.href='../movimentacoes.html'">
+        <span class="bdr-menu-icon"><i class="fa-solid fa-right-left"></i></span>
+      </button>
+      <button class="bdr-menu-btn" data-permissao="RELATORIOS_VER" data-tip="Relatórios" onclick="location.href='../relatorios.html'">
+        <span class="bdr-menu-icon"><i class="fa-regular fa-file-lines"></i></span>
+      </button>
+      <button class="bdr-menu-btn" data-permissao="EMPRESAS_VER" data-tip="Empresas" onclick="location.href='../empresa.html'">
+        <span class="bdr-menu-icon"><i class="fa-solid fa-building"></i></span>
+      </button>
+      <button class="bdr-menu-btn" data-permissao="USUARIOS_VER" data-tip="Usuários" onclick="location.href='../usuarios.html'">
+        <span class="bdr-menu-icon"><i class="fa-solid fa-users"></i></span>
+      </button>
+    </nav>
+  </aside>
+
+  <main class="bdr-main atlas-account-main">
+    <div class="bdr-topbar">
+      <div>
+        <div class="bdr-topbar-title">👤 Minha conta</div>
+        <div class="bdr-topbar-sub">Preferências pessoais, segurança e notificações.</div>
+      </div>
+
+      <div class="bdr-top-actions">
+        <div class="user-menu" data-atlas-toggle="user">
+          <div class="user-mini">
+            <b id="usuarioNome">Olá, -</b>
+            <small id="usuarioPerfil">-</small>
+          </div>
+          <div class="avatar"><i class="fa-solid fa-user"></i></div>
+          <div class="dropdown-user" id="dropdownUser">
+            <button type="button" onclick="location.href='minha-conta.html';event.stopPropagation()">
+              <i class="fa-solid fa-circle-user"></i> Minha conta
+            </button>
+            <button type="button" class="logout-btn" onclick="AtlasMinhaConta.sair();event.stopPropagation()">
+              <i class="fa-solid fa-right-from-bracket"></i> Sair do sistema
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="atlas-account-hero">
+      <div class="atlas-account-avatar" id="accountAvatar">--</div>
+      <div>
+        <h1 id="accountName">Minha conta</h1>
+        <p id="accountLogin">Carregando...</p>
+      </div>
+      <span class="atlas-account-status" id="accountStatus">ATIVO</span>
+    </section>
+
+    <div class="atlas-account-grid">
+      <section class="atlas-account-card">
+        <div class="atlas-account-card-head">
+          <div>
+            <h2><i class="fa-regular fa-id-card"></i> Meu perfil</h2>
+            <p>Informações da sua conta no Atlas.</p>
+          </div>
+        </div>
+
+        <div class="atlas-account-fields">
+          <div><small>Nome</small><strong id="fieldNome">-</strong></div>
+          <div><small>Usuário</small><strong id="fieldUsuario">-</strong></div>
+          <div><small>E-mail</small><strong id="fieldEmail">-</strong></div>
+          <div><small>Perfil</small><strong id="fieldPerfil">-</strong></div>
+          <div class="wide"><small>Obra principal</small><strong id="fieldObra">-</strong></div>
+        </div>
+      </section>
+
+      <section class="atlas-account-card">
+        <div class="atlas-account-card-head">
+          <div>
+            <h2><i class="fa-solid fa-shield-halved"></i> Segurança</h2>
+            <p>Gerencie sua própria senha sem acessar a administração de usuários.</p>
+          </div>
+        </div>
+
+        <div class="atlas-account-security">
+          <div>
+            <strong>Senha de acesso</strong>
+            <span>Recomendamos trocar a senha sempre que houver suspeita de acesso indevido.</span>
+          </div>
+          <button class="atlas-account-btn dark" type="button" onclick="location.href='../alterar-senha.html'">
+            <i class="fa-solid fa-key"></i> Trocar minha senha
+          </button>
+        </div>
+      </section>
+
+      <section class="atlas-account-card wide-card">
+        <div class="atlas-account-card-head">
+          <div>
+            <h2><i class="fa-regular fa-bell"></i> Minhas notificações</h2>
+            <p>Você pode personalizar avisos. Isso não altera suas permissões de acesso.</p>
+          </div>
+          <span class="atlas-account-safe"><i class="fa-solid fa-lock"></i> Preferência pessoal</span>
+        </div>
+
+        <div class="atlas-notification-mode">
+          <label>
+            <input type="radio" name="notifMode" value="NOTIF_MODO_SOM">
+            <span><i class="fa-solid fa-volume-high"></i><strong>Som e aviso</strong><small>Exibe a notificação e reproduz som.</small></span>
+          </label>
+          <label>
+            <input type="radio" name="notifMode" value="NOTIF_MODO_VISUAL">
+            <span><i class="fa-regular fa-bell"></i><strong>Apenas aviso</strong><small>Exibe a notificação sem som.</small></span>
+          </label>
+          <label>
+            <input type="radio" name="notifMode" value="NOTIF_MODO_SILENCIOSO">
+            <span><i class="fa-solid fa-bell-slash"></i><strong>Silencioso</strong><small>Mantém o registro sem alerta sonoro.</small></span>
+          </label>
+        </div>
+
+        <div class="atlas-account-notif-grid" id="notifOptions"></div>
+
+        <div class="atlas-account-footer">
+          <span id="saveInfo">Nenhuma alteração pendente.</span>
+          <button class="atlas-account-btn primary" id="btnSalvarPreferencias" type="button">
+            <i class="fa-solid fa-floppy-disk"></i> Salvar preferências
+          </button>
+        </div>
+      </section>
+
+      <section class="atlas-account-card wide-card">
+        <div class="atlas-account-card-head">
+          <div>
+            <h2><i class="fa-solid fa-building"></i> Minhas obras / setores</h2>
+            <p>Locais liberados pelo administrador. Nesta tela você apenas consulta.</p>
+          </div>
+          <span class="atlas-account-safe"><i class="fa-solid fa-eye"></i> Somente leitura</span>
+        </div>
+        <div class="atlas-account-works" id="accountWorks">
+          <div class="atlas-account-empty">Carregando obras...</div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script src="../JS/bdrMenuPermissoes.js"></script>
+<script src="./JS/atlasMinhaConta.js"></script>
+
+<script src="../JS/atlasTopbar.js"></script>
+</body>
+</html>

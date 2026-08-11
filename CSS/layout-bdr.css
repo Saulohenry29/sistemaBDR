@@ -1684,12 +1684,21 @@ main,
     overflow:visible !important;
   }
 
-  /* Cabeçalho e conteúdo ficam abaixo do menu */
+  /*
+    Camadas do desktop:
+    o conteúdo continua abaixo da sidebar, mas o topbar precisa ficar
+    acima dos cards/formulários para seus dropdowns aparecerem por cima.
+  */
   .bdr-main,
-  .bdr-topbar,
   .hero,
   .card{
     z-index:1 !important;
+  }
+
+  .bdr-topbar{
+    position:relative !important;
+    z-index:5000 !important;
+    overflow:visible !important;
   }
 
   /* Nome exibido ao passar o mouse */

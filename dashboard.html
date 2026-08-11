@@ -1658,8 +1658,9 @@ grid-template-columns:auto repeat(4,95px) 160px 160px 95px 1fr;
 <script src="./JS/bdrSyncEngine.js"></script>
 <script src="./JS/bdrSyncCenter.js"></script>
 <script src="./JS/bdrNotificacoes.js"></script>
+<script src="JS/atlasTopbar.js"></script>
 <script src="./JS/bdrMenuPermissoes.js"></script>
-<script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260629-padrao-unico"></script>
+<script src="./JS/atlasControleAcesso.js?v=20260629-padrao-unico"></script>
 
 <script>verificarLogin();</script>
 
@@ -1673,77 +1674,72 @@ grid-template-columns:auto repeat(4,95px) 160px 160px 95px 1fr;
 
  <!-- MENU PRINCIPAL FIXO -->
  <nav class="bdr-menu">
-
-  <!-- DASHBOARD -->
-  <button data-permissao="DASHBOARD_VER" class="bdr-menu-btn active" data-tip="Dashboard" onclick="ir('dashboard.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-chart-simple"></i>
-    </span>
-  </button>
-
-  <!-- ENTRADA -->
-  <button data-permissao="ENTRADA_VER" class="bdr-menu-btn" data-tip="Entrada" onclick="ir('entrada.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-arrow-down-wide-short"></i>
-    </span>
-  </button>
-
-  <!-- TRIAGEM -->
-  <button data-permissao="TRIAGEM_VER" class="bdr-menu-btn" data-tip="Triagem" onclick="ir('triagem.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-vials"></i>
-    </span>
-  </button>
-
-  <!-- Estoque -->
-  <button data-permissao="ESTOQUE_VER" class="bdr-menu-btn" data-tip="Estoque" onclick="ir('estoque.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-boxes-stacked"></i>
-    </span>
-  </button>
-
-  <!-- PATRIMÔNIO -->
-  <button data-permissao="PATRIMONIO_VER" class="bdr-menu-btn" data-tip="Patrimônio" onclick="ir('patrimonio.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-tags"></i>
-    </span>
-  </button>
-
-  <!-- EXPEDIÇÃO -->
-   <button data-permissao="EXPEDICAO_VER" class="bdr-menu-btn " data-tip="Expedição" onclick="ir('expedicao.html')">
-     <span class="bdr-menu-icon">
-       <i class="fa-solid fa-truck-fast"></i>
-      </span>
-    </button>
-
-    <!-- MOVIMENTAÇÕES -->
-  <button data-permissao="MOVIMENTACOES_VER" class="bdr-menu-btn" data-tip="Movimentações" onclick="ir('movimentacoes.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-right-left"></i>
-    </span>
-  </button>
-  
-  <!-- RELATÓRIOS -->
-  <button data-permissao="RELATORIOS_VER" class="bdr-menu-btn" data-tip="Relatórios" onclick="ir('relatorios.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-regular fa-file-lines"></i>
-    </span>
-  </button>
-
-  <!-- EMPRESAS -->
-  <button data-permissao="EMPRESAS_VER" class="bdr-menu-btn" data-tip="Empresas" onclick="ir('empresa.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-building"></i>
-    </span>
-  </button>
-
-  <!-- USUÁRIOS -->
-  <button data-permissao="USUARIOS_VER" class="bdr-menu-btn" data-tip="Usuários" onclick="ir('usuarios.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-users"></i>
-    </span>
-  </button>
-
+<!-- DASHBOARD -->
+<button class="bdr-menu-btn active" data-permissao="DASHBOARD_VER" data-tip="Dashboard" onclick="ir('dashboard.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-chart-simple"></i>
+</span>
+</button>
+<!-- ENTRADA -->
+<button class="bdr-menu-btn" data-permissao="ENTRADA_VER" data-tip="Entrada" onclick="ir('entrada.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-arrow-down-wide-short"></i>
+</span>
+</button>
+<!-- TRIAGEM -->
+<button class="bdr-menu-btn" data-permissao="TRIAGEM_VER" data-tip="Triagem" onclick="ir('triagem.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-vials"></i>
+</span>
+</button>
+<!-- Estoque -->
+<button class="bdr-menu-btn" data-permissao="ESTOQUE_VER" data-tip="Estoque" onclick="ir('estoque.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-boxes-stacked"></i>
+</span>
+</button>
+<!-- PATRIMÔNIO -->
+<button class="bdr-menu-btn" data-permissao="PATRIMONIO_VER" data-tip="Patrimônio" onclick="ir('patrimonio.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-tags"></i>
+</span>
+</button>
+<!-- MANUTENÇÃO -->
+<button class="bdr-menu-btn" data-permissao="PATRIMONIO_VER" data-tip="Manutenção" onclick="ir('manutencao.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-screwdriver-wrench"></i>
+</span>
+</button>
+<!-- EXPEDIÇÃO -->
+<button class="bdr-menu-btn" data-permissao="EXPEDICAO_VER" data-tip="Expedição" onclick="ir('expedicao.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-truck-fast"></i>
+</span>
+</button>
+<!-- MOVIMENTAÇÕES -->
+<button class="bdr-menu-btn" data-permissao="MOVIMENTACOES_VER" data-tip="Movimentações" onclick="ir('movimentacoes.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-right-left"></i>
+</span>
+</button>
+<!-- RELATÓRIOS -->
+<button class="bdr-menu-btn" data-permissao="RELATORIOS_VER" data-tip="Relatórios" onclick="ir('relatorios.html')">
+<span class="bdr-menu-icon">
+<i class="fa-regular fa-file-lines"></i>
+</span>
+</button>
+<!-- EMPRESAS -->
+<button class="bdr-menu-btn" data-permissao="EMPRESAS_VER" data-tip="Empresas" onclick="ir('empresa.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-building"></i>
+</span>
+</button>
+<!-- USUÁRIOS -->
+<button class="bdr-menu-btn" data-permissao="USUARIOS_VER" data-tip="Usuários" onclick="ir('usuarios.html')">
+<span class="bdr-menu-icon">
+<i class="fa-solid fa-users"></i>
+</span>
+</button>
 </nav>
 
   </aside>
@@ -1760,7 +1756,7 @@ grid-template-columns:auto repeat(4,95px) 160px 160px 95px 1fr;
 
       <div class="dash-user">
         <div class="notif-wrap">
-          <button type="button" class="notif-btn" title="Notificações" onclick="toggleNotificacoes(event)">
+          <button type="button" class="notif-btn" data-atlas-toggle="notifications" title="Notificações">
             <i class="fa-regular fa-bell"></i>
             <span id="notifBadge" class="notif-badge">0</span>
           </button>
@@ -1773,7 +1769,7 @@ grid-template-columns:auto repeat(4,95px) 160px 160px 95px 1fr;
           </div>
         </div>
 
-        <div class="user-menu-top" id="userMenuTop" onclick="toggleUserMenu(event)">
+        <div class="user-menu-top" data-atlas-toggle="user" id="userMenuTop">
           <div class="user-mini">
             <b id="usuarioNome">Olá, -</b>
             <small id="usuarioPerfil">-</small>
@@ -1781,14 +1777,9 @@ grid-template-columns:auto repeat(4,95px) 160px 160px 95px 1fr;
 
           <div class="avatar"><i class="fa-solid fa-user"></i></div>
 
-          <div class="user-dropdown" id="userDropdown" onclick="event.stopPropagation()">
-            <div class="user-dropdown-head" style="display:none;">
-              <strong id="usuarioNomeMenu">Usuário</strong>
-              <span id="usuarioPerfilMenu">-</span>
-            </div>
-
-            <button data-permissao="USUARIOS_VER" type="button" onclick="ir('usuarios.html'); event.stopPropagation();">
-              <i class="fa-solid fa-user-gear"></i> Meu perfil / usuários
+          <div class="user-dropdown" id="dropdownUser" onclick="event.stopPropagation()">
+            <button type="button" onclick="location.href='MinhaConta/minha-conta.html'; event.stopPropagation();">
+              <i class="fa-solid fa-circle-user"></i> Minha conta
             </button>
 
             <button type="button" class="logout-btn" onclick="sairSistema(); event.stopPropagation();">
@@ -2129,8 +2120,17 @@ function usuarioTemPermissaoBDR(permissao, usuario = usuarioAtual()){
 
 function bloquearPaginaSemPermissaoBDR(permissao){
   if(usuarioTemPermissaoBDR(permissao)) return true;
-  alert("Você não tem permissão para acessar esta tela.");
-  window.location.href = "login.html";
+
+  /*
+    Falta de permissão para o Dashboard não significa logout.
+    Mantém a sessão e envia para o primeiro módulo autorizado.
+  */
+  const usuario = usuarioAtual();
+  const destino =
+    window.BDRMenuPermissoes?.primeiraPaginaPermitida?.(usuario) ||
+    "login.html";
+
+  window.location.replace(destino);
   return false;
 }
 
@@ -2145,8 +2145,63 @@ function usuarioPodeVerTodasObrasBDR(usuario = usuarioAtual()){
   return usuarioTemPermissaoBDR("TODAS_OBRAS_VER", usuario);
 }
 
+function normalizarObrasLiberadasBDR(valor){
+  if(valor === null || valor === undefined || valor === "") return [];
+
+  let bruto = valor;
+
+  if(typeof bruto === "string"){
+    const texto = bruto.trim();
+    if(!texto) return [];
+
+    try{
+      const parsed = JSON.parse(texto);
+      bruto = Array.isArray(parsed) ? parsed : [parsed];
+    }catch(_){
+      bruto = texto.split(/[,;|]/);
+    }
+  }
+
+  if(!Array.isArray(bruto)) bruto = [bruto];
+
+  return [...new Set(
+    bruto
+      .flatMap(item => {
+        if(item && typeof item === "object"){
+          return [item.id, item.obra_id, item.value];
+        }
+        return [item];
+      })
+      .map(v => String(v ?? "").trim())
+      .filter(v => /^\d+$/.test(v))
+      .map(Number)
+      .filter(id => Number.isFinite(id) && id > 0)
+  )];
+}
+
+function obrasPermitidasDashboardBDR(usuario = usuarioAtual()){
+  if(!usuario) return [];
+
+  const ids = [];
+  const principal = Number(usuario.obra_id);
+
+  if(Number.isFinite(principal) && principal > 0){
+    ids.push(principal);
+  }
+
+  normalizarObrasLiberadasBDR(usuario.obras_liberadas)
+    .forEach(id => ids.push(id));
+
+  return [...new Set(ids)];
+}
+
 function usuarioPodeVerPropriaObraBDR(usuario = usuarioAtual()){
-  return usuarioTemPermissaoBDR("PROPRIA_OBRA_VER", usuario);
+  /*
+    Mantido por compatibilidade com o restante do Dashboard.
+    A própria obra agora é definida pelo vínculo obra_id/obras_liberadas,
+    sem exigir a antiga permissão PROPRIA_OBRA_VER.
+  */
+  return obrasPermitidasDashboardBDR(usuario).length > 0;
 }
 
 function usuarioPodeVerValoresBDR(usuario = usuarioAtual()){
@@ -2160,35 +2215,26 @@ function aplicarVisibilidadeValoresBDR(){
   const topValor = document.getElementById("topObrasValor")?.closest("section");
   if(topValor) topValor.style.display = pode ? "" : "none";
 }
-function toggleUserMenu(event){
-  if(event) event.stopPropagation();
-
-  const menu = document.getElementById("userDropdown");
+function fecharUserMenu(){
+  const menu = document.getElementById("dropdownUser");
   const box = document.getElementById("userMenuTop");
 
-  if(!menu || !box) return;
-
-  menu.classList.toggle("show");
-  box.classList.toggle("open");
-}
-
-function fecharUserMenu(){
-  document.getElementById("userDropdown")?.classList.remove("show");
-  document.getElementById("userMenuTop")?.classList.remove("open");
-}
-
-function toggleNotificacoes(event){
-  if(event) event.stopPropagation();
-  document.getElementById("notifDropdown")?.classList.toggle("ativo");
-  fecharUserMenu();
+  menu?.classList.remove("show", "ativo");
+  box?.classList.remove("open", "ativo");
 }
 
 function fecharNotificacoes(){
-  document.getElementById("notifDropdown")?.classList.remove("ativo");
+  const menu = document.getElementById("notifDropdown");
+  menu?.classList.remove("ativo", "show");
+}
+
+function fecharMenusTopbar(){
+  fecharUserMenu();
+  fecharNotificacoes();
 }
 
 function sairSistema(){
-  fecharUserMenu();
+  window.AtlasTopbar?.closeAll?.();
 
   if(typeof logout === "function"){
     logout();
@@ -2199,11 +2245,6 @@ function sairSistema(){
   localStorage.removeItem("usuarioLogado");
   window.location.href = "login.html";
 }
-
-document.addEventListener("click", () => { fecharUserMenu(); fecharNotificacoes(); });
-document.addEventListener("keydown", e => {
-  if(e.key === "Escape"){ fecharUserMenu(); fecharNotificacoes(); }
-});
 
 function moeda(v){
   return Number(v || 0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
@@ -2408,11 +2449,22 @@ async function carregarDados(){
   document.getElementById("usuarioPerfil").innerText =
     usuario ? usuario.perfil || "-" : "-";
 
-  document.getElementById("usuarioNomeMenu").innerText =
-    usuario ? usuario.nome || "Usuário" : "Usuário";
+  /*
+    O dropdown do usuário foi simplificado e não possui mais
+    usuarioNomeMenu/usuarioPerfilMenu. Mantemos compatibilidade caso
+    alguma versão futura volte a exibir esses campos.
+  */
+  const usuarioNomeMenu = document.getElementById("usuarioNomeMenu");
+  if(usuarioNomeMenu){
+    usuarioNomeMenu.innerText =
+      usuario ? usuario.nome || "Usuário" : "Usuário";
+  }
 
-  document.getElementById("usuarioPerfilMenu").innerText =
-    usuario ? usuario.perfil || "-" : "-";
+  const usuarioPerfilMenu = document.getElementById("usuarioPerfilMenu");
+  if(usuarioPerfilMenu){
+    usuarioPerfilMenu.innerText =
+      usuario ? usuario.perfil || "-" : "-";
+  }
 
   document.getElementById("ultimaAtualizacao").innerText =
     new Date().toLocaleString("pt-BR");
@@ -2435,26 +2487,38 @@ async function carregarDados(){
   obras = obrasResp.data || [];
   movimentacoes = movResp.data || [];
 
-  /* DADOS: filtra por permissão, nunca por perfil.
-     Owner id=1 vê tudo. Quem tem TODAS_OBRAS_VER vê tudo.
-     Quem tem PROPRIA_OBRA_VER vê apenas a própria obra.
-     Quem não tem nenhuma permissão de dados fica sem dados. */
+  /*
+     ESCOPO OFICIAL DO DASHBOARD
+     - OWNER id=1: todas as obras.
+     - TODAS_OBRAS_VER: todas as obras.
+     - Demais usuários: obra principal + obras_liberadas.
+     - Não depende mais da antiga PROPRIA_OBRA_VER.
+  */
   const podeVerTodas = usuarioPodeVerTodasObrasBDR(usuario);
-  const podeVerPropria = usuarioPodeVerPropriaObraBDR(usuario);
 
   if(usuario && !podeVerTodas){
-    if(podeVerPropria && usuario.obra_id){
+    const obrasPermitidas = obrasPermitidasDashboardBDR(usuario);
+    const permitidas = new Set(obrasPermitidas.map(String));
+
+    if(permitidas.size){
       patrimonios = patrimonios.filter(p =>
-        String(p.obra_id) === String(usuario.obra_id)
+        permitidas.has(String(p.obra_id))
       );
 
       movimentacoes = movimentacoes.filter(m =>
-        String(m.obra_origem_id) === String(usuario.obra_id) ||
-        String(m.obra_destino_id) === String(usuario.obra_id)
+        permitidas.has(String(m.obra_origem_id)) ||
+        permitidas.has(String(m.obra_destino_id))
       );
+
+      /*
+        O filtro de obras do próprio Dashboard também mostra somente
+        as obras que este usuário realmente pode consultar.
+      */
+      obras = obras.filter(o => permitidas.has(String(o.id)));
     }else{
       patrimonios = [];
       movimentacoes = [];
+      obras = [];
     }
   }
 

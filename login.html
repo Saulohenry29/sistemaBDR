@@ -70,6 +70,24 @@ input{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;font-size:
   font-weight:900;padding:8px 11px;cursor:pointer;
 }
 </style>
+
+<style>
+/* ATLAS - AJUSTE VISUAL DAS MENSAGENS DE LOGIN
+   Para mudar depois, altere SOMENTE font-size abaixo. */
+#mensagem,
+#mensagemErro,
+#erroLogin,
+.login-error,
+.login-message,
+.mensagem-erro,
+.erro-login {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1.35 !important;
+    text-align: center !important;
+}
+</style>
+
 </head>
 
 <body>
@@ -142,42 +160,98 @@ function senhaEhTemporariaBDR(usuario){
          String(usuario?.trocar_senha).toLowerCase() === "true";
 }
 
-function destinoPadraoBDR(usuario){
-  const perms = String(usuario?.permissoes || "").toUpperCase();
-  if(perms.includes("DASHBOARD_VER")) return "dashboard.html";
-  if(perms.includes("PATRIMONIO_VER")) return "patrimonio.html";
-  if(perms.includes("ESTOQUE_VER")) return "estoque.html";
-  if(perms.includes("EXPEDICAO_VER")) return "expedicao.html";
-  if(perms.includes("RELATORIOS_VER")) return "relatorios.html";
-  return "dashboard.html";
+function permissoesLoginBDR(usuario){
+  const legadas = new Set([
+    "DASHBOARD","ENTRADA","TRIAGEM","ESTOQUE","PATRIMONIO",
+    "EXPEDICAO","RELATORIOS","MOVIMENTACOES","EMPRESAS",
+    "USUARIOS","CONFIGURACOES"
+  ]);
+
+  const lista = Array.isArray(usuario?.permissoes)
+    ? usuario.permissoes
+    : String(usuario?.permissoes || "").split(",");
+
+  return lista
+    .map(p => String(p || "").trim().toUpperCase())
+    .filter(Boolean)
+    .filter(p => !legadas.has(p));
 }
 
-async function buscarUsuarioLoginBDR(login){
-  const banco = bancoBDR();
-  if(!banco) throw new Error("Supabase não carregado.");
+function destinoPadraoBDR(usuario){
+  /*
+    PERFIL NÃO CONCEDE ACESSO.
+    ADMIN, MASTER, ALMOXARIFE, ENGENHEIRO etc. seguem as permissões
+    explícitas cadastradas. Somente o ID 1 é absoluto.
+  */
+  const perms = permissoesLoginBDR(usuario);
 
-  let resp = await banco
-    .from("usuarios_sistema")
-    .select("*")
-    .eq("usuario", login)
-    .limit(1);
+  if(Number(usuario?.id) === 1){
+    return "dashboard.html";
+  }
 
-  if(resp.error) throw resp.error;
-  if(resp.data && resp.data[0]) return resp.data[0];
+  const rotas = [
+    ["DASHBOARD_VER", "dashboard.html"],
+    ["PATRIMONIO_VER", "patrimonio.html"],
+    ["ENTRADA_VER", "entrada.html"],
+    ["TRIAGEM_VER", "triagem.html"],
+    ["ESTOQUE_VER", "estoque.html"],
+    ["EXPEDICAO_VER", "expedicao.html"],
+    ["MOVIMENTACOES_VER", "movimentacoes.html"],
+    ["RELATORIOS_VER", "relatorios.html"],
+    ["EMPRESAS_VER", "empresa.html"],
+    ["USUARIOS_VER", "usuarios.html"],
+    ["CONFIGURACOES_VER", "configuracoes.html"]
+  ];
 
-  resp = await banco
-    .from("usuarios_sistema")
-    .select("*")
-    .eq("email", login)
-    .limit(1);
+  const encontrada = rotas.find(([permissao]) => perms.includes(permissao));
+  return encontrada ? encontrada[1] : "";
+}
 
-  if(resp.error) throw resp.error;
-  return resp.data?.[0] || null;
+function identificarNavegadorBDR(){
+  const ua = navigator.userAgent || "";
+  if(/Edg\//i.test(ua)) return "Edge";
+  if(/OPR\//i.test(ua)) return "Opera";
+  if(/CriOS|Chrome/i.test(ua)) return "Chrome";
+  if(/FxiOS|Firefox/i.test(ua)) return "Firefox";
+  if(/Safari/i.test(ua) && !/Chrome|CriOS|Chromium/i.test(ua)) return "Safari";
+  return "Outro";
+}
+
+function identificarSistemaBDR(){
+  const ua = navigator.userAgent || "";
+  if(/Windows/i.test(ua)) return "Windows";
+  if(/iPhone|iPad|iPod/i.test(ua)) return "iOS";
+  if(/Android/i.test(ua)) return "Android";
+  if(/Mac OS X|Macintosh/i.test(ua)) return "macOS";
+  if(/Linux/i.test(ua)) return "Linux";
+  return "Outro";
+}
+
+function identificarDispositivoBDR(){
+  const ua = navigator.userAgent || "";
+  if(/iPad|Tablet/i.test(ua)) return "Tablet";
+  if(/Mobi|iPhone|Android/i.test(ua)) return "Celular";
+  return "Computador";
+}
+
+function sessaoLoginBDR(){
+  let sessao = localStorage.getItem("bdr_sessao_id");
+  if(sessao) return sessao;
+
+  try{
+    sessao = crypto.randomUUID();
+  }catch(_){
+    sessao = `bdr-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+
+  localStorage.setItem("bdr_sessao_id", sessao);
+  return sessao;
 }
 
 async function fazerLogin(){
   const login = document.getElementById("usuario").value.trim();
   const senha = document.getElementById("senha").value.trim();
+  const botao = document.querySelector(".btn-login");
 
   mostrarMensagem("");
 
@@ -186,27 +260,86 @@ async function fazerLogin(){
     return;
   }
 
+  const banco = bancoBDR();
+  if(!banco){
+    mostrarMensagem("Supabase não carregado.");
+    return;
+  }
+
+  if(botao){
+    botao.disabled = true;
+    botao.textContent = "Validando...";
+  }
+
   try{
-    const usuario = await buscarUsuarioLoginBDR(login);
+    /*
+      A autenticação e o registro da tentativa acontecem juntos no banco.
+      O navegador não precisa buscar a lista de usuários para validar o login.
+    */
+    const { data, error } = await banco.rpc("atlas_login_autenticar", {
+      p_login: login,
+      p_senha: senha,
+      p_user_agent: navigator.userAgent || null,
+      p_navegador: identificarNavegadorBDR(),
+      p_sistema_operacional: identificarSistemaBDR(),
+      p_dispositivo: identificarDispositivoBDR(),
+      p_sessao_id: sessaoLoginBDR()
+    });
 
-    if(!usuario){
-      mostrarMensagem("Usuário ou senha inválidos.");
+    if(error) throw error;
+
+    if(!data?.sucesso || !data?.usuario){
+      if(data?.bloqueado === true){
+        mostrarMensagem("Acesso temporariamente indisponível. Tente novamente em alguns minutos.");
+      }else{
+        mostrarMensagem("Usuário ou senha inválidos.");
+      }
+
+      /*
+         Nas falhas repetidas o servidor pode solicitar um pequeno intervalo
+         antes de liberar uma nova tentativa. O bloqueio real continua sendo
+         controlado no PostgreSQL, não depende deste JavaScript.
+      */
+      const espera = Math.max(0, Math.min(Number(data?.aguardar_segundos || 0), 5));
+      if(espera > 0){
+        await new Promise(resolve => setTimeout(resolve, espera * 1000));
+      }
       return;
     }
 
-    if(usuario.ativo === false || String(usuario.ativo).toLowerCase() === "false"){
-      mostrarMensagem("Usuário ou senha inválidos.");
+    const usuarioSessao = data.usuario;
+
+    /*
+      Senha temporária precisa de sessão para abrir a troca de senha,
+      independentemente dos módulos liberados.
+    */
+    if(senhaEhTemporariaBDR(usuarioSessao)){
+      localStorage.setItem("usuario_logado", JSON.stringify(usuarioSessao));
+      localStorage.setItem("usuarioLogado", JSON.stringify(usuarioSessao));
+      localStorage.setItem("perfil_usuario", usuarioSessao.perfil || "");
+      localStorage.setItem("bdr_login_cache_em", new Date().toISOString());
+      location.href = "alterar-senha.html";
       return;
     }
 
-    if(String(usuario.senha || "") !== String(senha)){
-      mostrarMensagem("Usuário ou senha inválidos.");
+    const destino = destinoPadraoBDR(usuarioSessao);
+
+    if(!destino){
+      /*
+        Login é válido, porém não existe módulo funcional liberado.
+        Não cria uma sessão que ficaria presa no Dashboard.
+      */
+      localStorage.removeItem("usuario_logado");
+      localStorage.removeItem("usuarioLogado");
+      localStorage.removeItem("perfil_usuario");
+      mostrarMensagem("Seu usuário ainda não possui nenhum módulo liberado. Procure o administrador.");
       return;
     }
 
-    const usuarioSessao = {...usuario};
     localStorage.setItem("usuario_logado", JSON.stringify(usuarioSessao));
     localStorage.setItem("usuarioLogado", JSON.stringify(usuarioSessao));
+    localStorage.setItem("perfil_usuario", usuarioSessao.perfil || "");
+    localStorage.setItem("bdr_login_cache_em", new Date().toISOString());
 
     if(document.getElementById("lembrar")?.checked){
       localStorage.setItem("bdr_login_lembrado", login);
@@ -214,23 +347,16 @@ async function fazerLogin(){
       localStorage.removeItem("bdr_login_lembrado");
     }
 
-    try{
-      await bancoBDR()
-        .from("usuarios_sistema")
-        .update({ ultimo_acesso:new Date().toISOString(), ultimo_login:new Date().toISOString() })
-        .eq("id", usuario.id);
-    }catch(e){}
-
-    if(senhaEhTemporariaBDR(usuarioSessao)){
-      location.href = "alterar-senha.html";
-      return;
-    }
-
-    location.href = destinoPadraoBDR(usuarioSessao);
+    location.href = destino;
 
   }catch(e){
-    console.error(e);
-    mostrarMensagem(e.message || "Erro ao fazer login.");
+    console.error("Erro no login auditado:", e);
+    mostrarMensagem("Não foi possível validar o acesso. Verifique a conexão e tente novamente.");
+  }finally{
+    if(botao){
+      botao.disabled = false;
+      botao.textContent = "Entrar no Sistema";
+    }
   }
 }
 

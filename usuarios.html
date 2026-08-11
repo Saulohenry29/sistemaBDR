@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="data:,">
-  <title>Atlas - Usuários</title>
+  <title>Usuários</title>
   <link rel="stylesheet" href="./CSS/layout-bdr.css">
   <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260805-users-v8">
   <link rel="stylesheet" href="./CSS/atlas-topbar.css?v=20260724-v3">
@@ -18,17 +18,129 @@
   <aside class="bdr-sidebar">
     <div class="bdr-brand"><div class="bdr-brand-icon bdr-logo-menu"></div></div>
     <nav class="bdr-menu">
-      <button data-permissao="DASHBOARD_VER" class="bdr-menu-btn" data-tip="Dashboard" onclick="location.href='dashboard.html'"><span class="bdr-menu-icon"><i class="fa-solid fa-chart-simple"></i></span></button>
-      <button data-permissao="ENTRADA_VER" class="bdr-menu-btn" data-tip="Entrada" onclick="location.href='entrada.html'"><span class="bdr-menu-icon"><i class="fa-solid fa-arrow-down-wide-short"></i></span></button>
-      <button data-permissao="TRIAGEM_VER" class="bdr-menu-btn" data-tip="Triagem" onclick="location.href='triagem.html'"><span class="bdr-menu-icon"><i class="fa-solid fa-vials"></i></span></button>
-      <button data-permissao="ESTOQUE_VER" class="bdr-menu-btn" data-tip="Estoque" onclick="location.href='estoque.html'"><span class="bdr-menu-icon"><i class="fa-solid fa-boxes-stacked"></i></span></button>
-      <button data-permissao="PATRIMONIO_VER" class="bdr-menu-btn" data-tip="Patrimônio" onclick="location.href='patrimonio.html'"><span class="bdr-menu-icon"><i class="fa-solid fa-tags"></i></span></button>
-      <button data-permissao="EXPEDICAO_VER" class="bdr-menu-btn" data-tip="Expedição" onclick="location.href='expedicao.html'"><span class="bdr-menu-icon"><i class="fa-solid fa-truck-fast"></i></span></button>
-      <button data-permissao="MOVIMENTACOES_VER" class="bdr-menu-btn" data-tip="Movimentações" onclick="location.href='movimentacoes.html'"><span class="bdr-menu-icon"><i class="fa-solid fa-right-left"></i></span></button>
-      <button data-permissao="RELATORIOS_VER" class="bdr-menu-btn" data-tip="Relatórios" onclick="location.href='relatorios.html'"><span class="bdr-menu-icon"><i class="fa-regular fa-file-lines"></i></span></button>
-      <button data-permissao="EMPRESAS_VER" class="bdr-menu-btn" data-tip="Empresas" onclick="location.href='empresa.html'"><span class="bdr-menu-icon"><i class="fa-solid fa-building"></i></span></button>
-      <button data-permissao="USUARIOS_VER" class="bdr-menu-btn active" data-tip="Usuários"><span class="bdr-menu-icon"><i class="fa-solid fa-users"></i></span></button>
-    </nav>
+
+  <!-- DASHBOARD -->
+  <button
+    data-permissao="DASHBOARD_VER"
+    class="bdr-menu-btn"
+    data-tip="Dashboard"
+    onclick="location.href='dashboard.html'">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-chart-simple"></i>
+    </span>
+  </button>
+
+  <!-- ENTRADA -->
+  <button
+    data-permissao="ENTRADA_VER"
+    class="bdr-menu-btn"
+    data-tip="Entrada"
+    onclick="location.href='entrada.html'">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-arrow-down-wide-short"></i>
+    </span>
+  </button>
+
+  <!-- TRIAGEM -->
+  <button
+    data-permissao="TRIAGEM_VER"
+    class="bdr-menu-btn"
+    data-tip="Triagem"
+    onclick="location.href='triagem.html'">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-vials"></i>
+    </span>
+  </button>
+
+  <!-- ESTOQUE -->
+  <button
+    data-permissao="ESTOQUE_VER"
+    class="bdr-menu-btn"
+    data-tip="Estoque"
+    onclick="location.href='estoque.html'">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-boxes-stacked"></i>
+    </span>
+  </button>
+
+  <!-- PATRIMÔNIO -->
+  <button
+    data-permissao="PATRIMONIO_VER"
+    class="bdr-menu-btn"
+    data-tip="Patrimônio"
+    onclick="location.href='patrimonio.html'">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-tags"></i>
+    </span>
+  </button>
+
+  <!-- EXPEDIÇÃO -->
+  <button
+    data-permissao="EXPEDICAO_VER"
+    class="bdr-menu-btn"
+    data-tip="Expedição"
+    onclick="location.href='expedicao.html'">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-truck-fast"></i>
+    </span>
+  </button>
+
+  <!-- MOVIMENTAÇÕES -->
+  <button
+    data-permissao="MOVIMENTACOES_VER"
+    class="bdr-menu-btn"
+    data-tip="Movimentações"
+    onclick="location.href='movimentacoes.html'">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-right-left"></i>
+    </span>
+  </button>
+
+  <!-- MANUTENÇÃO -->
+  <button
+    data-permissao="PATRIMONIO_VER"
+    class="bdr-menu-btn"
+    data-tip="Manutenção"
+    onclick="location.href='manutencao.html'">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-screwdriver-wrench"></i>
+    </span>
+  </button>
+
+  <!-- RELATÓRIOS -->
+  <button
+    data-permissao="RELATORIOS_VER"
+    class="bdr-menu-btn"
+    data-tip="Relatórios"
+    onclick="location.href='relatorios.html'">
+    <span class="bdr-menu-icon">
+      <i class="fa-regular fa-file-lines"></i>
+    </span>
+  </button>
+
+  <!-- EMPRESAS -->
+  <button
+    data-permissao="EMPRESAS_VER"
+    class="bdr-menu-btn"
+    data-tip="Empresas"
+    onclick="location.href='empresa.html'">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-building"></i>
+    </span>
+  </button>
+
+  <!-- USUÁRIOS -->
+  <button
+    data-permissao="USUARIOS_VER"
+    class="bdr-menu-btn active"
+    data-tip="Usuários"
+    onclick="location.href='usuarios.html'">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-users"></i>
+    </span>
+  </button>
+
+</nav>
   </aside>
 
   <main class="bdr-main atlas-users-main">
@@ -46,7 +158,9 @@
           <div class="user-mini"><b id="usuarioNome">Olá, usuário</b><small id="usuarioPerfil">-</small></div>
           <div class="avatar"><i class="fa-solid fa-user"></i></div>
           <div id="dropdownUser" class="dropdown-user">
-            <button type="button" onclick="location.href='alterar-senha.html';event.stopPropagation()"><i class="fa-solid fa-key"></i> Alterar minha senha</button>
+            <button type="button" onclick="location.href='MinhaConta/minha-conta.html';event.stopPropagation()">
+              <i class="fa-solid fa-circle-user"></i> Minha conta
+            </button>
             <button type="button" class="logout-btn" onclick="logout();event.stopPropagation()"><i class="fa-solid fa-right-from-bracket"></i> Sair do sistema</button>
           </div>
         </div>
@@ -183,10 +297,10 @@
 <script src="./JS/supabaseClient.js"></script>
 <script src="./JS/bdrCore.js"></script>
 <script src="./JS/bdrMenuPermissoes.js"></script>
-<script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260805-users-oficial"></script>
+<script src="./JS/atlasControleAcesso.js?v=20260805-users-oficial"></script>
 <script src="./JS/atlasAudio/atlasAudio.js"></script>
 <script src="./JS/bdrNotificacoes.js"></script>
-<script src="./JS/atlasTopbar.js?v=20260728-v1-3-scroll-interno"></script>
+<script src="JS/atlasTopbar.js"></script>
 <script src="./JS/atlasUsuarios.js?v=20260806-modo-compacto"></script>
 <script src="./JS/bdrMenuMobileAtivo.js?v=20260702-3"></script>
 </body>

@@ -34,7 +34,7 @@
 <script defer src="./JS/atlasAudio/atlasAudio.js"></script>
 <script defer src="./JS/bdrNotificacoes.js"></script>
 <script defer src="./JS/bdrMenuPermissoes.js"></script>
-<script defer src="./JS/bdr-menu-ocultar-de-verdade.js"></script>
+<script defer src="./JS/atlasControleAcesso.js?v=20260810-padrao-unico"></script>
 <script defer src="./JS/expedicao/expedicaoBoot.js"></script>
 
 <style>
@@ -875,7 +875,9 @@
           <div class="user-mini"><b id="usuarioNome">Olá, -</b><small id="usuarioPerfil">-</small></div>
           <div class="avatar"><i class="fa-solid fa-user"></i></div>
           <div id="dropdownUser" class="dropdown-user">
-            <button data-permissao="USUARIOS_VER" onclick="ir('usuarios.html')"><i class="fa-solid fa-user-gear"></i> Meu perfil / usuários</button>
+            <button type="button" onclick="location.href='MinhaConta/minha-conta.html';event.stopPropagation()">
+              <i class="fa-solid fa-circle-user"></i> Minha conta
+            </button>
             <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
           </div>
         </div>

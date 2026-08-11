@@ -179,7 +179,12 @@ button{-webkit-tap-highlight-color:transparent}
         <div class="user-menu" onclick="toggleMenuUsuario(event)">
           <div class="user-mini"><b id="usuarioNome">Olá, -</b><small id="usuarioPerfil">-</small></div>
           <div class="avatar"><i class="fa-solid fa-user"></i></div>
-          <div id="dropdownUser" class="dropdown-user"><button onclick="ir('usuarios.html');event.stopPropagation()"><i class="fa-solid fa-user-gear"></i> Meu perfil / usuários</button><button class="logout-btn" onclick="logout();event.stopPropagation()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button></div>
+          <div id="dropdownUser" class="dropdown-user">
+            <button type="button" onclick="location.href='MinhaConta/minha-conta.html';event.stopPropagation()">
+              <i class="fa-solid fa-circle-user"></i> Minha conta
+            </button>
+            <button class="logout-btn" onclick="logout();event.stopPropagation()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+          </div>
         </div>
       </div>
     </div>
