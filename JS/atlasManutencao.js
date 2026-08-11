@@ -520,14 +520,25 @@
     const lista=$("#manutLista");
     if(!lista) return null;
 
+    /*
+      A paginação pertence ao mesmo painel da lista.
+      O HTML atual já traz o container pronto; o fallback existe
+      apenas para compatibilidade com alguma cópia antiga da página.
+    */
     let pag=$("#manutPaginacao");
-    if(pag) return pag;
 
-    pag=document.createElement("div");
-    pag.id="manutPaginacao";
-    pag.className="atlas-manut-pagination";
-    pag.setAttribute("aria-label","Paginação das ordens de manutenção");
-    lista.insertAdjacentElement("afterend",pag);
+    if(!pag){
+      pag=document.createElement("div");
+      pag.id="manutPaginacao";
+      pag.className="atlas-manut-pagination";
+      pag.setAttribute("aria-label","Paginação das ordens de manutenção");
+
+      const painelLista=lista.closest(".atlas-manut-pane.left");
+      (painelLista || lista.parentElement)?.appendChild(pag);
+    }
+
+    if(pag.dataset.atlasPaginacaoLigada==="1") return pag;
+    pag.dataset.atlasPaginacaoLigada="1";
 
     pag.addEventListener("click",e=>{
       const btn=e.target.closest("[data-pagina]");
@@ -658,11 +669,11 @@
 
     box.innerHTML=pagina.map(o=>`
       <button class="atlas-manut-row ${String(state.selecionada?.id)===String(o.id)?"selected":""}" data-id="${o.id}" type="button">
-        <div class="code"><strong>${esc(o.codigo||"#"+o.id)}</strong><small>${esc(o.codigo_patrimonio||"-")}</small></div>
-        <div class="item"><strong>${esc(o.nome_patrimonio||"Patrimônio")}</strong><small>${esc(o.fornecedor_nome||o.fornecedor||"Fornecedor ainda não definido")}</small></div>
-        <div class="status"><span class="atlas-manut-status ${statusClass(o.status)}">${esc(labelStatus(o.status))}</span></div>
-        <div class="valor"><strong>${brl(o.valor_orcamento||0)}</strong><small>${dataHora(o.data_criacao||o.data_entrada)}</small></div>
-        <span class="open">Abrir</span>
+        <div class="atlas-manut-row-code"><strong>${esc(o.codigo||"#"+o.id)}</strong><small>${esc(o.codigo_patrimonio||"-")}</small></div>
+        <div class="atlas-manut-row-item"><strong>${esc(o.nome_patrimonio||"Patrimônio")}</strong><small>${esc(o.fornecedor_nome||o.fornecedor||"Fornecedor ainda não definido")}</small></div>
+        <div class="atlas-manut-row-status"><span class="atlas-manut-status ${statusClass(o.status)}">${esc(labelStatus(o.status))}</span></div>
+        <div class="atlas-manut-row-value"><strong>${brl(o.valor_orcamento||0)}</strong><small>${dataHora(o.data_criacao||o.data_entrada)}</small></div>
+        <span class="atlas-manut-row-open">Abrir</span>
       </button>`).join("");
 
     renderPaginacao(lista.length);
@@ -770,6 +781,28 @@
     return b.join("");
   }
 
+  function rolarParaDetalheNoMobile(){
+    /*
+      No desktop os painéis têm rolagem própria.
+      No tablet/celular a página é uma coluna; depois de selecionar
+      uma ordem, levamos o usuário até o painel de detalhe.
+    */
+    if(!window.matchMedia?.("(max-width: 1200px)")?.matches) return;
+
+    const detalhe=$("#manutDetalhe");
+    if(!detalhe) return;
+
+    requestAnimationFrame(()=>{
+      setTimeout(()=>{
+        detalhe.scrollIntoView({
+          behavior:"smooth",
+          block:"start",
+          inline:"nearest"
+        });
+      },40);
+    });
+  }
+
   async function selecionar(id){
     /*
       A Central só permite selecionar ordens que já vieram da consulta
@@ -821,12 +854,24 @@
 
     renderLista();
     renderDetalhe();
+    rolarParaDetalheNoMobile();
   }
 
   function renderDetalhe(){
     const box=$("#manutDetalhe");if(!box)return;
+    const app=$("#atlasManutencaoApp");
     const o=state.selecionada;
-    if(!o){box.innerHTML=`<div class="atlas-manut-detail-empty">Selecione uma ordem para acompanhar o fluxo.</div>`;return;}
+
+    /*
+      No mobile, o painel de detalhe só entra no fluxo depois que
+      uma ordem é escolhida. No desktop ele continua sempre visível.
+    */
+    app?.classList.toggle("has-selection",Boolean(o));
+
+    if(!o){
+      box.innerHTML=`<div class="atlas-manut-detail-empty">Selecione uma ordem para acompanhar o fluxo.</div>`;
+      return;
+    }
     const orc=state.orcamento;
     const custo=Number(orc?.valor_total ?? o.valor_orcamento ?? 0);
     box.innerHTML=`
