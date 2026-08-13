@@ -1,5 +1,5 @@
 /* BDR ERP - Service Worker V4 SAFE OFFLINE */
-const BDR_CACHE_VERSION = "bdr-erp-manut-mobile-polida-20260811";
+const BDR_CACHE_VERSION = "bdr-erp-fornecedor-moeda-zero-20260813";
 
 const BDR_ASSETS = [
   "./",
@@ -55,7 +55,9 @@ const BDR_ASSETS = [
   "./JS/patrimonio/patrimonio.js",
   "./JS/atlasWorkflowManutencao.js",
   "./JS/atlasManutencao.js",
+  "./JS/atlasManutencaoFornecedor.js",
   "./CSS/atlasManutencao.css",
+  "./CSS/atlasManutencaoFornecedor.css",
   "./JS/movimentacao.js",
   "./JS/usuarios.js"
 ];

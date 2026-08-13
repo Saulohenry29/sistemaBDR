@@ -86,11 +86,19 @@
     return Array.from(bytes, b => b.toString(16).padStart(2,"0")).join("");
   }
 
-  function baseUrl(){
-    const url = new URL(window.location.href);
-    const path = url.pathname.replace(/[^/]+$/, "");
-    return `${url.origin}${path}`;
+  function urlFornecedor(token){
+    const ambiente = window.AtlasAmbienteDominio;
+
+    if(!ambiente?.urlFornecedor){
+      throw new Error(
+        "Configuração de ambiente/domínio não carregada. " +
+        "Verifique JS/atlasAmbienteDominio.js."
+      );
+    }
+
+    return ambiente.urlFornecedor(token);
   }
+
 
   async function historico(manutencaoId, statusAnterior, statusNovo, acao, observacao, usuario){
     try{
@@ -289,7 +297,7 @@
       ativo:linkRow.ativo !== false,
       expira_em:linkRow.expira_em || null,
       criado_em:linkRow.criado_em || null,
-      url:`${baseUrl()}manutencaobdr-fornecedor.html?t=${encodeURIComponent(linkRow.token)}`
+      url:urlFornecedor(linkRow.token)
     };
   }
 
@@ -346,7 +354,7 @@
         token:data.token,
         ativo:true,
         expira_em:data.expira_em || null,
-        url:`${baseUrl()}manutencaobdr-fornecedor.html?t=${encodeURIComponent(data.token)}`
+        url:urlFornecedor(data.token)
       }
     };
   }
