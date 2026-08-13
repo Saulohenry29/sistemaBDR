@@ -14,8 +14,17 @@
 .atlas-manut-modal{width:min(900px,96vw);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;border-radius:17px;background:#fff;box-shadow:0 30px 90px rgba(0,0,0,.28)}
 .atlas-manut-modal-head{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--am-line);background:linear-gradient(135deg,#fff,#fff5f5)}
 .atlas-manut-modal-head h2{margin:0;color:var(--am-red);font-size:18px}.atlas-manut-modal-head small{display:block;margin-top:3px;color:var(--am-muted);font-size:10px;font-weight:700}
-.atlas-manut-close{width:34px;height:34px;border:0;border-radius:9px;background:#fee2e2;color:var(--am-red);font-size:22px;font-weight:900;cursor:pointer}
-.atlas-manut-modal-body{padding:17px;overflow-y:auto}.atlas-manut-modal-foot{display:flex;justify-content:flex-end;gap:9px;padding:13px 17px;border-top:1px solid var(--am-line);background:#fafcff}
+.atlas-manut-close{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 35px;
+  height: 35px;
+  padding: 0;
+
+  line-height: 1;
+}.atlas-manut-modal-body{padding:17px;overflow-y:auto}.atlas-manut-modal-foot{display:flex;justify-content:flex-end;gap:9px;padding:13px 17px;border-top:1px solid var(--am-line);background:#fafcff}
 .atlas-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:0 14px;border:1px solid transparent;border-radius:10px;font-size:11px;font-weight:900;cursor:pointer}
 .atlas-btn.primary{background:linear-gradient(135deg,#dc101b,var(--am-red));color:#fff}.atlas-btn.dark{background:var(--am-navy);color:#fff}.atlas-btn.light{border-color:#d7dee8;background:#fff;color:#334155}.atlas-btn.success{background:#17863d;color:#fff}.atlas-btn.warning{background:#f59e0b;color:#fff}.atlas-btn.danger{background:#dc2626;color:#fff}.atlas-btn:disabled{opacity:.55;cursor:not-allowed}
 .atlas-manut-patrimonio-resumo{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:13px}.atlas-manut-patrimonio-resumo>div{padding:11px;border:1px solid var(--am-line);border-radius:11px;background:#f8fafc;min-width:0}.atlas-manut-patrimonio-resumo small,.atlas-manut-patrimonio-resumo strong{display:block}.atlas-manut-patrimonio-resumo small{color:var(--am-muted);font-size:9px}.atlas-manut-patrimonio-resumo strong{margin-top:4px;overflow-wrap:anywhere;font-size:11px;color:#0f172a}

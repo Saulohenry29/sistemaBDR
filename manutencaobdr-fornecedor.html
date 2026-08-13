@@ -1,84 +1,134 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BDR - Orçamento de Manutenção</title>
-<link href="data:," rel="icon">
-<link href="./CSS/atlasManutencaoFornecedor.css" rel="stylesheet">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BDR - Orçamento de Manutenção</title>
+  <link href="data:," rel="icon">
+  <link rel="stylesheet" href="./CSS/atlasManutencaoFornecedor.css">
 </head>
 <body>
-<div class="forn-shell">
-  <header class="forn-head">
-    <div class="forn-brand"><img src="./imagens/logo.png" alt="BDR"><div><h1>BDR CONSTRUART</h1><p>Portal de orçamento de manutenção • Acesso exclusivo desta ordem</p></div></div>
-    <div class="forn-order"><small>Ordem</small><strong id="ordemCodigo">Carregando...</strong></div>
-  </header>
-
-  <div id="portalLoading" class="forn-card forn-state"><div class="icon">🔧</div><h2>Carregando ordem de manutenção...</h2><p>Aguarde um instante.</p></div>
-  <div id="portalErro" class="forn-card forn-state forn-error" hidden><div class="icon">⚠️</div><h2>Não foi possível abrir esta ordem</h2><p id="portalErroTexto"></p></div>
-  <div id="portalSucesso" class="forn-card forn-state forn-success" hidden><div class="icon">✅</div><h2>Orçamento enviado com sucesso</h2><p>A BDR recebeu automaticamente as informações. Total informado: <b id="sucessoTotal"></b>.</p><p>Você pode fechar esta página.</p></div>
-
-  <main id="portalConteudo" hidden>
-    <section class="forn-card">
-      <h2>🔧 Patrimônio enviado para manutenção</h2>
-      <div class="forn-pat-grid">
-        <div><small>Patrimônio</small><strong id="patCodigo">-</strong></div>
-        <div><small>Item</small><strong id="patNome">-</strong></div>
-        <div><small>Marca / modelo</small><strong id="patMarcaModelo">-</strong></div>
-        <div><small>Nº de série</small><strong id="patSerie">-</strong></div>
-        <div><small>Origem</small><strong id="patLocal">-</strong></div>
+  <div class="forn-shell">
+    <header class="forn-head">
+      <div class="forn-brand">
+        <img src="./imagens/logo.png" alt="BDR">
+        <div>
+          <h1>BDR CONSTRUART</h1>
+          <p>Portal de orçamento de manutenção • Acesso exclusivo desta ordem</p>
+        </div>
       </div>
-      <div class="forn-defeito"><b>Defeito informado pela BDR:</b> <span id="defeitoInformado">-</span></div>
-    </section>
-
-    <section class="forn-card">
-      <h3>1. Diagnóstico e serviço recomendado</h3>
-      <div class="forn-grid">
-        <label class="wide">Empresa / oficina *<input id="fornecedorNome" placeholder="Nome da empresa ou oficina"></label>
-        <label class="wide">Diagnóstico encontrado *<textarea id="diagnostico" placeholder="Descreva o defeito encontrado durante a avaliação."></textarea></label>
-        <label>Causa provável<textarea id="causaProvavel" placeholder="Causa provável do problema."></textarea></label>
-        <label>Serviço recomendado *<textarea id="servicoRecomendado" placeholder="Descreva o serviço necessário."></textarea></label>
+      <div class="forn-order">
+        <small>Ordem</small>
+        <strong id="ordemCodigo">Carregando...</strong>
       </div>
-    </section>
+    </header>
 
-    <section class="forn-card">
-      <h3>2. Peças e materiais</h3>
-      <div class="forn-items-head"><span>Descrição</span><span>Referência</span><span>Qtd.</span><span>Valor unitário</span><span>Total</span><span></span></div>
-      <div id="itensOrcamento"></div>
-      <button id="btnAdicionarItem" class="forn-add" type="button">+ Adicionar peça / material</button>
+    <div id="portalLoading" class="forn-card forn-state">
+      <div class="forn-state-icon">🔧</div>
+      <h2>Carregando ordem de manutenção...</h2>
+      <p>Aguarde um instante.</p>
+    </div>
 
-      <div class="forn-grid" style="margin-top:12px">
-        <label class="wide">
-          Descrição da mão de obra
-          <textarea id="maoObraDescricao"
-            placeholder="Ex.: desmontagem, limpeza, troca da peça, montagem e testes finais."></textarea>
-        </label>
-      </div>
+    <div id="portalErro" class="forn-card forn-state forn-error" hidden>
+      <div class="forn-state-icon">⚠️</div>
+      <h2>Não foi possível abrir esta ordem</h2>
+      <p id="portalErroTexto"></p>
+    </div>
 
-      <div class="forn-values">
-        <label>Mão de obra (R$)<input id="maoObra" type="number" min="0" step="0.01"></label>
-        <label>Frete (R$)<input id="frete" type="number" min="0" step="0.01"></label>
-        <label>Outros custos (R$)<input id="outrosCustos" type="number" min="0" step="0.01"></label>
-        <label>Desconto (R$)<input id="desconto" type="number" min="0" step="0.01"></label>
-      </div>
-      <div class="forn-totals"><div><small>Total peças</small><strong id="totalPecas">R$ 0,00</strong></div><div class="grand"><small>Total do orçamento</small><strong id="totalOrcamento">R$ 0,00</strong></div></div>
-    </section>
+    <div id="portalSucesso" class="forn-card forn-state forn-success" hidden>
+      <div class="forn-state-icon">✅</div>
+      <h2>Orçamento enviado com sucesso</h2>
+      <p>A BDR recebeu automaticamente as informações. Total informado: <b id="sucessoTotal"></b>.</p>
+      <p>Você pode fechar esta página.</p>
+    </div>
 
-    <section class="forn-card">
-      <h3>3. Prazo, garantia e observações</h3>
-      <div class="forn-grid">
-        <label>Prazo estimado (dias)<input id="prazoDias" type="number" min="0" step="1"></label>
-        <label>Garantia do serviço (dias)<input id="garantiaDias" type="number" min="0" step="1"></label>
-        <label class="wide">Link do orçamento / laudo (opcional)<input id="urlOrcamento" type="url" placeholder="https://... PDF, Drive ou documento da oficina"></label>
-        <label class="wide">Observações<textarea id="observacoes" placeholder="Condições do orçamento, validade, peças sob encomenda, outras informações..."></textarea></label>
-      </div>
-    </section>
+    <main id="portalConteudo" hidden>
+      <section class="forn-card">
+        <h2 class="forn-section-title">🔧 Patrimônio enviado para manutenção</h2>
+        <div class="forn-pat-grid">
+          <div><small>Patrimônio</small><strong id="patCodigo">-</strong></div>
+          <div><small>Item</small><strong id="patNome">-</strong></div>
+          <div><small>Marca / modelo</small><strong id="patMarcaModelo">-</strong></div>
+          <div><small>Nº de série</small><strong id="patSerie">-</strong></div>
+          <div><small>Origem</small><strong id="patLocal">-</strong></div>
+        </div>
+        <div class="forn-defeito"><b>Defeito informado pela BDR:</b> <span id="defeitoInformado">-</span></div>
+      </section>
 
-    <section class="forn-submit"><p>Ao enviar, o orçamento será registrado automaticamente no Atlas e a equipe responsável da BDR será avisada.</p><button id="btnEnviarOrcamento" type="button">Enviar orçamento para a BDR</button></section>
-  </main>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script src="./JS/supabaseClient.js"></script>
-<script src="./JS/atlasManutencaoFornecedor.js?v=20260807-final-mao-obra"></script>
+      <section class="forn-card">
+        <h2 class="forn-section-title">1. Diagnóstico e serviço recomendado</h2>
+        <div class="forn-grid">
+          <label class="wide">Empresa / oficina *
+            <input id="fornecedorNome" type="text" autocomplete="organization" placeholder="Nome da empresa ou oficina">
+          </label>
+          <label class="wide">Diagnóstico encontrado *
+            <textarea id="diagnostico" placeholder="Descreva o defeito encontrado durante a avaliação."></textarea>
+          </label>
+          <label>Causa provável
+            <textarea id="causaProvavel" placeholder="Causa provável do problema."></textarea>
+          </label>
+          <label>Serviço recomendado *
+            <textarea id="servicoRecomendado" placeholder="Descreva o serviço necessário."></textarea>
+          </label>
+        </div>
+      </section>
+
+      <section class="forn-card">
+        <div class="forn-section-head">
+          <h2 class="forn-section-title">2. Peças e materiais</h2>
+          <button id="btnAdicionarItem" class="forn-add" type="button"><span>＋</span>Adicionar peça / material</button>
+        </div>
+
+        <div class="forn-items-table">
+          <div class="forn-items-head" aria-hidden="true">
+            <span>Descrição</span><span>Referência</span><span>Qtd.</span><span>Valor unitário (R$)</span><span>Total (R$)</span><span>Ações</span>
+          </div>
+          <div id="itensOrcamento"></div>
+          <div class="forn-items-summary"><span>Total peças</span><strong id="totalPecasTabela">R$ 0,00</strong></div>
+        </div>
+
+        <div class="forn-labor-box">
+          <label>Descrição da mão de obra
+            <textarea id="maoObraDescricao" placeholder="Ex.: desmontagem, limpeza, troca da peça, montagem e testes finais."></textarea>
+          </label>
+
+          <div class="forn-values">
+            <label>Mão de obra (R$)<input id="maoObra" class="forn-money" type="text" inputmode="numeric" autocomplete="off" data-moeda-brl value="0,00"></label>
+            <label>Frete (R$)<input id="frete" class="forn-money" type="text" inputmode="numeric" autocomplete="off" data-moeda-brl value="0,00"></label>
+            <label>Outros custos (R$)<input id="outrosCustos" class="forn-money" type="text" inputmode="numeric" autocomplete="off" data-moeda-brl value="0,00"></label>
+            <label>Desconto (R$)<input id="desconto" class="forn-money" type="text" inputmode="numeric" autocomplete="off" data-moeda-brl value="0,00"></label>
+          </div>
+        </div>
+
+        <div class="forn-totals">
+          <div><small>Total peças</small><strong id="totalPecas">R$ 0,00</strong></div>
+          <div class="grand"><small>Total do orçamento</small><strong id="totalOrcamento">R$ 0,00</strong></div>
+        </div>
+      </section>
+
+      <section class="forn-card">
+        <h2 class="forn-section-title">3. Prazo, garantia e observações</h2>
+        <div class="forn-grid">
+          <label>Prazo estimado (dias)<input id="prazoDias" type="number" min="0" step="1"></label>
+          <label>Garantia do serviço (dias)<input id="garantiaDias" type="number" min="0" step="1"></label>
+          <label class="wide">Link do orçamento / laudo (opcional)
+            <input id="urlOrcamento" type="url" placeholder="https://... PDF, Drive ou documento da oficina">
+          </label>
+          <label class="wide">Observações
+            <textarea id="observacoes" placeholder="Condições do orçamento, validade, peças sob encomenda, outras informações..."></textarea>
+          </label>
+        </div>
+      </section>
+
+      <section class="forn-submit">
+        <p>Ao enviar, o orçamento será registrado automaticamente no Atlas e a equipe responsável da BDR será avisada.</p>
+        <button id="btnEnviarOrcamento" type="button">Enviar orçamento para a BDR</button>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="./JS/supabaseClient.js"></script>
+  <script src="./JS/atlasManutencaoFornecedor.js"></script>
 </body>
 </html>

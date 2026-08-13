@@ -913,6 +913,55 @@
 
   function linha(rotulo,valor){return `<div class="atlas-manut-line"><span>${esc(rotulo)}</span><strong>${esc(valor)}</strong></div>`;}
 
+  /* =========================================================
+     DOCUMENTO DO ORÇAMENTO / LAUDO
+     - aceita somente http:// ou https://
+     - usa o campo url_orcamento recebido do fornecedor
+     - o botão só aparece quando existir link válido
+  ========================================================= */
+  function urlDocumentoOrcamento(orc=state.orcamento){
+    const bruto=String(orc?.url_orcamento || "").trim();
+    if(!bruto) return "";
+
+    try{
+      const url=new URL(bruto, window.location.origin);
+      if(!["http:","https:"].includes(url.protocol)) return "";
+      return url.href;
+    }catch(_){
+      return "";
+    }
+  }
+
+  function botaoDocumentoOrcamento(orc=state.orcamento){
+    if(!urlDocumentoOrcamento(orc)) return "";
+
+    return `
+      <div style="margin-top:12px;display:flex;justify-content:flex-start;">
+        <button
+          type="button"
+          class="atlas-btn light"
+          data-action="abrir-documento-orcamento"
+          title="Abrir orçamento ou laudo enviado pelo fornecedor">
+          📄 Abrir orçamento / laudo
+        </button>
+      </div>`;
+  }
+
+  function abrirDocumentoOrcamento(){
+    const url=urlDocumentoOrcamento();
+
+    if(!url){
+      aviso("O fornecedor não informou um link válido para o orçamento / laudo.","danger");
+      return;
+    }
+
+    const novaAba=window.open(url,"_blank","noopener,noreferrer");
+
+    if(!novaAba){
+      aviso("O navegador bloqueou a nova aba. Libere pop-ups para abrir o documento.","warning");
+    }
+  }
+
   function renderResumoOrcamento(orc){
     return `
       ${linha("Diagnóstico",orc.diagnostico||"-")}
@@ -922,7 +971,8 @@
       ${linha("Frete",brl(orc.frete))}
       ${linha("Prazo",orc.prazo_dias?`${orc.prazo_dias} dia(s)`:"-")}
       ${linha("Garantia",orc.garantia_dias?`${orc.garantia_dias} dia(s)`:"-")}
-      <div class="atlas-manut-total"><span>Total</span><strong>${brl(orc.valor_total)}</strong></div>`;
+      <div class="atlas-manut-total"><span>Total</span><strong>${brl(orc.valor_total)}</strong></div>
+      ${botaoDocumentoOrcamento(orc)}`;
   }
 
   function verOrcamento(){
@@ -1006,16 +1056,21 @@
           <strong>${brl(orc.valor_total)}</strong>
         </div>
       </section>`;
+       //* Modal - Orçamento da manutenção
 
     const bg=modalBase(
-      "atlasManutVerOrcamento",
-      "Orçamento da manutenção",
-      corpo,
-      `<button class="atlas-btn light" data-fechar-orcamento>Fechar</button>
-       <button class="atlas-btn dark" data-imprimir-orcamento>🖨 Imprimir / PDF</button>`
-    );
+  "atlasManutVerOrcamento",
+  "Orçamento da manutenção",
+  corpo,
+  `${urlDocumentoOrcamento(orc) ? `<button class="atlas-btn light" data-documento-orcamento>📄 Abrir orçamento / laudo</button>` : ""}
+   <button class="atlas-btn dark" data-imprimir-orcamento>🖨 Imprimir / PDF</button>`
+);
 
-    bg.querySelector("[data-fechar-orcamento]").onclick=()=>bg.remove();
+const btnDocumento=bg.querySelector("[data-documento-orcamento]");
+    if(btnDocumento){
+      btnDocumento.onclick=()=>abrirDocumentoOrcamento();
+    }
+
     bg.querySelector("[data-imprimir-orcamento]").onclick=()=>imprimirOrcamento();
   }
 
@@ -1025,6 +1080,7 @@
       if(acao==="saida") return abrirRegistrarSaida(o);
       if(acao==="link") return mostrarLink(o.id);
       if(acao==="ver-orcamento") return verOrcamento();
+      if(acao==="abrir-documento-orcamento") return abrirDocumentoOrcamento();
       if(acao==="imprimir") return imprimirOrcamento();
       if(acao==="encaminhar") return encaminharOrcamento();
       if(acao==="aprovar") return decisao("ORCAMENTO_APROVADO","Aprovar orçamento",true);
