@@ -13,7 +13,7 @@
 <title>Atlas - Expedição Nova</title>
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
 <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260724-v11">
-<link rel="stylesheet" href="./CSS/atlas-topbar.css?v=20260724-v3">
+<link rel="stylesheet" href="./CSS/atlas-topbar.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <!-- =========================================================
      EXPEDIÇÃO NOVA - CARREGAMENTO ENXUTO
@@ -24,17 +24,10 @@
 <script defer src="./JS/supabaseClient.js"></script>
 <script defer src="./JS/auth.js"></script>
 <script defer src="./JS/bdrCore.js"></script>
-<script defer src="./JS/offlineQueue.js"></script>
-<script defer src="./JS/offlineDB.js"></script>
-<script defer src="./JS/bdrSyncEngine.js"></script>
-<script defer src="./JS/bdrSyncCenter.js"></script>
-<script defer src="./JS/atlasEvents.js"></script>
-<script defer src="./JS/atlasEventStore.js"></script>
-<script defer src="./JS/atlasGestorNotificacoes.js"></script>
-<script defer src="./JS/atlasAudio/atlasAudio.js"></script>
 <script defer src="./JS/bdrNotificacoes.js"></script>
 <script defer src="./JS/bdrMenuPermissoes.js"></script>
 <script defer src="./JS/atlasControleAcesso.js?v=20260810-padrao-unico"></script>
+<script defer src="./JS/atlasTopbar.js"></script>
 <script defer src="./JS/expedicao/expedicaoBoot.js"></script>
 
 <style>
@@ -760,6 +753,89 @@
 
 
 
+
+.atlas-resumo-catalogo{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.atlas-paginacao-topo{
+  margin:0;
+  padding:0;
+  border:0;
+  background:transparent;
+  min-width:max-content;
+}
+.atlas-paginacao-topo button{
+  min-width:34px;
+  height:34px;
+  padding:0 10px;
+}
+@media(max-width:700px){
+  .atlas-resumo-catalogo{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+}
+
+
+/* =========================================================
+   PAGINAÇÃO PADRÃO ATLAS
+   Mesmo padrão visual usado em Usuários e Manutenção.
+========================================================= */
+.atlas-pagination{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  min-height:47px;
+  padding:10px 0 0;
+}
+
+.atlas-page-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:34px;
+  height:34px;
+  padding:0 9px;
+  border:1px solid #d7dee8;
+  border-radius:9px;
+  background:#fff;
+  color:#334155;
+  font-size:12px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.atlas-page-btn:hover:not(:disabled){
+  border-color:#f0a5aa;
+  background:#fff1f2;
+  color:#b5121b;
+}
+
+.atlas-page-btn.active{
+  border-color:#b5121b;
+  background:#b5121b;
+  color:#fff;
+  box-shadow:0 6px 14px rgba(181,18,27,.2);
+}
+
+.atlas-page-btn:disabled{
+  opacity:.4;
+  cursor:not-allowed;
+}
+
+.atlas-page-dots{
+  display:inline-flex;
+  min-width:20px;
+  justify-content:center;
+  color:#94a3b8;
+  font-weight:900;
+}
+
 </style>
 <link rel="stylesheet" href="./CSS/expedicao-nova.css">
 </head>
@@ -856,14 +932,16 @@
       </div>
 
       <div class="bdr-top-actions">
-        <div class="notif-wrap" data-permissao="RECEBER_NOTIFICACOES">
-          <button class="notif-btn" type="button" data-atlas-toggle="notifications" aria-label="Abrir notificações">
+        <div class="notif-wrap">
+          <button aria-label="Abrir notificações" class="notif-btn" data-atlas-toggle="notifications" title="Notificações" type="button">
             <i class="fa-regular fa-bell"></i>
-            <span id="notifBadge" class="notif-badge" data-count="0">0</span>
+            <span class="notif-badge" id="notifBadge">0</span>
           </button>
-          <div id="notifDropdown" class="notif-dropdown">
+          <div class="notif-dropdown" id="notifDropdown" onclick="event.stopPropagation()">
             <div class="notif-head">🔔 Central de notificações</div>
-            <div id="notifLista" class="notif-list"><div class="notif-item">Nenhuma notificação.</div></div>
+            <div class="notif-list" id="notifLista">
+              <div class="notif-item">Nenhuma notificação no momento.</div>
+            </div>
           </div>
         </div>
 
@@ -903,7 +981,7 @@
         <div>
           <div class="card">
             <div class="exp-head"><div class="exp-title"><h2>Catálogo de itens</h2><p>Solicite materiais entre obras/setores da rede BDR.</p></div><button class="btn-dark" data-permissao="EXPEDICAO_VER" onclick="carregarTudo()"><i class="fa-solid fa-rotate"></i> Atualizar</button></div>
-            <div class="searchbar"><input id="buscaCatalogo" placeholder="Buscar produto, patrimônio, código, obra..." oninput="renderizarCatalogo()"><button onclick="renderizarCatalogo()"><i class="fa-solid fa-search"></i> Buscar</button><button type="button" class="btn-cart-top" onclick="abrirModalCarrinho()" title="Abrir carrinho"><i class="fa-solid fa-cart-shopping"></i><span id="cartQtdTopo">0</span></button></div>
+            <div class="searchbar"><input id="buscaCatalogo" placeholder="Buscar produto, patrimônio, código, obra..." oninput="agendarBuscaCatalogo()"><button onclick="agendarBuscaCatalogo()"><i class="fa-solid fa-search"></i> Buscar</button><button type="button" class="btn-cart-top" onclick="abrirModalCarrinho()" title="Abrir carrinho"><i class="fa-solid fa-cart-shopping"></i><span id="cartQtdTopo">0</span></button></div>
             <div class="atlas-filtros-avancados">
               <div class="atlas-campo-filtro">
                 <label for="filtroObraCatalogo">Obra</label>
@@ -930,9 +1008,9 @@
               <div class="atlas-campo-filtro">
                 <label for="itensPorPaginaCatalogo">Itens por página</label>
                 <select id="itensPorPaginaCatalogo" onchange="atlasAlterarItensPorPagina()">
-                  <option value="30" selected>30</option>
-                  <option value="50">50</option>
-                  <option value="100">100</option>
+                  <option value="24" selected>24</option>
+                  <option value="48">48</option>
+                  <option value="72">72</option>
                 </select>
               </div>
               <button type="button" class="atlas-btn-limpar" onclick="atlasLimparFiltrosCatalogo()">
@@ -940,8 +1018,11 @@
               </button>
             </div>
             <div class="atlas-resumo-catalogo">
-              <span id="atlasResumoCatalogo">Mostrando 0 itens</span>
-              <span id="atlasFiltrosAtivosCatalogo"></span>
+              <div>
+                <span id="atlasResumoCatalogo">Mostrando 0 itens</span>
+                <span id="atlasFiltrosAtivosCatalogo"></span>
+              </div>
+              </div>
             </div>
             <div class="chips">
               <button class="chip-exp active" data-filtro="TODOS" onclick="filtrarStatus('TODOS',this)">Todos <span class="num" id="chipTodos">0</span></button>
@@ -951,13 +1032,7 @@
               <button class="chip-exp" data-filtro="RESERVADO" onclick="filtrarStatus('RESERVADO',this)">🟣 Reservados <span class="num" id="chipReservado">0</span></button>
             </div>
             <div id="catalogoGrid" class="catalogo-grid"></div>
-            <div id="atlasPaginacaoCatalogo" class="atlas-paginacao" aria-label="Paginação do catálogo">
-              <button type="button" id="atlasPrimeiraPagina" onclick="atlasIrPaginaCatalogo(1)">⏮ Primeira</button>
-              <button type="button" id="atlasPaginaAnterior" onclick="atlasMudarPaginaCatalogo(-1)">◀ Anterior</button>
-              <span id="atlasPaginaAtual" class="atlas-pagina-atual">Página 1 de 1</span>
-              <button type="button" id="atlasProximaPagina" onclick="atlasMudarPaginaCatalogo(1)">Próxima ▶</button>
-              <button type="button" id="atlasUltimaPagina" onclick="atlasIrUltimaPaginaCatalogo()">Última ⏭</button>
-            </div>
+            <div id="atlasPaginacaoCatalogo" class="atlas-pagination" aria-label="Paginação do catálogo"></div>
           </div>
         </div>
 
@@ -983,6 +1058,5 @@
 
 
 
-<script src="JS/atlasTopbar.js"></script>
 </body>
 </html>

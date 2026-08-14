@@ -1,5 +1,5 @@
 /* =========================================================
-   ATLAS EXPEDIÇÃO NOVA — CARREGADOR DE MÓDULOS V1.2
+   ATLAS EXPEDIÇÃO — CARREGADOR DE MÓDULOS
 ========================================================= */
 (function(global){
   'use strict';
@@ -7,6 +7,8 @@
   if(global.AtlasExpedicaoLoader?.__loaded) return;
 
   const carregados = new Map();
+
+  const inicioBoot = performance.now();
 
   const base = {
     modal:['./JS/AtlasModal.js'],
@@ -33,10 +35,23 @@
     visual:[
       './JS/bdrUppercase.js',
       './JS/AtlasMotion.js',
-      './JS/bdrMenuMobileAtivo.js',
-      './JS/atlasTopbar.js'
+      './JS/bdrMenuMobileAtivo.js'
     ],
-    pwa:['./JS/pwa-update.js']
+    pwa:['./JS/pwa-update.js'],
+    infraBase:[
+      './JS/offlineDB.js',
+      './JS/offlineQueue.js',
+      './JS/atlasEvents.js'
+    ],
+    infraSync:[
+      './JS/bdrSyncEngine.js',
+      './JS/bdrSyncCenter.js'
+    ],
+    infraNotif:[
+      './JS/atlasEventStore.js',
+      './JS/atlasGestorNotificacoes.js',
+      './JS/atlasAudio/atlasAudio.js'
+    ]
   };
 
   function carregarScript(src){
@@ -157,15 +172,32 @@
     });
   }
 
+  async function carregarInfraBackground(){
+    // Infraestrutura importante, mas não bloqueia a primeira pintura da Expedição.
+    // A ordem é preservada para respeitar dependências entre offline/sync/eventos.
+    try{
+      await modulo('infraBase');
+      await Promise.allSettled([modulo('infraSync'),modulo('infraNotif')]);
+      console.info(`⚡ ATLAS EXPEDIÇÃO infraestrutura pronta em ${Math.round(performance.now()-inicioBoot)} ms`);
+    }catch(e){
+      console.warn('Expedição: infraestrutura em segundo plano',e?.message||e);
+    }
+  }
+
   async function iniciar(){
     try{
       if(typeof global.verificarLogin==='function') global.verificarLogin();
 
+      await carregarScript('./JS/expedicao/expedicaoCatalogo.js');
+      await carregarScript('./JS/expedicao/expedicaoPedidos.js');
       await carregarScript('./JS/expedicao/expedicaoCore.js');
 
       instalarAbaLazy();
       instalarAcoesLazy();
       esconderLoading();
+
+      // A interface já está utilizável. O restante da infraestrutura entra sem bloquear.
+      void carregarInfraBackground();
 
       const aba=new URLSearchParams(location.search).get('aba');
 
@@ -181,7 +213,7 @@
       idle(()=>modulo('pwa').catch(console.warn));
 
       console.log(
-        '✅ ATLAS EXPEDIÇÃO NOVA V1.2 carregada — Fiscal e Workflow sob demanda'
+        `✅ ATLAS EXPEDIÇÃO interface pronta em ${Math.round(performance.now()-inicioBoot)} ms — dados progressivos`
       );
     }catch(e){
       esconderLoading();
@@ -198,7 +230,6 @@
 
   global.AtlasExpedicaoLoader={
     __loaded:true,
-    versao:'1.2-fiscal-workflow-lazy',
     modulo,
     prepararAba,
     iniciar
