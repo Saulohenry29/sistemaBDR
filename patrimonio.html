@@ -143,7 +143,7 @@
 </span>
 </button>
 <!-- MANUTENÇÃO -->
-<button class="bdr-menu-btn" data-permissao="PATRIMONIO_VER" data-tip="Manutenção" onclick="ir('manutencao.html')">
+<button class="bdr-menu-btn" data-permissao="MANUTENCAO_VER" data-tip="Manutenção" onclick="ir('manutencao.html')">
 <span class="bdr-menu-icon">
 <i class="fa-solid fa-screwdriver-wrench"></i>
 </span>
@@ -433,7 +433,7 @@
 <div class="acoes">
 <button class="btn-ok acao-movimentar" onclick="alterarStatus('ESTOQUE')">📦 Voltar Estoque</button>
 <button class="btn-blue acao-movimentar" onclick="alterarStatus('EM_USO')">✅ Colocar Em Uso</button>
-<button class="btn-orange acao-movimentar acao-manutencao" onclick="AtlasManutencao.abrir(patrimonioSelecionado)">🛠 Manutenção</button>
+<button class="btn-orange acao-movimentar acao-manutencao" data-permissao="MANUTENCAO_CRIAR" onclick="AtlasManutencao.abrir(patrimonioSelecionado)">🛠 Manutenção</button>
 <button class="acao-movimentar" onclick="trocarObra()">🔁 Trocar Setor</button>
 <button class="btn-gray acao-movimentar" onclick="alterarStatus('BAIXADO')">⬇️ Baixar</button>
 <button class="btn-dark acao-imprimir" onclick="imprimirEtiqueta()">🖨 Etiqueta</button>

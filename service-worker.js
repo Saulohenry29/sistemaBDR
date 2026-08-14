@@ -1,5 +1,5 @@
 /* BDR ERP - Service Worker V4 SAFE OFFLINE */
-const BDR_CACHE_VERSION = "bdr-erp-fornecedor-moeda-zero-20260813";
+const BDR_CACHE_VERSION = "bdr-erp-manutencao-permissoes";
 
 const BDR_ASSETS = [
   "./",

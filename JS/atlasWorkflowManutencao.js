@@ -167,12 +167,17 @@
       const lista = (usuarios || []).filter(u => {
         if(manutencao?.empresa_id && String(u.empresa_id) !== String(manutencao.empresa_id)) return false;
         if(atual?.id && String(u.id) === String(atual.id)) return false;
-        const perfil = String(u.perfil || "").toUpperCase();
         const perms = String(u.permissoes || "").toUpperCase();
-        return perms.includes("RECEBER_NOTIFICACOES") && (
-          ["MASTER","ADMIN","ADMINISTRADOR"].includes(perfil) ||
+        const owner = Number(u.id) === 1;
+        const acessaManutencao =
+          perms.includes("MANUTENCAO_VER") ||
           perms.includes("MANUTENCAO_ANALISAR_ORCAMENTO") ||
-          perms.includes("PATRIMONIO_MOVIMENTAR")
+          perms.includes("MANUTENCAO_APROVAR") ||
+          perms.includes("MANUTENCAO_RECEBER");
+
+        return owner || (
+          perms.includes("RECEBER_NOTIFICACOES") &&
+          acessaManutencao
         );
       });
 
@@ -445,6 +450,37 @@
     }
 
     await historico(id, anterior, novo, "STATUS_ALTERADO", observacao || `${anterior} → ${novo}`);
+
+    try{
+      let tipoNotificacao="MANUTENCAO_STATUS";
+      let tituloNotificacao="🔧 Manutenção atualizada";
+
+      if([
+        STATUS.ORCAMENTO_RECEBIDO,
+        STATUS.ORCAMENTO_APROVADO,
+        STATUS.AJUSTE_SOLICITADO,
+        STATUS.ORCAMENTO_RECUSADO
+      ].includes(novo)){
+        tipoNotificacao="MANUTENCAO_ORCAMENTO";
+        tituloNotificacao="💰 Orçamento de manutenção atualizado";
+      }else if([
+        STATUS.RECEBIDA,
+        STATUS.FINALIZADA,
+        STATUS.AGUARDANDO_RECEBIMENTO
+      ].includes(novo)){
+        tipoNotificacao="MANUTENCAO_RETORNO";
+        tituloNotificacao="📦 Retorno de manutenção";
+      }
+
+      await notificarResponsaveis(
+        data,
+        tituloNotificacao,
+        `${data.codigo || "#"+data.id} • ${data.codigo_patrimonio || "Patrimônio"} • ${anterior} → ${novo}`,
+        tipoNotificacao
+      );
+    }catch(e){
+      console.warn("Atlas Manutenção: falha ao notificar mudança de status",e?.message||e);
+    }
 
     if(novo === STATUS.FINALIZADA){
       await banco.from("patrimonio").update({status:"ESTOQUE"}).eq("id", ordem.patrimonio_id);

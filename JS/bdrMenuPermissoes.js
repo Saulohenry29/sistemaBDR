@@ -24,6 +24,7 @@
     TRIAGEM: "triagem.html",
     ESTOQUE: "estoque.html",
     PATRIMONIO: "patrimonio.html",
+    MANUTENCAO: "manutencao.html",
     EXPEDICAO: "expedicao.html",
     RELATORIOS: "relatorios.html",
     MOVIMENTACOES: "movimentacoes.html",
@@ -38,6 +39,7 @@
     "triagem.html": "TRIAGEM_VER",
     "estoque.html": "ESTOQUE_VER",
     "patrimonio.html": "PATRIMONIO_VER",
+    "manutencao.html": "MANUTENCAO_VER",
     "expedicao.html": "EXPEDICAO_VER",
     "relatorios.html": "RELATORIOS_VER",
     "movimentacoes.html": "MOVIMENTACOES_VER",
@@ -54,6 +56,7 @@
     TRIAGEM: "TRIAGEM_VER",
     ESTOQUE: "ESTOQUE_VER",
     PATRIMONIO: "PATRIMONIO_VER",
+    MANUTENCAO: "MANUTENCAO_VER",
     EXPEDICAO: "EXPEDICAO_VER",
     RELATORIOS: "RELATORIOS_VER",
     MOVIMENTACOES: "MOVIMENTACOES_VER",
@@ -65,6 +68,7 @@
   const ORDEM = [
     "DASHBOARD_VER",
     "PATRIMONIO_VER",
+    "MANUTENCAO_VER",
     "ESTOQUE_VER",
     "ENTRADA_VER",
     "TRIAGEM_VER",
@@ -82,6 +86,7 @@
     TRIAGEM: "TRIAGEM_VER",
     ESTOQUE: "ESTOQUE_VER",
     PATRIMONIO: "PATRIMONIO_VER",
+    MANUTENCAO: "MANUTENCAO_VER",
     EXPEDICAO: "EXPEDICAO_VER",
     RELATORIOS: "RELATORIOS_VER",
     MOVIMENTACOES: "MOVIMENTACOES_VER",
@@ -141,6 +146,7 @@
     "TRIAGEM",
     "ESTOQUE",
     "PATRIMONIO",
+    "MANUTENCAO",
     "EXPEDICAO",
     "RELATORIOS",
     "MOVIMENTACOES",
@@ -330,6 +336,7 @@
       ["triagem.html", "TRIAGEM_VER"],
       ["estoque.html", "ESTOQUE_VER"],
       ["patrimonio.html", "PATRIMONIO_VER"],
+      ["manutencao.html", "MANUTENCAO_VER"],
       ["expedicao.html", "EXPEDICAO_VER"],
       ["relatorios.html", "RELATORIOS_VER"],
       ["movimentacoes.html", "MOVIMENTACOES_VER"],
@@ -349,6 +356,7 @@
     if(tip.includes("TRIAGEM")) return "TRIAGEM_VER";
     if(tip.includes("ESTOQUE")) return "ESTOQUE_VER";
     if(tip.includes("PATRIMONIO")) return "PATRIMONIO_VER";
+    if(tip.includes("MANUTENCAO")) return "MANUTENCAO_VER";
     if(tip.includes("EXPEDICAO")) return "EXPEDICAO_VER";
     if(tip.includes("RELATORIO")) return "RELATORIOS_VER";
     if(tip.includes("MOVIMENTACAO") || tip.includes("MOVIMENTACOES")) return "MOVIMENTACOES_VER";
