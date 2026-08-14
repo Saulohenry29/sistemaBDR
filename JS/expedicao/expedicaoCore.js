@@ -14,6 +14,17 @@ var obras = window.obras || [];
 var filtroAtual = window.filtroAtual || "TODOS";
 var pedidoRetiradaAtual = window.pedidoRetiradaAtual || null;
 
+/* Catálogo paginado: somente uma pequena janela fica no navegador. */
+var catalogoPagina = 0;
+var catalogoTemMais = false;
+var catalogoCarregando = false;
+var catalogoBuscaTimer = null;
+var catalogoKPIs = null;
+var pedidosTotalServidor = 0;
+var catalogoTotalServidor = 0;
+var catalogoTotalPaginas = 1;
+var pedidosBackgroundPromise = null;
+
 /* =========================================================
    OFFLINE BDR - Expedição
    A tela cria solicitações e muda status mesmo sem internet.
@@ -167,6 +178,63 @@ function rotStatus(s){ const m={ESTOQUE:"DISPONÍVEL",DISPONIVEL:"DISPONÍVEL",N
 function statusClass(s){ return "st-" + String(s || "").toUpperCase().replaceAll(" ","_"); }
 function nomeObra(id){ const o=obras.find(x=>String(x.id)===String(id)); return o ? `${o.codigo_obra || "-"} - ${o.nome || "-"}` : "Sem obra"; }
 function obraCurta(id, fallback){ const txt = fallback || nomeObra(id); return txt.replace(/^\d+\s*-\s*/,'').slice(0,28); }
+
+function preencherFiltroObrasCatalogo(){
+  const select=document.getElementById("filtroObraCatalogo");
+  if(!select) return;
+
+  const atual=String(select.value||"TODAS");
+  const lista=(Array.isArray(obras)?obras:[])
+    .slice()
+    .sort((a,b)=>{
+      const ca=String(a.codigo_obra||"");
+      const cb=String(b.codigo_obra||"");
+      return ca.localeCompare(cb,"pt-BR",{numeric:true,sensitivity:"base"});
+    });
+
+  select.innerHTML=[
+    '<option value="TODAS">Todas as obras</option>',
+    ...lista.map(o=>{
+      const id=Number(o.id||0);
+      const codigo=esc(o.codigo_obra||"");
+      const nome=esc(o.nome||"");
+      return `<option value="${id}">${codigo}${codigo&&nome?" - ":""}${nome}</option>`;
+    })
+  ].join("");
+
+  if([...select.options].some(o=>o.value===atual)){
+    select.value=atual;
+  }else{
+    select.value="TODAS";
+  }
+}
+
+function preencherFiltroCategoriasCatalogo(){
+  const select=document.getElementById("filtroCategoriaCatalogo");
+  if(!select) return;
+
+  const atual=String(select.value||"TODAS");
+  const categorias=[...new Set(
+    (Array.isArray(itensCatalogo)?itensCatalogo:[])
+      .map(i=>String(i.tipo||i.categoria||i.tipo_item||"").trim().toUpperCase())
+      .filter(Boolean)
+  )].sort((a,b)=>a.localeCompare(b,"pt-BR",{numeric:true,sensitivity:"base"}));
+
+  select.innerHTML=[
+    '<option value="TODAS">Todas</option>',
+    ...categorias.map(v=>{
+      const rotulo=esc(v.replaceAll("_"," ").toLowerCase().replace(/\b\w/g,l=>l.toUpperCase()));
+      return `<option value="${esc(v)}">${rotulo}</option>`;
+    })
+  ].join("");
+
+  if([...select.options].some(o=>o.value===atual)){
+    select.value=atual;
+  }else{
+    select.value="TODAS";
+  }
+}
+
 function fotoItem(i){ return i.foto_url || i.imagem_url || ""; }
 function placeholderIcon(i){ const t = `${i.nome || i.descricao || ""}`.toLowerCase(); if(t.includes("furadeira")||t.includes("parafusadeira")) return "🔩"; if(t.includes("notebook")||t.includes("computador")) return "💻"; if(t.includes("impressora")) return "🖨️"; if(t.includes("solda")) return "⚡"; if(t.includes("capacete")) return "⛑️"; if(t.includes("cadeira")) return "🪑"; return "📦"; }
 function carregarTopo(){ const u=usuarioAtual(); document.getElementById("usuarioNome").innerText = u ? "Olá, " + (u.nome || "usuário") : "Olá, usuário"; document.getElementById("usuarioPerfil").innerText = u ? (u.perfil || "-") : "-"; }
@@ -175,8 +243,25 @@ function carregarTopo(){ const u=usuarioAtual(); document.getElementById("usuari
    Controlada exclusivamente por JS/atlasTopbar.js.
 ========================================================= */
 
-function abrirAba(nome, btn){ document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active")); document.getElementById("tab-"+nome)?.classList.add("active"); document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active")); btn?.classList.add("active"); renderizarPedidos(); }
-function filtrarStatus(st, btn){ filtroAtual = st; document.querySelectorAll(".chip-exp").forEach(b=>b.classList.remove("active")); btn?.classList.add("active"); renderizarCatalogo(); }
+function abrirAba(nome, btn){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("tab-"+nome)?.classList.add("active");
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+  btn?.classList.add("active");
+
+  if(nome!=="catalogo" && typeof window.AtlasExpedicaoCarregarPedidos==="function"){
+    void window.AtlasExpedicaoCarregarPedidos();
+  }
+
+  renderizarPedidos();
+}
+async function filtrarStatus(st, btn){
+  filtroAtual = st;
+  document.querySelectorAll(".chip-exp").forEach(b=>b.classList.remove("active"));
+  btn?.classList.add("active");
+  catalogoPagina=0;
+  await carregarCatalogo({acumular:false});
+}
 
 async function carregarTudo(){
   if(!db()){ alert("Supabase não carregado."); return; }
@@ -196,7 +281,7 @@ async function carregarTudo(){
       window.pedidos = pedidos;
       window.obras = obras;
       renderizarTudo();
-      console.log("📦 Expedição carregada do cache local.");
+      console.warn("📦 ATLAS EXPEDIÇÃO: dados exibidos do CACHE LOCAL (não são uma leitura nova do Supabase).");
       return;
     }
 
@@ -205,14 +290,64 @@ async function carregarTudo(){
   }
 
   try{
-    const ob = await db().from("obras").select("*").eq("ativa",true).order("nome");
+    const inicioDados=performance.now();
+
+    // 1) O mínimo necessário para o catálogo e identificação das obras.
+    const ob = await db().from("obras")
+      .select("id,codigo_obra,nome,ativa")
+      .eq("ativa",true)
+      .order("nome");
+    if(ob.error) throw ob.error;
     obras = ob.data || [];
-    await Promise.all([carregarCatalogo(), carregarPedidos()]);
-    salvarCacheExpedicao();
-    window.itensCatalogo = itensCatalogo;
-    window.pedidos = pedidos;
     window.obras = obras;
-    renderizarTudo();
+    preencherFiltroObrasCatalogo();
+
+    catalogoPagina=0;
+    catalogoKPIs=null;
+
+    // Carrinho e estrutura aparecem antes dos pedidos pesados.
+    renderizarCarrinho();
+    atualizarKPIs();
+
+    // 2) Catálogo primeiro: é a área principal de interação do funcionário.
+    await carregarCatalogo({acumular:false});
+    window.itensCatalogo = itensCatalogo;
+    renderizarCatalogo();
+
+    console.info(`☁️ ATLAS EXPEDIÇÃO: dados LIVE recebidos do Supabase — ${obras.length} obra(s) ativa(s).`);
+    console.info(`⚡ Expedição: catálogo utilizável em ${Math.round(performance.now()-inicioDados)} ms`);
+
+    // 3) A página e o catálogo já estão utilizáveis.
+    // Pedidos/movimentações ficam por último e não bloqueiam o funcionário.
+    const iniciarPedidosBackground=()=>{
+      if(pedidosBackgroundPromise) return pedidosBackgroundPromise;
+
+      pedidosBackgroundPromise=carregarPedidos()
+        .then(()=>{
+          window.pedidos=pedidos;
+          renderizarPedidos();
+          atualizarKPIs();
+          salvarCacheExpedicao();
+          console.info(`⚡ Expedição: pedidos/movimentações prontos em ${Math.round(performance.now()-inicioDados)} ms`);
+          return pedidos;
+        })
+        .catch(err=>{
+          pedidosBackgroundPromise=null;
+          console.warn("Expedição: pedidos em segundo plano",err?.message||err);
+          return [];
+        });
+
+      return pedidosBackgroundPromise;
+    };
+
+    window.AtlasExpedicaoCarregarPedidos=iniciarPedidosBackground;
+
+    const idle=window.requestIdleCallback
+      ? fn=>window.requestIdleCallback(fn,{timeout:1800})
+      : fn=>setTimeout(fn,900);
+
+    idle(()=>void iniciarPedidosBackground());
+
   }catch(e){
     if(bdrExpErroInternet(e)){
       const cache = carregarCacheExpedicao();
@@ -381,79 +516,332 @@ async function aplicarReservasNoCatalogoAtlas(lista){
   }
 }
 
-async function carregarCatalogo(){
-  const u = usuarioAtual();
-  let lista = [];
+async function carregarCatalogo({acumular=false}={}){
+  const u=usuarioAtual();
 
-  const pat = await db().from("patrimonio").select("*").in("status",["ESTOQUE","NO ESTOQUE","DISPONIVEL","EM_USO","MANUTENCAO","RESERVADO"]).order("id",{ascending:false}).limit(1000);
-  if(!pat.error){
-    lista.push(...(pat.data || []).map(p=>({
+  // OFFLINE mantém o catálogo salvo localmente, sem tentar consultar o servidor.
+  if(!(await bdrExpOnlineReal())){
+    renderizarCatalogo();
+    return;
+  }
+
+  if(catalogoCarregando) return;
+  if(!window.AtlasExpedicaoCatalogo?.buscar){
+    throw new Error("Módulo de catálogo da Expedição não carregado.");
+  }
+
+  catalogoCarregando=true;
+  renderizarEstadoCarregandoCatalogo(acumular);
+
+  try{
+    const escopoPermitido = podeVerOutras()
+      ? null
+      : [...new Set([
+          Number(u?.obra_id||0),
+          1,
+          ...obras.filter(o=>String(o?.nome||"").toUpperCase().includes("CD")).map(o=>Number(o.id))
+        ].filter(Boolean))];
+
+    const obraSelecionada=String(document.getElementById("filtroObraCatalogo")?.value||"TODAS");
+    let obraIds=escopoPermitido;
+
+    if(obraSelecionada!=="TODAS"){
+      const idSelecionado=Number(obraSelecionada||0);
+      if(idSelecionado){
+        if(Array.isArray(escopoPermitido)){
+          obraIds=escopoPermitido.includes(idSelecionado) ? [idSelecionado] : [];
+        }else{
+          obraIds=[idSelecionado];
+        }
+      }
+    }
+
+    const busca=valor("buscaCatalogo");
+    const limitePagina=Number(document.getElementById("itensPorPaginaCatalogo")?.value || 24);
+
+    const resposta=await window.AtlasExpedicaoCatalogo.buscar({
+      busca,
+      status:filtroAtual,
+      pagina:catalogoPagina,
+      limite:limitePagina,
+      obraIds
+    });
+
+    catalogoTotalServidor=Number(resposta.total||0);
+    catalogoTotalPaginas=Math.max(1,Number(resposta.totalPaginas||1));
+
+    let lista=[];
+    lista.push(...(resposta.patrimonios||[]).map(p=>({
       origem_tabela:"patrimonio", id:p.id, codigo:p.codigo_qr, nome:p.nome_bem || "Patrimônio", descricao:p.nome_bem || "Patrimônio", tipo:"PATRIMONIO",
       status:normalStatus(p.status), qtd:1, obra_id:p.obra_id, empresa_id:p.empresa_id, obra_nome:p.localizacao || nomeObra(p.obra_id),
       localizacao:p.localizacao_fisica || p.endereco_codigo || p.localizacao || "-", marca:p.marca, modelo:p.modelo, valor:p.valor_bem, foto_url:p.foto_url,
       estado:p.estado_conservacao || "-", patrimonio_id:p.id, raw:p
     })));
-  }
-
-  const est = await db().from("estoque_produtos").select("*").in("status",["DISPONIVEL","ESTOQUE","NO ESTOQUE","EM_USO","MANUTENCAO","RESERVADO"]).order("id",{ascending:false}).limit(1000);
-  if(!est.error){
-    lista.push(...(est.data || []).map(p=>({
+    lista.push(...(resposta.produtos||[]).map(p=>({
       origem_tabela:"estoque_produtos", id:p.id, codigo:p.codigo, nome:p.descricao || p.produto || "Produto", descricao:p.descricao || p.produto || "Produto", tipo:p.tipo_controle || "CONSUMO",
       status:normalStatus(p.status), qtd:Number(p.quantidade || p.qtd || 0), obra_id:p.obra_id, empresa_id:p.empresa_id, obra_nome:nomeObra(p.obra_id),
       localizacao:p.localizacao_fisica || [p.rua,p.prateleira,p.coluna,p.nivel].filter(Boolean).join("-") || "-", marca:p.marca, modelo:p.modelo, valor:p.valor_unitario, foto_url:p.foto_url,
       estado:p.estado_material || p.condicao || "-", produto_id:p.id, patrimonio_id:p.patrimonio_id, raw:p
     })));
+
+    const categoriaSelecionada=String(document.getElementById("filtroCategoriaCatalogo")?.value||"TODAS").toUpperCase();
+    if(categoriaSelecionada!=="TODAS"){
+      lista=lista.filter(i=>String(i.tipo||i.categoria||i.tipo_item||"").trim().toUpperCase()===categoriaSelecionada);
+    }
+
+    const ordenacao=String(document.getElementById("ordenacaoCatalogo")?.value||"RECENTES").toUpperCase();
+    if(ordenacao==="NOME_ASC"){
+      lista.sort((a,b)=>String(a.nome||a.descricao||"").localeCompare(String(b.nome||b.descricao||""),"pt-BR",{numeric:true,sensitivity:"base"}));
+    }else if(ordenacao==="CODIGO_ASC"){
+      lista.sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||""),"pt-BR",{numeric:true,sensitivity:"base"}));
+    }else if(ordenacao==="OBRA_ASC"){
+      lista.sort((a,b)=>String(a.obra_nome||"").localeCompare(String(b.obra_nome||""),"pt-BR",{numeric:true,sensitivity:"base"}));
+    }else if(ordenacao==="STATUS_ASC"){
+      lista.sort((a,b)=>String(a.status||"").localeCompare(String(b.status||""),"pt-BR",{numeric:true,sensitivity:"base"}));
+    }else{
+      lista.sort((a,b)=>Number(b.id||0)-Number(a.id||0));
+    }
+
+    lista=lista.slice(0,limitePagina);
+    lista=await aplicarReservasNoCatalogoAtlas(lista);
+    lista=lista.filter(i=>!["BAIXADO","QUEBRADO"].includes(normalStatus(i.status)));
+
+    if(acumular){
+      const chaves=new Set(itensCatalogo.map(i=>`${i.origem_tabela}:${i.id}`));
+      itensCatalogo.push(...lista.filter(i=>!chaves.has(`${i.origem_tabela}:${i.id}`)));
+    }else{
+      itensCatalogo=lista;
+    }
+
+    catalogoTemMais=Boolean(resposta.temMais);
+    window.itensCatalogo=itensCatalogo;
+    preencherFiltroCategoriasCatalogo();
+    renderizarCatalogo();
+    atualizarPaginacaoCatalogoServidor();
+
+    // Os KPIs são contagens leves no banco; não exigem baixar todo o catálogo.
+    if(!catalogoKPIs){
+      window.AtlasExpedicaoCatalogo.kpis({obraIds})
+        .then(k=>{ catalogoKPIs=k; atualizarKPIs(); })
+        .catch(e=>console.warn("Expedição: KPIs do catálogo",e?.message||e));
+    }
+  }finally{
+    catalogoCarregando=false;
   }
-
-  if(!podeVerOutras()){
-    const minhaObra = String(u?.obra_id || "");
-    lista = lista.filter(i => ["", minhaObra].includes(String(i.obra_id || "")) || String(i.obra_id || "") === "1" || String(i.obra_nome||"").toUpperCase().includes("CD"));
-  }
-
-  // Atlas 2.8.1: antes de renderizar, recalcula disponibilidade real.
-  lista = await aplicarReservasNoCatalogoAtlas(lista);
-
-  itensCatalogo = lista.filter(i => !["BAIXADO","QUEBRADO"].includes(normalStatus(i.status)));
-  atualizarKPIs();
 }
 
-async function carregarPedidos(){
-  const r = await db().from("pedidos_retirada").select("*").order("id",{ascending:false}).limit(300);
-  if(r.error){ console.warn("Erro pedidos:", r.error.message); pedidos=[]; return; }
-  pedidos = r.data || [];
-  const ids = pedidos.map(p=>p.id);
-  if(ids.length){
-    const it = await db().from("itens_retirada").select("*").in("pedido_id", ids);
-    const itens = it.data || [];
-    pedidos = pedidos.map(p=>({...p, itens_retirada: itens.filter(i=>String(i.pedido_id)===String(p.id))}));
+function renderizarEstadoCarregandoCatalogo(acumular){
+  const grid=document.getElementById("catalogoGrid");
+  if(!grid) return;
+  if(acumular) return;
+  grid.innerHTML=`<div class="cart-empty" style="grid-column:1/-1">Carregando itens...</div>`;
+}
+
+function agendarBuscaCatalogo(){
+  clearTimeout(catalogoBuscaTimer);
+  catalogoBuscaTimer=setTimeout(async()=>{
+    catalogoPagina=0;
+    catalogoKPIs=null;
+    window.AtlasExpedicaoCatalogo?.limparCachePaginacao?.();
+    await carregarCatalogo({acumular:false});
+  },260);
+}
+window.agendarBuscaCatalogo=agendarBuscaCatalogo;
+
+
+function paginasVisiveisCatalogo(atual,total){
+  const paginas=[];
+  const add=p=>{
+    if(p>=1 && p<=total && !paginas.includes(p)) paginas.push(p);
+  };
+
+  add(1);
+  add(atual-1);
+  add(atual);
+  add(atual+1);
+  add(total);
+
+  return paginas.sort((a,b)=>a-b);
+}
+
+function atualizarPaginacaoCatalogoServidor(){
+  const atual=catalogoPagina+1;
+  const total=Math.max(1,Number(catalogoTotalPaginas)||1);
+  const box=document.getElementById("atlasPaginacaoCatalogo");
+
+  if(!box) return;
+
+  const paginas=paginasVisiveisCatalogo(atual,total);
+  let anterior=null;
+  const partes=[];
+
+  paginas.forEach(p=>{
+    if(anterior!==null && p-anterior>1){
+      partes.push('<span class="atlas-page-dots" aria-hidden="true">…</span>');
+    }
+
+    partes.push(`
+      <button type="button"
+        class="atlas-page-btn ${p===atual?"active":""}"
+        data-pagina="${p}"
+        ${p===atual?'aria-current="page"':""}
+        title="Página ${p}">
+        ${p}
+      </button>`);
+
+    anterior=p;
+  });
+
+  box.innerHTML=`
+    <button type="button"
+      class="atlas-page-btn nav"
+      data-pagina="${atual-1}"
+      ${atual<=1?"disabled":""}
+      aria-label="Página anterior">‹</button>
+
+    ${partes.join("")}
+
+    <button type="button"
+      class="atlas-page-btn nav"
+      data-pagina="${atual+1}"
+      ${atual>=total?"disabled":""}
+      aria-label="Próxima página">›</button>
+  `;
+
+  box.style.display="flex";
+
+  box.querySelectorAll("[data-pagina]").forEach(btn=>{
+    btn.addEventListener("click",async()=>{
+      if(btn.disabled) return;
+      const pagina=Number(btn.dataset.pagina||1);
+      await atlasCarregarPaginaCatalogo(pagina-1);
+    });
+  });
+
+  const resumo=document.getElementById("atlasResumoCatalogo");
+  if(resumo){
+    if(!catalogoTotalServidor){
+      resumo.textContent="Nenhum item encontrado";
+    }else{
+      const porPagina=Number(document.getElementById("itensPorPaginaCatalogo")?.value||24);
+      const inicio=((atual-1)*porPagina)+1;
+      const fim=Math.min(inicio+itensCatalogo.length-1,catalogoTotalServidor);
+      resumo.textContent=`Mostrando ${inicio}–${fim} de ${catalogoTotalServidor} itens`;
+    }
   }
+}
+
+async function atlasCarregarPaginaCatalogo(pagina){
+  const destino=Math.min(
+    Math.max(0,Number(pagina)||0),
+    Math.max(0,catalogoTotalPaginas-1)
+  );
+
+  if(destino===catalogoPagina && itensCatalogo.length) return;
+
+  catalogoPagina=destino;
+  await carregarCatalogo({acumular:false});
+  document.getElementById("catalogoGrid")?.scrollIntoView({
+    behavior:"smooth",
+    block:"start"
+  });
+}
+
+window.atlasMudarPaginaCatalogo=async function(delta){
+  await atlasCarregarPaginaCatalogo(catalogoPagina+Number(delta||0));
+};
+
+window.atlasIrPaginaCatalogo=async function(pagina){
+  await atlasCarregarPaginaCatalogo(Number(pagina||1)-1);
+};
+
+window.atlasIrUltimaPaginaCatalogo=async function(){
+  await atlasCarregarPaginaCatalogo(Math.max(0,catalogoTotalPaginas-1));
+};
+
+window.atlasAlterarItensPorPagina=async function(){
+  catalogoPagina=0;
+  await carregarCatalogo({acumular:false});
+};
+
+window.atlasAlterarFiltroCatalogo=async function(){
+  catalogoPagina=0;
+  await carregarCatalogo({acumular:false});
+};
+
+window.atlasLimparFiltrosCatalogo=async function(){
+  const ids={
+    filtroObraCatalogo:"TODAS",
+    filtroCategoriaCatalogo:"TODAS",
+    ordenacaoCatalogo:"RECENTES",
+    itensPorPaginaCatalogo:"24",
+    buscaCatalogo:""
+  };
+  Object.entries(ids).forEach(([id,valor])=>{
+    const el=document.getElementById(id);
+    if(el) el.value=valor;
+  });
+
+  filtroAtual="TODOS";
+  document.querySelectorAll(".chip-exp").forEach(btn=>{
+    btn.classList.toggle("active",btn.dataset.filtro==="TODOS");
+  });
+
+  catalogoPagina=0;
+  catalogoKPIs=null;
+  window.AtlasExpedicaoCatalogo?.limparCachePaginacao?.();
+  await carregarCatalogo({acumular:false});
+};
+
+
+async function carregarPedidos(){
+  if(!window.AtlasExpedicaoPedidos?.carregar){
+    throw new Error("Módulo de pedidos da Expedição não carregado.");
+  }
+  const r=await window.AtlasExpedicaoPedidos.carregar();
+  pedidos=r.pedidos||[];
+  pedidosTotalServidor=Number(r.total||pedidos.length);
+  window.pedidos=pedidos;
 }
 
 function atualizarKPIs(){
   const c = s => itensCatalogo.filter(i=>normalStatus(i.status)===s).length;
-  document.getElementById("kpiTotal").innerText = itensCatalogo.length;
-  document.getElementById("kpiEstoque").innerText = c("ESTOQUE");
-  document.getElementById("kpiUso").innerText = c("EM_USO");
-  document.getElementById("kpiManutencao").innerText = c("MANUTENCAO");
-  document.getElementById("kpiReservado").innerText = c("RESERVADO");
-  document.getElementById("kpiPedidos").innerText = pedidos.length;
-  document.getElementById("chipTodos").innerText = itensCatalogo.length;
-  document.getElementById("chipEstoque").innerText = c("ESTOQUE");
-  document.getElementById("chipUso").innerText = c("EM_USO");
-  document.getElementById("chipManutencao").innerText = c("MANUTENCAO");
-  document.getElementById("chipReservado").innerText = c("RESERVADO");
+  const k=catalogoKPIs||{};
+  document.getElementById("kpiTotal").innerText = k.TODOS ?? itensCatalogo.length;
+  document.getElementById("kpiEstoque").innerText = k.ESTOQUE ?? c("ESTOQUE");
+  document.getElementById("kpiUso").innerText = k.EM_USO ?? c("EM_USO");
+  document.getElementById("kpiManutencao").innerText = k.MANUTENCAO ?? c("MANUTENCAO");
+  document.getElementById("kpiReservado").innerText = k.RESERVADO ?? c("RESERVADO");
+  document.getElementById("kpiPedidos").innerText = pedidosTotalServidor || pedidos.length;
+  document.getElementById("chipTodos").innerText = k.TODOS ?? itensCatalogo.length;
+  document.getElementById("chipEstoque").innerText = k.ESTOQUE ?? c("ESTOQUE");
+  document.getElementById("chipUso").innerText = k.EM_USO ?? c("EM_USO");
+  document.getElementById("chipManutencao").innerText = k.MANUTENCAO ?? c("MANUTENCAO");
+  document.getElementById("chipReservado").innerText = k.RESERVADO ?? c("RESERVADO");
 }
 
 function renderizarTudo(){ atualizarKPIs(); renderizarCatalogo(); renderizarCarrinho(); renderizarPedidos(); }
 function renderizarCatalogo(){
   const grid = document.getElementById("catalogoGrid");
-  const busca = valor("buscaCatalogo").toLowerCase();
-  let lista = itensCatalogo.filter(i=>{
-    const texto = `${i.codigo||""} ${i.nome||""} ${i.descricao||""} ${i.marca||""} ${i.modelo||""} ${i.obra_nome||""} ${i.localizacao||""}`.toLowerCase();
-    const st = normalStatus(i.status);
-    return texto.includes(busca) && (filtroAtual === "TODOS" || st === filtroAtual);
-  });
-  if(!lista.length){ grid.innerHTML = `<div class="cart-empty" style="grid-column:1/-1">Nenhum item encontrado.</div>`; return; }
+  if(!grid) return;
+
+  let lista = itensCatalogo;
+
+  // No modo offline o cache pode conter um catálogo maior; filtra localmente.
+  if(navigator.onLine===false){
+    const busca = valor("buscaCatalogo").toLowerCase();
+    lista = itensCatalogo.filter(i=>{
+      const texto = `${i.codigo||""} ${i.nome||""} ${i.descricao||""} ${i.marca||""} ${i.modelo||""} ${i.obra_nome||""} ${i.localizacao||""}`.toLowerCase();
+      const st = normalStatus(i.status);
+      return texto.includes(busca) && (filtroAtual === "TODOS" || st === filtroAtual);
+    });
+  }
+
+  if(!lista.length){
+    grid.innerHTML = `<div class="cart-empty" style="grid-column:1/-1">Nenhum item encontrado.</div>`;
+    return;
+  }
+
   grid.innerHTML = lista.map(i => cardItem(i)).join("");
 }
 
@@ -1533,9 +1921,10 @@ window.BDRExpedicao = {
 };
 
 function bdrExpedicaoIniciarSeguro(){
-  setTimeout(() => {
+  // Entrega o primeiro frame ao navegador e inicia os dados logo em seguida.
+  requestAnimationFrame(() => {
     carregarTudo().catch(e => console.warn("BDR Expedição: falha ao carregar:", e?.message || e));
-  }, 100);
+  });
 }
 
 if(document.readyState === "loading"){
@@ -3127,286 +3516,11 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
 
 
 /* =========================================================
-   ATLAS EXPEDIÇÃO 3.6
-   CATÁLOGO COM FILTROS HORIZONTAIS E PAGINAÇÃO
-   Observação: nesta primeira versão, a paginação é visual.
-   Os dados já carregados em itensCatalogo são filtrados e
-   exibidos em blocos de 30, 50 ou 100 registros.
+   CATÁLOGO — FILTROS E PAGINAÇÃO
+   A paginação visual antiga foi removida.
+   A fonte oficial agora é a paginação real do Supabase
+   implementada acima em carregarCatalogo().
 ========================================================= */
-(function(){
-  const estado = window.AtlasCatalogoPaginado = window.AtlasCatalogoPaginado || {
-    pagina: 1,
-    porPagina: 30,
-    totalPaginas: 1
-  };
-
-  function textoSeguro(v){
-    return String(v ?? "").trim();
-  }
-
-  function valorElemento(id, padrao){
-    const el = document.getElementById(id);
-    return el ? el.value : padrao;
-  }
-
-  function obraDoItem(item){
-    return textoSeguro(
-      item.obra_id ??
-      item.localizacao_obra_id ??
-      item.obra_origem_id ??
-      item.empresa_obra_id ??
-      item.obra_nome ??
-      item.obra ??
-      item.localizacao
-    );
-  }
-
-  function obraNomeDoItem(item){
-    return textoSeguro(
-      item.obra_nome ??
-      item.nome_obra ??
-      item.obra ??
-      item.localizacao ??
-      item.setor ??
-      obraDoItem(item)
-    );
-  }
-
-  function categoriaDoItem(item){
-    return textoSeguro(
-      item.tipo_item ??
-      item.categoria ??
-      item.tipo ??
-      item.grupo ??
-      item.classificacao ??
-      "OUTRO"
-    ).toUpperCase();
-  }
-
-  function dataDoItem(item){
-    const bruto = item.created_at ?? item.data_cadastro ?? item.updated_at ?? item.id ?? 0;
-    const data = new Date(bruto);
-    return Number.isNaN(data.getTime()) ? Number(item.id || 0) : data.getTime();
-  }
-
-  function compararTexto(a,b){
-    return textoSeguro(a).localeCompare(textoSeguro(b), "pt-BR", {numeric:true, sensitivity:"base"});
-  }
-
-  function preencherSelect(id, valores, textoTodos){
-    const select = document.getElementById(id);
-    if(!select) return;
-    const atual = select.value;
-    const opcoes = [`<option value="TODAS">${textoTodos}</option>`]
-      .concat(valores.map(v => `<option value="${String(v.valor).replace(/"/g,"&quot;")}">${v.rotulo}</option>`));
-    select.innerHTML = opcoes.join("");
-    if(Array.from(select.options).some(o => o.value === atual)) select.value = atual;
-  }
-
-  function atlasAtualizarOpcoesFiltros(){
-    const lista = Array.isArray(window.itensCatalogo) ? window.itensCatalogo : [];
-
-    const mapaObras = new Map();
-    lista.forEach(item => {
-      const valor = obraDoItem(item);
-      const rotulo = obraNomeDoItem(item);
-      if(valor && !mapaObras.has(valor)) mapaObras.set(valor, rotulo || valor);
-    });
-    const obrasOrdenadas = Array.from(mapaObras.entries())
-      .map(([valor,rotulo]) => ({valor,rotulo}))
-      .sort((a,b)=>compararTexto(a.rotulo,b.rotulo));
-    preencherSelect("filtroObraCatalogo", obrasOrdenadas, "Todas as obras");
-
-    const categorias = Array.from(new Set(lista.map(categoriaDoItem).filter(Boolean)))
-      .sort(compararTexto)
-      .map(valor => ({
-        valor,
-        rotulo: valor.replaceAll("_"," ").toLowerCase().replace(/\b\w/g, l=>l.toUpperCase())
-      }));
-    preencherSelect("filtroCategoriaCatalogo", categorias, "Todas");
-  }
-
-  function obterListaFiltrada(){
-    const buscaEl = document.getElementById("buscaCatalogo");
-    const busca = textoSeguro(buscaEl?.value).toLowerCase();
-    const obra = valorElemento("filtroObraCatalogo","TODAS");
-    const categoria = valorElemento("filtroCategoriaCatalogo","TODAS");
-    const ordenacao = valorElemento("ordenacaoCatalogo","RECENTES");
-
-    let lista = (Array.isArray(window.itensCatalogo) ? window.itensCatalogo : []).filter(item => {
-      const texto = [
-        item.codigo, item.codigo_bem, item.etiqueta, item.codigo_qr,
-        item.nome, item.nome_bem, item.descricao, item.marca, item.modelo,
-        obraNomeDoItem(item), item.localizacao, item.numero_serie
-      ].map(textoSeguro).join(" ").toLowerCase();
-
-      const status = typeof normalStatus === "function"
-        ? normalStatus(item.status)
-        : textoSeguro(item.status).toUpperCase();
-
-      const passaBusca = !busca || texto.includes(busca);
-      const passaStatus = window.filtroAtual === "TODOS" || status === window.filtroAtual;
-      const passaObra = obra === "TODAS" || obraDoItem(item) === obra;
-      const passaCategoria = categoria === "TODAS" || categoriaDoItem(item) === categoria;
-
-      return passaBusca && passaStatus && passaObra && passaCategoria;
-    });
-
-    lista.sort((a,b)=>{
-      if(ordenacao === "NOME_ASC") return compararTexto(a.nome ?? a.nome_bem, b.nome ?? b.nome_bem);
-      if(ordenacao === "CODIGO_ASC") return compararTexto(a.codigo ?? a.codigo_bem ?? a.etiqueta, b.codigo ?? b.codigo_bem ?? b.etiqueta);
-      if(ordenacao === "OBRA_ASC") return compararTexto(obraNomeDoItem(a), obraNomeDoItem(b));
-      if(ordenacao === "STATUS_ASC") return compararTexto(a.status, b.status);
-      return dataDoItem(b) - dataDoItem(a);
-    });
-
-    return lista;
-  }
-
-  function atualizarResumo(total, inicio, fim){
-    const resumo = document.getElementById("atlasResumoCatalogo");
-    if(resumo){
-      resumo.textContent = total
-        ? `Mostrando ${inicio + 1}–${fim} de ${total} itens`
-        : "Nenhum item encontrado";
-    }
-
-    const ativos = [];
-    const obra = valorElemento("filtroObraCatalogo","TODAS");
-    const categoria = valorElemento("filtroCategoriaCatalogo","TODAS");
-    const obraEl = document.getElementById("filtroObraCatalogo");
-    if(obra !== "TODAS") ativos.push(`Obra: ${obraEl?.selectedOptions?.[0]?.text || obra}`);
-    if(categoria !== "TODAS") ativos.push(`Categoria: ${categoria.replaceAll("_"," ")}`);
-    if(window.filtroAtual && window.filtroAtual !== "TODOS") ativos.push(`Status: ${window.filtroAtual.replaceAll("_"," ")}`);
-
-    const filtros = document.getElementById("atlasFiltrosAtivosCatalogo");
-    if(filtros) filtros.textContent = ativos.length ? `Filtros ativos — ${ativos.join(" • ")}` : "";
-  }
-
-  function atualizarPaginacao(){
-    const totalPaginas = Math.max(1, estado.totalPaginas);
-    const pagina = Math.min(Math.max(1, estado.pagina), totalPaginas);
-    estado.pagina = pagina;
-
-    const label = document.getElementById("atlasPaginaAtual");
-    if(label) label.textContent = `Página ${pagina} de ${totalPaginas}`;
-
-    const primeira = pagina <= 1;
-    const ultima = pagina >= totalPaginas;
-    ["atlasPrimeiraPagina","atlasPaginaAnterior"].forEach(id=>{
-      const el=document.getElementById(id); if(el) el.disabled=primeira;
-    });
-    ["atlasProximaPagina","atlasUltimaPagina"].forEach(id=>{
-      const el=document.getElementById(id); if(el) el.disabled=ultima;
-    });
-
-    const paginacao = document.getElementById("atlasPaginacaoCatalogo");
-    if(paginacao) paginacao.style.display = estado.totalPaginas <= 1 ? "none" : "flex";
-  }
-
-  window.renderizarCatalogo = function(){
-    const grid = document.getElementById("catalogoGrid");
-    if(!grid) return;
-
-    atlasAtualizarOpcoesFiltros();
-
-    estado.porPagina = Number(valorElemento("itensPorPaginaCatalogo", estado.porPagina || 30)) || 30;
-    const lista = obterListaFiltrada();
-    estado.totalPaginas = Math.max(1, Math.ceil(lista.length / estado.porPagina));
-    if(estado.pagina > estado.totalPaginas) estado.pagina = estado.totalPaginas;
-
-    const inicio = (estado.pagina - 1) * estado.porPagina;
-    const fim = Math.min(inicio + estado.porPagina, lista.length);
-    const pagina = lista.slice(inicio, fim);
-
-    if(!pagina.length){
-      grid.innerHTML = `<div class="cart-empty" style="grid-column:1/-1">Nenhum item encontrado com os filtros selecionados.</div>`;
-    }else{
-      grid.innerHTML = pagina.map(item => typeof cardItem === "function" ? cardItem(item) : "").join("");
-    }
-
-    atualizarResumo(lista.length, inicio, fim);
-    atualizarPaginacao();
-  };
-
-  window.atlasAlterarFiltroCatalogo = function(){
-    estado.pagina = 1;
-    window.renderizarCatalogo();
-  };
-
-  window.atlasAlterarItensPorPagina = function(){
-    estado.porPagina = Number(valorElemento("itensPorPaginaCatalogo",30)) || 30;
-    estado.pagina = 1;
-    window.renderizarCatalogo();
-  };
-
-  window.atlasMudarPaginaCatalogo = function(delta){
-    estado.pagina = Math.min(Math.max(1, estado.pagina + Number(delta || 0)), estado.totalPaginas);
-    window.renderizarCatalogo();
-    document.getElementById("catalogoGrid")?.scrollIntoView({behavior:"smooth",block:"start"});
-  };
-
-  window.atlasIrPaginaCatalogo = function(pagina){
-    estado.pagina = Math.min(Math.max(1, Number(pagina || 1)), estado.totalPaginas);
-    window.renderizarCatalogo();
-    document.getElementById("catalogoGrid")?.scrollIntoView({behavior:"smooth",block:"start"});
-  };
-
-  window.atlasIrUltimaPaginaCatalogo = function(){
-    window.atlasIrPaginaCatalogo(estado.totalPaginas);
-  };
-
-  window.atlasLimparFiltrosCatalogo = function(){
-    const ids = {
-      filtroObraCatalogo:"TODAS",
-      filtroCategoriaCatalogo:"TODAS",
-      ordenacaoCatalogo:"RECENTES",
-      itensPorPaginaCatalogo:"30",
-      buscaCatalogo:""
-    };
-    Object.entries(ids).forEach(([id,valor])=>{
-      const el=document.getElementById(id);
-      if(el) el.value=valor;
-    });
-    window.filtroAtual = "TODOS";
-    document.querySelectorAll(".chip-exp").forEach(btn=>{
-      btn.classList.toggle("active", btn.dataset.filtro === "TODOS");
-    });
-    estado.pagina = 1;
-    estado.porPagina = 30;
-    window.renderizarCatalogo();
-  };
-
-  // Busca digitada sempre retorna à primeira página.
-  document.addEventListener("DOMContentLoaded", function(){
-    const busca = document.getElementById("buscaCatalogo");
-    if(busca){
-      busca.removeAttribute("oninput");
-      let timer;
-      busca.addEventListener("input", ()=>{
-        clearTimeout(timer);
-        timer=setTimeout(()=>{
-          estado.pagina=1;
-          window.renderizarCatalogo();
-        },180);
-      });
-    }
-
-    // Mantém paginação correta quando os chips de status forem usados.
-    document.querySelectorAll(".chip-exp").forEach(btn=>{
-      btn.addEventListener("click", ()=>{ estado.pagina=1; });
-    });
-
-    setTimeout(()=>{
-      atlasAtualizarOpcoesFiltros();
-      window.renderizarCatalogo();
-    },350);
-  });
-
-  // Exporta para possíveis integrações futuras.
-  window.atlasAtualizarOpcoesFiltrosCatalogo = atlasAtualizarOpcoesFiltros;
-})();
-
 
 /* =========================================================
    ATLAS EXPEDIÇÃO — ACABAMENTO LOGÍSTICO V3.6

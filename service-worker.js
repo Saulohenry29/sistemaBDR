@@ -1,5 +1,5 @@
 /* BDR ERP - Service Worker V4 SAFE OFFLINE */
-const BDR_CACHE_VERSION = "bdr-erp-manutencao-permissoes";
+const BDR_CACHE_VERSION = "bdr-erp-expedicao-performance";
 
 const BDR_ASSETS = [
   "./",
@@ -50,7 +50,11 @@ const BDR_ASSETS = [
   "./JS/entrada.js",
   "./JS/triagem.js",
   "./JS/estoque.js",
-  "./JS/expedicao.js",
+  "./JS/expedicao/expedicaoBoot.js",
+  "./JS/expedicao/expedicaoCatalogo.js",
+  "./JS/expedicao/expedicaoPedidos.js",
+  "./JS/expedicao/expedicaoCore.js",
+  "./JS/expedicao/expedicaoImagens.js",
   "./JS/patrimonioService.js",
   "./JS/patrimonio/patrimonio.js",
   "./JS/atlasWorkflowManutencao.js",
