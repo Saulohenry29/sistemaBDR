@@ -52,6 +52,29 @@
     return window.client || window.supabaseClient || window.clientSupabase || globalThis.client;
   }
 
+  function temPermissao(chave){
+    if(Number(usuarioAtual()?.id)===1) return true;
+    if(window.BDRMenuPermissoes?.temPermissao){
+      return window.BDRMenuPermissoes.temPermissao(chave);
+    }
+    const permissoes=String(usuarioAtual()?.permissoes||"")
+      .split(",")
+      .map(x=>x.trim().toUpperCase());
+    return permissoes.includes(String(chave||"").toUpperCase());
+  }
+
+  function exigirPermissao(chave,mensagem="Você não possui permissão para esta ação."){
+    if(temPermissao(chave)) return true;
+    aviso(mensagem,"danger");
+    return false;
+  }
+
+  function podeVerValoresManutencao(){
+    return temPermissao("VALORES_VER") ||
+      temPermissao("MANUTENCAO_ANALISAR_ORCAMENTO") ||
+      temPermissao("MANUTENCAO_APROVAR");
+  }
+
   function esc(v){
     return String(v ?? "").replace(/[&<>'"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[ch]));
   }
@@ -358,6 +381,7 @@
   }
 
   async function abrir(patrimonio){
+    if(!exigirPermissao("MANUTENCAO_CRIAR","Você não possui permissão para enviar patrimônios para manutenção.")) return;
     if(!patrimonio?.id){
       aviso("Selecione um patrimônio primeiro.","danger");
       return;
@@ -513,7 +537,9 @@
     set("manutKpiOrcamento",lista.filter(x=>["AGUARDANDO_ORCAMENTO","ORCAMENTO_RECEBIDO","AGUARDANDO_APROVACAO"].includes(x.status)).length);
     set("manutKpiExecucao",lista.filter(x=>["ORCAMENTO_APROVADO","EM_MANUTENCAO","AGUARDANDO_PECA"].includes(x.status)).length);
     set("manutKpiRetorno",lista.filter(x=>["SERVICO_CONCLUIDO","AGUARDANDO_RECEBIMENTO","RECEBIDA"].includes(x.status)).length);
-    set("manutKpiCusto",brl(lista.reduce((s,x)=>s+Number(x.valor_orcamento||0),0)));
+    set("manutKpiCusto",podeVerValoresManutencao()
+      ? brl(lista.reduce((s,x)=>s+Number(x.valor_orcamento||0),0))
+      : "••••");
   }
 
   function garantirPaginacao(){
@@ -672,7 +698,7 @@
         <div class="atlas-manut-row-code"><strong>${esc(o.codigo||"#"+o.id)}</strong><small>${esc(o.codigo_patrimonio||"-")}</small></div>
         <div class="atlas-manut-row-item"><strong>${esc(o.nome_patrimonio||"Patrimônio")}</strong><small>${esc(o.fornecedor_nome||o.fornecedor||"Fornecedor ainda não definido")}</small></div>
         <div class="atlas-manut-row-status"><span class="atlas-manut-status ${statusClass(o.status)}">${esc(labelStatus(o.status))}</span></div>
-        <div class="atlas-manut-row-value"><strong>${brl(o.valor_orcamento||0)}</strong><small>${dataHora(o.data_criacao||o.data_entrada)}</small></div>
+        <div class="atlas-manut-row-value"><strong>${podeVerValoresManutencao()?brl(o.valor_orcamento||0):"••••"}</strong><small>${dataHora(o.data_criacao||o.data_entrada)}</small></div>
         <span class="atlas-manut-row-open">Abrir</span>
       </button>`).join("");
 
@@ -742,22 +768,26 @@
     const b=[];
     const temOrcamento=Boolean(state.orcamento?.id);
 
-    if(s==="AGUARDANDO_ENVIO") b.push(`<button class="atlas-btn primary" data-action="saida">🚚 Registrar saída</button>`);
-    if(["ENVIADA_FORNECEDOR","AGUARDANDO_ORCAMENTO","AJUSTE_SOLICITADO"].includes(s)) b.push(`<button class="atlas-btn dark" data-action="link">🔗 Gerar / Copiar link do fornecedor</button>`);
+    if(s==="AGUARDANDO_ENVIO" && temPermissao("MANUTENCAO_SAIDA")) b.push(`<button class="atlas-btn primary" data-action="saida">🚚 Registrar saída</button>`);
+    if(["ENVIADA_FORNECEDOR","AGUARDANDO_ORCAMENTO","AJUSTE_SOLICITADO"].includes(s) && temPermissao("MANUTENCAO_SAIDA")) b.push(`<button class="atlas-btn dark" data-action="link">🔗 Gerar / Copiar link do fornecedor</button>`);
 
     /*
       O orçamento vira documento permanente da ordem.
       Depois de recebido ele continua acessível, inclusive após finalizar.
     */
-    if(temOrcamento){
+    if(temOrcamento && temPermissao("MANUTENCAO_ANALISAR_ORCAMENTO")){
       b.push(`<button class="atlas-btn light" data-action="ver-orcamento">📄 Ver orçamento</button>`);
-      }
+    }
 
     if(["ORCAMENTO_RECEBIDO","AGUARDANDO_APROVACAO"].includes(s)){
-      b.push(`<button class="atlas-btn dark" data-action="encaminhar">📨 Encaminhar</button>`);
-      b.push(`<button class="atlas-btn success" data-action="aprovar">✅ Aprovar</button>`);
-      b.push(`<button class="atlas-btn warning" data-action="ajuste">↩ Solicitar ajuste</button>`);
-      b.push(`<button class="atlas-btn danger" data-action="recusar">✕ Recusar</button>`);
+      if(temPermissao("MANUTENCAO_ANALISAR_ORCAMENTO")){
+        b.push(`<button class="atlas-btn dark" data-action="encaminhar">📨 Encaminhar</button>`);
+      }
+      if(temPermissao("MANUTENCAO_APROVAR")){
+        b.push(`<button class="atlas-btn success" data-action="aprovar">✅ Aprovar</button>`);
+        b.push(`<button class="atlas-btn warning" data-action="ajuste">↩ Solicitar ajuste</button>`);
+        b.push(`<button class="atlas-btn danger" data-action="recusar">✕ Recusar</button>`);
+      }
     }
     /*
       Fluxo simplificado:
@@ -770,7 +800,7 @@
       "AGUARDANDO_PECA",
       "SERVICO_CONCLUIDO",
       "AGUARDANDO_RECEBIMENTO"
-    ].includes(s)){
+    ].includes(s) && temPermissao("MANUTENCAO_RECEBER")){
       b.push(`<button class="atlas-btn primary" data-action="receber">📦 Registrar recebimento</button>`);
     }
 
@@ -874,6 +904,7 @@
     }
     const orc=state.orcamento;
     const custo=Number(orc?.valor_total ?? o.valor_orcamento ?? 0);
+    const podeValores=podeVerValoresManutencao();
     box.innerHTML=`
       <div class="atlas-manut-detail-head">
         <div>
@@ -881,7 +912,7 @@
           <h2>${esc(o.codigo||"#"+o.id)} • ${esc(o.nome_patrimonio||"Patrimônio")}</h2>
           <p>${esc(o.codigo_patrimonio||"-")} • ${esc(o.motivo||"Sem defeito informado")}</p>
         </div>
-        <div class="atlas-manut-detail-value"><small>Orçamento atual</small><strong>${brl(custo)}</strong></div>
+        <div class="atlas-manut-detail-value"><small>Orçamento atual</small><strong>${podeValores?brl(custo):"••••"}</strong></div>
       </div>
       <div class="atlas-manut-actions">${acoesPorStatus(o)}</div>
       <div class="atlas-manut-detail-grid">
@@ -896,7 +927,11 @@
         </section>
         <section class="atlas-manut-card">
           <h3>💰 Orçamento do fornecedor</h3>
-          ${orc?renderResumoOrcamento(orc):`<div class="atlas-manut-noquote">Ainda não recebemos orçamento pelo link do fornecedor.</div>`}
+          ${orc
+            ? (temPermissao("MANUTENCAO_ANALISAR_ORCAMENTO")
+                ? renderResumoOrcamento(orc)
+                : `<div class="atlas-manut-noquote">Orçamento recebido. Seu usuário não possui permissão para visualizar os valores e detalhes.</div>`)
+            : `<div class="atlas-manut-noquote">Ainda não recebemos orçamento pelo link do fornecedor.</div>`}
         </section>
       </div>
       <section class="atlas-manut-card atlas-manut-history">
@@ -1077,16 +1112,29 @@ const btnDocumento=bg.querySelector("[data-documento-orcamento]");
   async function executarAcao(acao){
     const o=state.selecionada;if(!o)return;
     try{
-      if(acao==="saida") return abrirRegistrarSaida(o);
-      if(acao==="link") return mostrarLink(o.id);
-      if(acao==="ver-orcamento") return verOrcamento();
-      if(acao==="abrir-documento-orcamento") return abrirDocumentoOrcamento();
-      if(acao==="imprimir") return imprimirOrcamento();
-      if(acao==="encaminhar") return encaminharOrcamento();
-      if(acao==="aprovar") return decisao("ORCAMENTO_APROVADO","Aprovar orçamento",true);
-      if(acao==="ajuste") return decisao("AJUSTE_SOLICITADO","Solicitar ajuste",true);
-      if(acao==="recusar") return decisao("ORCAMENTO_RECUSADO","Recusar orçamento",true);
+      if(acao==="saida"){
+        if(!exigirPermissao("MANUTENCAO_SAIDA")) return;
+        return abrirRegistrarSaida(o);
+      }
+      if(acao==="link"){
+        if(!exigirPermissao("MANUTENCAO_SAIDA")) return;
+        return mostrarLink(o.id);
+      }
+      if(acao==="ver-orcamento" || acao==="abrir-documento-orcamento" || acao==="imprimir" || acao==="encaminhar"){
+        if(!exigirPermissao("MANUTENCAO_ANALISAR_ORCAMENTO","Você não possui permissão para analisar este orçamento.")) return;
+        if(acao==="ver-orcamento") return verOrcamento();
+        if(acao==="abrir-documento-orcamento") return abrirDocumentoOrcamento();
+        if(acao==="imprimir") return imprimirOrcamento();
+        return encaminharOrcamento();
+      }
+      if(["aprovar","ajuste","recusar"].includes(acao)){
+        if(!exigirPermissao("MANUTENCAO_APROVAR","Você não possui permissão para aprovar ou recusar orçamentos.")) return;
+        if(acao==="aprovar") return decisao("ORCAMENTO_APROVADO","Aprovar orçamento",true);
+        if(acao==="ajuste") return decisao("AJUSTE_SOLICITADO","Solicitar ajuste",true);
+        return decisao("ORCAMENTO_RECUSADO","Recusar orçamento",true);
+      }
       if(acao==="receber"){
+        if(!exigirPermissao("MANUTENCAO_RECEBER","Você não possui permissão para registrar o recebimento.")) return;
         return abrirRecebimento(o);
       }
       aviso("Status atualizado.");await carregar();await selecionar(o.id);

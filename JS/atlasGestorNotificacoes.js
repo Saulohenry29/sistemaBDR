@@ -108,6 +108,7 @@
 
   const DETALHES_NOTIFICACAO = {
     PATRIMONIO:["NOTIF_PATRIMONIO_CRIACAO","NOTIF_PATRIMONIO_ETIQUETA","NOTIF_PATRIMONIO_MOVIMENTACAO","NOTIF_PATRIMONIO_STATUS"],
+    MANUTENCAO:["NOTIF_MANUTENCAO_NOVA_ORDEM","NOTIF_MANUTENCAO_ORCAMENTO","NOTIF_MANUTENCAO_STATUS","NOTIF_MANUTENCAO_RETORNO"],
     EXPEDICAO:["NOTIF_EXPEDICAO_PEDIDOS","NOTIF_EXPEDICAO_APROVACAO","NOTIF_EXPEDICAO_SEPARACAO","NOTIF_EXPEDICAO_TRANSPORTE","NOTIF_EXPEDICAO_RECEBIMENTO"],
     ESTOQUE:["NOTIF_ESTOQUE_MOVIMENTACAO","NOTIF_ESTOQUE_BAIXO"],
     INVENTARIO:["NOTIF_INVENTARIO_ANDAMENTO","NOTIF_INVENTARIO_FINALIZADO"]
@@ -120,6 +121,12 @@
       if(t.includes("ETIQUETA") || t.includes("IMPRESS")) return ["PATRIMONIO","NOTIF_PATRIMONIO_ETIQUETA"];
       if(t.includes("MOVIMENT") || t.includes("TRANSFER")) return ["PATRIMONIO","NOTIF_PATRIMONIO_MOVIMENTACAO"];
       return ["PATRIMONIO","NOTIF_PATRIMONIO_STATUS"];
+    }
+    if(t.includes("MANUTENCAO") || t.includes("ORCAMENTO")){
+      if(t.includes("CRIAD") || t.includes("NOVA_ORDEM")) return ["MANUTENCAO","NOTIF_MANUTENCAO_NOVA_ORDEM"];
+      if(t.includes("ORCAMENTO") || t.includes("APROV") || t.includes("RECUS") || t.includes("AJUST")) return ["MANUTENCAO","NOTIF_MANUTENCAO_ORCAMENTO"];
+      if(t.includes("RECEB") || t.includes("RETORNO") || t.includes("FINAL") || t.includes("DIVERGEN")) return ["MANUTENCAO","NOTIF_MANUTENCAO_RETORNO"];
+      return ["MANUTENCAO","NOTIF_MANUTENCAO_STATUS"];
     }
     if(t.includes("PEDIDO") || t.includes("EXPEDICAO") || t.includes("RETIRADA") || t.includes("RECEB")){
       if(t.includes("CRIADO") || t.includes("SOLICIT")) return ["EXPEDICAO","NOTIF_EXPEDICAO_PEDIDOS"];
@@ -140,7 +147,7 @@
     const [modulo,detalhe]=preferenciaDoTipo(tipo);
     if(modulo==="GERAL") return true;
     const configuradas=Object.values(DETALHES_NOTIFICACAO).flat().filter(p=>perms.includes(p));
-    const algumModulo=["PATRIMONIO","EXPEDICAO","ESTOQUE","INVENTARIO"].some(m=>perms.includes("NOTIF_"+m));
+    const algumModulo=["PATRIMONIO","MANUTENCAO","EXPEDICAO","ESTOQUE","INVENTARIO"].some(m=>perms.includes("NOTIF_"+m));
     // Compatibilidade com usuários antigos: apenas RECEBER_NOTIFICACOES = recebe tudo.
     if(!configuradas.length && !algumModulo) return true;
     if(perms.includes("NOTIF_"+modulo)) return true;
