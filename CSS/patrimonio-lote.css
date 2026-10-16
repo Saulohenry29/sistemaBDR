@@ -59,29 +59,31 @@
 ========================================================= */
 .atlas-lote-botao{
   width:auto!important;
-  min-width:68px!important;
-  height:42px!important;
-  min-height:42px!important;
+  min-width:78px!important;
+  height:37.8px!important;
+  min-height:37.8px!important;
   margin:0!important;
-  padding:0 11px!important;
-  border:1px solid #cbd5e1!important;
-  border-radius:9px!important;
+  padding:0 12px!important;
+  box-sizing:border-box!important;
+  border:1px solid #cbdcf4!important;
+  border-radius:10px!important;
   background:#fff!important;
   color:#334155!important;
   box-shadow:none!important;
-  font-size:12px!important;
-  font-weight:850!important;
-  line-height:40px!important;
+  font-size:10.8px!important;
+  font-weight:400!important;
+  line-height:1!important;
   white-space:nowrap;
   cursor:pointer;
-  transition:border-color .16s ease,background .16s ease,color .16s ease,transform .16s ease;
+  transition:border-color .16s ease,box-shadow .16s ease,background .16s ease;
 }
 
 .atlas-lote-botao:hover{
-  border-color:#94a3b8!important;
-  background:#f8fafc!important;
-  color:#0f172a!important;
-  transform:translateY(-1px);
+  border-color:#75aef7!important;
+  background:#fff!important;
+  color:#334155!important;
+  box-shadow:0 0 0 2px rgba(59,130,246,.08)!important;
+  transform:none!important;
 }
 
 /* No modo aberto o botão vira um fechamento compacto. */
@@ -449,69 +451,4 @@
     min-width:40px!important;
     padding:0!important;
   }
-}
-
-/* =========================================================
-   ATLAS LOTE — TOQUE ÚNICO + MOBILE SEM ZOOM
-   ========================================================= */
-.atlas-lote-sem-serie{
-  position:relative;
-  touch-action:manipulation;
-  -webkit-tap-highlight-color:transparent;
-}
-.atlas-lote-sem-serie input{
-  position:absolute!important;
-  inset:0!important;
-  width:100%!important;
-  height:100%!important;
-  margin:0!important;
-  opacity:0!important;
-  pointer-events:auto!important;
-  cursor:pointer!important;
-  z-index:3;
-}
-.atlas-lote-sem-serie .atlas-lote-check-caixa,
-.atlas-lote-sem-serie > span:not(.atlas-lote-check-caixa){pointer-events:none}
-
-@media(max-width:560px){
-  .atlas-serie-lote,
-  .atlas-serie-lote[data-modo="lote"]{
-    grid-column:1!important;
-    width:100%!important;
-    max-width:100%!important;
-    grid-template-columns:minmax(0,1fr) 64px!important;
-    gap:7px!important;
-  }
-
-  .atlas-serie-area,
-  .atlas-serie-area > input{min-width:0!important;width:100%!important}
-
-  .atlas-lote-botao{
-    width:64px!important;
-    min-width:64px!important;
-    padding:0 6px!important;
-  }
-
-  .atlas-serie-lote[data-modo="lote"] .atlas-lote-botao,
-  .atlas-lote-botao.ativo{
-    width:40px!important;
-    min-width:40px!important;
-  }
-
-  .atlas-lote-modos{
-    display:grid!important;
-    grid-template-columns:1fr!important;
-    gap:2px!important;
-    padding:5px 9px 4px!important;
-  }
-
-  .atlas-lote-sem-serie{
-    width:100%;
-    margin:0!important;
-    padding:9px 6px!important;
-    box-sizing:border-box;
-  }
-
-  .atlas-editor-textarea,
-  #atlasLoteQuantidade{font-size:16px!important}
 }

@@ -486,12 +486,17 @@
       .map(i => {
         const produto = mapaProd.get(String(i.produto_id || ""));
         const patrimonio = mapaPat.get(String(i.patrimonio_id || ""));
+        // Endereço físico da separação.
+        // `patrimonio.localizacao` representa obra/setor e NÃO uma posição de estoque.
+        // Ao reabrir a separação, priorizamos o endereço já confirmado no item e,
+        // na falta dele, o endereço físico oficial do cadastro.
         const enderecoEsperado =
           i.endereco_codigo ||
           produto?.localizacao_fisica ||
+          [produto?.rua, produto?.prateleira, produto?.coluna, produto?.nivel].filter(Boolean).join("-") ||
+          patrimonio?.endereco_estoque ||
           patrimonio?.endereco_codigo ||
           patrimonio?.localizacao_fisica ||
-          patrimonio?.localizacao ||
           "";
 
         const codigosValidos = [
@@ -762,9 +767,12 @@
     toast(msg,"erro");
   }
 
-  function validarEndereco(valorForcado){
+  async function validarEndereco(valorForcado){
+    if(estado.bloqueado) return;
+    const banco = db();
     const i = itemAtual();
-    if(!i) return;
+    if(!banco || !i) return;
+
     const lido = normalizarCodigo(valorForcado ?? document.getElementById("asqCodigoEndereco")?.value);
     const esperado = normalizarCodigo(i.endereco_esperado);
 
@@ -778,12 +786,30 @@
       return;
     }
 
-    estado.enderecoLido = lido;
-    estado.etapa = "ITEM";
-    fecharCamera();
-    somSucesso();
-    toast("Posição correta","ok");
-    render();
+    // Persiste a posição assim que ela é validada.
+    // Dessa forma, fechar e reabrir a Separação Guiada não perde a referência.
+    estado.bloqueado = true;
+    try{
+      const { error } = await banco
+        .from("itens_retirada")
+        .update({ endereco_codigo:lido })
+        .eq("id",i.id);
+
+      if(error) throw error;
+
+      i.endereco_codigo = lido;
+      i.endereco_esperado = lido;
+      estado.enderecoLido = lido;
+      estado.etapa = "ITEM";
+      fecharCamera();
+      somSucesso();
+      toast("Posição correta","ok");
+      render();
+    }catch(e){
+      marcarErro("asqStepEndereco","Não foi possível salvar a posição conferida: " + (e?.message || e));
+    }finally{
+      estado.bloqueado = false;
+    }
   }
 
   function confirmarSemEndereco(){
@@ -1440,5 +1466,5 @@
   AtlasSeparacaoQR.normalizarCodigo = normalizarCodigo;
 
   window.AtlasSeparacaoQR = AtlasSeparacaoQR;
-  console.log("✅ ATLAS SEPARAÇÃO QR V2.2 carregado - qrbox mobile seguro e áudio final único");
+  void 0;
 })();

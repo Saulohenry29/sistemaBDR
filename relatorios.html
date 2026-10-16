@@ -1416,73 +1416,79 @@ button,
   </div>
 
  <!-- MENU PRINCIPAL FIXO -->
-<nav class="bdr-menu">
-<!-- DASHBOARD -->
-<button class="bdr-menu-btn" data-permissao="DASHBOARD_VER" data-tip="Dashboard" onclick="ir('dashboard.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-chart-simple"></i>
-</span>
-</button>
-<!-- ENTRADA -->
-<button class="bdr-menu-btn" data-permissao="ENTRADA_VER" data-tip="Entrada" onclick="ir('entrada.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-arrow-down-wide-short"></i>
-</span>
-</button>
-<!-- TRIAGEM -->
-<button class="bdr-menu-btn" data-permissao="TRIAGEM_VER" data-tip="Triagem" onclick="ir('triagem.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-vials"></i>
-</span>
-</button>
-<!-- Estoque -->
-<button class="bdr-menu-btn" data-permissao="ESTOQUE_VER" data-tip="Estoque" onclick="ir('estoque.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-boxes-stacked"></i>
-</span>
-</button>
-<!-- PATRIMÔNIO -->
-<button class="bdr-menu-btn" data-permissao="PATRIMONIO_VER" data-tip="Patrimônio" onclick="ir('patrimonio.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-tags"></i>
-</span>
-</button>
-<!-- MANUTENÇÃO -->
-<button class="bdr-menu-btn" data-permissao="MANUTENCAO_VER" data-tip="Manutenção" onclick="ir('manutencao.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-screwdriver-wrench"></i>
-</span>
-</button>
-<!-- EXPEDIÇÃO -->
-<button class="bdr-menu-btn" data-permissao="EXPEDICAO_VER" data-tip="Expedição" onclick="ir('expedicao.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-truck-fast"></i>
-</span>
-</button>
-<!-- MOVIMENTAÇÕES -->
-<button class="bdr-menu-btn" data-permissao="MOVIMENTACOES_VER" data-tip="Movimentações" onclick="ir('movimentacoes.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-right-left"></i>
-</span>
-</button>
-<!-- RELATÓRIOS -->
-<button class="bdr-menu-btn active" data-permissao="RELATORIOS_VER" data-tip="Relatórios" onclick="ir('relatorios.html')">
-<span class="bdr-menu-icon">
-<i class="fa-regular fa-file-lines"></i>
-</span>
-</button>
-<!-- EMPRESAS -->
-<button class="bdr-menu-btn" data-permissao="EMPRESAS_VER" data-tip="Empresas" onclick="ir('empresa.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-building"></i>
-</span>
-</button>
-<!-- USUÁRIOS -->
-<button class="bdr-menu-btn" data-permissao="USUARIOS_VER" data-tip="Usuários" onclick="ir('usuarios.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-users"></i>
-</span>
-</button>
+ <nav class="bdr-menu">
+
+  <!-- DASHBOARD -->
+  <button class="bdr-menu-btn" data-tip="Dashboard" onclick="ir('dashboard.html')" data-permissao="DASHBOARD_VER">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-chart-simple"></i>
+    </span>
+  </button>
+
+  <!-- ENTRADA -->
+  <button class="bdr-menu-btn" data-tip="Entrada" onclick="ir('entrada.html')" data-permissao="ENTRADA_VER">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-arrow-down-wide-short"></i>
+    </span>
+  </button>
+
+  <!-- TRIAGEM -->
+  <button class="bdr-menu-btn" data-tip="Triagem" onclick="ir('triagem.html')" data-permissao="TRIAGEM_VER">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-vials"></i>
+    </span>
+  </button>
+
+  <!-- Estoque -->
+  <button class="bdr-menu-btn" data-tip="Estoque" onclick="ir('estoque.html')" data-permissao="ESTOQUE_VER">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-boxes-stacked"></i>
+    </span>
+  </button>
+
+  <!-- PATRIMÔNIO -->
+  <button class="bdr-menu-btn" data-tip="Patrimônio" onclick="ir('patrimonio.html')" data-permissao="PATRIMONIO_VER">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-tags"></i>
+    </span>
+  </button>
+
+  <!-- EXPEDIÇÃO -->
+   <button class="bdr-menu-btn " data-tip="Expedição" onclick="ir('expedicao.html')" data-permissao="EXPEDICAO_VER">
+     <span class="bdr-menu-icon">
+       <i class="fa-solid fa-truck-fast"></i>
+      </span>
+    </button>
+
+    <!-- MOVIMENTAÇÕES -->
+  <button data-permissao="MOVIMENTACOES_VER" class="bdr-menu-btn" data-tip="Movimentações" onclick="ir('movimentacoes.html')">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-right-left"></i>
+    </span>
+  </button>
+
+  
+  <!-- RELATÓRIOS -->
+  <button class="bdr-menu-btn active" data-tip="Relatórios" onclick="ir('relatorios.html')" data-permissao="RELATORIOS_VER">
+    <span class="bdr-menu-icon">
+      <i class="fa-regular fa-file-lines"></i>
+    </span>
+  </button>
+
+  <!-- EMPRESAS -->
+  <button class="bdr-menu-btn" data-tip="Empresas" onclick="ir('empresa.html')" data-permissao="EMPRESAS_VER">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-building"></i>
+    </span>
+  </button>
+
+  <!-- USUÁRIOS -->
+  <button class="bdr-menu-btn" data-tip="Usuários" onclick="ir('usuarios.html')" data-permissao="USUARIOS_VER">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-users"></i>
+    </span>
+  </button>
+
 </nav>
 
 </aside>
@@ -1508,7 +1514,7 @@ button,
 
   <div class="bdr-top-actions">
     <div class="notif-wrap">
-      <button class="notif-btn" data-atlas-toggle="notifications" type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="toggleNotificacoes(event); this.blur();" title="Notificações">
+      <button class="notif-btn" type="button" tabindex="-1" onmousedown="event.preventDefault()" onclick="toggleNotificacoes(event); this.blur();" title="Notificações">
         <i class="fa-regular fa-bell"></i>
         <span id="notifBadge" class="notif-badge">0</span>
       </button>
@@ -1521,7 +1527,7 @@ button,
       </div>
     </div>
 
-    <div class="user-menu" data-atlas-toggle="user">
+    <div class="user-menu" onclick="toggleMenuUsuario(event)">
       <div class="user-mini">
         <b id="usuarioNome" tabindex="-1">Olá, -</b>
         <small id="usuarioPerfil" tabindex="-1">-</small>
@@ -1529,13 +1535,14 @@ button,
       <div class="avatar"><i class="fa-solid fa-user"></i></div>
 
       <div id="dropdownUser" class="dropdown-user">
-            <button type="button" onclick="location.href='MinhaConta/minha-conta.html';event.stopPropagation()">
-              <i class="fa-solid fa-circle-user"></i> Minha conta
-            </button>
-            <button type="button" class="logout-btn" onclick="logout(); event.stopPropagation();">
+        <button type="button" onclick="ir('usuarios.html'); event.stopPropagation();">
+          <i class="fa-solid fa-user-gear"></i> Meu perfil / usuários
+        </button>
+
+        <button type="button" class="logout-btn" onclick="logout(); event.stopPropagation();">
           <i class="fa-solid fa-right-from-bracket"></i> Sair do sistema
         </button>
-          </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1629,10 +1636,10 @@ button,
 
 </div>
 
-<div class="card" data-permissao="RELATORIOS_EXPORTAR">
-  <h3>🏗 Seleção de obras/setores</h3>
+<div class="card" data-permissao="SIENGE_EXPORTAR">
+  <h3>🏗 Seleção de obras/setores para exportação</h3>
   <p style="font-size:13px;color:#374151;margin-top:0;">
-    Marque uma ou mais obras/setores permitidos para filtrar o relatório e as exportações. Se nenhuma obra estiver marcada, o relatório usa o filtro normal acima.
+    Marque uma ou mais obras/setores para exportar somente o que você quiser. Se nenhuma obra estiver marcada, o relatório usa o filtro normal acima.
   </p>
 
   <div class="sienge-mini-actions">
@@ -1925,9 +1932,8 @@ Importar Excel/CSV</h3>
 <script src="./JS/supabaseClient.js"></script>
 <script src="./JS/bdrCore.js"></script>
 <script src="./JS/bdrNotificacoes.js"></script>
-<script src="JS/atlasTopbar.js"></script>
 <script src="./JS/bdrMenuPermissoes.js"></script>
-<script src="./JS/atlasControleAcesso.js?v=20260629-2"></script>
+<script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260629-2"></script>
 
 
 <div id="modalConferenciaPatrimonial" class="atlas-conf-modal-bg" aria-hidden="true">
@@ -2110,44 +2116,12 @@ async function carregarDados(){
   }
 
   if(elUsuarioPerfil){
-    elUsuarioPerfil.innerText = usuarioTopo
-      ? (Number(usuarioTopo.id) === 1 ? "OWNER" : (usuarioTopo.perfil || "-"))
-      : "-";
+    elUsuarioPerfil.innerText = usuarioTopo ? (usuarioTopo.perfil || "-") : "-";
   }
 
   if(!db()){
     alert("Supabase não carregado.");
     return;
-  }
-
-  async function carregarUsuarioAtualRelatorioDoBanco(usuarioSessao){
-    if(!usuarioSessao?.id) return usuarioSessao || null;
-
-    // A sessão do navegador pode ter sido criada antes de uma alteração em
-    // Usuários > Obras/Permissões. Para o Relatório, o banco é a fonte atual.
-    for(const tabela of ["usuarios_sistema", "usuarios"]){
-      try{
-        const resposta = await db()
-          .from(tabela)
-          .select("*")
-          .eq("id", Number(usuarioSessao.id))
-          .maybeSingle();
-
-        if(!resposta.error && resposta.data){
-          const atualizado = { ...usuarioSessao, ...resposta.data };
-
-          // Mantém a sessão sincronizada para as outras telas abertas depois.
-          try{
-            localStorage.setItem("usuario_logado", JSON.stringify(atualizado));
-            localStorage.setItem("usuarioLogado", JSON.stringify(atualizado));
-          }catch(_){}
-
-          return atualizado;
-        }
-      }catch(_){}
-    }
-
-    return usuarioSessao;
   }
 
   async function carregarTodosPatrimoniosRelatorio(){
@@ -2219,114 +2193,36 @@ async function carregarDados(){
     console.error(movResp.error);
   }
 
-let usuario = usuarioAtualRelatoriosBDR();
-usuario = await carregarUsuarioAtualRelatorioDoBanco(usuario);
-
-console.log("✅ BDR RELATÓRIOS: usuário/escopo atualizados do banco", {
-  id: usuario?.id ?? null,
-  perfil: Number(usuario?.id) === 1 ? "OWNER" : (usuario?.perfil ?? null),
-  obras_liberadas: usuario?.obras_liberadas ?? null
-});
+const usuario = usuarioAtualRelatoriosBDR();
 
 let dadosPatrimonios = patResp.data || [];
 let dadosMovimentacoes = movResp.data || [];
 
-/* =========================================================
-   ESCOPO DE OBRAS DOS RELATÓRIOS
-   - OWNER ou RELATORIOS_TODAS_OBRAS: todas as obras.
-   - Caso contrário: usa exatamente obras_liberadas da aba Obras do usuário.
-   - obra_id entra somente como fallback para cadastros legados.
-   Assim Relatórios segue a mesma configuração de obras do usuário.
-========================================================= */
-function idsObrasLiberadasRelatoriosBDR(u){
-  if(!u) return [];
-
-  let raw = u.obras_liberadas;
-  let lista = raw;
-
-  if(typeof lista === "string"){
-    const s = lista.trim();
-    if(!s) lista = [];
-    else{
-      try{
-        const parsed = JSON.parse(s);
-        lista = Array.isArray(parsed) ? parsed : [parsed];
-      }catch(_){
-        lista = s.split(/[,;|]/);
-      }
-    }
-  }
-
-  if(!Array.isArray(lista)){
-    lista = lista === null || lista === undefined ? [] : [lista];
-  }
-
-  const ids = lista
-    .flatMap(item => item && typeof item === "object"
-      ? [item.id, item.obra_id, item.value]
-      : [item])
-    .map(v => Number(String(v ?? "").trim()))
-    .filter(id => Number.isFinite(id) && id > 0);
-
-  if(!ids.length){
-    const principal = Number(u.obra_id);
-    if(Number.isFinite(principal) && principal > 0) ids.push(principal);
-  }
-
-  return [...new Set(ids)];
-}
-
-const podeTodasObras =
-  Number(usuario?.id) === 1 ||
-  temPermissaoRelatoriosBDR("RELATORIOS_TODAS_OBRAS", usuario);
-
-/*
-  IMPORTANTE: TODAS_OBRAS_VER antigo não libera mais TODOS os dados do Relatório.
-  O escopo do Relatório agora é independente:
-  - padrão = obras_liberadas da aba Obras;
-  - RELATORIOS_TODAS_OBRAS = todas.
-  Isso impede permissões antigas de furarem o escopo configurado no usuário.
-*/
-
-let obrasVisiveisRelatorio = obrasResp.data || [];
+/* DADOS: filtra por permissão nova, não por perfil. */
+const podeTodasObras = temPermissaoRelatoriosBDR("TODAS_OBRAS_VER", usuario);
+const podePropriaObra = temPermissaoRelatoriosBDR("PROPRIA_OBRA_VER", usuario);
 
 if(usuario && !podeTodasObras){
-  const idsPermitidos = idsObrasLiberadasRelatoriosBDR(usuario);
-  const permitidas = new Set(idsPermitidos.map(String));
+  if(podePropriaObra && usuario.obra_id){
+    dadosPatrimonios = dadosPatrimonios.filter(p =>
+      String(p.obra_id) === String(usuario.obra_id)
+    );
 
-  dadosPatrimonios = dadosPatrimonios.filter(p =>
-    permitidas.has(String(p.obra_id))
-  );
+    dadosMovimentacoes = dadosMovimentacoes.filter(m =>
+      String(m.obra_origem_id) === String(usuario.obra_id) ||
+      String(m.obra_destino_id) === String(usuario.obra_id)
+    );
 
-  dadosMovimentacoes = dadosMovimentacoes.filter(m =>
-    permitidas.has(String(m.obra_origem_id)) ||
-    permitidas.has(String(m.obra_destino_id))
-  );
-
-  obrasVisiveisRelatorio = obrasVisiveisRelatorio.filter(o =>
-    permitidas.has(String(o.id))
-  );
-
-  if(!idsPermitidos.length){
     document.getElementById("filtroObra").style.display = "none";
   }else{
-    document.getElementById("filtroObra").style.display = "";
+    dadosPatrimonios = [];
+    dadosMovimentacoes = [];
+    document.getElementById("filtroObra").style.display = "none";
   }
-
-  console.log("✅ BDR RELATÓRIOS: obras permitidas aplicadas", {
-    idsPermitidos,
-    obrasVisiveis: obrasVisiveisRelatorio.length,
-    patrimoniosVisiveis: dadosPatrimonios.length
-  });
-}else if(usuario){
-  console.log("✅ BDR RELATÓRIOS: acesso a todas as obras", {
-    owner: Number(usuario.id) === 1,
-    permissao: temPermissaoRelatoriosBDR("RELATORIOS_TODAS_OBRAS", usuario)
-  });
 }
 
 patrimonios = dadosPatrimonios;
-obras = obrasVisiveisRelatorio;
+obras = obrasResp.data || [];
 empresas = empresasResp.data || [];
 siengeCodigos = siengeResp.data || [];
 movimentacoes = dadosMovimentacoes;
@@ -2403,9 +2299,7 @@ function carregarChecksObrasSienge(){
 
   box.innerHTML = "";
 
-  const obrasDisponiveis = Array.isArray(obras) ? obras : [];
-
-  obrasDisponiveis.forEach(o => {
+  obras.forEach(o => {
     const qtd = patrimonios.filter(p => String(p.obra_id) === String(o.id)).length;
     if(qtd === 0) return;
 
@@ -4998,7 +4892,7 @@ carregarDados();
     alert("Função original salvarCodigoSienge não encontrada.");
   };
 
-  console.log("✅ BDR Sienge: INSUMO salvando nas 2 bases carregado");
+  void 0;
 })();
 </script>
 

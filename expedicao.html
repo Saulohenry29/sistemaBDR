@@ -10,10 +10,47 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:,">
 <link rel="manifest" href="./manifest.json">
-<title>Atlas - Expedição Nova</title>
+<title>Atlas - Expedição</title>
+<script>
+/* ATLAS: identifica o modo embutido antes do carregamento dos CSS. */
+(function(){
+  const params=new URLSearchParams(location.search);
+  if(params.get('atlas')==='1') document.documentElement.classList.add('atlas-embedded');
+})();
+</script>
+<style>
+/* =========================================================
+   EXPEDIÇÃO - MODO MÓDULO DO ATLAS
+   O shell atlas.html fornece menu e topo. A Expedição entrega
+   somente a área útil quando aberta com ?atlas=1.
+========================================================= */
+html.atlas-embedded{
+  width:100%!important; height:100%!important; min-height:0!important;
+  overflow:hidden!important; background:#f6f7fb!important;
+}
+html.atlas-embedded body{
+  width:100%!important; height:100%!important; min-height:0!important;
+  margin:0!important; padding:0!important; overflow:hidden!important;
+  background:#f6f7fb!important;
+}
+html.atlas-embedded .app-layout{
+  display:block!important; width:100%!important; height:100%!important;
+  min-height:0!important; overflow:hidden!important;
+}
+html.atlas-embedded .bdr-sidebar,
+html.atlas-embedded .bdr-topbar{ display:none!important; }
+html.atlas-embedded .bdr-main{
+  display:block!important; width:100%!important; max-width:none!important;
+  height:100%!important; min-height:0!important; margin:0!important;
+  padding:10px!important; padding-left:0!important; padding-bottom:18px!important;
+  overflow-x:hidden!important; overflow-y:auto!important;
+  overscroll-behavior:contain!important; -webkit-overflow-scrolling:touch!important;
+  box-sizing:border-box!important; background:#f6f7fb!important;
+}
+</style>
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
 <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260724-v11">
-<link rel="stylesheet" href="./CSS/atlas-topbar.css">
+<link rel="stylesheet" href="./CSS/atlas-topbar.css?v=20260724-v3">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <!-- =========================================================
      EXPEDIÇÃO NOVA - CARREGAMENTO ENXUTO
@@ -24,10 +61,18 @@
 <script defer src="./JS/supabaseClient.js"></script>
 <script defer src="./JS/auth.js"></script>
 <script defer src="./JS/bdrCore.js"></script>
+<script defer src="./JS/offlineQueue.js"></script>
+<script defer src="./JS/offlineDB.js"></script>
+<script defer src="./JS/bdrSyncEngine.js"></script>
+<script defer src="./JS/bdrSyncCenter.js"></script>
+<script defer src="./JS/atlasEvents.js"></script>
+<script defer src="./JS/atlasEventStore.js"></script>
+<script defer src="./JS/atlasGestorNotificacoes.js"></script>
+<script defer src="./JS/atlasAudio/atlasAudio.js"></script>
 <script defer src="./JS/bdrNotificacoes.js"></script>
 <script defer src="./JS/bdrMenuPermissoes.js"></script>
-<script defer src="./JS/atlasControleAcesso.js?v=20260810-padrao-unico"></script>
-<script defer src="./JS/atlasTopbar.js"></script>
+<script defer src="./JS/bdr-menu-ocultar-de-verdade.js"></script>
+<script defer src="./JS/AtlasModal.js"></script>
 <script defer src="./JS/expedicao/expedicaoBoot.js"></script>
 
 <style>
@@ -704,18 +749,18 @@
   display:flex;
   justify-content:center;
   align-items:center;
-  gap:8px;
+  gap:5px;
   flex-wrap:wrap;
-  margin-top:16px;
+  margin-top:9px;
 }
 .atlas-paginacao button{
-  min-height:38px;
+  min-height:28px;
   border:1px solid #dbe3ee;
-  border-radius:10px;
+  border-radius:8px;
   background:#fff;
   color:#334155;
-  padding:8px 12px;
-  font-size:12px;
+  padding:4px 8px;
+  font-size:10px;
   font-weight:900;
   cursor:pointer;
 }
@@ -728,10 +773,10 @@
   cursor:not-allowed;
 }
 .atlas-pagina-atual{
-  min-width:125px;
+  min-width:88px;
   text-align:center;
   color:#0f172a;
-  font-size:12px;
+  font-size:10px;
   font-weight:900;
 }
 @media(max-width:900px){
@@ -754,252 +799,49 @@
 
 
 
-.atlas-resumo-catalogo{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-}
-.atlas-paginacao-topo{
-  margin:0;
-  padding:0;
-  border:0;
-  background:transparent;
-  min-width:max-content;
-}
-.atlas-paginacao-topo button{
-  min-width:34px;
-  height:34px;
-  padding:0 10px;
-}
-@media(max-width:700px){
-  .atlas-resumo-catalogo{
-    align-items:flex-start;
-    flex-direction:column;
-  }
-}
-
-
 /* =========================================================
-   PAGINAÇÃO PADRÃO ATLAS
-   Mesmo padrão visual usado em Usuários e Manutenção.
+   ATLAS EXPEDIÇÃO — DENSIDADE COMPACTA DESKTOP
+   Redução real de dimensões (sem zoom/scale).
 ========================================================= */
-.atlas-pagination{
-  flex:0 0 auto;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:6px;
-  min-height:47px;
-  padding:10px 0 0;
+@media (min-width: 901px){
+  .kpi-row{gap:8px;margin-bottom:9px;}
+  .kpi{min-height:60px;padding:8px 10px;border-radius:12px;}
+  .kpi strong{font-size:18px;}
+  .kpi span{font-size:10px;margin-top:4px;}
+
+  .tabs{gap:6px;margin-bottom:9px;}
+  .tab-btn{padding:7px 10px;font-size:11px;}
+
+  .card{padding:11px;border-radius:12px;}
+  .exp-head{gap:8px;margin-bottom:8px;}
+  .exp-title h2{font-size:18px;}
+  .exp-title p{font-size:10px;}
+
+  .searchbar{grid-template-columns:1fr 112px 46px;gap:6px;margin-bottom:8px;}
+  .searchbar input{height:34px;padding:0 13px;font-size:11px;}
+  .searchbar button{min-height:34px;font-size:11px;}
+
+  .filtros-grid{gap:7px;}
+  .filtros-grid label{font-size:10px;}
+  .filtros-grid select,.filtros-grid input{min-height:34px;font-size:11px;}
+
+  .chips{gap:6px;margin-bottom:8px;}
+  .chip-exp{padding:6px 9px;font-size:10px;}
+
+  .catalogo-grid{grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px;}
+  .produto-card{border-radius:12px;}
+  .produto-foto{height:88px;}
+  .produto-foto .placeholder{font-size:32px;}
+  .produto-info{padding:8px;}
+  .produto-nome{font-size:11px;line-height:1.18;}
+  .produto-meta,.produto-obra{font-size:9px;}
+
+  .pedido-card{border-radius:11px;}
+  .pedido-top{padding:9px 10px;gap:8px;}
+  .pedido-cod{font-size:11px;}
+  .pedido-small{font-size:9px;}
+  .btn-mini,.atlas-btn-abrir{padding:6px 8px;font-size:10px;border-radius:8px;}
 }
-
-.atlas-page-btn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  min-width:34px;
-  height:34px;
-  padding:0 9px;
-  border:1px solid #d7dee8;
-  border-radius:9px;
-  background:#fff;
-  color:#334155;
-  font-size:12px;
-  font-weight:900;
-  cursor:pointer;
-}
-
-.atlas-page-btn:hover:not(:disabled){
-  border-color:#f0a5aa;
-  background:#fff1f2;
-  color:#b5121b;
-}
-
-.atlas-page-btn.active{
-  border-color:#b5121b;
-  background:#b5121b;
-  color:#fff;
-  box-shadow:0 6px 14px rgba(181,18,27,.2);
-}
-
-.atlas-page-btn:disabled{
-  opacity:.4;
-  cursor:not-allowed;
-}
-
-.atlas-page-dots{
-  display:inline-flex;
-  min-width:20px;
-  justify-content:center;
-  color:#94a3b8;
-  font-weight:900;
-}
-
-
-/* =========================================================
-   SKELETON DO CATÁLOGO
-   A estrutura aparece imediatamente enquanto o Supabase responde.
-========================================================= */
-.atlas-skeleton-card{
-  min-height:245px;
-  pointer-events:none;
-  cursor:default;
-  transform:none!important;
-  box-shadow:0 2px 8px rgba(15,23,42,.05);
-}
-
-.atlas-skeleton-card:hover{
-  transform:none;
-  box-shadow:0 2px 8px rgba(15,23,42,.05);
-}
-
-.atlas-skeleton-photo{
-  height:118px;
-  position:relative;
-  overflow:hidden;
-  background:#edf2f7;
-}
-
-.atlas-skeleton-info{
-  padding:10px;
-}
-
-.atlas-skeleton-line,
-.atlas-skeleton-pill{
-  position:relative;
-  overflow:hidden;
-  background:#e7edf4;
-}
-
-.atlas-skeleton-line{
-  height:11px;
-  margin-bottom:9px;
-  border-radius:6px;
-}
-
-.atlas-skeleton-line.title{
-  width:86%;
-  height:14px;
-}
-
-.atlas-skeleton-line.medium{width:68%;}
-.atlas-skeleton-line.short{width:46%;}
-
-.atlas-skeleton-footer{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:8px;
-  margin-top:10px;
-}
-
-.atlas-skeleton-pill{
-  width:82px;
-  height:22px;
-  border-radius:999px;
-}
-
-.atlas-skeleton-small{
-  width:44px;
-  height:10px;
-  border-radius:5px;
-  background:#e7edf4;
-  position:relative;
-  overflow:hidden;
-}
-
-.atlas-skeleton-photo::after,
-.atlas-skeleton-line::after,
-.atlas-skeleton-pill::after,
-.atlas-skeleton-small::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  transform:translateX(-100%);
-  background:linear-gradient(
-    90deg,
-    transparent,
-    rgba(255,255,255,.72),
-    transparent
-  );
-  animation:atlasSkeletonMove 1.15s ease-in-out infinite;
-}
-
-@keyframes atlasSkeletonMove{
-  100%{transform:translateX(100%);}
-}
-
-@media (prefers-reduced-motion:reduce){
-  .atlas-skeleton-photo::after,
-  .atlas-skeleton-line::after,
-  .atlas-skeleton-pill::after,
-  .atlas-skeleton-small::after{
-    animation:none;
-  }
-}
-
-
-/* =========================================================
-   LOADING DOS KPIs
-   Nunca mostra "0" antes do valor real chegar.
-========================================================= */
-.kpi strong.atlas-kpi-loading{
-  width:46px;
-  height:21px;
-  border-radius:7px;
-  color:transparent!important;
-  background:#e7edf4;
-  position:relative;
-  overflow:hidden;
-}
-
-.kpi strong.atlas-kpi-loading::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  transform:translateX(-100%);
-  background:linear-gradient(
-    90deg,
-    transparent,
-    rgba(255,255,255,.78),
-    transparent
-  );
-  animation:atlasSkeletonMove 1.15s ease-in-out infinite;
-}
-
-/* O skeleton ocupa praticamente o mesmo espaço do card final. */
-.atlas-skeleton-card{
-  min-height:0;
-}
-
-.atlas-skeleton-info{
-  min-height:116px;
-}
-
-.atlas-skeleton-line.title{
-  height:48px;
-  width:88%;
-  border-radius:7px;
-}
-
-.atlas-skeleton-line.medium{
-  height:11px;
-  width:66%;
-  margin-top:7px;
-}
-
-.atlas-skeleton-line.short{
-  height:10px;
-  width:52%;
-}
-
-@media (prefers-reduced-motion:reduce){
-  .kpi strong.atlas-kpi-loading::after{
-    animation:none;
-  }
-}
-
 </style>
 <link rel="stylesheet" href="./CSS/expedicao-nova.css">
 </head>
@@ -1013,75 +855,79 @@
   </div>
 
  <!-- MENU PRINCIPAL FIXO -->
-<nav class="bdr-menu">
-<!-- DASHBOARD -->
-<button class="bdr-menu-btn" data-permissao="DASHBOARD_VER" data-tip="Dashboard" onclick="ir('dashboard.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-chart-simple"></i>
-</span>
-</button>
-<!-- ENTRADA -->
-<button class="bdr-menu-btn" data-permissao="ENTRADA_VER" data-tip="Entrada" onclick="ir('entrada.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-arrow-down-wide-short"></i>
-</span>
-</button>
-<!-- TRIAGEM -->
-<button class="bdr-menu-btn" data-permissao="TRIAGEM_VER" data-tip="Triagem" onclick="ir('triagem.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-vials"></i>
-</span>
-</button>
-<!-- Estoque -->
-<button class="bdr-menu-btn" data-permissao="ESTOQUE_VER" data-tip="Estoque" onclick="ir('estoque.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-boxes-stacked"></i>
-</span>
-</button>
-<!-- PATRIMÔNIO -->
-<button class="bdr-menu-btn" data-permissao="PATRIMONIO_VER" data-tip="Patrimônio" onclick="ir('patrimonio.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-tags"></i>
-</span>
-</button>
-<!-- MANUTENÇÃO -->
-<button class="bdr-menu-btn" data-permissao="MANUTENCAO_VER" data-tip="Manutenção" onclick="ir('manutencao.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-screwdriver-wrench"></i>
-</span>
-</button>
-<!-- EXPEDIÇÃO -->
-<button class="bdr-menu-btn active" data-permissao="EXPEDICAO_VER" data-tip="Expedição" onclick="ir('expedicao.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-truck-fast"></i>
-</span>
-</button>
-<!-- MOVIMENTAÇÕES -->
-<button class="bdr-menu-btn" data-permissao="MOVIMENTACOES_VER" data-tip="Movimentações" onclick="ir('movimentacoes.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-right-left"></i>
-</span>
-</button>
-<!-- RELATÓRIOS -->
-<button class="bdr-menu-btn" data-permissao="RELATORIOS_VER" data-tip="Relatórios" onclick="ir('relatorios.html')">
-<span class="bdr-menu-icon">
-<i class="fa-regular fa-file-lines"></i>
-</span>
-</button>
-<!-- EMPRESAS -->
-<button class="bdr-menu-btn" data-permissao="EMPRESAS_VER" data-tip="Empresas" onclick="ir('empresa.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-building"></i>
-</span>
-</button>
-<!-- USUÁRIOS -->
-<button class="bdr-menu-btn" data-permissao="USUARIOS_VER" data-tip="Usuários" onclick="ir('usuarios.html')">
-<span class="bdr-menu-icon">
-<i class="fa-solid fa-users"></i>
-</span>
-</button>
-</nav>
+ <nav class="bdr-menu">
 
+  <!-- DASHBOARD -->
+  <button data-permissao="DASHBOARD_VER" class="bdr-menu-btn" data-tip="Dashboard" onclick="ir('dashboard.html')">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-chart-simple"></i>
+    </span>
+  </button>
+
+  <!-- ENTRADA -->
+  <button data-permissao="ENTRADA_VER" class="bdr-menu-btn" data-tip="Entrada" onclick="ir('entrada.html')">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-arrow-down-wide-short"></i>
+    </span>
+  </button>
+
+  <!-- TRIAGEM -->
+  <button data-permissao="TRIAGEM_VER" class="bdr-menu-btn" data-tip="Triagem" onclick="ir('triagem.html')">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-vials"></i>
+    </span>
+  </button>
+
+  <!-- Estoque -->
+  <button data-permissao="ESTOQUE_VER" class="bdr-menu-btn" data-tip="Estoque" onclick="ir('estoque.html')">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-boxes-stacked"></i>
+    </span>
+  </button>
+
+  <!-- PATRIMÔNIO -->
+  <button data-permissao="PATRIMONIO_VER" class="bdr-menu-btn" data-tip="Patrimônio" onclick="ir('patrimonio.html')">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-tags"></i>
+    </span>
+  </button>
+
+  <!-- EXPEDIÇÃO -->
+   <button data-permissao="EXPEDICAO_VER" class="bdr-menu-btn active" data-tip="Expedição" onclick="ir('expedicao.html')">
+     <span class="bdr-menu-icon">
+       <i class="fa-solid fa-truck-fast"></i>
+      </span>
+    </button>
+
+    <!-- MOVIMENTAÇÕES -->
+  <button data-permissao="MOVIMENTACOES_VER" class="bdr-menu-btn" data-tip="Movimentações" onclick="ir('movimentacoes.html')">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-right-left"></i>
+    </span>
+  </button>
+
+  <!-- RELATÓRIOS -->
+  <button data-permissao="RELATORIOS_VER" class="bdr-menu-btn" data-tip="Relatórios" onclick="ir('relatorios.html')">
+    <span class="bdr-menu-icon">
+      <i class="fa-regular fa-file-lines"></i>
+    </span>
+  </button>
+
+  <!-- EMPRESAS -->
+  <button data-permissao="EMPRESAS_VER" class="bdr-menu-btn" data-tip="Empresas" onclick="ir('empresa.html')">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-building"></i>
+    </span>
+  </button>
+
+  <!-- USUÁRIOS -->
+  <button data-permissao="USUARIOS_VER" class="bdr-menu-btn" data-tip="Usuários" onclick="ir('usuarios.html')">
+    <span class="bdr-menu-icon">
+      <i class="fa-solid fa-users"></i>
+    </span>
+  </button>
+
+</nav>
   </aside>
   <main class="bdr-main expedicao-premium-main">
     <!-- =====================================================
@@ -1096,16 +942,14 @@
       </div>
 
       <div class="bdr-top-actions">
-        <div class="notif-wrap">
-          <button aria-label="Abrir notificações" class="notif-btn" data-atlas-toggle="notifications" title="Notificações" type="button">
+        <div class="notif-wrap" data-permissao="RECEBER_NOTIFICACOES">
+          <button class="notif-btn" type="button" data-atlas-toggle="notifications" aria-label="Abrir notificações">
             <i class="fa-regular fa-bell"></i>
-            <span class="notif-badge" id="notifBadge">0</span>
+            <span id="notifBadge" class="notif-badge" data-count="0">0</span>
           </button>
-          <div class="notif-dropdown" id="notifDropdown" onclick="event.stopPropagation()">
+          <div id="notifDropdown" class="notif-dropdown">
             <div class="notif-head">🔔 Central de notificações</div>
-            <div class="notif-list" id="notifLista">
-              <div class="notif-item">Nenhuma notificação no momento.</div>
-            </div>
+            <div id="notifLista" class="notif-list"><div class="notif-item">Nenhuma notificação.</div></div>
           </div>
         </div>
 
@@ -1113,9 +957,7 @@
           <div class="user-mini"><b id="usuarioNome">Olá, -</b><small id="usuarioPerfil">-</small></div>
           <div class="avatar"><i class="fa-solid fa-user"></i></div>
           <div id="dropdownUser" class="dropdown-user">
-            <button type="button" onclick="location.href='MinhaConta/minha-conta.html';event.stopPropagation()">
-              <i class="fa-solid fa-circle-user"></i> Minha conta
-            </button>
+            <button data-permissao="USUARIOS_VER" onclick="ir('usuarios.html')"><i class="fa-solid fa-user-gear"></i> Meu perfil / usuários</button>
             <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
           </div>
         </div>
@@ -1123,20 +965,21 @@
     </div>
 
     <div class="kpi-row">
-      <div class="kpi"><strong id="kpiTotal" class="atlas-kpi-loading" aria-label="Carregando total de itens"></strong><span>Total itens</span></div>
-      <div class="kpi"><strong id="kpiEstoque" class="atlas-kpi-loading" aria-label="Carregando itens em estoque"></strong><span>Em estoque</span></div>
-      <div class="kpi"><strong id="kpiUso" class="atlas-kpi-loading" aria-label="Carregando itens em uso"></strong><span>Em uso</span></div>
-      <div class="kpi"><strong id="kpiManutencao" class="atlas-kpi-loading" aria-label="Carregando itens em manutenção"></strong><span>Manutenção</span></div>
-      <div class="kpi"><strong id="kpiReservado" class="atlas-kpi-loading" aria-label="Carregando itens reservados"></strong><span>Reservados</span></div>
-      <div class="kpi"><strong id="kpiPedidos" class="atlas-kpi-loading" aria-label="Carregando solicitações"></strong><span>Solicitações</span></div>
+      <div class="kpi"><strong id="kpiTotal">0</strong><span>Total itens</span></div>
+      <div class="kpi"><strong id="kpiEstoque">0</strong><span>Em estoque</span></div>
+      <div class="kpi"><strong id="kpiUso">0</strong><span>Em uso</span></div>
+      <div class="kpi"><strong id="kpiManutencao">0</strong><span>Manutenção</span></div>
+      <div class="kpi"><strong id="kpiReservado">0</strong><span>Reservados</span></div>
+      <div class="kpi"><strong id="kpiPedidos">0</strong><span>Solicitações</span></div>
     </div>
 
     <div class="tabs">
       <button class="tab-btn active" data-permissao="EXPEDICAO_VER" onclick="abrirAba('catalogo',this)">🛒 Catálogo</button>
       <button class="tab-btn" data-permissao="EXPEDICAO_APROVAR" onclick="abrirAba('solicitacoes',this)">📋 Solicitações</button>
       <button class="tab-btn" data-permissao="EXPEDICAO_SEPARAR" onclick="abrirAba('separacao',this)">📦 Separação</button>
-      <button class="tab-btn" data-permissao="EXPEDICAO_ENTREGAR" onclick="abrirAba('retirada',this)">📦 Aguardando retirada</button>
-      <button class="tab-btn" data-permissao="EXPEDICAO_ENTREGAR" onclick="abrirAba('transito',this)">🛣 Em trânsito</button>
+      <button class="tab-btn" data-permissao="EXPEDICAO_TRANSPORTE" onclick="abrirAba('retirada',this)">📦 Aguardando saída</button>
+      <button class="tab-btn" data-permissao="EXPEDICAO_VER" onclick="abrirAba('transito',this)">🛣 Em trânsito</button>
+      <button class="tab-btn" data-permissao="EXPEDICAO_VER" onclick="abrirAba('receber',this)">📥 A receber</button>
       <button class="tab-btn" data-permissao="EXPEDICAO_VER" onclick="abrirAba('historico',this)">📜 Histórico</button>
     </div>
 
@@ -1145,7 +988,7 @@
         <div>
           <div class="card">
             <div class="exp-head"><div class="exp-title"><h2>Catálogo de itens</h2><p>Solicite materiais entre obras/setores da rede BDR.</p></div><button class="btn-dark" data-permissao="EXPEDICAO_VER" onclick="carregarTudo()"><i class="fa-solid fa-rotate"></i> Atualizar</button></div>
-            <div class="searchbar"><input id="buscaCatalogo" placeholder="Buscar produto, patrimônio, código, obra..." oninput="agendarBuscaCatalogo()"><button onclick="agendarBuscaCatalogo()"><i class="fa-solid fa-search"></i> Buscar</button><button type="button" class="btn-cart-top" onclick="abrirModalCarrinho()" title="Abrir carrinho"><i class="fa-solid fa-cart-shopping"></i><span id="cartQtdTopo">0</span></button></div>
+            <div class="searchbar"><input id="buscaCatalogo" placeholder="Buscar produto, patrimônio, código, obra..." oninput="renderizarCatalogo()"><button onclick="renderizarCatalogo()"><i class="fa-solid fa-search"></i> Buscar</button><button type="button" class="btn-cart-top" onclick="abrirModalCarrinho()" title="Abrir carrinho"><i class="fa-solid fa-cart-shopping"></i><span id="cartQtdTopo">0</span></button></div>
             <div class="atlas-filtros-avancados">
               <div class="atlas-campo-filtro">
                 <label for="filtroObraCatalogo">Obra</label>
@@ -1173,8 +1016,8 @@
                 <label for="itensPorPaginaCatalogo">Itens por página</label>
                 <select id="itensPorPaginaCatalogo" onchange="atlasAlterarItensPorPagina()">
                   <option value="30" selected>30</option>
-                  <option value="60">60</option>
-                  <option value="90">90</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
                 </select>
               </div>
               <button type="button" class="atlas-btn-limpar" onclick="atlasLimparFiltrosCatalogo()">
@@ -1182,11 +1025,8 @@
               </button>
             </div>
             <div class="atlas-resumo-catalogo">
-              <div>
-                <span id="atlasResumoCatalogo">Preparando catálogo...</span>
-                <span id="atlasFiltrosAtivosCatalogo"></span>
-              </div>
-              </div>
+              <span id="atlasResumoCatalogo">Mostrando 0 itens</span>
+              <span id="atlasFiltrosAtivosCatalogo"></span>
             </div>
             <div class="chips">
               <button class="chip-exp active" data-filtro="TODOS" onclick="filtrarStatus('TODOS',this)">Todos <span class="num" id="chipTodos">0</span></button>
@@ -1195,369 +1035,14 @@
               <button class="chip-exp" data-filtro="MANUTENCAO" onclick="filtrarStatus('MANUTENCAO',this)">🟠 Manutenção <span class="num" id="chipManutencao">0</span></button>
               <button class="chip-exp" data-filtro="RESERVADO" onclick="filtrarStatus('RESERVADO',this)">🟣 Reservados <span class="num" id="chipReservado">0</span></button>
             </div>
-            <div id="catalogoGrid" class="catalogo-grid">
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-<div class="produto-card atlas-skeleton-card" aria-hidden="true">
-  <div class="atlas-skeleton-photo"></div>
-  <div class="atlas-skeleton-info">
-    <div class="atlas-skeleton-line title"></div>
-    <div class="atlas-skeleton-line medium"></div>
-    <div class="atlas-skeleton-line short"></div>
-    <div class="atlas-skeleton-footer">
-      <div class="atlas-skeleton-pill"></div>
-      <div class="atlas-skeleton-small"></div>
-    </div>
-  </div>
-</div>
-</div>
-            <div id="atlasPaginacaoCatalogo" class="atlas-pagination" aria-label="Paginação do catálogo"></div>
+            <div id="catalogoGrid" class="catalogo-grid"></div>
+            <div id="atlasPaginacaoCatalogo" class="atlas-paginacao" aria-label="Paginação do catálogo">
+              <button type="button" id="atlasPaginaAnterior" onclick="atlasMudarPaginaCatalogo(-1)">‹ Anterior</button>
+              <span id="atlasPaginaAtual" class="atlas-pagina-atual">Página 1 de 1</span>
+              <button type="button" id="atlasProximaPagina" onclick="atlasMudarPaginaCatalogo(1)">Próxima ›</button>
+              <button type="button" id="atlasPrimeiraPagina" onclick="atlasIrPaginaCatalogo(1)" hidden aria-hidden="true">Primeira</button>
+              <button type="button" id="atlasUltimaPagina" onclick="atlasIrUltimaPaginaCatalogo()" hidden aria-hidden="true">Última</button>
+            </div>
           </div>
         </div>
 
@@ -1566,16 +1051,16 @@
 
     <section id="tab-solicitacoes" class="tab" data-permissao="EXPEDICAO_APROVAR"><div class="card"><h3>📋 Solicitações aguardando autorização</h3><div id="listaSolicitacoes" class="pedido-lista"></div></div></section>
     <section id="tab-separacao" class="tab" data-permissao="EXPEDICAO_SEPARAR"><div class="card"><h3>📦 Separação</h3><div id="listaSeparacao" class="pedido-lista"></div></div></section>
-    <section id="tab-retirada" class="tab" data-permissao="EXPEDICAO_ENTREGAR"><div class="card"><h3>📦 Aguardando retirada</h3><div id="listaRetirada" class="pedido-lista"></div></div></section>
-    <section id="tab-transito" class="tab" data-permissao="EXPEDICAO_ENTREGAR"><div class="card"><h3>🛣 Em trânsito</h3><div id="listaTransito" class="pedido-lista"></div></div></section>
+    <section id="tab-retirada" class="tab" data-permissao="EXPEDICAO_TRANSPORTE"><div class="card"><h3>📦 Aguardando saída</h3><div id="listaRetirada" class="pedido-lista"></div></div></section>
+    <section id="tab-transito" class="tab" data-permissao="EXPEDICAO_VER"><div class="card"><h3>🛣 Em trânsito</h3><div id="listaTransito" class="pedido-lista"></div></div></section>
+    <section id="tab-receber" class="tab" data-permissao="EXPEDICAO_VER"><div class="card"><h3>📥 A receber</h3><div id="listaReceber" class="pedido-lista"></div></div></section>
     <section id="tab-historico" class="tab" data-permissao="EXPEDICAO_VER"><div class="card"><h3>📜 Histórico</h3><div id="listaHistorico" class="pedido-lista"></div></div></section>
   </main>
 </div>
 
 <div id="modalCarrinho" class="modal-bg"><div class="modal"><div class="modal-head"><span><i class="fa-solid fa-cart-shopping"></i> Meu carrinho</span><button class="fechar-modal" onclick="fecharModalCarrinho()">X</button></div><div class="modal-body"><div class="cart-modal-panel"><div class="cart-head"><span>Itens selecionados</span><span id="cartQtd">0</span></div><div id="cartItens"></div><textarea id="obsSolicitacao" placeholder="Observação da solicitação..." style="margin-top:8px;min-height:70px"></textarea><button class="btn-submit" data-permissao="EXPEDICAO_VER" onclick="enviarSolicitacao()"><i class="fa-regular fa-paper-plane"></i> Enviar solicitação</button><div class="mini-summary"><div class="mini-box"><strong id="cartResumoItens">0</strong>Itens</div><div class="mini-box"><strong id="cartResumoObras">0</strong>Origens</div></div><div class="info-box">A solicitação será enviada aos responsáveis pela obra/setor de origem. Itens em uso entram como interesse, não como retirada direta.</div></div></div></div></div>
 <div id="modalDetalhe" class="modal-bg"><div class="modal"><div class="modal-head"><span id="modalTitulo">Detalhes</span><button class="fechar-modal" onclick="fecharModalDetalhe()">X</button></div><div class="modal-body" id="modalConteudo"></div></div></div>
-<div id="modalRetirada" class="modal-bg"><div class="modal"><div class="modal-head"><span>🚚 Confirmar retirada</span><button class="fechar-modal" onclick="fecharModalRetirada()">X</button></div><div class="modal-body"><input id="retMotorista" placeholder="Motorista / responsável"><br><br><input id="retVeiculo" placeholder="Veículo"><br><br><input id="retPlaca" placeholder="Placa"><br><br><textarea id="retObs" placeholder="Observação da retirada"></textarea><br><br><button class="btn-ok" data-permissao="EXPEDICAO_ENTREGAR" onclick="confirmarRetiradaModal()">Confirmar retirada</button></div></div></div>
-
+<div id="modalRetirada" class="modal-bg"><div class="modal"><div class="modal-head"><span>🚚 Preparar envio</span><button class="fechar-modal" onclick="fecharModalRetirada()">X</button></div><div class="modal-body"><div id="retResumoTransporte" style="display:none;margin-bottom:14px;padding:10px 12px;border:1px solid #dbe7f5;border-radius:10px;background:#f5f9ff;color:#17365d;font-size:12px;font-weight:700"></div><input id="retMotorista" placeholder="Motorista / responsável"><br><br><input id="retVeiculo" placeholder="Veículo / transportadora"><br><br><input id="retPlaca" placeholder="Placa"><br><br><textarea id="retObs" placeholder="Observação da saída"></textarea><br><br><div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn-ok" data-permissao="EXPEDICAO_TRANSPORTE" onclick="confirmarRetiradaModal()" style="background:#16a34a;color:#fff;border:0;border-radius:10px;padding:10px 16px;font-weight:800;cursor:pointer">🚚 Enviar remessa</button></div></div></div></div>
 
 
 

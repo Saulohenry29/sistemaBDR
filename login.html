@@ -70,24 +70,6 @@ input{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;font-size:
   font-weight:900;padding:8px 11px;cursor:pointer;
 }
 </style>
-
-<style>
-/* ATLAS - AJUSTE VISUAL DAS MENSAGENS DE LOGIN
-   Para mudar depois, altere SOMENTE font-size abaixo. */
-#mensagem,
-#mensagemErro,
-#erroLogin,
-.login-error,
-.login-message,
-.mensagem-erro,
-.erro-login {
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    line-height: 1.35 !important;
-    text-align: center !important;
-}
-</style>
-
 </head>
 
 <body>
@@ -139,245 +121,15 @@ input{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;font-size:
 <script src="./JS/pwa-update.js"></script>
 
 <script>
-function bancoBDR(){
-  return window.client || window.supabaseClient || window.clientSupabase || null;
-}
-
-function mostrarMensagem(txt, cor="red"){
-  const msg = document.getElementById("mensagem");
-  if(msg){
-    msg.style.color = cor;
-    msg.innerText = txt || "";
-  }
-}
-
-function senhaEhTemporariaBDR(usuario){
-  return usuario?.senha_temporaria === true ||
-         usuario?.senha_provisoria === true ||
-         usuario?.trocar_senha === true ||
-         String(usuario?.senha_temporaria).toLowerCase() === "true" ||
-         String(usuario?.senha_provisoria).toLowerCase() === "true" ||
-         String(usuario?.trocar_senha).toLowerCase() === "true";
-}
-
-function permissoesLoginBDR(usuario){
-  const legadas = new Set([
-    "DASHBOARD","ENTRADA","TRIAGEM","ESTOQUE","PATRIMONIO",
-    "EXPEDICAO","RELATORIOS","MOVIMENTACOES","EMPRESAS",
-    "USUARIOS","CONFIGURACOES"
-  ]);
-
-  const lista = Array.isArray(usuario?.permissoes)
-    ? usuario.permissoes
-    : String(usuario?.permissoes || "").split(",");
-
-  return lista
-    .map(p => String(p || "").trim().toUpperCase())
-    .filter(Boolean)
-    .filter(p => !legadas.has(p));
-}
-
-function destinoPadraoBDR(usuario){
-  /*
-    PERFIL NÃO CONCEDE ACESSO.
-    ADMIN, MASTER, ALMOXARIFE, ENGENHEIRO etc. seguem as permissões
-    explícitas cadastradas. Somente o ID 1 é absoluto.
-  */
-  const perms = permissoesLoginBDR(usuario);
-
-  if(Number(usuario?.id) === 1){
-    return "dashboard.html";
-  }
-
-  const rotas = [
-    ["DASHBOARD_VER", "dashboard.html"],
-    ["PATRIMONIO_VER", "patrimonio.html"],
-    ["ENTRADA_VER", "entrada.html"],
-    ["TRIAGEM_VER", "triagem.html"],
-    ["ESTOQUE_VER", "estoque.html"],
-    ["EXPEDICAO_VER", "expedicao.html"],
-    ["MOVIMENTACOES_VER", "movimentacoes.html"],
-    ["RELATORIOS_VER", "relatorios.html"],
-    ["EMPRESAS_VER", "empresa.html"],
-    ["USUARIOS_VER", "usuarios.html"],
-    ["CONFIGURACOES_VER", "configuracoes.html"]
-  ];
-
-  const encontrada = rotas.find(([permissao]) => perms.includes(permissao));
-  return encontrada ? encontrada[1] : "";
-}
-
-function identificarNavegadorBDR(){
-  const ua = navigator.userAgent || "";
-  if(/Edg\//i.test(ua)) return "Edge";
-  if(/OPR\//i.test(ua)) return "Opera";
-  if(/CriOS|Chrome/i.test(ua)) return "Chrome";
-  if(/FxiOS|Firefox/i.test(ua)) return "Firefox";
-  if(/Safari/i.test(ua) && !/Chrome|CriOS|Chromium/i.test(ua)) return "Safari";
-  return "Outro";
-}
-
-function identificarSistemaBDR(){
-  const ua = navigator.userAgent || "";
-  if(/Windows/i.test(ua)) return "Windows";
-  if(/iPhone|iPad|iPod/i.test(ua)) return "iOS";
-  if(/Android/i.test(ua)) return "Android";
-  if(/Mac OS X|Macintosh/i.test(ua)) return "macOS";
-  if(/Linux/i.test(ua)) return "Linux";
-  return "Outro";
-}
-
-function identificarDispositivoBDR(){
-  const ua = navigator.userAgent || "";
-  if(/iPad|Tablet/i.test(ua)) return "Tablet";
-  if(/Mobi|iPhone|Android/i.test(ua)) return "Celular";
-  return "Computador";
-}
-
-function sessaoLoginBDR(){
-  let sessao = localStorage.getItem("bdr_sessao_id");
-  if(sessao) return sessao;
-
-  try{
-    sessao = crypto.randomUUID();
-  }catch(_){
-    sessao = `bdr-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  }
-
-  localStorage.setItem("bdr_sessao_id", sessao);
-  return sessao;
-}
-
-async function fazerLogin(){
-  const login = document.getElementById("usuario").value.trim();
-  const senha = document.getElementById("senha").value.trim();
-  const botao = document.querySelector(".btn-login");
-
-  mostrarMensagem("");
-
-  if(!login || !senha){
-    mostrarMensagem("Informe usuário e senha.");
-    return;
-  }
-
-  const banco = bancoBDR();
-  if(!banco){
-    mostrarMensagem("Supabase não carregado.");
-    return;
-  }
-
-  if(botao){
-    botao.disabled = true;
-    botao.textContent = "Validando...";
-  }
-
-  try{
-    /*
-      A autenticação e o registro da tentativa acontecem juntos no banco.
-      O navegador não precisa buscar a lista de usuários para validar o login.
-    */
-    const { data, error } = await banco.rpc("atlas_login_autenticar", {
-      p_login: login,
-      p_senha: senha,
-      p_user_agent: navigator.userAgent || null,
-      p_navegador: identificarNavegadorBDR(),
-      p_sistema_operacional: identificarSistemaBDR(),
-      p_dispositivo: identificarDispositivoBDR(),
-      p_sessao_id: sessaoLoginBDR()
-    });
-
-    if(error) throw error;
-
-    if(!data?.sucesso || !data?.usuario){
-      if(data?.bloqueado === true){
-        mostrarMensagem("Acesso temporariamente indisponível. Tente novamente em alguns minutos.");
-      }else{
-        mostrarMensagem("Usuário ou senha inválidos.");
-      }
-
-      /*
-         Nas falhas repetidas o servidor pode solicitar um pequeno intervalo
-         antes de liberar uma nova tentativa. O bloqueio real continua sendo
-         controlado no PostgreSQL, não depende deste JavaScript.
-      */
-      const espera = Math.max(0, Math.min(Number(data?.aguardar_segundos || 0), 5));
-      if(espera > 0){
-        await new Promise(resolve => setTimeout(resolve, espera * 1000));
-      }
-      return;
-    }
-
-    const usuarioSessao = data.usuario;
-
-    /*
-      Senha temporária precisa de sessão para abrir a troca de senha,
-      independentemente dos módulos liberados.
-    */
-    if(senhaEhTemporariaBDR(usuarioSessao)){
-      localStorage.setItem("usuario_logado", JSON.stringify(usuarioSessao));
-      localStorage.setItem("usuarioLogado", JSON.stringify(usuarioSessao));
-      localStorage.setItem("perfil_usuario", usuarioSessao.perfil || "");
-      localStorage.setItem("bdr_login_cache_em", new Date().toISOString());
-      location.href = "alterar-senha.html";
-      return;
-    }
-
-    const destino = destinoPadraoBDR(usuarioSessao);
-
-    if(!destino){
-      /*
-        Login é válido, porém não existe módulo funcional liberado.
-        Não cria uma sessão que ficaria presa no Dashboard.
-      */
-      localStorage.removeItem("usuario_logado");
-      localStorage.removeItem("usuarioLogado");
-      localStorage.removeItem("perfil_usuario");
-      mostrarMensagem("Seu usuário ainda não possui nenhum módulo liberado. Procure o administrador.");
-      return;
-    }
-
-    localStorage.setItem("usuario_logado", JSON.stringify(usuarioSessao));
-    localStorage.setItem("usuarioLogado", JSON.stringify(usuarioSessao));
-    localStorage.setItem("perfil_usuario", usuarioSessao.perfil || "");
-    localStorage.setItem("bdr_login_cache_em", new Date().toISOString());
-
-    if(document.getElementById("lembrar")?.checked){
-      localStorage.setItem("bdr_login_lembrado", login);
-    }else{
-      localStorage.removeItem("bdr_login_lembrado");
-    }
-
-    location.href = destino;
-
-  }catch(e){
-    console.error("Erro no login auditado:", e);
-    mostrarMensagem("Não foi possível validar o acesso. Verifique a conexão e tente novamente.");
-  }finally{
-    if(botao){
-      botao.disabled = false;
-      botao.textContent = "Entrar no Sistema";
-    }
-  }
-}
-
 function mostrarSenha(){
   const campo = document.getElementById("senha");
   const icone = document.getElementById("iconeOlho");
-
   if(campo.type === "password"){
     campo.type = "text";
-    icone.innerHTML = `
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/>
-    `;
+    icone.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/>`;
   }else{
     campo.type = "password";
-    icone.innerHTML = `
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18"/>
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.58 10.58A2 2 0 0012 14a2 2 0 001.42-.58"/>
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.88 4.24A9.7 9.7 0 0112 4c5 0 8.27 3.11 10 8a13.38 13.38 0 01-2.16 3.57"/>
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.61 6.61C4.56 7.86 3.01 9.73 2 12c1.73 4.89 5 8 10 8a9.7 9.7 0 005.39-1.61"/>
-    `;
+    icone.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3l18 18"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.58 10.58A2 2 0 0012 14a2 2 0 001.42-.58"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.88 4.24A9.7 9.7 0 0112 4c5 0 8.27 3.11 10 8a13.38 13.38 0 01-2.16 3.57"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.61 6.61C4.56 7.86 3.01 9.73 2 12c1.73 4.89 5 8 10 8a9.7 9.7 0 005.39-1.61"/>`;
   }
 }
 
@@ -389,7 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-document.getElementById("formLogin").addEventListener("submit", function(e){
+document.getElementById("formLogin").addEventListener("submit", (e) => {
   e.preventDefault();
   fazerLogin();
 });

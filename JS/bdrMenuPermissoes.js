@@ -24,7 +24,6 @@
     TRIAGEM: "triagem.html",
     ESTOQUE: "estoque.html",
     PATRIMONIO: "patrimonio.html",
-    MANUTENCAO: "manutencao.html",
     EXPEDICAO: "expedicao.html",
     RELATORIOS: "relatorios.html",
     MOVIMENTACOES: "movimentacoes.html",
@@ -39,7 +38,6 @@
     "triagem.html": "TRIAGEM_VER",
     "estoque.html": "ESTOQUE_VER",
     "patrimonio.html": "PATRIMONIO_VER",
-    "manutencao.html": "MANUTENCAO_VER",
     "expedicao.html": "EXPEDICAO_VER",
     "relatorios.html": "RELATORIOS_VER",
     "movimentacoes.html": "MOVIMENTACOES_VER",
@@ -56,7 +54,6 @@
     TRIAGEM: "TRIAGEM_VER",
     ESTOQUE: "ESTOQUE_VER",
     PATRIMONIO: "PATRIMONIO_VER",
-    MANUTENCAO: "MANUTENCAO_VER",
     EXPEDICAO: "EXPEDICAO_VER",
     RELATORIOS: "RELATORIOS_VER",
     MOVIMENTACOES: "MOVIMENTACOES_VER",
@@ -68,7 +65,6 @@
   const ORDEM = [
     "DASHBOARD_VER",
     "PATRIMONIO_VER",
-    "MANUTENCAO_VER",
     "ESTOQUE_VER",
     "ENTRADA_VER",
     "TRIAGEM_VER",
@@ -86,7 +82,6 @@
     TRIAGEM: "TRIAGEM_VER",
     ESTOQUE: "ESTOQUE_VER",
     PATRIMONIO: "PATRIMONIO_VER",
-    MANUTENCAO: "MANUTENCAO_VER",
     EXPEDICAO: "EXPEDICAO_VER",
     RELATORIOS: "RELATORIOS_VER",
     MOVIMENTACOES: "MOVIMENTACOES_VER",
@@ -101,7 +96,11 @@
     CADASTRAR_PATRIMONIO: "PATRIMONIO_CRIAR",
     EDITAR_PATRIMONIO: "PATRIMONIO_EDITAR",
     ALTERAR_STATUS: "PATRIMONIO_MOVIMENTAR",
-    MOVIMENTAR_PATRIMONIO: "PATRIMONIO_MOVIMENTAR"
+    MOVIMENTAR_PATRIMONIO: "PATRIMONIO_MOVIMENTAR",
+
+    /* Expedição: nomes antigos da interface apontam para as permissões oficiais atuais. */
+    EXPEDICAO_APROVAR: "APROVAR_PEDIDO_ORIGEM",
+    EXPEDICAO_SEPARAR: "SEPARAR_PEDIDO"
   };
 
   function norm(v){
@@ -140,30 +139,15 @@
       .filter(Boolean);
   }
 
-  const MODULOS_LEGADOS = new Set([
-    "DASHBOARD",
-    "ENTRADA",
-    "TRIAGEM",
-    "ESTOQUE",
-    "PATRIMONIO",
-    "MANUTENCAO",
-    "EXPEDICAO",
-    "RELATORIOS",
-    "MOVIMENTACOES",
-    "EMPRESAS",
-    "USUARIOS",
-    "CONFIGURACOES"
-  ]);
-
   function permissoes(u = usuarioLocal()){
-    /*
-      Acesso a módulo é SEMPRE explícito:
-      DASHBOARD_VER, PATRIMONIO_VER, EXPEDICAO_VER etc.
+    const ps = permissoesBrutas(u);
+    const set = new Set(ps);
 
-      Tokens antigos como "DASHBOARD" podem continuar no banco durante
-      a transição, mas NÃO concedem acesso.
-    */
-    return permissoesBrutas(u).filter(p => !MODULOS_LEGADOS.has(p));
+    ps.forEach(p => {
+      if(LEGADO_PARA_NOVO[p]) set.add(LEGADO_PARA_NOVO[p]);
+    });
+
+    return [...set];
   }
 
   function perfil(u){
@@ -172,58 +156,19 @@
 
   function owner(u = usuarioLocal()){
     /*
-      ÚNICA EXCEÇÃO ABSOLUTA DO ATLAS:
-      somente o usuário ID 1 vê tudo independentemente do perfil
-      e das permissões cadastradas.
+      OWNER ABSOLUTO:
+      - id=1 sempre vê tudo
+      - independente de permissoes preenchidas
+      - independente de perfil
+      - usado para evitar menu sumindo no PWA/cache/offline
     */
-    return Number(u?.id) === 1;
-  }
-
-  function desenvolvedorSaude(u = usuarioLocal()){
-    // Saúde do Sistema é invisível para qualquer usuário diferente do ID 1.
-    return Number(u?.id) === 1;
-  }
-
-  function caminhoSaudeSistema(){
-    const dentroDoModulo = location.pathname.toLowerCase().includes("/saudesistema/");
-    return dentroDoModulo ? "./saude-sistema.html" : "SaudeSistema/saude-sistema.html";
-  }
-
-  function garantirBotaoSaudeSistema(u = usuarioLocal()){
-    document.querySelectorAll(".bdr-menu").forEach(menu => {
-      let btn = menu.querySelector("#bdrMenuSaudeSistema");
-
-      if(!desenvolvedorSaude(u)){
-        if(btn) btn.remove();
-        return;
-      }
-
-      if(!btn){
-        btn = document.createElement("button");
-        btn.id = "bdrMenuSaudeSistema";
-        btn.type = "button";
-        btn.className = "bdr-menu-btn";
-        btn.dataset.tip = "Saúde do Sistema";
-        btn.setAttribute("aria-label", "Saúde do Sistema");
-        btn.innerHTML = '<span class="bdr-menu-icon"><i class="fa-solid fa-heart-pulse"></i></span>';
-        btn.addEventListener("click", () => {
-          location.href = caminhoSaudeSistema();
-        });
-        menu.appendChild(btn);
-      }
-
-      const pagina = paginaAtual();
-      btn.classList.toggle("active", pagina === "saude-sistema.html");
-      mostrarElemento(btn);
-    });
+    return Number(u?.id) === 1 || norm(u?.perfil) === "OWNER";
   }
 
   function masterLivre(u = usuarioLocal()){
-    /*
-      Nome mantido internamente por compatibilidade.
-      Perfil não libera módulo. Somente ID 1 é absoluto.
-    */
-    return owner(u);
+    const p = perfil(u);
+    const ps = permissoesBrutas(u);
+    return owner(u) || ((p === "MASTER" || p === "ADMIN") && ps.length === 0);
   }
 
   function mostrarElemento(el){
@@ -289,14 +234,8 @@
     const ps = permissoes(u);
     const achou = ORDEM.find(p => ps.includes(p));
 
-    const modulo = Object.entries(MENU_PARA_NOVO)
-      .find(([,novo]) => novo === achou)?.[0];
-
-    /*
-      Sem módulo liberado não existe fallback para Dashboard.
-      O login já orienta o usuário a procurar o administrador.
-    */
-    return PAGINAS[modulo] || "login.html";
+    const modulo = Object.entries(MENU_PARA_NOVO).find(([,novo]) => novo === achou)?.[0];
+    return PAGINAS[modulo] || "dashboard.html";
   }
 
   function temAcessoPagina(u){
@@ -336,7 +275,6 @@
       ["triagem.html", "TRIAGEM_VER"],
       ["estoque.html", "ESTOQUE_VER"],
       ["patrimonio.html", "PATRIMONIO_VER"],
-      ["manutencao.html", "MANUTENCAO_VER"],
       ["expedicao.html", "EXPEDICAO_VER"],
       ["relatorios.html", "RELATORIOS_VER"],
       ["movimentacoes.html", "MOVIMENTACOES_VER"],
@@ -356,7 +294,6 @@
     if(tip.includes("TRIAGEM")) return "TRIAGEM_VER";
     if(tip.includes("ESTOQUE")) return "ESTOQUE_VER";
     if(tip.includes("PATRIMONIO")) return "PATRIMONIO_VER";
-    if(tip.includes("MANUTENCAO")) return "MANUTENCAO_VER";
     if(tip.includes("EXPEDICAO")) return "EXPEDICAO_VER";
     if(tip.includes("RELATORIO")) return "RELATORIOS_VER";
     if(tip.includes("MOVIMENTACAO") || tip.includes("MOVIMENTACOES")) return "MOVIMENTACOES_VER";
@@ -380,7 +317,6 @@
     u = u || usuarioLocal();
     if(!u) return;
 
-    garantirBotaoSaudeSistema(u);
     prepararBotoes();
 
     const botoes = document.querySelectorAll("[data-permissao], [data-permissao-resolvida]");
@@ -443,30 +379,61 @@
     return false;
   }
 
-  function iniciar(){
-    /*
-      Responsabilidade deste arquivo:
-      somente resolver permissões visuais do menu e das ações.
+  async function buscarUsuarioBanco(){
+    const local = usuarioLocal();
+    const supa = window.client || window.supabaseClient;
 
-      A atualização da sessão no banco e o redirecionamento de páginas
-      pertencem a JS/atlasControleAcesso.js.
-    */
-    const u = usuarioLocal();
+    if(!local || !supa) return local;
+
+    let q = supa.from("usuarios_sistema").select("*").limit(1);
+
+    if(local.id) q = q.eq("id", local.id);
+    else if(local.usuario) q = q.eq("usuario", local.usuario);
+    else if(local.email) q = q.eq("email", local.email);
+    else return local;
+
+    const { data, error } = await q;
+
+    if(error || !data || !data[0]) return local;
+
+    const novo = { ...local, ...data[0] };
+    salvarUsuarioLocal(novo);
+    return novo;
+  }
+
+  async function iniciar(){
+    let u = usuarioLocal();
+
     prepararBotoes();
     aplicarMenu(u);
 
-    if(temAcessoPagina(u)){
-      document.documentElement.style.visibility = "visible";
-    }
-  }
+    if(redirecionarSeBloqueado(u)) return;
 
+    try{
+      u = await buscarUsuarioBanco();
+      aplicarMenu(u);
+
+      if(redirecionarSeBloqueado(u)) return;
+    }catch(e){
+      console.warn("BDR permissões: usando dados locais.", e);
+    }
+
+    document.documentElement.style.visibility = "visible";
+
+    setTimeout(() => aplicarMenu(usuarioLocal()), 300);
+    setTimeout(() => aplicarMenu(usuarioLocal()), 900);
+    setTimeout(() => {
+      const atual = usuarioLocal();
+      aplicarMenu(atual);
+      redirecionarSeBloqueado(atual);
+      document.documentElement.style.visibility = "visible";
+    }, 1500);
+  }
 
 
   function recuperarMenuOwner(){
     const u = usuarioLocal();
     if(!owner(u)) return;
-
-    garantirBotaoSaudeSistema(u);
 
     document
       .querySelectorAll("[data-permissao], [data-permissao-resolvida], [data-acao-permissao], .bdr-menu-btn, .side-btn")
@@ -482,6 +449,7 @@
     iniciar,
     aplicarMenu,
     aplicarAcoes,
+    buscarUsuarioBanco,
     redirecionarSeBloqueado,
     prepararBotoes,
     temPermissao,
@@ -491,24 +459,12 @@
     owner,
     mostrarElemento,
     ocultarElemento,
-    recuperarMenuOwner,
-    desenvolvedorSaude,
-    garantirBotaoSaudeSistema,
-    primeiraPaginaPermitida,
-    temAcessoPagina
+    recuperarMenuOwner
   };
 
   window.usuarioTemPermissaoBDR = temPermissao;
   window.bdrExigirPermissao = exigir;
   window.bdrAplicarPermissoesTela = aplicarAcoes;
-
-  /*
-    Aplica o menu imediatamente.
-    Como este arquivo é carregado depois do HTML do menu nas páginas atuais,
-    isso evita que módulos não permitidos fiquem visíveis até o DOMContentLoaded.
-  */
-  prepararBotoes();
-  aplicarMenu(usuarioLocal());
 
   if(document.readyState === "loading"){
     document.addEventListener("DOMContentLoaded", iniciar);
@@ -516,5 +472,5 @@
     iniciar();
   }
 
-  console.log("✅ BDR MENU PERMISSÕES carregado - menu e acesso centralizados");
+  void 0;
 })();

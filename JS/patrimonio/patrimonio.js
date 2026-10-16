@@ -146,7 +146,7 @@ async function salvarOperacaoPatrimonioOffline(tipo, tabela, dados, opcoes={}){
 }
 
 
-async function bdrSalvarPrimeiroNoTablet(tabela, payload, meta={}){
+async function bdrSalvarPrimeiroNoTablet(tabela, payload, meta={}, contexto={}){
   /*
     REGRA NOVA:
     - Com internet real: grava direto no Supabase.
@@ -156,13 +156,17 @@ async function bdrSalvarPrimeiroNoTablet(tabela, payload, meta={}){
     mesmo online. Por isso o patrimônio ficava como pendente/fila.
   */
 
-  const onlineReal = await patrimonioOnlineReal();
+  const onlineReal = typeof contexto.onlineReal === "boolean"
+    ? contexto.onlineReal
+    : await patrimonioOnlineReal();
 
   if(onlineReal && db()){
-    const { data, error } = await db()
-      .from(tabela)
-      .insert([payload])
-      .select();
+    // Movimentações não precisam retornar a linha inserida.
+    // Evita exigir SELECT RLS apenas para registrar o histórico.
+    const consulta = db().from(tabela).insert([payload]);
+    const { data, error } = tabela === "movimentacoes"
+      ? await consulta
+      : await consulta.select();
 
     return {
       offlineFirst:false,
@@ -229,6 +233,13 @@ async function bdrAtualizarPrimeiroNoTablet(tabela, match, payload, meta={}){
  * Não bloqueia a tela e não exige clicar em OK.
  */
 function atlasAvisoPatrimonio(titulo, texto, tipo="sucesso"){
+  // Dentro da shell, o aviso pertence ao topo global do Atlas.
+  // Assim ele continua visível independentemente da rolagem do módulo/iframe.
+  if(window.self !== window.top && typeof window.bdrAvisoAtlas === "function"){
+    const tipoShell = tipo === "offline" ? "warning" : tipo === "info" ? "info" : "success";
+    return window.bdrAvisoAtlas(String(texto || titulo || ""), String(titulo || "Atlas Patrimônio"), tipoShell, 4200);
+  }
+
   let aviso = document.getElementById("atlasPatrimonioToast");
 
   if(!aviso){
@@ -242,7 +253,7 @@ function atlasAvisoPatrimonio(titulo, texto, tipo="sucesso"){
 
   aviso.className =
     "atlas-patrimonio-toast" +
-    (tipo === "offline" ? " offline" : "");
+    (tipo === "offline" ? " offline" : tipo === "info" ? " info" : "");
 
   aviso.innerHTML =
     `<span class="atlas-toast-titulo">${String(titulo || "Concluído")}</span>` +
@@ -269,8 +280,12 @@ function bdrAvisoSalvoTablet(texto="Salvo no tablet. Está pendente de sincroniz
 }
 
 function usuarioAtual(){
-  const u = localStorage.getItem("usuario_logado");
-  return u ? JSON.parse(u) : null;
+  try{
+    const u = localStorage.getItem("usuario_logado") || localStorage.getItem("usuarioLogado");
+    return u ? JSON.parse(u) : null;
+  }catch(_){
+    return null;
+  }
 }
 
 function carregarUsuarioTopo(){
@@ -340,179 +355,37 @@ function usuarioTemPermissao(permissao){
   return false;
 }
 
-function usuarioPodeCriarPatrimonioBDR(){
-  const u = usuarioAtual();
-  if(!u) return false;
-
-  if(usuarioOwnerBDR(u)) return true;
-
-  /*
-   * A fonte central continua sendo prioritária, mas fazemos fallback para
-   * as permissões gravadas na própria sessão. Isso evita o caso em que o
-   * usuário acabou de ter a permissão atualizada e o menu central ainda
-   * está com uma fotografia antiga da sessão.
-   */
-  if(usuarioTemPermissao("PATRIMONIO_CRIAR")) return true;
-
-  const ps = permissoesUsuarioBDR(u);
-  return ps.includes("PATRIMONIO_CRIAR") ||
-         ps.includes("CADASTRAR_PATRIMONIO");
-}
-
-function usuarioQuerSomCriacaoPatrimonioBDR(){
-  const u = usuarioAtual();
-  if(!u) return false;
-
-  const ps = permissoesUsuarioBDR(u);
-
-  /*
-   * O som de confirmação do cadastro respeita as preferências do usuário.
-   * - Silencioso: nunca toca.
-   * - Visual: nunca toca.
-   * - Som: só toca se "Criação de patrimônio" estiver habilitada.
-   */
-  if(ps.includes("NOTIF_MODO_SILENCIOSO")) return false;
-  if(ps.includes("NOTIF_MODO_VISUAL")) return false;
-
-  return ps.includes("NOTIF_PATRIMONIO_CRIACAO");
-}
-
 function usuarioEhGestao(){
-  /*
-    Compatibilidade com chamadas antigas do Patrimônio.
-    Perfil/cargo, USUARIOS_VER ou EMPRESAS_VER não concedem ações.
-    Somente o usuário ID 1 é absoluto.
-  */
-  return usuarioOwnerBDR();
+  return usuarioTemPermissao("USUARIOS") || usuarioTemPermissao("EMPRESAS");
 }
 
 function usuarioPodeVerTodasObras(){
-  /*
-    Escopo amplo também é explícito.
-    Perfil ADMIN/MASTER não libera obras automaticamente.
-  */
-  const u = usuarioAtual();
-  if(!u) return false;
-
-  if(usuarioOwnerBDR(u)) return true;
-
-  const ps = permissoesUsuarioBDR(u);
-  return ps.includes("PATRIMONIO_VER_TODAS_OBRAS") ||
-         ps.includes("PATRIMONIO_TODAS_OBRAS") ||
-         ps.includes("TODAS_OBRAS_VER");
+  // Somente o OWNER possui escopo global real no Patrimônio.
+  return usuarioOwnerBDR(usuarioAtual());
 }
 
-function normalizarIdsObrasLiberadasPatrimonioBDR(valor){
-  let lista = valor;
-
-  if(typeof lista === "string"){
-    const texto = lista.trim();
-
-    if(!texto) return [];
-
-    try{
-      const parsed = JSON.parse(texto);
-      lista = Array.isArray(parsed) ? parsed : [parsed];
-    }catch(_){
-      lista = texto.split(/[,;|]/);
-    }
-  }
-
-  if(!Array.isArray(lista)){
-    lista = lista === null || lista === undefined ? [] : [lista];
-  }
-
-  return [...new Set(
-    lista
-      .flatMap(item => {
-        if(item && typeof item === "object"){
-          return [item.id, item.obra_id, item.value];
-        }
-        return [item];
-      })
-      .map(v => Number(String(v ?? "").trim()))
-      .filter(id => Number.isFinite(id) && id > 0)
-  )];
+function idsObrasAtuacaoUsuarioBDR(){
+  const u=usuarioAtual();
+  if(!u) return [];
+  const ids=new Set();
+  if(u.obra_id!=null && String(u.obra_id).trim()) ids.add(String(u.obra_id).trim());
+  String(u.obras_liberadas||"").split(/[;,|]/).map(x=>x.trim()).filter(Boolean).forEach(id=>ids.add(String(id)));
+  return [...ids];
 }
-
-function obrasPermitidasPatrimonioBDR(usuario = usuarioAtual()){
-  if(!usuario) return [];
-
-  if(usuarioPodeVerTodasObras()){
-    return (obras || []).map(o => Number(o.id)).filter(Number.isFinite);
-  }
-
-  /*
-   * REGRA CENTRAL DO PATRIMÔNIO:
-   * obras_liberadas do cadastro de Usuários é a fonte autoritativa.
-   *
-   * Se houver obras marcadas na aba "Obras", o usuário vê SOMENTE elas.
-   * A obra principal entra apenas como fallback para cadastros antigos em que
-   * nenhuma obra liberada foi configurada.
-   *
-   * Isso faz:
-   * - Thayanne com ATLAS + SATH -> enxergar somente ATLAS + SATH.
-   * - Samuel sem obra principal + várias obras liberadas -> escolher qualquer
-   *   uma das obras realmente marcadas para ele.
-   */
-  const liberadas =
-    normalizarIdsObrasLiberadasPatrimonioBDR(usuario.obras_liberadas);
-
-  if(liberadas.length){
-    return liberadas;
-  }
-
-  const principal = Number(usuario.obra_id);
-  if(Number.isFinite(principal) && principal > 0){
-    return [principal];
-  }
-
-  return [];
-}
-
-function usuarioPodeVerObraPatrimonioBDR(obraId, usuario = usuarioAtual()){
-  if(!usuario) return false;
-  if(usuarioPodeVerTodasObras()) return true;
-
-  const permitidas = new Set(
-    obrasPermitidasPatrimonioBDR(usuario).map(String)
-  );
-
-  return permitidas.has(String(obraId));
-}
-
 
 function usuarioPodeLancarQualquerObra(){
-  const u = usuarioAtual();
-  if(!u) return false;
-
+  const u=usuarioAtual();
+  if(!u || !usuarioTemPermissao("PATRIMONIO_CRIAR")) return false;
   if(usuarioOwnerBDR(u)) return true;
-
-  const ps = permissoesUsuarioBDR(u);
-  return ps.includes("PATRIMONIO_LANCAR_QUALQUER_OBRA") ||
-         ps.includes("PATRIMONIO_VER_TODAS_OBRAS") ||
-         ps.includes("PATRIMONIO_TODAS_OBRAS") ||
-         ps.includes("TODAS_OBRAS_VER");
-}
-
-function usuarioPodeEscolherObraLancamentoBDR(usuario = usuarioAtual()){
-  if(!usuario) return false;
-  if(usuarioPodeLancarQualquerObra()) return true;
-
-  // Se o administrador marcou ao menos uma obra em Usuários, o funcionário
-  // pode escolher/travar dentro DESSE escopo, mesmo sem obra principal.
-  return normalizarIdsObrasLiberadasPatrimonioBDR(
-    usuario.obras_liberadas
-  ).length > 0;
+  return idsObrasAtuacaoUsuarioBDR().length > 1;
 }
 
 function obraVinculadaUsuarioBDR(){
-  const u = usuarioAtual();
-  if(!u || !u.obra_id) return null;
-
-  return (obras || []).find(o =>
-    String(o.id) === String(u.obra_id)
-  ) || null;
+  const u=usuarioAtual();
+  if(!u) return null;
+  const ids=idsObrasAtuacaoUsuarioBDR();
+  if(ids.length!==1) return null;
+  return (obras||[]).find(o=>String(o.id)===String(ids[0]))||null;
 }
 
 function aplicarRegraObraLancamentoBDR(){
@@ -522,40 +395,24 @@ function aplicarRegraObraLancamentoBDR(){
 
   if(!select || !u) return;
 
-  const permitidas = obrasPermitidasPatrimonioBDR(u);
-
-  if(usuarioPodeEscolherObraLancamentoBDR(u)){
-    // Pode escolher, mas o autocomplete será filtrado somente para "permitidas".
+  if(usuarioPodeLancarQualquerObra()){
     select.disabled = false;
-
-    if(btn){
-      btn.disabled = false;
-      if(!window.obraTravada){
-        btn.className = "lock-btn lock-off";
-        btn.innerText = "✅ Confirmar obra";
-      }
-    }
-
-    atlasSincronizarCampoObra();
+    if(btn) btn.disabled = false;
     return;
   }
 
-  // Cadastro antigo: sem obras_liberadas, mas com uma obra principal.
   const obraUsuario = obraVinculadaUsuarioBDR();
 
-  if(!obraUsuario || !permitidas.includes(Number(obraUsuario.id))){
+  if(!obraUsuario){
     select.value = "";
     select.disabled = true;
-
     if(btn){
       btn.disabled = true;
       btn.className = "lock-btn lock-off";
-      btn.innerText = "⚠️ Sem obra liberada";
+      btn.innerText = "⚠️ Sem obra";
     }
-
     window.obraAtiva = null;
     window.obraTravada = false;
-    atlasSincronizarCampoObra();
     return;
   }
 
@@ -577,13 +434,8 @@ function aplicarRegraObraLancamentoBDR(){
 
 function bloquearPatrimonioSemPermissaoBDR(){
   if(usuarioTemPermissao("PATRIMONIO_VER")) return true;
-
-  const usuario = usuarioAtual();
-  const destino =
-    window.BDRMenuPermissoes?.primeiraPaginaPermitida?.(usuario) ||
-    "login.html";
-
-  window.location.replace(destino);
+  alert("Você não tem permissão para acessar Patrimônio.");
+  window.location.href = "dashboard.html";
   return false;
 }
 
@@ -646,7 +498,7 @@ function bdrExtrairSequencialPatrimonio(codigo_qr, codigoObra){
   return Number(final) || 0;
 }
 
-async function bdrProximoSequencialObra(obra){
+async function bdrProximoSequencialObra(obra, contexto={}){
   const codigoObra = bdrCodigoObraLimpo(obra?.codigo_obra);
 
   if(!codigoObra){
@@ -656,7 +508,9 @@ async function bdrProximoSequencialObra(obra){
   const prefixoCodigo = "PAT-" + codigoObra;
   let maior = 0;
 
-  const onlineReal = await patrimonioOnlineReal();
+  const onlineReal = typeof contexto.onlineReal === "boolean"
+    ? contexto.onlineReal
+    : await patrimonioOnlineReal();
 
   if(onlineReal){
     const { data, error } = await db()
@@ -714,34 +568,11 @@ function preencherFiltroObraPatrimonio(){
   });
 
   const usuario = usuarioAtual();
-
-  if(usuario && !usuarioPodeVerTodasObras()){
-    const permitidas = new Set(
-      obrasPermitidasPatrimonioBDR(usuario).map(String)
-    );
-
-    [...filtro.options].forEach(opcao => {
-      if(!opcao.value) return;
-      opcao.hidden = !permitidas.has(String(opcao.value));
-    });
-
-    if(permitidas.size === 1){
-      filtro.value = [...permitidas][0];
-      filtro.disabled = true;
-      return;
-    }
-
-    filtro.disabled = false;
-
-    if(valorAtual && permitidas.has(String(valorAtual))){
-      filtro.value = valorAtual;
-    }else{
-      filtro.value = "";
-    }
+  if(usuario && !usuarioPodeVerTodasObras() && usuario.obra_id){
+    filtro.value = usuario.obra_id;
+    filtro.disabled = true;
     return;
   }
-
-  filtro.disabled = false;
 
   if(valorAtual && [...filtro.options].some(op => op.value === valorAtual)){
     filtro.value = valorAtual;
@@ -760,39 +591,44 @@ function formatarMoeda(valor){
 }
 
 function mascaraMoeda(input){
-  const valorAntes = input.value;
-  const inicioAntes = input.selectionStart ?? valorAntes.length;
-  const digitosAntesDoCursor = valorAntes.slice(0, inicioAntes).replace(/\D/g, "").length;
+  if(!input) return;
 
-  let valor = valorAntes.replace(/\D/g, "");
+  const valorAntes = String(input.value || "");
+  const inicioSelecao = Number.isInteger(input.selectionStart)
+    ? input.selectionStart
+    : valorAntes.length;
 
-  if(!valor){
+  // Quantos algarismos existiam à direita do cursor antes de formatar.
+  // Isso permite editar no meio do valor sem jogar o cursor para o final.
+  const digitosDireita = (valorAntes.slice(inicioSelecao).match(/\d/g) || []).length;
+  const digitos = valorAntes.replace(/\D/g, "");
+
+  if(!digitos){
     input.value = "";
     return;
   }
 
-  const numero = Number(valor) / 100;
-  const formatado = numero.toLocaleString("pt-BR", {
+  const centavos = Number(digitos);
+  const formatado = (centavos / 100).toLocaleString("pt-BR", {
     minimumFractionDigits:2,
-    maximumFractionDigits:2
+    maximumFractionDigits:2,
+    useGrouping:true
   });
 
   input.value = formatado;
 
-  // Reposiciona o cursor pelo mesmo número de algarismos à esquerda.
-  let vistos = 0;
-  let pos = formatado.length;
-  for(let i = 0; i < formatado.length; i++){
-    if(/\d/.test(formatado[i])) vistos++;
-    if(vistos >= digitosAntesDoCursor){
-      pos = i + 1;
-      break;
-    }
+  // Restaura a posição lógica do cursor contando os algarismos da direita.
+  let novaPosicao = formatado.length;
+  let encontrados = 0;
+
+  while(novaPosicao > 0 && encontrados < digitosDireita){
+    novaPosicao--;
+    if(/\d/.test(formatado[novaPosicao])) encontrados++;
   }
 
-  requestAnimationFrame(() => {
-    try{ input.setSelectionRange(pos, pos); }catch(_){ }
-  });
+  try{
+    input.setSelectionRange(novaPosicao, novaPosicao);
+  }catch(_){}
 }
 
 
@@ -800,8 +636,6 @@ function mascaraMoeda(input){
 let atlasObraIndice = -1;
 let atlasObraResultados = [];
 let atlasObraComboIniciado = false;
-let atlasObraInteragindoLista = false;
-let atlasObraInteracaoTimer = null;
 
 function atlasNormalizarBuscaObra(valor){
   return String(valor || "")
@@ -843,16 +677,8 @@ function atlasSincronizarCampoObra(){
 
 function atlasFiltrarObras(termo, abrirTudo = false){
   const normalizado = atlasNormalizarBuscaObra(termo);
-  const u = usuarioAtual();
-  const permitidas = new Set(
-    obrasPermitidasPatrimonioBDR(u).map(String)
-  );
 
-  const base = usuarioPodeVerTodasObras()
-    ? (obras || [])
-    : (obras || []).filter(obra => permitidas.has(String(obra.id)));
-
-  atlasObraResultados = base.filter(obra => {
+  atlasObraResultados = (obras || []).filter(obra => {
     if(abrirTudo || !normalizado) return true;
 
     const codigo = atlasNormalizarBuscaObra(obra.codigo_obra);
@@ -888,8 +714,12 @@ function atlasRenderizarSugestoesObra(){
 
   lista.classList.add("ativo");
 
-  // A seleção é tratada por delegação no pointerdown da lista.
-  // Isso ocorre antes do blur do campo e torna toda a linha clicável.
+  lista.querySelectorAll(".atlas-obra-opcao").forEach(botao => {
+    botao.addEventListener("mousedown", evento => evento.preventDefault());
+    botao.addEventListener("click", () => {
+      atlasSelecionarObraCombo(botao.dataset.obraId, false);
+    });
+  });
 }
 
 async function atlasSelecionarObraCombo(obraId, confirmarAutomaticamente = false){
@@ -899,11 +729,6 @@ async function atlasSelecionarObraCombo(obraId, confirmarAutomaticamente = false
 
   const obra = (obras || []).find(o => String(o.id) === String(obraId));
   if(!obra) return false;
-
-  if(!usuarioPodeVerObraPatrimonioBDR(obra.id)){
-    console.warn("Atlas Patrimônio: tentativa de selecionar obra não liberada.", obra.id);
-    return false;
-  }
 
   select.value = String(obra.id);
   input.value = atlasTextoObra(obra);
@@ -927,15 +752,7 @@ async function atlasConfirmarObraDigitada(){
   const termo = atlasNormalizarBuscaObra(input.value);
   if(!termo) return false;
 
-  const permitidas = new Set(
-    obrasPermitidasPatrimonioBDR(usuarioAtual()).map(String)
-  );
-
-  const basePermitida = usuarioPodeVerTodasObras()
-    ? (obras || [])
-    : (obras || []).filter(obra => permitidas.has(String(obra.id)));
-
-  const exata = basePermitida.find(obra =>
+  const exata = (obras || []).find(obra =>
     atlasNormalizarBuscaObra(obra.codigo_obra) === termo ||
     atlasNormalizarBuscaObra(atlasTextoObra(obra)) === termo
   );
@@ -944,7 +761,7 @@ async function atlasConfirmarObraDigitada(){
     ? [exata]
     : (atlasObraResultados.length
         ? atlasObraResultados
-        : basePermitida.filter(obra =>
+        : (obras || []).filter(obra =>
             atlasNormalizarBuscaObra(atlasTextoObra(obra)).includes(termo)
           ));
 
@@ -980,35 +797,26 @@ function atlasIniciarComboObras(){
   if(!input || !seta || !lista || !select) return;
   atlasObraComboIniciado = true;
 
-  lista.addEventListener("pointerdown", async evento => {
-    /*
-     * Clicar/arrastar a barra de rolagem tira o foco do campo.
-     * Registramos a interação antes do blur para a lista não fechar durante a rolagem.
-     */
-    atlasObraInteragindoLista = true;
-    clearTimeout(atlasObraInteracaoTimer);
-
-    const opcao = evento.target.closest?.(".atlas-obra-opcao");
-    if(!opcao || !lista.contains(opcao)) return;
-
-    evento.preventDefault();
-    evento.stopPropagation();
-    await atlasSelecionarObraCombo(opcao.dataset.obraId, false);
-    atlasObraInteragindoLista = false;
-  });
-
-  const encerrarInteracaoLista = () => {
-    clearTimeout(atlasObraInteracaoTimer);
-    atlasObraInteracaoTimer = setTimeout(() => {
-      atlasObraInteragindoLista = false;
-    }, 180);
-  };
-
-  lista.addEventListener("pointerup", encerrarInteracaoLista);
-  lista.addEventListener("pointercancel", encerrarInteracaoLista);
-
   input.addEventListener("focus", () => {
     if(!input.disabled) atlasFiltrarObras(input.value);
+  });
+
+  // A obra atualmente selecionada é estado do seletor, não texto de pesquisa.
+  // Na primeira edição, limpa o rótulo exibido antes de deixar o navegador
+  // inserir/apagar o conteúdo digitado pelo usuário.
+  input.addEventListener("beforeinput", (evento) => {
+    if(input.disabled || !select.value) return;
+
+    const obraSelecionada = atlasObraSelecionadaAtual();
+    if(!obraSelecionada) return;
+
+    if(input.value === atlasTextoObra(obraSelecionada) && (
+      evento.inputType.startsWith("insert") ||
+      evento.inputType.startsWith("delete")
+    )){
+      input.value = "";
+      select.value = "";
+    }
   });
 
   input.addEventListener("input", () => {
@@ -1036,16 +844,19 @@ function atlasIniciarComboObras(){
       return;
     }
 
-    if(evento.key === "Enter" || evento.key === "Tab"){
-      const resultado = atlasObraResultados[atlasObraIndice >= 0 ? atlasObraIndice : 0];
+    if(evento.key === "Enter"){
+      evento.preventDefault();
+      await atlasConfirmarObraDigitada();
+      return;
+    }
 
-      if(resultado && lista.classList.contains("ativo")){
-        if(evento.key === "Enter") evento.preventDefault();
-        await atlasSelecionarObraCombo(resultado.id, false);
-      }else{
-        if(evento.key === "Enter") evento.preventDefault();
-        await atlasConfirmarObraDigitada();
-      }
+    if(evento.key === "Tab"){
+      /*
+       * TAB apenas confirma a opção digitada no campo interno.
+       * O lançamento só fica travado quando o usuário aciona
+       * explicitamente o botão "Confirmar obra".
+       */
+      await atlasConfirmarObraDigitada();
       return;
     }
 
@@ -1056,14 +867,12 @@ function atlasIniciarComboObras(){
 
   input.addEventListener("blur", () => {
     setTimeout(() => {
-      if(atlasObraInteragindoLista) return;
-
       atlasFecharSugestoesObra();
       const selecionada = atlasObraSelecionadaAtual();
       if(selecionada){
         input.value = atlasTextoObra(selecionada);
       }
-    }, 160);
+    }, 140);
   });
 
   seta.addEventListener("click", () => {
@@ -1090,7 +899,15 @@ function atlasIniciarComboObras(){
 
 async function carregarObras(){
 
+  const limitarObrasAoUsuario = () => {
+    const u=usuarioAtual();
+    if(usuarioOwnerBDR(u)) return;
+    const permitidas=new Set(idsObrasAtuacaoUsuarioBDR());
+    obras=(obras||[]).filter(o=>permitidas.has(String(o.id)));
+  };
+
   const preencherSelectObras = () => {
+    limitarObrasAoUsuario();
     const select = document.getElementById("obraSelect");
     const novaSelect = document.getElementById("novaObraSelect");
 
@@ -1120,6 +937,11 @@ async function carregarObras(){
 
     if(!onlineReal){
       obras = await BDROfflineDB.lerTabela("obras") || [];
+      const usuario = usuarioAtual();
+      if(usuario && !usuarioOwnerBDR(usuario)){
+        const permitidas = new Set(idsObrasAtuacaoUsuarioBDR());
+        obras = obras.filter(o => permitidas.has(String(o.id)));
+      }
       preencherSelectObras();
       mostrarAvisoModoOffline();
       return;
@@ -1135,6 +957,12 @@ async function carregarObras(){
 
     obras = data || [];
 
+    const usuario = usuarioAtual();
+    if(usuario && !usuarioOwnerBDR(usuario)){
+      const permitidas = new Set(idsObrasAtuacaoUsuarioBDR());
+      obras = obras.filter(o => permitidas.has(String(o.id)));
+    }
+
     if(window.BDROfflineDB?.salvarTabela){
       await BDROfflineDB.salvarTabela("obras", obras);
     }
@@ -1144,6 +972,11 @@ async function carregarObras(){
   }catch(e){
     console.warn("Patrimônio: falha ao carregar obras online, usando cache:", e.message || e);
     obras = await BDROfflineDB.lerTabela("obras") || [];
+    const usuario = usuarioAtual();
+    if(usuario && !usuarioOwnerBDR(usuario)){
+      const permitidas = new Set(idsObrasAtuacaoUsuarioBDR());
+      obras = obras.filter(o => permitidas.has(String(o.id)));
+    }
     preencherSelectObras();
     BDR_PATRIMONIO_ONLINE_REAL = false;
     mostrarAvisoModoOffline();
@@ -1152,14 +985,14 @@ async function carregarObras(){
 
 async function alternarTravaObra(){
 
-  if(!usuarioPodeCriarPatrimonioBDR()){
+  if(!usuarioTemPermissao("PATRIMONIO_CRIAR")){
     alert("Você não tem permissão para alterar obra de lançamento.");
     return;
   }
 
-  if(!usuarioPodeEscolherObraLancamentoBDR()){
+  if(!usuarioPodeLancarQualquerObra()){
     aplicarRegraObraLancamentoBDR();
-    alert("Este usuário não possui obras liberadas para escolher no lançamento.");
+    alert("Este usuário só pode lançar patrimônio na própria obra vinculada ao cadastro dele.");
     return;
   }
 
@@ -1183,37 +1016,30 @@ async function alternarTravaObra(){
     return;
   }
 
-  let obraSelecionada = atlasObraSelecionadaAtual();
+  let obra_id = document.getElementById("obraSelect").value;
 
-  /*
-   * O campo visível de obras é um autocomplete e o select real fica oculto.
-   * Em alguns navegadores/sessões o texto podia estar correto, porém o select
-   * ainda não tinha sido confirmado. Antes de desistir, sincronizamos os dois.
-   */
-  if(!obraSelecionada && document.getElementById("obraBusca")?.value){
+  if(!obra_id && document.getElementById("obraBusca")?.value){
     const selecionouDigitacao = await atlasConfirmarObraDigitada();
-
-    if(selecionouDigitacao){
-      obraSelecionada = atlasObraSelecionadaAtual();
-    }
+    if(!selecionouDigitacao) return;
+    obra_id = document.getElementById("obraSelect").value;
   }
 
-  if(!obraSelecionada){
-    alert("Selecione uma obra/setor da lista antes de confirmar.");
-    document.getElementById("obraBusca")?.focus();
+  if(!obra_id){
+    alert("Selecione uma obra/setor para travar.");
     return;
   }
 
-  /*
-   * MASTER sem obra principal pode escolher qualquer uma das obras que
-   * realmente estiverem liberadas para ele. Assim não precisamos prender
-   * o usuário a uma obra só para conseguir cadastrar.
-   */
-  if(
-    !usuarioOwnerBDR() &&
-    !usuarioPodeVerObraPatrimonioBDR(obraSelecionada.id)
-  ){
+  const obraSelecionada = obras.find(
+    o => String(o.id) === String(obra_id)
+  );
+
+  if(!usuarioOwnerBDR(usuarioAtual()) && !idsObrasAtuacaoUsuarioBDR().includes(String(obra_id))){
     alert("Esta obra não está liberada para este usuário.");
+    return;
+  }
+
+  if(!obraSelecionada){
+    alert("Obra não encontrada.");
     return;
   }
 
@@ -1227,7 +1053,7 @@ async function alternarTravaObra(){
 }
 
 function destravarObra(){
-  if(!usuarioPodeEscolherObraLancamentoBDR()){
+  if(!usuarioPodeLancarQualquerObra()){
     aplicarRegraObraLancamentoBDR();
     return;
   }
@@ -1387,6 +1213,7 @@ const ATLAS_NOMES_PATRIMONIO_PADRAO = [
 
 let atlasIndiceSugestaoPatrimonio = -1;
 let atlasCatalogoGlobalPatrimonio = [];
+let atlasSugestoesPatrimonioAtuais = [];
 
 function atlasNormalizarTextoSugestao(texto){
   return String(texto || "")
@@ -1402,77 +1229,49 @@ function atlasChaveCatalogoPatrimonio(item){
     .join('|');
 }
 
-function atlasRegistroCatalogoPatrimonio(item){
-  if(!item) return null;
-  return {
-    id:item.id ?? null,
-    created_at:item.created_at ?? null,
-    nome_bem:String(item.nome_bem||'').trim().toUpperCase(),
-    tipo_item:String(item.tipo_item||'').trim().toUpperCase(),
-    tipo_outro:String(item.tipo_outro||'').trim().toUpperCase(),
-    marca:String(item.marca||'').trim().toUpperCase(),
-    modelo:String(item.modelo||'').trim().toUpperCase(),
-    valor_bem:item.valor_bem ?? null,
-    estado_conservacao:String(item.estado_conservacao||'').trim().toUpperCase(),
-    ncm:String(item.ncm||'').trim(),
-    cor:String(item.cor||'').trim().toUpperCase(),
-    combustivel:String(item.combustivel||'').trim().toUpperCase(),
-    potencia:String(item.potencia||'').trim().toUpperCase(),
-    ano_fabricacao:item.ano_fabricacao ?? null,
-    ano_modelo:item.ano_modelo ?? null,
-    vezes_utilizado:Number(item.vezes_utilizado||1)
-  };
-}
-
 async function atlasCarregarCatalogoGlobalPatrimonio(){
-  try{
-    if(!db()) return;
-    const {data,error}=await db()
-      .from('patrimonio')
-      .select('id,created_at,nome_bem,tipo_item,tipo_outro,marca,modelo,valor_bem,estado_conservacao,ncm,cor,combustivel,potencia,ano_fabricacao,ano_modelo')
-      .neq('ativo',false)
-      .order('created_at',{ascending:false})
-      .order('id',{ascending:false})
-      .limit(5000);
+  // `carregarPatrimonios()` já traz os registros completos e os grava no
+  // IndexedDB. O catálogo reaproveita essa mesma fonte, evitando uma segunda
+  // consulta ao Supabase e mantendo as sugestões disponíveis offline.
+  let fonte = Array.isArray(patrimonios) ? patrimonios : [];
 
-    if(error) throw error;
-
-    const mapa=new Map();
-    (data||[]).forEach(item=>{
-      const registro=atlasRegistroCatalogoPatrimonio(item);
-      if(!registro?.nome_bem) return;
-      const chave=atlasChaveCatalogoPatrimonio(registro);
-      if(!chave) return;
-
-      if(!mapa.has(chave)){
-        mapa.set(chave,{...registro,vezes_utilizado:1});
-      }else{
-        mapa.get(chave).vezes_utilizado++;
-      }
-    });
-
-    atlasCatalogoGlobalPatrimonio=[...mapa.values()]
-      .sort((a,b)=>
-        (Number(b.vezes_utilizado||0)-Number(a.vezes_utilizado||0)) ||
-        a.nome_bem.localeCompare(b.nome_bem,'pt-BR')
-      );
-  }catch(e){
-    console.warn('Atlas Patrimônio: catálogo global indisponível; usando dados locais.',e?.message||e);
-    atlasCatalogoGlobalPatrimonio=[];
+  if(!fonte.length && window.BDROfflineDB?.lerTabela){
+    try{
+      fonte = await BDROfflineDB.lerTabela("patrimonio") || [];
+    }catch(e){
+      console.warn("Atlas Patrimônio: cache do catálogo indisponível.",e?.message||e);
+      fonte = [];
+    }
   }
+
+  const mapa=new Map();
+  (fonte||[]).forEach(item=>{
+    const nome=String(item?.nome_bem||'').trim();
+    if(!nome) return;
+    const registro={
+      id:item.id,
+      nome_bem:nome.toUpperCase(),
+      marca:String(item?.marca||'').trim().toUpperCase(),
+      modelo:String(item?.modelo||'').trim().toUpperCase()
+    };
+    const chave=atlasChaveCatalogoPatrimonio(registro);
+    if(chave && !mapa.has(chave)) mapa.set(chave,registro);
+  });
+
+  atlasCatalogoGlobalPatrimonio=[...mapa.values()]
+    .sort((a,b)=>a.nome_bem.localeCompare(b.nome_bem,'pt-BR'));
 }
 
 function atlasCatalogoNomesPatrimonio(){
-  const locais=(window.patrimonios||patrimonios||[])
-    .map(atlasRegistroCatalogoPatrimonio)
-    .filter(p=>p?.nome_bem);
+  const locais=(window.patrimonios||patrimonios||[]).map(p=>({
+    id:p?.id,
+    nome_bem:String(p?.nome_bem||'').trim().toUpperCase(),
+    marca:String(p?.marca||'').trim().toUpperCase(),
+    modelo:String(p?.modelo||'').trim().toUpperCase()
+  })).filter(p=>p.nome_bem);
 
-  const padrao=ATLAS_NOMES_PATRIMONIO_PADRAO.map(nome=>({
-    nome_bem:nome,marca:'',modelo:'',vezes_utilizado:0
-  }));
-
+  const padrao=ATLAS_NOMES_PATRIMONIO_PADRAO.map(nome=>({id:null,nome_bem:nome,marca:'',modelo:''}));
   const mapa=new Map();
-  // Registros reais têm prioridade sobre nomes genéricos do catálogo padrão.
   [...atlasCatalogoGlobalPatrimonio,...locais,...padrao].forEach(item=>{
     const chave=atlasChaveCatalogoPatrimonio(item);
     if(chave && !mapa.has(chave)) mapa.set(chave,item);
@@ -1489,61 +1288,147 @@ function atlasAtualizarSugestoesPatrimonio(){
   atlasIndiceSugestaoPatrimonio=-1;
   if(termo.length<2){atlasFecharSugestoesPatrimonio();return;}
 
-  const sugestoes=atlasCatalogoNomesPatrimonio()
+  atlasSugestoesPatrimonioAtuais=atlasCatalogoNomesPatrimonio()
     .filter(item=>[item.nome_bem,item.marca,item.modelo]
       .some(v=>atlasNormalizarTextoSugestao(v).includes(termo)))
-    .sort((a,b)=>{
-      const aNome=atlasNormalizarTextoSugestao(a.nome_bem);
-      const bNome=atlasNormalizarTextoSugestao(b.nome_bem);
-      const aComeca=aNome.startsWith(termo)?1:0;
-      const bComeca=bNome.startsWith(termo)?1:0;
-      if(aComeca!==bComeca) return bComeca-aComeca;
-      const aCompleto=(a.marca||a.modelo)?1:0;
-      const bCompleto=(b.marca||b.modelo)?1:0;
-      if(aCompleto!==bCompleto) return bCompleto-aCompleto;
-      return Number(b.vezes_utilizado||0)-Number(a.vezes_utilizado||0);
-    })
     .slice(0,10);
 
-  if(!sugestoes.length){atlasFecharSugestoesPatrimonio();return;}
+  if(!atlasSugestoesPatrimonioAtuais.length){atlasFecharSugestoesPatrimonio();return;}
 
-  lista.innerHTML=sugestoes.map((item,indice)=>{
-    const dados=encodeURIComponent(JSON.stringify(item));
+  lista.innerHTML=atlasSugestoesPatrimonioAtuais.map((item,indice)=>{
     const detalhe=[item.marca,item.modelo].filter(Boolean).join(' • ');
-    const usado=Number(item.vezes_utilizado||0)>1 ? ` • usado ${Number(item.vezes_utilizado)}x` : '';
-    return `<button type="button" class="atlas-sugestao" data-indice="${indice}" data-dados="${dados}"
-      onmousedown="event.preventDefault(); atlasEscolherSugestaoPatrimonioDados('${dados}')">
+    return `<button type="button" class="atlas-sugestao" data-indice="${indice}"
+      onmousedown="event.preventDefault(); atlasEscolherSugestaoPatrimonioIndice(${indice})">
       ${item.nome_bem}
-      <small>${detalhe||'Nome padronizado do catálogo'}${usado}</small>
+      <small>${detalhe||'Nome padronizado do catálogo'}</small>
     </button>`;
   }).join('');
   lista.classList.add('ativo');
+}
+
+function atlasDefinirCampoSeExiste(id,valorCampo){
+  if(valorCampo===null || valorCampo===undefined || String(valorCampo).trim()==='') return;
+  const el=document.getElementById(id);
+  if(!el) return;
+  if(id==='valor_bem'){
+    const numero=Number(valorCampo);
+    if(Number.isFinite(numero)) el.value=numero.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    return;
+  }
+  el.value=String(valorCampo);
+}
+
+async function atlasAplicarPatrimonioComoModelo(registro){
+  if(!registro) return;
+
+  // Primeiro define o tipo para o Atlas criar os campos dinâmicos corretos.
+  atlasDefinirCampoSeExiste('nome_bem',registro.nome_bem);
+  const campoTipo=document.getElementById('tipo_item');
+  if(campoTipo) campoTipo.value=String(registro.tipo_item||'');
+  mostrarCampos();
+
+  // Copia somente características reutilizáveis. Identificadores individuais,
+  // obra/localização e medições atuais permanecem vazios para o novo patrimônio.
+  const campos=[
+    'tipo_outro','estado_conservacao','valor_bem',
+    'marca','modelo','cor','combustivel','potencia','ano_fabricacao','ano_modelo',
+    'especificacoes','descricao','fornecedor','departamento','responsavel',
+    'endereco_estoque','ncm'
+  ];
+  campos.forEach(id=>{
+    atlasDefinirCampoSeExiste(id,registro[id]);
+  });
+
+  // Nunca copiar dados que identificam uma unidade específica.
+  ['numero_serie','placa','renavam','chassi','codigo_antigo','quilometragem','horimetro','numero_nfe','observacao']
+    .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+
+  // Novo patrimônio começa sempre EM_USO; o status do patrimônio usado como modelo
+  // não deve ser herdado.
+  const statusInicial=document.getElementById('status_inicial');
+  if(statusInicial){
+    statusInicial.value='EM_USO';
+    statusInicial.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+
+  window.AtlasPatrimonioLote?.resetar?.();
+
+  // O formulário já está renderizado neste ponto. O foco segue direto para o
+  // único dado individual que falta informar, sem uma segunda renderização.
+  const serie=document.getElementById('numero_serie');
+  if(serie && !serie.disabled && serie.offsetParent!==null){
+    serie.focus();
+    serie.select?.();
+  }else{
+    const gerar=document.querySelector('#btnGerarPatrimonio, [data-acao="gerar-patrimonio"], button[onclick*="gerarPatrimonio"]');
+    gerar?.focus();
+  }
+}
+
+async function atlasEscolherSugestaoPatrimonioIndice(indice){
+  const item=atlasSugestoesPatrimonioAtuais[indice];
+  if(!item) return;
+
+  atlasFecharSugestoesPatrimonio();
+
+  if(!item.id){
+    atlasDefinirCampoSeExiste('nome_bem',item.nome_bem);
+    document.getElementById('nome_bem')?.focus();
+    return;
+  }
+
+  // O registro completo já foi carregado por carregarPatrimonios() e fica no
+  // IndexedDB. Usá-lo primeiro mantém o autopreenchimento instantâneo/offline.
+  let registro=(patrimonios||[]).find(p=>String(p?.id)===String(item.id))||null;
+
+  if(!registro && window.BDROfflineDB?.lerTabela){
+    try{
+      const cache=await BDROfflineDB.lerTabela('patrimonio')||[];
+      registro=cache.find(p=>String(p?.id)===String(item.id))||null;
+    }catch(e){
+      console.warn('Atlas Patrimônio: não foi possível ler o modelo do cache.',e?.message||e);
+    }
+  }
+
+  if(registro){
+    await atlasAplicarPatrimonioComoModelo(registro);
+    return;
+  }
+
+  // Fallback apenas para um item que não esteja no conjunto/cache local.
+  if(navigator.onLine !== false && db()){
+    try{
+      const {data,error}=await db()
+        .from('patrimonio')
+        .select('*')
+        .eq('id',item.id)
+        .single();
+      if(error) throw error;
+      await atlasAplicarPatrimonioComoModelo(data);
+      return;
+    }catch(e){
+      console.error('Atlas Patrimônio: não foi possível carregar os dados da sugestão.',e);
+    }
+  }
+
+  atlasDefinirCampoSeExiste('nome_bem',item.nome_bem);
+  atlasDefinirCampoSeExiste('marca',item.marca);
+  atlasDefinirCampoSeExiste('modelo',item.modelo);
 }
 
 function atlasEscolherSugestaoPatrimonioDados(dadosCodificados){
   let item=null;
   try{item=JSON.parse(decodeURIComponent(dadosCodificados));}catch(e){}
   if(!item) return;
-
-  if(window.AtlasPatrimonioAssistente?.preencher?.(item)){
-    atlasFecharSugestoesPatrimonio();
-    return;
-  }
-
-  // Fallback seguro caso o módulo assistente ainda não tenha carregado.
-  const input=document.getElementById('nome_bem');
-  if(input) input.value=String(item.nome_bem||'').toUpperCase();
-  const marca=document.getElementById('marca');
-  const modelo=document.getElementById('modelo');
-  if(marca && item.marca) marca.value=String(item.marca).toUpperCase();
-  if(modelo && item.modelo) modelo.value=String(item.modelo).toUpperCase();
-  atlasFecharSugestoesPatrimonio();
-  input?.focus();
-  window.AtlasPatrimonioLote?.resetar?.();
+  const indice=atlasSugestoesPatrimonioAtuais.findIndex(x=>String(x.id||'')===String(item.id||'') && atlasChaveCatalogoPatrimonio(x)===atlasChaveCatalogoPatrimonio(item));
+  if(indice>=0) return atlasEscolherSugestaoPatrimonioIndice(indice);
+  atlasDefinirCampoSeExiste('nome_bem',item.nome_bem);
 }
 
 function atlasEscolherSugestaoPatrimonio(nome){
-  atlasEscolherSugestaoPatrimonioDados(encodeURIComponent(JSON.stringify({nome_bem:nome,marca:'',modelo:''})));
+  const indice=atlasSugestoesPatrimonioAtuais.findIndex(x=>x.nome_bem===nome);
+  if(indice>=0) return atlasEscolherSugestaoPatrimonioIndice(indice);
+  atlasDefinirCampoSeExiste('nome_bem',nome);
 }
 
 function atlasFecharSugestoesPatrimonio(){
@@ -1564,22 +1449,14 @@ function atlasTeclaSugestaoPatrimonio(event){
 
   if(event.key === "ArrowDown"){
     event.preventDefault();
-    atlasIndiceSugestaoPatrimonio =
-      Math.min(atlasIndiceSugestaoPatrimonio + 1, botoes.length - 1);
+    atlasIndiceSugestaoPatrimonio = Math.min(atlasIndiceSugestaoPatrimonio + 1, botoes.length - 1);
   }else if(event.key === "ArrowUp"){
     event.preventDefault();
-    atlasIndiceSugestaoPatrimonio =
-      Math.max(atlasIndiceSugestaoPatrimonio - 1, 0);
+    atlasIndiceSugestaoPatrimonio = Math.max(atlasIndiceSugestaoPatrimonio - 1, 0);
   }else if(event.key === "Enter" || event.key === "Tab"){
-    const indice = atlasIndiceSugestaoPatrimonio >= 0
-      ? atlasIndiceSugestaoPatrimonio
-      : 0;
-
-    const dados = botoes[indice]?.dataset?.dados;
-    if(dados){
-      if(event.key === "Enter") event.preventDefault();
-      atlasEscolherSugestaoPatrimonioDados(dados);
-    }
+    const indice = atlasIndiceSugestaoPatrimonio >= 0 ? atlasIndiceSugestaoPatrimonio : 0;
+    if(event.key === "Enter") event.preventDefault();
+    atlasEscolherSugestaoPatrimonioIndice(indice);
     return;
   }else if(event.key === "Escape"){
     atlasFecharSugestoesPatrimonio();
@@ -1623,12 +1500,9 @@ function atlasCompactarObraPatrimonio(){
   const ids = new Set(idsLiberados);
   if(u.obra_id) ids.add(String(u.obra_id));
 
-  // MASTER/OWNER continuam vendo o seletor porque possuem acesso amplo.
-  const perfil = String(u.perfil || "").toUpperCase();
-  const acessoAmplo =
-    ["MASTER","OWNER"].includes(perfil) ||
-    usuarioTemPermissao("PATRIMONIO_LANCAR_QUALQUER_OBRA") ||
-    usuarioTemPermissao("TODAS_OBRAS_VER");
+  // O seletor fica disponível quando o usuário possui mais de uma obra de atuação.
+  // Perfil/permissão não amplia o escopo além das obras marcadas no cadastro.
+  const acessoAmplo = usuarioOwnerBDR(u) || idsObrasAtuacaoUsuarioBDR().length > 1;
 
   if(!acessoAmplo && ids.size === 1){
     const obraId = Array.from(ids)[0];
@@ -1802,18 +1676,14 @@ function atlasTeclaAutocomplete(evento,tipo){
   }else if(evento.key === "ArrowUp" && itens.length){
     evento.preventDefault();
     estado.indice = Math.max(estado.indice - 1, 0);
-  }else if(evento.key === "Enter" && lista?.classList.contains("ativo")){
+  }else if((evento.key === "Enter" || evento.key === "Tab") && lista?.classList.contains("ativo")){
     const selecionado = itens[estado.indice >= 0 ? estado.indice : 0];
     if(selecionado){
-      evento.preventDefault();
+      if(evento.key === "Enter") evento.preventDefault();
       atlasSelecionarAutocomplete(tipo, selecionado);
     }else{
       atlasFecharAutocomplete(tipo);
     }
-    return;
-  }else if(evento.key === "Tab"){
-    // TAB preserva exatamente o texto digitado em Marca/Modelo.
-    atlasFecharAutocomplete(tipo);
     return;
   }else if(evento.key === "Escape"){
     atlasFecharAutocomplete(tipo);
@@ -1844,7 +1714,7 @@ function atlasCampoAutocomplete(tipo,placeholder){
 
 function atlasCampoSerieComLote(placeholder="Número de série"){
   return window.AtlasPatrimonioLote?.renderizarCampo(placeholder) ||
-    `<input id="numero_serie" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="${placeholder}">`;
+    `<input id="numero_serie" placeholder="${placeholder}">`;
 }
 
 function mostrarCampos(){
@@ -1953,41 +1823,78 @@ function bdrResumoPatrimonioDuplicado(p){
 }
 
 async function bdrBaseDuplicidadePatrimonio(){
-  const campos = "id,codigo_qr,nome_bem,tipo_item,marca,modelo,numero_serie,placa,renavam,chassi,codigo_antigo,obra_id,localizacao,ativo";
-
-  try{
-    const onlineReal = await patrimonioOnlineReal();
-
-    if(onlineReal && db()){
-      const { data, error } = await db()
-        .from("patrimonio")
-        .select(campos)
-        .or("ativo.eq.true,ativo.is.null")
-        .limit(5000);
-
-      if(!error && Array.isArray(data)) return data;
-      console.warn("Anti-duplicidade: usando lista local porque o banco retornou erro:", error?.message || error);
-    }
-  }catch(e){
-    console.warn("Anti-duplicidade: falha ao consultar banco, usando lista local.", e);
-  }
-
+  // Base local serve para alertas flexíveis (série/código antigo). Identificadores
+  // fortes (placa/RENAVAM/chassi) são consultados diretamente no banco.
   try{
     const cache = window.BDROfflineDB?.lerTabela
       ? await BDROfflineDB.lerTabela("patrimonio")
       : [];
-
     return [ ...(patrimonios || []), ...(cache || []) ];
   }catch(e){
     return patrimonios || [];
   }
 }
 
-async function bdrVerificarDuplicidadePatrimonio(dados,opcoes={}){
+async function bdrBuscarIdentificadorFortePatrimonio(campo, valorCampo, contexto={}){
+  const bruto=String(valorCampo||'').trim();
+  if(bdrCampoVazioOuGenerico(bruto)) return [];
+
+  const normalizado=bdrNormalizarComparacao(bruto);
+  const unicos=new Map();
+  const adicionar=(lista)=>{
+    (lista||[]).forEach(p=>{
+      if(!p || p.ativo===false) return;
+      if(bdrNormalizarComparacao(p[campo])!==normalizado) return;
+      unicos.set(String(p.id ?? `${campo}:${p[campo]}:${p.codigo_qr||''}`),p);
+    });
+  };
+
+  // Consulta dirigida: não depende da paginação/limite da listagem de patrimônios.
+  try{
+    const onlineReal = typeof contexto.onlineReal === "boolean"
+      ? contexto.onlineReal
+      : await patrimonioOnlineReal();
+    if(onlineReal && db()){
+      const {data,error}=await db()
+        .from("patrimonio")
+        .select("id,codigo_qr,nome_bem,placa,renavam,chassi,numero_serie,codigo_antigo,obra_id,localizacao,ativo")
+        .ilike(campo, bruto)
+        .neq("ativo", false)
+        .limit(20);
+      if(error) throw error;
+      adicionar(data);
+    }
+  }catch(e){
+    console.warn(`Anti-duplicidade: falha ao consultar ${campo} diretamente no banco.`,e);
+  }
+
+  // Fallback/cache também cobre pequenas diferenças de máscara já carregadas.
+  try{
+    const cache=window.BDROfflineDB?.lerTabela ? await BDROfflineDB.lerTabela("patrimonio") : [];
+    adicionar(patrimonios||[]);
+    adicionar(cache||[]);
+  }catch(e){
+    adicionar(patrimonios||[]);
+  }
+
+  return [...unicos.values()];
+}
+
+async function bdrVerificarDuplicidadePatrimonio(dados,opcoes={},contexto={}){
   const lista=await bdrBaseDuplicidadePatrimonio();
   const bloqueios=[];
   const alertas=[];
   const tipo=String(dados.tipo_item||'').toUpperCase();
+
+  // Placa, RENAVAM e chassi precisam ser validados contra o banco inteiro,
+  // e não contra a página/lista parcial que estiver carregada na tela.
+  for(const campo of ["placa","renavam","chassi"]){
+    const encontrados=await bdrBuscarIdentificadorFortePatrimonio(campo,dados[campo],contexto);
+    encontrados.forEach(p=>{
+      if(dados.id && String(p.id)===String(dados.id)) return;
+      bloqueios.push({motivo:`${campo.toUpperCase()} já cadastrado`,patrimonio:p});
+    });
+  }
 
   const igual=(a,b)=>bdrMesmoValor(a,b);
   const camposIguais=(p)=>
@@ -2000,12 +1907,9 @@ async function bdrVerificarDuplicidadePatrimonio(dados,opcoes={}){
     if(!p||p.ativo===false) return;
     if(dados.id && String(p.id)===String(dados.id)) return;
 
-    if(tipo==='VEICULO'){
-      if(igual(dados.placa,p.placa)) bloqueios.push({motivo:'PLACA já cadastrada',patrimonio:p});
-      if(igual(dados.renavam,p.renavam)) bloqueios.push({motivo:'RENAVAM já cadastrado',patrimonio:p});
-      if(igual(dados.chassi,p.chassi)) bloqueios.push({motivo:'CHASSI já cadastrado',patrimonio:p});
-      return;
-    }
+    // Placa, RENAVAM e chassi são identificadores fortes sempre que informados.
+    // Se qualquer um já existir em outro patrimônio ativo, o cadastro é bloqueado.
+    if(bloqueios.some(item=>String(item.patrimonio?.id)===String(p.id))) return;
 
     const quatroIguais=camposIguais(p);
     const codigoAntigoInformado=!bdrCampoVazioOuGenerico(dados.codigo_antigo);
@@ -2044,7 +1948,7 @@ async function bdrVerificarDuplicidadePatrimonio(dados,opcoes={}){
   const b=unicos(bloqueios),a=unicos(alertas);
   if(b.length){
     const msg=b.slice(0,5).map(item=>`🚫 ${item.motivo}\n${bdrResumoPatrimonioDuplicado(item.patrimonio)}\nSérie: ${item.patrimonio?.numero_serie||'-'}\nCódigo antigo: ${item.patrimonio?.codigo_antigo||'-'}`).join('\n\n');
-    alert('Cadastro bloqueado porque todos os identificadores coincidem.\n\n'+msg);
+    alert('Cadastro bloqueado por identificador já cadastrado.\n\n'+msg);
     return false;
   }
 
@@ -2063,7 +1967,10 @@ async function validarDuplicidadeCampoPatrimonio(campo){
   }
 
   const tipoItem = String(valor("tipo_item") || "").toUpperCase();
-  const lista = await bdrBaseDuplicidadePatrimonio();
+  const identificadorUnico = ["placa", "renavam", "chassi"].includes(campo);
+  const lista = identificadorUnico
+    ? await bdrBuscarIdentificadorFortePatrimonio(campo,v)
+    : await bdrBaseDuplicidadePatrimonio();
 
   const achados = (lista || []).filter(p => {
     if(!p || p.ativo === false) return false;
@@ -2083,15 +1990,11 @@ async function validarDuplicidadeCampoPatrimonio(campo){
     .map(bdrResumoPatrimonioDuplicado)
     .join("\n\n");
 
-  const identificadorUnicoVeiculo =
-    tipoItem === "VEICULO" &&
-    ["placa", "renavam", "chassi"].includes(campo);
-
-  if(identificadorUnicoVeiculo){
+  if(identificadorUnico){
     alert(
       `🚫 ${campo.toUpperCase()} já cadastrado.\n\n` +
       msg +
-      "\n\nEste identificador não pode se repetir em veículos."
+      "\n\nEste identificador não pode se repetir em patrimônios ativos."
     );
 
     document.getElementById(campo)?.classList.add("atlas-campo-duplicado");
@@ -2143,7 +2046,7 @@ async function gerarPatrimonio(){
     return;
   }
 
-  if(!usuarioPodeCriarPatrimonioBDR()){
+  if(!usuarioTemPermissao("PATRIMONIO_CRIAR")){
     alert("Você não tem permissão para cadastrar patrimônio.");
     return;
   }
@@ -2158,7 +2061,7 @@ async function gerarPatrimonio(){
 
   const nome_bem = valor("nome_bem");
   const tipo_item = valor("tipo_item");
-  const status_inicial = valor("status_inicial") || "ESTOQUE";
+  const status_inicial = valor("status_inicial") || "EM_USO";
 
   if(!nome_bem || !tipo_item){
     alert("Preencha nome do bem e tipo.");
@@ -2204,7 +2107,15 @@ async function gerarPatrimonio(){
     obra_id: obra.id ? Number(obra.id) : null
   };
 
-  const podeContinuarDuplicidade = await bdrVerificarDuplicidadePatrimonio(dadosParaValidarDuplicidade, { confirmar:true });
+  // Uma única decisão de conectividade vale para toda esta gravação.
+  // Evita repetir o teste de rede durante duplicidade, sequencial e INSERT.
+  const onlineRealCadastro = await patrimonioOnlineReal();
+
+  const podeContinuarDuplicidade = await bdrVerificarDuplicidadePatrimonio(
+    dadosParaValidarDuplicidade,
+    { confirmar:true },
+    { onlineReal:onlineRealCadastro }
+  );
   if(!podeContinuarDuplicidade){
     window.__BDR_PATRIMONIO_SALVANDO__ = false;
     bdrSetGerandoPatrimonio(false);
@@ -2215,7 +2126,7 @@ let sequencial = 1;
 let codigo_qr = "";
 
 try{
-  sequencial = await bdrProximoSequencialObra(obra);
+  sequencial = await bdrProximoSequencialObra(obra, { onlineReal:onlineRealCadastro });
   codigo_qr = bdrMontarCodigoPatrimonio(obra.codigo_obra, sequencial);
 }catch(e){
   console.error(e);
@@ -2290,7 +2201,7 @@ usuario_cadastro:
   const resp = await bdrSalvarPrimeiroNoTablet("patrimonio", patrimonio, {
     acao:"CADASTRO_PATRIMONIO",
     codigo_qr
-  });
+  }, { onlineReal:onlineRealCadastro });
 
   if(resp.error){
     console.error(resp.error);
@@ -2325,9 +2236,7 @@ usuario_cadastro:
       "\nSerá sincronizado automaticamente quando a internet voltar."
     );
   }else{
-    if(usuarioQuerSomCriacaoPatrimonioBDR()){
-      window.AtlasAudio?.concluido?.();
-    }
+    window.AtlasAudio?.concluido?.();
     atlasAvisoPatrimonio(
       "✅ Patrimônio cadastrado",
       `Código ${codigo_qr} salvo e sincronizado com sucesso.`
@@ -2341,7 +2250,7 @@ usuario_cadastro:
 function limparFormularioCadastro(){
   document.getElementById("nome_bem").value = "";
   document.getElementById("tipo_item").value = "";
-  document.getElementById("status_inicial").value = "ESTOQUE";
+  document.getElementById("status_inicial").value = "EM_USO";
   document.getElementById("valor_bem").value = "";
   document.getElementById("tipo_outro").value = "";
   document.getElementById("campoOutroTipo").style.display = "none";
@@ -2396,6 +2305,167 @@ async function atlasAoAlterarFiltroStatus(){
 
 window.atlasAoAlterarFiltroStatus = atlasAoAlterarFiltroStatus;
 
+function atlasEscaparHtml(valor){
+  return String(valor ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+window.atlasRemessasAReceberCache = window.atlasRemessasAReceberCache || new Map();
+
+function atlasRotuloStatusRemessa(status){
+  return ({
+    AGUARDANDO_RETIRADA:"Aguardando saída",
+    EM_TRANSITO:"Em trânsito",
+    AGUARDANDO_CONFERENCIA:"Aguardando conferência"
+  })[String(status||"").toUpperCase()] || String(status||"").replaceAll("_"," ");
+}
+
+async function atlasIrParaRecebimentoRemessa(pedidoId){
+  const id=Number(pedidoId);
+  if(!Number.isFinite(id)) return;
+
+  try{
+    /* Patrimônio roda dentro do iframe do shell. A navegação precisa acontecer
+       no PARENT, senão um novo atlas.html é aberto dentro do módulo. */
+    if(window.parent && window.parent !== window && window.parent.Atlas?.navigate){
+      window.parent.Atlas.navigate(`expedicao.html?aba=receber&pedido=${encodeURIComponent(id)}`);
+      return;
+    }
+
+    if(window.Atlas?.navigate){
+      window.Atlas.navigate(`expedicao.html?aba=receber&pedido=${encodeURIComponent(id)}`);
+      return;
+    }
+
+    location.href=`atlas.html#m=expedicao&aba=receber&pedido=${encodeURIComponent(id)}`;
+  }catch(e){
+    console.error("Atlas Patrimônio: falha ao abrir recebimento da remessa.",e);
+  }
+}
+window.atlasIrParaRecebimentoRemessa=atlasIrParaRecebimentoRemessa;
+
+function atlasAbrirRemessaAReceber(pedidoId){
+  const registro = window.atlasRemessasAReceberCache.get(String(pedidoId));
+  if(!registro) return;
+  const {remessa,itens}=registro;
+  const pats=(itens||[]).filter(i=>i.patrimonio_id);
+  const podeReceber=String(remessa.status||"").toUpperCase()==="EM_TRANSITO";
+  const overlay=document.createElement("div");
+  overlay.className="atlas-remessa-overlay";
+  overlay.innerHTML=`
+    <div class="atlas-remessa-modal" role="dialog" aria-modal="true">
+      <div class="atlas-remessa-modal-topo">
+        <div><strong>${atlasEscaparHtml(remessa.codigo||("Remessa #"+remessa.id))}</strong><small>${atlasEscaparHtml(atlasRotuloStatusRemessa(remessa.status))}</small></div>
+        <button type="button" class="atlas-remessa-fechar" aria-label="Fechar">×</button>
+      </div>
+      <div class="atlas-remessa-rota"><span>${atlasEscaparHtml(remessa.obra_origem_nome||remessa.origem_nome||("Obra "+(remessa.obra_origem_id||"origem")))}</span><b>→</b><span>${atlasEscaparHtml(remessa.obra_nome||remessa.obra_destino_nome||"Destino")}</span></div>
+      <div class="atlas-remessa-modal-resumo">${pats.length} patrimônio(s) nesta remessa</div>
+      <div class="atlas-remessa-itens">${pats.map(i=>`<div><strong>${atlasEscaparHtml(i.patrimonio_codigo||("PAT #"+i.patrimonio_id))}</strong><span>${atlasEscaparHtml(i.patrimonio_nome||"Patrimônio")}</span></div>`).join("") || '<div class="atlas-remessa-vazia">Nenhum patrimônio vinculado.</div>'}</div>
+      ${podeReceber?`<div class="atlas-remessa-acoes"><button type="button" class="atlas-remessa-receber">📦 Receber na Expedição</button></div>`:""}
+    </div>`;
+  const fechar=()=>overlay.remove();
+  overlay.querySelector(".atlas-remessa-fechar")?.addEventListener("click",fechar);
+  overlay.querySelector(".atlas-remessa-receber")?.addEventListener("click",async()=>{
+    fechar();
+    await atlasIrParaRecebimentoRemessa(remessa.id);
+  });
+  overlay.addEventListener("click",e=>{if(e.target===overlay)fechar();});
+  document.body.appendChild(overlay);
+}
+window.atlasAbrirRemessaAReceber=atlasAbrirRemessaAReceber;
+
+async function atlasCarregarAReceber(){
+  const card=document.getElementById("atlasCardAReceber"), lista=document.getElementById("atlasAReceberLista"), qtd=document.getElementById("atlasAReceberQtd");
+  if(!card||!lista)return;
+  // O card só aparece depois que a consulta confirmar remessa real para receber.
+  card.hidden=true;
+  card.classList.add("atlas-sem-remessa");
+  const u=usuarioAtual(), obraDestinoId=u?.obra_id?Number(u.obra_id):null;
+  if(!obraDestinoId||patrimonioOffline()){card.hidden=true;card.classList.add("atlas-sem-remessa");return;}
+  try{
+    const {data:pedidos,error}=await db().from("pedidos_retirada").select("*").eq("obra_destino_id",obraDestinoId).in("status",["AGUARDANDO_RETIRADA","EM_TRANSITO","AGUARDANDO_CONFERENCIA"]).order("id",{ascending:false}).limit(100);
+    if(error)throw error;
+    const remessas=(pedidos||[]).filter(p=>String(p.codigo||"").startsWith("TR-"));
+    if(!remessas.length){card.hidden=true;card.classList.add("atlas-sem-remessa");lista.innerHTML="";if(qtd)qtd.textContent="";return;}
+    const {data:itens,error:erroItens}=await db().from("itens_retirada").select("*").in("pedido_id",remessas.map(p=>p.id));
+    if(erroItens)throw erroItens;
+    const todos=itens||[];
+    const origemIds=[...new Set(remessas.map(r=>Number(r.obra_origem_id)).filter(Number.isFinite))];
+    let nomesObras=new Map();
+    if(origemIds.length){
+      try{
+        const {data:obrasOrigem}=await db().from("obras").select("id,nome,codigo_obra").in("id",origemIds);
+        nomesObras=new Map((obrasOrigem||[]).map(o=>[String(o.id),o.nome||o.codigo_obra||("Obra "+o.id)]));
+      }catch(e){}
+    }
+    window.atlasRemessasAReceberCache.clear();
+
+    const linhas=[];
+    let totalPatrimonios=0;
+    remessas.forEach(r=>{
+      const pats=todos.filter(i=>String(i.pedido_id)===String(r.id)&&i.patrimonio_id);
+      totalPatrimonios+=pats.length;
+      const unico=pats.length===1;
+      const identificacao=unico?(pats[0].patrimonio_codigo||("PAT #"+pats[0].patrimonio_id)):(r.codigo||("Remessa #"+r.id));
+      const conteudo=unico?(pats[0].patrimonio_nome||"Patrimônio"):(pats.length+" patrimônios");
+      const origem=r.obra_origem_nome||r.origem_nome||nomesObras.get(String(r.obra_origem_id))||("Obra "+(r.obra_origem_id||"origem"));
+      const destino=r.obra_nome||r.obra_destino_nome||"Sua obra";
+      const remessaCache={...r,obra_origem_nome:origem,obra_destino_nome:destino};
+      window.atlasRemessasAReceberCache.set(String(r.id),{remessa:remessaCache,itens:pats});
+      linhas.push(`<div class="atlas-a-receber-linha">
+        <div class="atlas-a-receber-id"><strong>${atlasEscaparHtml(identificacao)}</strong><span>${atlasEscaparHtml(conteudo)}</span></div>
+        <div class="atlas-a-receber-rota"><span>${atlasEscaparHtml(origem)}</span><b>→</b><span>${atlasEscaparHtml(destino)}</span></div>
+        <div class="atlas-a-receber-status">${atlasEscaparHtml(atlasRotuloStatusRemessa(r.status))}</div>
+        <button type="button" class="atlas-a-receber-olho" onclick="atlasAbrirRemessaAReceber('${r.id}')" title="Ver patrimônios da remessa" aria-label="Ver patrimônios da remessa">◉</button>
+      </div>`);
+    });
+    lista.innerHTML=linhas.slice(0,3).join("") + (linhas.length>3?`<button type="button" class="atlas-a-receber-ver-todas" onclick="this.previousElementSibling">Ver todas (${linhas.length})</button>`:"");
+    if(linhas.length>3){
+      const btn=lista.querySelector('.atlas-a-receber-ver-todas');
+      btn?.addEventListener('click',()=>{lista.innerHTML=linhas.join('');});
+    }
+    if(qtd)qtd.textContent=`${remessas.length} remessa(s) • ${totalPatrimonios} patrimônio(s)`;
+    card.classList.remove("atlas-sem-remessa");
+    card.hidden=false;
+  }catch(e){console.warn("Atlas Patrimônio: não foi possível carregar remessas a receber.",e?.message||e);card.hidden=true;card.classList.add("atlas-sem-remessa");}
+}
+window.atlasCarregarAReceber=atlasCarregarAReceber;
+
+async function atlasAplicarTransferenciasAtivasNaLista(){
+  if(!Array.isArray(patrimonios) || !patrimonios.length || patrimonioOffline()) return;
+  const ids=patrimonios.map(p=>Number(p.id)).filter(Number.isFinite);
+  if(!ids.length) return;
+  try{
+    const {data:itens,error}=await db().from("itens_retirada").select("pedido_id,patrimonio_id").in("patrimonio_id",ids);
+    if(error)throw error;
+    const pedidoIds=[...new Set((itens||[]).map(i=>i.pedido_id).filter(Boolean))];
+    if(!pedidoIds.length)return;
+    const {data:pedidos,error:erroPedidos}=await db().from("pedidos_retirada").select("id,status,obra_origem_id,obra_destino_id,obra_nome,codigo").in("id",pedidoIds).in("status",["AGUARDANDO_RETIRADA","EM_TRANSITO","AGUARDANDO_CONFERENCIA"]);
+    if(erroPedidos)throw erroPedidos;
+    const obraIds=[...new Set((pedidos||[]).flatMap(p=>[Number(p.obra_origem_id),Number(p.obra_destino_id)]).filter(Number.isFinite))];
+    let nomesObras=new Map();
+    if(obraIds.length){
+      const {data:obras}=await db().from("obras").select("id,nome,codigo_obra").in("id",obraIds);
+      nomesObras=new Map((obras||[]).map(o=>[String(o.id),o.nome||o.codigo_obra||("Obra "+o.id)]));
+    }
+    const ativos=new Map((pedidos||[]).map(p=>[String(p.id),{...p,obra_origem_nome:nomesObras.get(String(p.obra_origem_id))||null,obra_destino_nome:p.obra_nome||nomesObras.get(String(p.obra_destino_id))||null}]));
+    const porPat=new Map();
+    (itens||[]).forEach(i=>{const pedido=ativos.get(String(i.pedido_id));if(pedido&&i.patrimonio_id)porPat.set(String(i.patrimonio_id),pedido);});
+    if(!porPat.size)return;
+    patrimonios=patrimonios.map(p=>{
+      const remessa=porPat.get(String(p.id));
+      if(!remessa)return p;
+      const st=String(remessa.status||"").toUpperCase();
+      const statusContextual=st==="AGUARDANDO_RETIRADA"?"EM_TRANSFERENCIA":"EM_TRANSITO";
+      return {...p,status:statusContextual,__atlas_remessa:remessa};
+    });
+  }catch(e){console.warn("Atlas Patrimônio: não foi possível aplicar o status contextual das transferências.",e?.message||e);}
+}
+
 async function carregarPatrimonios(){
   const visualizarInativos = atlasMostrarInativos && atlasPodeVerInativos();
 
@@ -2411,13 +2481,8 @@ async function carregarPatrimonios(){
       );
 
       if(usuario && !usuarioPodeVerTodasObras()){
-        const permitidas = new Set(
-          obrasPermitidasPatrimonioBDR(usuario).map(String)
-        );
-
-        dadosCache = permitidas.size
-          ? dadosCache.filter(p => permitidas.has(String(p.obra_id)))
-          : [];
+        const permitidas = new Set(idsObrasAtuacaoUsuarioBDR());
+        dadosCache = dadosCache.filter(p => permitidas.has(String(p.obra_id)));
       }
 
       patrimonios = dadosCache;
@@ -2428,63 +2493,40 @@ async function carregarPatrimonios(){
     }
 
     const usuario = usuarioAtual();
-    const permitidasUsuario = usuario && !usuarioPodeVerTodasObras()
-      ? obrasPermitidasPatrimonioBDR(usuario)
-      : null;
 
-    if(Array.isArray(permitidasUsuario) && permitidasUsuario.length === 0){
-      patrimonios = [];
-      renderizarPatrimonios();
-      mostrarAvisoModoOffline();
-      atlasAtualizarBotaoInativos();
-      return;
-    }
 
-    /*
-     * O PostgREST/Supabase normalmente devolve no máximo cerca de 1000 linhas
-     * por resposta. Como o Atlas já ultrapassou isso, uma leitura única fazia
-     * os registros mais antigos sumirem da tela Patrimônio e da pesquisa.
-     */
-    const TAMANHO_PAGINA_BANCO = 1000;
-    let dados = [];
+    // Busca todos os patrimônios em páginas de 1000.
+    // Evita o teto de uma única resposta do PostgREST/Supabase.
+    const TAMANHO_PAGINA = 1000;
+    const dados = [];
 
-    for(let inicio = 0; ; inicio += TAMANHO_PAGINA_BANCO){
+    for(let inicio = 0; ; inicio += TAMANHO_PAGINA){
+      const fim = inicio + TAMANHO_PAGINA - 1;
       let query = db().from("patrimonio").select("*");
-
       query = visualizarInativos
         ? query.eq("ativo", false)
-        : query.or("ativo.eq.true,ativo.is.null");
+        : query.neq("ativo", false);
 
-      if(Array.isArray(permitidasUsuario)){
-        if(permitidasUsuario.length === 1){
-          query = query.eq("obra_id", permitidasUsuario[0]);
-        }else{
-          query = query.in("obra_id", permitidasUsuario);
-        }
+      if(usuario && !usuarioPodeVerTodasObras()){
+        const permitidas = idsObrasAtuacaoUsuarioBDR();
+        if(!permitidas.length) break;
+        query = query.in("obra_id", permitidas);
       }
 
-      const { data: pagina, error } = await query
+      const { data:lote, error } = await query
         .order("id", { ascending:false })
-        .range(inicio, inicio + TAMANHO_PAGINA_BANCO - 1);
-
+        .range(inicio, fim);
       if(error) throw error;
 
-      const lote = pagina || [];
-      dados.push(...lote);
-      if(lote.length < TAMANHO_PAGINA_BANCO) break;
+      const pagina = lote || [];
+      dados.push(...pagina);
+      if(pagina.length < TAMANHO_PAGINA) break;
     }
 
-    console.log("✅ ATLAS PATRIMÔNIO: carga completa", {
-      total: dados.length,
-      inativos: visualizarInativos,
-      obras_restritas: Array.isArray(permitidasUsuario) ? permitidasUsuario.length : "todas"
-    });
-
-    if(Array.isArray(permitidasUsuario)){
-      const permitidas = new Set(permitidasUsuario.map(String));
-      dados = dados.filter(p => permitidas.has(String(p.obra_id)));
-    }
-
+    // A consulta online já é restringida por obra acima quando o usuário
+    // não possui acesso global. Não refiltrar `dados` aqui: além de
+    // redundante, `dados` é const e uma reatribuição quebra usuários
+    // restritos com "Assignment to constant variable".
     patrimonios = dados;
 
     // O cache mantém apenas o conjunto carregado nesta visualização.
@@ -2492,7 +2534,9 @@ async function carregarPatrimonios(){
       await BDROfflineDB.salvarTabela("patrimonio", patrimonios);
     }
 
+    await atlasAplicarTransferenciasAtivasNaLista();
     renderizarPatrimonios();
+    await atlasCarregarAReceber();
     atlasAtualizarBotaoInativos();
 
   }catch(e){
@@ -2505,13 +2549,8 @@ async function carregarPatrimonios(){
     );
 
     if(usuario && !usuarioPodeVerTodasObras()){
-      const permitidas = new Set(
-        obrasPermitidasPatrimonioBDR(usuario).map(String)
-      );
-
-      dadosCache = permitidas.size
-        ? dadosCache.filter(p => permitidas.has(String(p.obra_id)))
-        : [];
+      const permitidas = new Set(idsObrasAtuacaoUsuarioBDR());
+      dadosCache = dadosCache.filter(p => permitidas.has(String(p.obra_id)));
     }
 
     patrimonios = dadosCache;
@@ -2572,12 +2611,60 @@ function bdrResetPaginaPatrimonio(){
   bdrPatrimonioPaginaAtual = 1;
 }
 
+function bdrAlternarFiltroAntigo(botao){
+  if(!botao) return;
+  const ativo = botao.getAttribute("aria-pressed") === "true";
+  botao.setAttribute("aria-pressed", ativo ? "false" : "true");
+  botao.classList.toggle("ativo", !ativo);
+  bdrResetPaginaPatrimonio();
+  renderizarPatrimonios();
+}
+
+
+function bdrNomeCadastradorPatrimonio(nome){
+  const bruto = String(nome || "").trim();
+  if(!bruto) return "";
+
+  const atual = usuarioAtual();
+  const nomeAtual = String(atual?.nome || "").trim();
+
+  // Compatibilidade com cadastros históricos gravados apenas com o primeiro nome.
+  if(nomeAtual && nomeAtual.includes(" ")){
+    const primeiro = nomeAtual.split(/\s+/)[0];
+    if(bruto.localeCompare(primeiro, "pt-BR", {sensitivity:"base"}) === 0){
+      return nomeAtual;
+    }
+  }
+
+  return bruto;
+}
+
+function bdrPreencherFiltroUsuariosPatrimonio(){
+  const filtro = document.getElementById("filtroUsuario");
+  if(!filtro) return;
+
+  const valorAtual = filtro.value;
+  const nomes = [...new Set((patrimonios || [])
+    .map(p => bdrNomeCadastradorPatrimonio(p.usuario_cadastro))
+    .filter(Boolean))]
+    .sort((a,b) => a.localeCompare(b, "pt-BR", {sensitivity:"base"}));
+
+  filtro.replaceChildren(new Option("Todos os cadastradores", ""));
+
+  nomes.forEach(nome => filtro.add(new Option(nome, nome)));
+
+  if(nomes.includes(valorAtual)) filtro.value = valorAtual;
+}
+
+
 function bdrPatrimonioFiltroChave(){
   return [
     valor("busca"),
     valor("filtroObra"),
     valor("filtroStatus"),
     valor("filtroTipo"),
+    valor("filtroUsuario"),
+    document.getElementById("filtroAntigo")?.getAttribute("aria-pressed") === "true" ? "ANTIGO" : "",
     atlasMostrarInativos ? "INATIVOS" : "ATIVOS"
   ].join("||");
 }
@@ -2603,6 +2690,10 @@ function renderizarPatrimonios(){
   const filtroStatus = valor("filtroStatus");
   const filtroTipo = valor("filtroTipo");
   const filtroObra = valor("filtroObra");
+  const filtroUsuario = valor("filtroUsuario");
+  const filtroAntigo = document.getElementById("filtroAntigo")?.getAttribute("aria-pressed") === "true";
+
+  bdrPreencherFiltroUsuariosPatrimonio();
 
   const chaveFiltro = bdrPatrimonioFiltroChave();
   if(chaveFiltro !== bdrPatrimonioUltimaChaveFiltro){
@@ -2621,7 +2712,9 @@ function renderizarPatrimonios(){
       (!busca || textoBusca.includes(busca)) &&
       (!filtroObra || String(p.obra_id || "") === String(filtroObra)) &&
       (!filtroStatus || p.status === filtroStatus) &&
-      (!filtroTipo || p.tipo_item === filtroTipo);
+      (!filtroTipo || p.tipo_item === filtroTipo) &&
+      (!filtroUsuario || bdrNomeCadastradorPatrimonio(p.usuario_cadastro) === filtroUsuario) &&
+      (!filtroAntigo || String(p.codigo_antigo || "").trim() !== "");
   });
 
   const total = filtrados.length;
@@ -2642,14 +2735,6 @@ function renderizarPatrimonios(){
   }
 
   lista.innerHTML = `
-    <div class="bdr-lista-tools">
-      <div>
-        <strong>Exibindo ${inicio + 1}–${fim} de ${total}</strong><br>
-        <span>${buscaOriginal ? "Resultado filtrado" : "Últimos patrimônios carregados"} • ${porPagina} por página</span>
-      </div>
-      <span>Use a pesquisa para localizar PAT, placa, série, nome ou obra.</span>
-    </div>
-
     <div class="lista-header">
       <div class="bdr-check-etiqueta"><input type="checkbox" aria-label="Selecionar itens desta página" title="Selecionar itens desta página" onchange="bdrSelecionarPaginaEtiquetas(this.checked)"></div>
       <div>Código</div>
@@ -2678,7 +2763,7 @@ function renderizarPatrimonios(){
     ].filter(Boolean).join(" | ");
 
     lista.innerHTML += `
-      <div class="linha-patrimonio" onclick="abrirModal('${p.id}')">
+      <div class="linha-patrimonio" onclick="bdrCliqueLinhaPatrimonio(event,'${p.id}','${p.codigo_qr || ''}')">
 
         <div class="bdr-check-etiqueta" onclick="event.stopPropagation()">
           <input type="checkbox" class="bdr-etiqueta-check" data-codigo="${p.codigo_qr || ''}" ${bdrEtiquetasSelecionadas.has(String(p.codigo_qr || '')) ? 'checked' : ''} onchange="bdrAlternarSelecaoEtiqueta(this.dataset.codigo,this.checked)" aria-label="Selecionar etiqueta ${p.codigo_qr || ''}">
@@ -2693,8 +2778,8 @@ function renderizarPatrimonios(){
           ${infoExtra ? `<br><small style="color:#6b7280;font-weight:700;">${infoExtra}</small>` : ""}
         </div>
 
-        <div class="pat-local" title="${p.localizacao || "SEM OBRA"}">
-          ${p.localizacao || "SEM OBRA"}
+        <div class="pat-local" title="${p.__atlas_remessa ? ((p.__atlas_remessa.obra_origem_nome || p.localizacao || "Origem") + " → " + (p.__atlas_remessa.obra_destino_nome || "Destino")) : (p.localizacao || "SEM OBRA")}">
+          ${p.__atlas_remessa ? `<strong>${atlasEscaparHtml(p.__atlas_remessa.obra_origem_nome || p.localizacao || "Origem")}</strong> <b class="atlas-rota-seta">→</b> <strong>${atlasEscaparHtml(p.__atlas_remessa.obra_destino_nome || "Destino")}</strong>` : (p.localizacao || "SEM OBRA")}
         </div>
 
         <div class="pat-tipo">
@@ -2706,7 +2791,7 @@ function renderizarPatrimonios(){
         </div>
 
         <div class="pat-status status-${statusClasse}">
-          ${p.status || "SEM STATUS"}
+          ${String(p.status || "SEM STATUS").replace(/_/g, " ")}
         </div>
 
       </div>
@@ -2722,6 +2807,26 @@ function renderizarPatrimonios(){
   `;
   bdrAtualizarContadorEtiquetas();
 }
+
+function bdrCliqueLinhaPatrimonio(event,id,codigo){
+  if(document.body.classList.contains("bdr-modo-selecao-etiquetas")){
+    if(event?.target?.closest?.("input,button,a,select,label")) return;
+
+    const chave = String(codigo || "");
+    if(!chave) return;
+
+    const check = [...document.querySelectorAll(".bdr-etiqueta-check")]
+      .find(el => String(el.dataset.codigo || "") === chave);
+    const marcar = check ? !check.checked : !bdrEtiquetasSelecionadas.has(chave);
+
+    if(check) check.checked = marcar;
+    bdrAlternarSelecaoEtiqueta(chave, marcar);
+    return;
+  }
+
+  abrirModal(id);
+}
+
 
 function bdrAlternarSelecaoEtiqueta(codigo, marcado){
   codigo = String(codigo || "").trim();
@@ -2740,28 +2845,54 @@ function bdrSelecionarPaginaEtiquetas(marcado){
 function bdrAtualizarContadorEtiquetas(){
   const quantidade = bdrEtiquetasSelecionadas.size;
   const el = document.getElementById("bdrQtdEtiquetasSelecionadas");
-  const botao = document.getElementById("bdrBotaoAcaoEtiquetas");
   const ajuda = document.getElementById("bdrLoteAjuda");
+  const btnSelecionar = document.getElementById("bdrBotaoSelecaoPatrimonio");
+  const btnEtiquetas = document.getElementById("bdrBotaoAcaoEtiquetas");
+  const btnRemessa = document.getElementById("bdrBotaoAcaoRemessa");
+  const btnManutencao = document.getElementById("bdrBotaoAcaoManutencao");
 
-  if(el) el.textContent = `${quantidade} etiqueta(s) selecionada(s)`;
+  if(el) el.textContent = `${quantidade} patrimônio(s) selecionado(s)`;
+  if(ajuda) ajuda.textContent = bdrModoSelecaoEtiquetas
+    ? "Selecione os patrimônios na lista e depois escolha a ação."
+    : "Imprima etiquetas, transfira ou envie patrimônios para manutenção.";
 
-  if(botao){
-    if(bdrModoSelecaoEtiquetas){
-      botao.className = "bdr-lote-imprimir";
-      botao.textContent = quantidade ? `🖨 Imprimir ${quantidade} etiqueta(s)` : "🖨 Imprimir selecionadas";
-      botao.disabled = quantidade === 0;
-    }else{
-      botao.className = "bdr-lote-selecionar";
-      botao.textContent = "☑ Selecionar etiquetas";
-      botao.disabled = false;
-    }
-  }
+  if(btnSelecionar) btnSelecionar.style.display = bdrModoSelecaoEtiquetas ? "none" : "inline-flex";
+  [btnEtiquetas,btnRemessa,btnManutencao].forEach(btn=>{
+    if(!btn) return;
+    btn.style.display = bdrModoSelecaoEtiquetas ? "inline-flex" : "none";
+    btn.disabled = quantidade === 0;
+  });
+  if(btnEtiquetas) btnEtiquetas.textContent = quantidade ? `🏷 Etiquetas (${quantidade})` : "🏷 Etiquetas";
+  if(btnRemessa) btnRemessa.textContent = quantidade ? `↔ Transferência (${quantidade})` : "↔ Transferência";
+  if(btnManutencao) btnManutencao.textContent = quantidade ? `🔧 Manutenção (${quantidade})` : "🔧 Manutenção";
+}
+function bdrEntrarModoSelecaoPatrimonios(){
+  // Entrar no modo de seleção é uma ação normal: não exibe aviso.
+  // A regra de mesma obra só é validada quando Transferência/Manutenção for executada.
+  bdrEntrarModoSelecaoEtiquetas();
+}
 
-  if(ajuda){
-    ajuda.textContent = bdrModoSelecaoEtiquetas
-      ? "Marque os patrimônios desejados na lista."
-      : "Imprima uma ou várias etiquetas sem poluir a lista.";
-  }
+function bdrPatrimoniosSelecionadosAtuais(){
+  const codigos = new Set(Array.from(bdrEtiquetasSelecionadas).map(v=>String(v)));
+  return patrimonios.filter(p=>codigos.has(String(p.codigo_qr || "")));
+}
+
+async function bdrEnviarSelecionadosRemessa(){
+  const itens=bdrPatrimoniosSelecionadosAtuais();
+  if(!itens.length){ atlasAvisoPatrimonio?.("Atlas Patrimônio","Selecione pelo menos um patrimônio.","info"); return; }
+  const obras=[...new Set(itens.map(p=>String(p.obra_id||"")))].filter(Boolean);
+  if(obras.length!==1){ atlasAvisoPatrimonio?.("Transferência patrimonial","Para transferir, selecione patrimônios que estejam atualmente na mesma obra/setor.","info"); return; }
+  if(!window.AtlasPatrimonioRemessas?.abrirComPatrimonios){ alert("Transferência patrimonial não está disponível."); return; }
+  await window.AtlasPatrimonioRemessas.abrirComPatrimonios(itens.map(p=>p.id));
+}
+
+async function bdrEnviarSelecionadosManutencao(){
+  const itens=bdrPatrimoniosSelecionadosAtuais();
+  if(!itens.length){ atlasAvisoPatrimonio?.("Atlas Patrimônio","Selecione pelo menos um patrimônio.","info"); return; }
+  const obras=[...new Set(itens.map(p=>String(p.obra_id||"")))].filter(Boolean);
+  if(obras.length!==1){ atlasAvisoPatrimonio?.("Manutenção patrimonial","Para manutenção, selecione patrimônios que estejam atualmente na mesma obra/setor.","info"); return; }
+  if(!window.AtlasManutencao?.abrirPatrimoniosSelecionados){ alert("Central de Manutenção não está disponível."); return; }
+  await window.AtlasManutencao.abrirPatrimoniosSelecionados(itens.map(p=>p.id));
 }
 
 function bdrEntrarModoSelecaoEtiquetas(){
@@ -2906,6 +3037,147 @@ function bdrLinhasTipoPatrimonio(p){
   return html;
 }
 
+async function atlasBuscarTransferenciaAtivaPatrimonio(patrimonioId){
+  if(!db() || !patrimonioId) return null;
+
+  const { data:itens, error:erroItens } = await db()
+    .from("itens_retirada")
+    .select("pedido_id,status,obra_origem_id,obra_destino_id,patrimonio_codigo")
+    .eq("patrimonio_id", patrimonioId)
+    .neq("status", "CANCELADO")
+    .order("id", {ascending:false});
+  if(erroItens) throw erroItens;
+  const ids = [...new Set((itens || []).map(i => i.pedido_id).filter(Boolean))];
+  if(!ids.length) return null;
+
+  const { data:pedidos, error:erroPedidos } = await db()
+    .from("pedidos_retirada")
+    .select("id,codigo,status,obra_origem_id,obra_destino_id,obra_id,obra_nome,observacao")
+    .in("id", ids)
+    .in("status", ["AGUARDANDO_RETIRADA","EM_TRANSITO","AGUARDANDO_CONFERENCIA"])
+    .order("id", {ascending:false})
+    .limit(1);
+  if(erroPedidos) throw erroPedidos;
+  return Array.isArray(pedidos) && pedidos.length ? pedidos[0] : null;
+}
+
+function atlasAplicarBloqueioTransferencia(pedido){
+  const box = document.getElementById("atlasTransferenciaBloqueio");
+  const btnCancelar = document.getElementById("btnCancelarTransferencia");
+  const controles = document.getElementById("atlasControlesPatrimonioAtivo");
+  const ativa = !!pedido;
+  const status = String(pedido?.status || "").toUpperCase();
+
+  if(box){
+    box.style.display = ativa ? "" : "none";
+    box.innerHTML = ativa
+      ? `<strong>🔒 Patrimônio vinculado à transferência ${atlasEscapeHtml(pedido.codigo || ("#" + pedido.id))}</strong><br>` +
+        (status === "AGUARDANDO_RETIRADA"
+          ? "Aguardando saída. Status e obra estão bloqueados. Se a transferência foi criada por engano, cancele-a antes do envio."
+          : "A remessa já saiu da origem. Status e obra ficam bloqueados até o recebimento no destino.")
+      : "";
+  }
+
+  if(controles) controles.style.display = ativa ? "none" : "";
+
+  document.querySelectorAll(".acao-movimentar,.acao-editar,.acao-excluir").forEach(btn => {
+    if(ativa){ btn.style.display = "none"; btn.disabled = true; }
+  });
+
+  if(btnCancelar){
+    btnCancelar.style.display = status === "AGUARDANDO_RETIRADA" ? "" : "none";
+    btnCancelar.disabled = status !== "AGUARDANDO_RETIRADA";
+    btnCancelar.dataset.pedidoId = pedido?.id || "";
+  }
+}
+
+let atlasPedidoCancelamentoAtual = null;
+
+function fecharModalCancelarTransferencia(){
+  const bg = document.getElementById("modalCancelarTransferenciaBg");
+  if(bg) bg.style.display = "none";
+  const motivo = document.getElementById("cancelarTransferenciaMotivo");
+  const erro = document.getElementById("cancelarTransferenciaErro");
+  const btn = document.getElementById("btnConfirmarCancelamentoTransferencia");
+  if(motivo) motivo.value = "";
+  if(erro){ erro.style.display = "none"; erro.textContent = ""; }
+  if(btn){ btn.disabled = false; btn.textContent = "✖ Cancelar transferência"; }
+  atlasPedidoCancelamentoAtual = null;
+}
+
+function atlasErroCancelamentoTransferencia(mensagem){
+  const erro = document.getElementById("cancelarTransferenciaErro");
+  if(!erro) return;
+  erro.textContent = String(mensagem || "Não foi possível cancelar a transferência.");
+  erro.style.display = "block";
+}
+
+async function cancelarTransferenciaAtual(){
+  if(!patrimonioSelecionado) return;
+  try{
+    const pedido = await atlasBuscarTransferenciaAtivaPatrimonio(patrimonioSelecionado.id);
+    if(!pedido){
+      atlasAvisoPatrimonio("Transferência não encontrada", "Este patrimônio não possui transferência ativa.", "offline");
+      return;
+    }
+    if(String(pedido.status || "").toUpperCase() !== "AGUARDANDO_RETIRADA"){
+      atlasAvisoPatrimonio("Cancelamento bloqueado", "A remessa já saiu da origem e deve ser recebida no destino.", "offline");
+      return;
+    }
+
+    atlasPedidoCancelamentoAtual = pedido;
+    const resumo = document.getElementById("cancelarTransferenciaResumo");
+    const motivo = document.getElementById("cancelarTransferenciaMotivo");
+    const erro = document.getElementById("cancelarTransferenciaErro");
+    if(resumo){
+      resumo.innerHTML =
+        `<strong>${atlasEscapeHtml(pedido.codigo || ("#" + pedido.id))}</strong><br>` +
+        `<strong>${atlasEscapeHtml(patrimonioSelecionado.codigo_qr || patrimonioSelecionado.codigo_bem || "Patrimônio")}</strong> — ${atlasEscapeHtml(patrimonioSelecionado.nome_bem || "")}`;
+    }
+    if(motivo) motivo.value = "";
+    if(erro){ erro.style.display = "none"; erro.textContent = ""; }
+    const bg = document.getElementById("modalCancelarTransferenciaBg");
+    if(bg) bg.style.display = "flex";
+    setTimeout(()=>motivo?.focus(), 50);
+  }catch(e){
+    console.error("Atlas Patrimônio: falha ao preparar cancelamento.", e);
+    atlasAvisoPatrimonio("Falha ao abrir cancelamento", e?.message || "Não foi possível consultar a transferência.", "offline");
+  }
+}
+
+async function confirmarCancelamentoTransferencia(){
+  const pedido = atlasPedidoCancelamentoAtual;
+  const motivoEl = document.getElementById("cancelarTransferenciaMotivo");
+  const btn = document.getElementById("btnConfirmarCancelamentoTransferencia");
+  const motivo = String(motivoEl?.value || "").trim();
+
+  if(!pedido){ atlasErroCancelamentoTransferencia("A transferência não está mais disponível. Feche e abra novamente."); return; }
+  if(motivo.length < 5){ atlasErroCancelamentoTransferencia("Informe um motivo com pelo menos 5 caracteres."); motivoEl?.focus(); return; }
+  if(!window.AtlasWorkflow?.cancelarTransferenciaPatrimonio){ atlasErroCancelamentoTransferencia("O Workflow de cancelamento não foi carregado. Atualize a página."); return; }
+
+  try{
+    if(btn){ btn.disabled = true; btn.textContent = "Cancelando..."; }
+    const patrimonioId = patrimonioSelecionado?.id;
+    await window.AtlasWorkflow.cancelarTransferenciaPatrimonio(pedido.id, motivo);
+    const statusAnteriorMov = await db().from("movimentacoes")
+      .select("status_novo")
+      .eq("patrimonio_id", patrimonioId)
+      .eq("tipo", "TRANSFERENCIA_CANCELADA")
+      .order("data_movimentacao", {ascending:false}).limit(1).maybeSingle();
+    const restaurado = statusAnteriorMov?.data?.status_novo || "EM_USO";
+    patrimonios = patrimonios.map(p => Number(p.id) === Number(patrimonioId) ? {...p,status:restaurado} : p);
+    fecharModalCancelarTransferencia();
+    fecharModal();
+    await carregarPatrimonios();
+    await atlasCarregarAReceber();
+    atlasAvisoPatrimonio("Transferência cancelada", `A remessa ${pedido.codigo || ("#" + pedido.id)} foi cancelada e o patrimônio voltou ao estado anterior.`);
+  }catch(e){
+    console.error("Atlas Patrimônio: falha ao cancelar transferência.", e);
+    atlasErroCancelamentoTransferencia(e?.message || "Não foi possível cancelar a transferência.");
+    if(btn){ btn.disabled = false; btn.textContent = "✖ Cancelar transferência"; }
+  }
+}
+
 async function abrirModal(id){
 
   const p = patrimonios.find(
@@ -2974,9 +3246,17 @@ async function abrirModal(id){
   });
 
   if(botaoReativar){
-    const podeReativar = usuarioTemPermissao("PATRIMONIO_EXCLUIR");
-    botaoReativar.style.display = inativo && podeReativar ? "" : "none";
-    botaoReativar.disabled = !inativo || !podeReativar;
+    botaoReativar.style.display = inativo ? "" : "none";
+    botaoReativar.disabled = !inativo;
+  }
+
+  try{
+    const transferenciaAtiva = inativo ? null : await atlasBuscarTransferenciaAtivaPatrimonio(p.id);
+    atlasAplicarBloqueioTransferencia(transferenciaAtiva);
+  }catch(e){
+    console.error("Atlas Patrimônio: não foi possível validar transferência ativa.", e);
+    // Falha fechada: se não conseguimos validar, não liberamos movimentação manual.
+    atlasAplicarBloqueioTransferencia({id:"?",codigo:"Validação indisponível",status:"EM_TRANSITO"});
   }
 
   document.getElementById("modalBg").style.display = "flex";
@@ -3052,6 +3332,16 @@ async function atlasMontarBlocoExclusao(patrimonio){
     </div>`;
 }
 
+function abrirHistoricoPatrimonioAtual(){
+  if(!patrimonioSelecionado?.id){ alert("Patrimônio não selecionado."); return; }
+  if(!window.AtlasPatrimonioRemessas?.abrirHistoricoPatrimonio){ alert("Histórico patrimonial não está disponível."); return; }
+  window.AtlasPatrimonioRemessas.abrirHistoricoPatrimonio(patrimonioSelecionado.id);
+}
+
+function fecharHistoricoPatrimonioAtual(){
+  window.AtlasPatrimonioRemessas?.fechar?.("atlasHistoricoPatrimonioModal");
+}
+
 function fecharModal(){
   document.getElementById("modalBg").style.display = "none";
   patrimonioSelecionado = null;
@@ -3062,15 +3352,31 @@ function aplicarPermissoesTela(){
 
   if(!usuario) return;
 
-  /*
-    Cada ação do Patrimônio é independente.
-    Perfil ADMIN/MASTER e permissões de outros módulos não liberam ações.
-  */
-  const podeCadastrar = usuarioPodeCriarPatrimonioBDR();
-  const podeMovimentar = usuarioTemPermissao("PATRIMONIO_MOVIMENTAR");
-  const podeEditar = usuarioTemPermissao("PATRIMONIO_EDITAR");
-  const podeImprimir = usuarioTemPermissao("PATRIMONIO_IMPRIMIR");
-  const podeExcluir = usuarioTemPermissao("PATRIMONIO_EXCLUIR");
+  const podeCadastrar =
+    usuarioEhGestao() ||
+    usuarioTemPermissao("PATRIMONIO_CRIAR");
+
+  const podeMovimentar =
+    usuarioEhGestao() ||
+    usuarioTemPermissao("PATRIMONIO_MOVIMENTAR");
+
+  const podeEditar =
+    usuarioEhGestao() ||
+    usuarioTemPermissao("PATRIMONIO_EDITAR") ||
+    usuarioTemPermissao("PATRIMONIO_CRIAR");
+
+  const podeImprimir =
+    usuarioEhGestao() ||
+    usuarioTemPermissao("PATRIMONIO_IMPRIMIR");
+
+  // Quem já consegue trabalhar/movimentar patrimônio também pode excluí-lo.
+  // A exclusão é lógica: o registro é preservado internamente.
+  const podeExcluir =
+    usuarioEhGestao() ||
+    usuarioTemPermissao("PATRIMONIO_MOVIMENTAR") ||
+    usuarioTemPermissao("PATRIMONIO_EXCLUIR") ||
+    usuarioTemPermissao("PATRIMONIO_EDITAR") ||
+    usuarioTemPermissao("PATRIMONIO_CRIAR");
 
   const cardEntrada = document.getElementById("cardEntradaPatrimonio");
   const cardObra = document.getElementById("cardObraLancamento");
@@ -3189,9 +3495,8 @@ async function carregarManutencoesPatrimonio(){
 }
 
 function renderizarAnalyticsManutencao(){
-  const statusEncerradosAtlas = ["FECHADA","FINALIZADA","CANCELADA","ORCAMENTO_RECUSADO"];
-  const abertas = manutencoesPatrimonio.filter(m => !statusEncerradosAtlas.includes(String(m.status || "ABERTA").toUpperCase()));
-  const fechadas = manutencoesPatrimonio.filter(m => statusEncerradosAtlas.includes(String(m.status || "").toUpperCase()));
+  const abertas = manutencoesPatrimonio.filter(m => String(m.status || "ABERTA").toUpperCase() !== "FECHADA");
+  const fechadas = manutencoesPatrimonio.filter(m => String(m.status || "").toUpperCase() === "FECHADA");
   const diasLista = manutencoesPatrimonio.map(m => Number(m.dias_parado || diasEntreDatasBDR(m.data_entrada, m.data_saida))).filter(n => n > 0);
   const mediaDias = diasLista.length ? Math.round(diasLista.reduce((s,n)=>s+n,0) / diasLista.length) : 0;
   const custo = manutencoesPatrimonio.reduce((s,m) => s + Number(m.valor_orcamento || 0), 0);
@@ -3232,10 +3537,9 @@ function renderizarAnalyticsManutencao(){
 }
 
 function manutencaoAbertaDoPatrimonio(id){
-  const encerrados = ["FECHADA","FINALIZADA","CANCELADA","ORCAMENTO_RECUSADO"];
   return manutencoesPatrimonio.find(m =>
     String(m.patrimonio_id) === String(id) &&
-    !encerrados.includes(String(m.status || "ABERTA").toUpperCase())
+    String(m.status || "ABERTA").toUpperCase() !== "FECHADA"
   );
 }
 
@@ -3390,30 +3694,18 @@ async function alterarStatus(novoStatus){
 
   const statusAtual = String(patrimonioSelecionado.status || "").toUpperCase();
 
+  const transferenciaAtiva = await atlasBuscarTransferenciaAtivaPatrimonio(patrimonioSelecionado.id);
+  if(transferenciaAtiva){
+    alert("Este patrimônio está vinculado à remessa " + (transferenciaAtiva.codigo || ("#" + transferenciaAtiva.id)) + ". Status e obra só podem mudar pelo fluxo da transferência.");
+    return;
+  }
+
   if(novoStatus === "MANUTENCAO"){
     abrirModalManutencao();
     return;
   }
 
   if(statusAtual === "MANUTENCAO" && novoStatus !== "MANUTENCAO"){
-    // Novo fluxo Atlas: se existir ordem estruturada aberta, a saída da
-    // manutenção precisa ser feita pela Central para preservar orçamento,
-    // aprovação, histórico, recebimento e garantia.
-    if(window.AtlasWorkflowManutencao?.abertaPorPatrimonio){
-      try{
-        const ordemAtlas = await window.AtlasWorkflowManutencao.abertaPorPatrimonio(patrimonioSelecionado.id);
-        if(ordemAtlas && String(ordemAtlas.status || "").toUpperCase() !== "ABERTA"){
-          if(confirm(`Existe a ordem ${ordemAtlas.codigo || "#" + ordemAtlas.id} em andamento.\n\nDeseja abrir a Central de Manutenção?`)){
-            location.href = `manutencao.html?id=${ordemAtlas.id}`;
-          }
-          return;
-        }
-      }catch(e){
-        console.warn("Atlas Patrimônio: não foi possível validar a ordem de manutenção.", e);
-      }
-    }
-
-    // Compatibilidade com manutenções antigas já existentes.
     abrirModalFecharManutencao(novoStatus);
     return;
   }
@@ -3431,6 +3723,12 @@ async function alterarStatusBaseBDR(novoStatus, observacaoForcada=null){
 
   if(!patrimonioSelecionado){
     alert("Selecione um patrimônio.");
+    return;
+  }
+
+  const transferenciaAtiva = await atlasBuscarTransferenciaAtivaPatrimonio(patrimonioSelecionado.id);
+  if(transferenciaAtiva){
+    alert("Alteração manual bloqueada: este patrimônio está vinculado à remessa " + (transferenciaAtiva.codigo || ("#" + transferenciaAtiva.id)) + ".");
     return;
   }
 
@@ -3514,117 +3812,75 @@ async function alterarStatusBaseBDR(novoStatus, observacaoForcada=null){
 }
 
 async function trocarObra(){
-
   if(!usuarioTemPermissao("PATRIMONIO_MOVIMENTAR")){
-    alert("Você não tem permissão para trocar obra/setor.");
+    alert("Você não tem permissão para transferir patrimônio.");
     return;
   }
-
 
   if(!patrimonioSelecionado){
     alert("Selecione um patrimônio.");
     return;
   }
 
+  const transferenciaAtiva = await atlasBuscarTransferenciaAtivaPatrimonio(patrimonioSelecionado.id);
+  if(transferenciaAtiva){
+    alert("Este patrimônio já possui uma transferência ativa (" + (transferenciaAtiva.codigo || ("#" + transferenciaAtiva.id)) + "). Conclua ou cancele a remessa antes de criar outra.");
+    return;
+  }
+
   const obs = valor("observacaoMov");
-
   if(!obs || obs.length < 5){
-    alert("Informe uma justificativa da troca de setor/obra.");
+    alert("Informe uma justificativa da transferência.");
     return;
   }
 
-  const novaObraId = document.getElementById("novaObraSelect").value;
-
+  const novaObraId = document.getElementById("novaObraSelect")?.value;
   if(!novaObraId){
-    alert("Selecione a nova obra/setor.");
+    alert("Selecione a obra/setor de destino.");
     return;
   }
 
-  const novaObra = obras.find(
-    o => String(o.id) === String(novaObraId)
-  );
-
+  const novaObra = obras.find(o => String(o.id) === String(novaObraId));
   if(!novaObra){
-    alert("Obra não encontrada.");
+    alert("Obra destino não encontrada.");
     return;
   }
 
-  const statusAnterior = patrimonioSelecionado.status || null;
-  const obraOrigemId = patrimonioSelecionado.obra_id || null;
+  if(String(patrimonioSelecionado.obra_id || "") === String(novaObra.id)){
+    alert("Este patrimônio já pertence à obra/setor selecionado.");
+    return;
+  }
 
-  const payload = {
-    obra_id: novaObra.id,
-    empresa_id: novaObra.empresa_id,
-    localizacao: novaObra.nome,
-    status: "EM_USO"
-  };
-
-  
   if(patrimonioOffline()){
-    await salvarOperacaoPatrimonioOffline("update", "patrimonio", payload, {
-      filtro:{ id: patrimonioSelecionado.id }
+    alert("A transferência logística precisa de internet para criar a remessa com segurança. Tente novamente quando a conexão voltar.");
+    return;
+  }
+
+  if(!window.AtlasWorkflow?.criarTransferenciaDireta){
+    alert("O fluxo logístico do Atlas não foi carregado. Atualize a página e tente novamente.");
+    return;
+  }
+
+  try{
+    const resultado = await window.AtlasWorkflow.criarTransferenciaDireta({
+      patrimonio:{ ...patrimonioSelecionado },
+      obraDestino:{ ...novaObra },
+      observacao:obs
     });
 
-    await salvarOperacaoPatrimonioOffline("insert", "movimentacoes", [{
-      patrimonio_id: patrimonioSelecionado.id,
-      empresa_id: novaObra.empresa_id,
-      obra_origem_id: obraOrigemId,
-      obra_destino_id: novaObra.id,
-      tipo: "TROCA_SETOR",
-      status_anterior: statusAnterior,
-      status_novo: "EM_USO",
-      observacao: obs,
-      usuario: usuarioAtual()?.nome || "Usuário não identificado",
-      data_movimentacao: new Date().toISOString()
-    }]);
-
-    patrimonios = patrimonios.map(p =>
-      Number(p.id) === Number(patrimonioSelecionado.id)
-        ? {...p, ...payload, __offline_pendente:!!respTroca.offlineFirst}
-        : p
-    );
-
-    alert("📦 Sem internet. Troca de setor salva no aparelho e será sincronizada quando a internet voltar.");
-
+    patrimonios = patrimonios.map(p => Number(p.id) === Number(patrimonioSelecionado.id) ? { ...p, status:"EM_TRANSFERENCIA" } : p);
     fecharModal();
     renderizarPatrimonios();
-    return;
+    await atlasCarregarAReceber();
+
+    alert(
+      "🚚 Remessa " + (resultado?.codigo || "criada") +
+      " criada com sucesso. O patrimônio continua na obra de origem até a saída e só mudará para a obra destino após o recebimento."
+    );
+  }catch(e){
+    console.error("Atlas Patrimônio: erro ao criar transferência direta.", e);
+    alert(e?.message || "Não foi possível criar a remessa de transferência.");
   }
-
-  const respTroca = await bdrAtualizarPrimeiroNoTablet(
-    "patrimonio",
-    { id: patrimonioSelecionado.id },
-    payload,
-    { acao:"TROCA_SETOR_PATRIMONIO" }
-  );
-
-  if(respTroca.error){
-    console.error(respTroca.error);
-    alert(respTroca.error.message || "Erro ao transferir patrimônio.");
-    return;
-  }
-
-  patrimonios = patrimonios.map(p =>
-    Number(p.id) === Number(patrimonioSelecionado.id)
-      ? {...p, ...payload, __offline_pendente:!!respTroca.offlineFirst}
-      : p
-  );
-
-  await gravarMovimentacao({
-    patrimonio_id: patrimonioSelecionado.id,
-    empresa_id: novaObra.empresa_id,
-    obra_origem_id: obraOrigemId,
-    obra_destino_id: novaObra.id,
-    tipo: "TROCA_SETOR",
-    status_anterior: statusAnterior,
-    status_novo: "EM_USO",
-    observacao: obs
-  });
-
-  if(respTroca.offlineFirst){ bdrAvisoSalvoTablet("Transferência salva offline. Será sincronizada automaticamente quando a internet voltar."); }
-
-  fecharModal();
-  renderizarPatrimonios();
 }
 
 
@@ -3746,7 +4002,11 @@ async function atlasNotificarExclusaoPatrimonio({ patrimonio, motivo, usuarioNom
 async function inativarPatrimonio(){
   const usuario = usuarioAtual();
   const podeExcluir =
-    usuarioTemPermissao("PATRIMONIO_EXCLUIR");
+    usuarioEhGestao() ||
+    usuarioTemPermissao("PATRIMONIO_MOVIMENTAR") ||
+    usuarioTemPermissao("PATRIMONIO_EXCLUIR") ||
+    usuarioTemPermissao("PATRIMONIO_EDITAR") ||
+    usuarioTemPermissao("PATRIMONIO_CRIAR");
 
   if(!podeExcluir){
     alert("Você não tem permissão para excluir patrimônio.");
@@ -3886,7 +4146,11 @@ async function atlasNotificarReativacaoPatrimonio({ patrimonio, usuarioNome, obr
 async function reativarPatrimonio(){
   const usuario = usuarioAtual();
   const podeReativar =
-    usuarioTemPermissao("PATRIMONIO_EXCLUIR");
+    usuarioEhGestao() ||
+    usuarioTemPermissao("PATRIMONIO_MOVIMENTAR") ||
+    usuarioTemPermissao("PATRIMONIO_EXCLUIR") ||
+    usuarioTemPermissao("PATRIMONIO_EDITAR") ||
+    usuarioTemPermissao("PATRIMONIO_CRIAR");
 
   if(!podeReativar){
     alert("Você não tem permissão para reativar patrimônio.");
@@ -4205,6 +4469,44 @@ document.addEventListener("keydown", event => {
 });
 
 
+// Fecha o modal aberto com ESC.
+// A etiqueta/configuração/lote possuem seus próprios controles; aqui cuidamos
+// dos modais principais do Patrimônio, do mais interno para o mais externo.
+document.addEventListener("keydown", event => {
+  if(event.key !== "Escape") return;
+
+  const visivel = id => {
+    const el = document.getElementById(id);
+    if(!el) return false;
+    const estilo = getComputedStyle(el);
+    return estilo.display !== "none" && estilo.visibility !== "hidden";
+  };
+
+  if(visivel("modalFecharManutencaoBg")){
+    event.preventDefault();
+    fecharModalFecharManutencao();
+    return;
+  }
+
+  if(visivel("modalManutencaoBg")){
+    event.preventDefault();
+    fecharModalManutencao();
+    return;
+  }
+
+  if(visivel("modalEdicaoBg")){
+    event.preventDefault();
+    fecharEdicao();
+    return;
+  }
+
+  if(visivel("modalBg")){
+    event.preventDefault();
+    fecharModal();
+  }
+});
+
+
 function montarCamposEdicaoPorTipo(){
   const tipo = valor("edit_tipo_item") || String(patrimonioSelecionado?.tipo_item || "");
   const box = document.getElementById("editCamposExtras");
@@ -4477,7 +4779,7 @@ async function salvarEdicaoPatrimonio(){
       : p
   );
 
-  await gravarMovimentacao({
+  const historicoGravado = await gravarMovimentacao({
     patrimonio_id: patrimonioSelecionado.id,
     empresa_id: patrimonioSelecionado.empresa_id,
     obra_origem_id: patrimonioSelecionado.obra_id,
@@ -4490,6 +4792,11 @@ async function salvarEdicaoPatrimonio(){
 
   if(respEdicao.offlineFirst){
     bdrAvisoSalvoTablet("Correção cadastral salva offline. Será sincronizada automaticamente quando a internet voltar.");
+  }else if(historicoGravado){
+    atlasAvisoPatrimonio(
+      "Patrimônio atualizado",
+      "Dados e histórico da alteração salvos com sucesso."
+    );
   }
 
   fecharEdicao();
@@ -4498,6 +4805,14 @@ async function salvarEdicaoPatrimonio(){
 }
 
 async function iniciar(){
+  // Antes de aplicar permissões ou montar a lista de obras, atualiza o
+  // contexto do usuário autenticado a partir da fonte oficial. Assim,
+  // alterações de obras/permissões feitas por um administrador passam a
+  // valer no próximo carregamento do módulo sem depender de logout/cache.
+  if(window.BDRAcessoObras?.sincronizarUsuarioAtual){
+    await window.BDRAcessoObras.sincronizarUsuarioAtual();
+  }
+
   if(!bloquearPatrimonioSemPermissaoBDR()) return;
   aplicarMenuPorPermissaoBDR();
 
@@ -4631,4 +4946,376 @@ setInterval(async () => {
 }, 30000);
 
 iniciar();
-console.log("✅ ATLAS PATRIMÔNIO V4.0 carregado - carga paginada completa + combo de obras com rolagem segura");
+
+// Interface oficial do módulo Patrimônio para Remessas, Histórico e demais módulos integrados.
+// A lista continua sendo a mesma fonte de verdade já carregada pelo Patrimônio.
+window.AtlasPatrimonioAPI = Object.freeze({
+  listar: () => patrimonios,
+  obras: () => obras,
+  selecionado: () => patrimonioSelecionado,
+  recarregar: () => carregarPatrimonios(),
+  renderizar: () => renderizarPatrimonios()
+});
+
+/* =========================================================
+   COMBOBOX PESQUISÁVEL DOS FILTROS DO PATRIMÔNIO
+   Mantém os <select> originais como fonte de verdade.
+   Assim não quebramos filtros, permissões ou rotinas existentes.
+   ========================================================= */
+(function(){
+  const IDS = ["filtroObra","filtroStatus","filtroTipo","filtroUsuario"];
+
+  function textoOpcaoSelecionada(select){
+    const op = select?.options?.[select.selectedIndex];
+    return op ? String(op.textContent || "").trim() : "";
+  }
+
+  function opcoesVisiveis(select){
+    return [...(select?.options || [])].filter(op => !op.hidden && !op.disabled);
+  }
+
+  function fecharTodos(exceto){
+    document.querySelectorAll(".atlas-combo.aberto").forEach(c => {
+      if(c !== exceto) c.classList.remove("aberto");
+    });
+  }
+
+  function montarMenu(combo, select, termo=""){
+    const menu = combo.querySelector(".atlas-combo-menu");
+
+    // A barra de rolagem faz parte do combo. Clicar/arrastar nela não pode fechar a lista.
+    if(menu && !menu.dataset.scrollProtegido){
+      menu.dataset.scrollProtegido = "1";
+
+      menu.addEventListener("pointerdown", (e) => {
+        combo.dataset.interagindoMenu = "1";
+        e.stopPropagation();
+      });
+
+      menu.addEventListener("mousedown", (e) => {
+        combo.dataset.interagindoMenu = "1";
+        e.stopPropagation();
+      });
+
+      const liberarInteracaoMenu = () => {
+        setTimeout(() => { delete combo.dataset.interagindoMenu; }, 80);
+      };
+      menu.addEventListener("pointerup", liberarInteracaoMenu);
+      menu.addEventListener("mouseup", liberarInteracaoMenu);
+      menu.addEventListener("pointercancel", liberarInteracaoMenu);
+    }
+    if(!menu) return;
+
+    const normaliza = s => String(s || "")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+
+    const q = normaliza(termo);
+    const ops = opcoesVisiveis(select).filter(op => !q || normaliza(op.textContent).includes(q));
+
+    menu.innerHTML = "";
+
+    if(!ops.length){
+      const vazio = document.createElement("div");
+      vazio.className = "atlas-combo-vazio";
+      vazio.textContent = "Nenhuma opção encontrada";
+      menu.appendChild(vazio);
+      return;
+    }
+
+    ops.forEach(op => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "atlas-combo-opcao" + (String(op.value) === String(select.value) ? " ativo" : "");
+      btn.textContent = String(op.textContent || "").trim();
+      btn.dataset.value = op.value;
+
+      btn.addEventListener("mousedown", e => {
+        e.preventDefault();
+        select.value = op.value;
+        select.dispatchEvent(new Event("change", {bubbles:true}));
+
+        const input = combo.querySelector(".atlas-combo-input");
+        if(input) input.value = String(op.textContent || "").trim();
+
+        combo.classList.remove("aberto");
+      });
+
+      menu.appendChild(btn);
+    });
+  }
+
+  function sincronizarCombo(select){
+    const combo = select?._atlasCombo;
+    if(!combo) return;
+    const input = combo.querySelector(".atlas-combo-input");
+    if(!input) return;
+
+    input.value = textoOpcaoSelecionada(select);
+    input.disabled = !!select.disabled;
+    combo.classList.toggle("desabilitado", !!select.disabled);
+  }
+
+  function criarCombo(select){
+    if(!select || select._atlasCombo) return;
+
+    select.classList.add("atlas-combo-native");
+
+    const combo = document.createElement("div");
+    combo.className = "atlas-combo";
+    combo.dataset.select = select.id;
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "atlas-combo-input";
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    input.setAttribute("aria-label", select.options?.[0]?.textContent || select.id);
+
+    const menu = document.createElement("div");
+    menu.className = "atlas-combo-menu";
+
+    combo.append(input, menu);
+    select.parentNode.insertBefore(combo, select);
+    select._atlasCombo = combo;
+
+    sincronizarCombo(select);
+
+    // Mesmo comportamento do seletor "Obra de lançamento":
+    // clicar/focar abre a lista completa sem transformar o texto atual em filtro.
+    input.addEventListener("focus", () => {
+      if(input.disabled) return;
+      fecharTodos(combo);
+      combo.classList.add("aberto");
+      montarMenu(combo, select, "");
+    });
+
+    input.addEventListener("click", () => {
+      if(input.disabled) return;
+      fecharTodos(combo);
+      combo.classList.add("aberto");
+      montarMenu(combo, select, "");
+    });
+
+    // A opção genérica (valor vazio) é estado do filtro, não texto de pesquisa.
+    // Ao começar a digitar/apagar, remove esse rótulo antes da edição nativa do navegador.
+    input.addEventListener("beforeinput", (e) => {
+      if(input.disabled || String(select.value || "") !== "") return;
+
+      const rotuloPadrao = textoOpcaoSelecionada(select);
+      if(input.value === rotuloPadrao && (
+        e.inputType.startsWith("insert") ||
+        e.inputType.startsWith("delete")
+      )){
+        input.value = "";
+      }
+    });
+
+    // Só filtra quando o usuário realmente digita.
+    input.addEventListener("input", () => {
+      if(input.disabled) return;
+      combo.classList.add("aberto");
+      montarMenu(combo, select, input.value);
+    });
+
+    input.addEventListener("blur", () => {
+      setTimeout(() => {
+        if(combo.dataset.interagindoMenu === "1") return;
+        if(!combo.contains(document.activeElement)){
+          combo.classList.remove("aberto");
+          sincronizarCombo(select);
+        }
+      }, 140);
+    });
+
+    input.addEventListener("keydown", e => {
+      if(e.key === "Escape"){
+        combo.classList.remove("aberto");
+        input.value = textoOpcaoSelecionada(select);
+        input.blur();
+      }
+      if(e.key === "Enter"){
+        const primeira = menu.querySelector(".atlas-combo-opcao");
+        if(primeira){
+          e.preventDefault();
+          primeira.dispatchEvent(new MouseEvent("mousedown", {bubbles:true}));
+        }
+      }
+    });
+
+    select.addEventListener("change", () => sincronizarCombo(select));
+
+    new MutationObserver(() => {
+      sincronizarCombo(select);
+      if(combo.classList.contains("aberto")) montarMenu(combo, select, "");
+    }).observe(select, {childList:true, subtree:true, attributes:true});
+
+    // disabled pode ser alterado por regra de permissão/obra.
+    const obsDisabled = new MutationObserver(() => sincronizarCombo(select));
+    obsDisabled.observe(select, {attributes:true, attributeFilter:["disabled"]});
+  }
+
+  function iniciar(){
+    IDS.forEach(id => criarCombo(document.getElementById(id)));
+
+    document.addEventListener("mousedown", e => {
+      if(!e.target.closest(".atlas-combo")){
+        document.querySelectorAll(".atlas-combo").forEach(combo => {
+          const id = combo.dataset.select;
+          const select = id ? document.getElementById(id) : null;
+          if(select) sincronizarCombo(select);
+        });
+        fecharTodos();
+      }
+    });
+  }
+
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", iniciar, {once:true});
+  }else{
+    iniciar();
+  }
+
+  window.atlasSincronizarCombosPatrimonio = function(){
+    IDS.forEach(id => sincronizarCombo(document.getElementById(id)));
+  };
+})();
+
+
+
+/* Nome do patrimônio: autocomplete interno removido.
+   Mantemos somente o outro modelo de sugestão escolhido para o campo. */
+(function removerAutocompleteInternoNomePatrimonio(){
+  const campo = document.getElementById("nomeBem") ||
+    [...document.querySelectorAll("input")].find(el =>
+      /nome do patrimônio/i.test(el.getAttribute("placeholder") || "")
+    );
+  if(!campo) return;
+
+  campo.removeAttribute("list");
+
+  const removerCaixasDoNome = () => {
+    const candidatos = document.querySelectorAll(
+      ".sugestoes, .sugestoes-nome, .autocomplete-suggestions, .autocomplete-list, [data-autocomplete-nome]"
+    );
+    candidatos.forEach(el => {
+      if(el.closest(".atlas-combo")) return;
+      const rCampo = campo.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      const proximoDoCampo =
+        Math.abs(r.left - rCampo.left) < Math.max(80, rCampo.width) &&
+        r.top >= rCampo.top - 10 &&
+        r.top <= rCampo.bottom + 260;
+      if(proximoDoCampo) el.remove();
+    });
+  };
+
+  campo.addEventListener("input", removerCaixasDoNome, true);
+  campo.addEventListener("focus", removerCaixasDoNome, true);
+})();
+
+
+
+/* Seletores do cadastro: apresentação responsiva, mantendo o select original
+   como fonte única de valores e eventos de negócio. */
+(function atlasSeletoresCadastroMobile() {
+  const ids = ["tipo_item", "status_inicial", "estado_conservacao"];
+  const media = window.matchMedia("(max-width: 700px)");
+  let aberto = null;
+
+  function fechar() {
+    if (!aberto) return;
+    aberto.menu.remove();
+    aberto.botao.setAttribute("aria-expanded", "false");
+    aberto = null;
+  }
+
+  function posicionar() {
+    if (!aberto) return;
+    const rect = aberto.botao.getBoundingClientRect();
+    const viewport = window.visualViewport;
+    const altura = viewport ? viewport.height : window.innerHeight;
+    const topo = viewport ? viewport.offsetTop : 0;
+    const largura = viewport ? viewport.width : window.innerWidth;
+    const esquerda = viewport ? viewport.offsetLeft : 0;
+    const margem = 10;
+    const limiteInferior = topo + altura - margem;
+    const espacoAbaixo = limiteInferior - rect.bottom;
+    const espacoAcima = rect.top - topo - margem;
+    const acima = espacoAbaixo < 185 && espacoAcima > espacoAbaixo;
+    const disponivel = Math.max(90, acima ? espacoAcima - 6 : espacoAbaixo - 6);
+    const alturaMenu = Math.min(280, disponivel);
+    aberto.menu.style.maxHeight = `${alturaMenu}px`;
+    aberto.menu.style.width = `${Math.min(rect.width, largura - margem * 2)}px`;
+    aberto.menu.style.left = `${Math.max(esquerda + margem, Math.min(rect.left, esquerda + largura - margem - rect.width))}px`;
+    aberto.menu.style.top = `${acima ? Math.max(topo + margem, rect.top - alturaMenu - 5) : rect.bottom + 5}px`;
+  }
+
+  function iniciar(select) {
+    if (!select || select.dataset.atlasMobileSelect === "ativo") return;
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "atlas-mobile-select-trigger";
+    botao.setAttribute("aria-haspopup", "listbox");
+    botao.setAttribute("aria-expanded", "false");
+    botao.setAttribute("aria-label", select.getAttribute("aria-label") || select.options[0]?.textContent.trim() || "Selecionar");
+    select.insertAdjacentElement("afterend", botao);
+    select.classList.add("atlas-mobile-select-original");
+    select.dataset.atlasMobileSelect = "ativo";
+
+    function atualizar() {
+      botao.textContent = select.selectedOptions[0]?.textContent.trim() || "Selecione";
+      botao.disabled = select.disabled;
+    }
+    atualizar();
+    select.addEventListener("change", atualizar);
+    const observer = new MutationObserver(atualizar);
+    observer.observe(select, {childList:true, subtree:true, attributes:true, attributeFilter:["disabled"]});
+
+    botao.addEventListener("click", () => {
+      if (!media.matches || select.disabled) return;
+      if (aberto?.botao === botao) { fechar(); return; }
+      fechar();
+      const menu = document.createElement("div");
+      menu.className = "atlas-mobile-select-menu";
+      menu.setAttribute("role", "listbox");
+      menu.setAttribute("aria-label", botao.getAttribute("aria-label"));
+      [...select.options].forEach(option => {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "atlas-mobile-select-option";
+        item.setAttribute("role", "option");
+        item.setAttribute("aria-selected", String(option.selected));
+        item.textContent = option.textContent.trim();
+        item.disabled = option.disabled;
+        if (option.selected) item.classList.add("selecionado");
+        item.addEventListener("click", () => {
+          if (select.value !== option.value) {
+            select.value = option.value;
+            select.dispatchEvent(new Event("change", {bubbles:true}));
+          }
+          atualizar();
+          fechar();
+          botao.focus({preventScroll:true});
+        });
+        menu.appendChild(item);
+      });
+      document.body.appendChild(menu);
+      aberto = {menu, botao};
+      botao.setAttribute("aria-expanded", "true");
+      posicionar();
+      menu.querySelector(".selecionado")?.scrollIntoView({block:"nearest"});
+    });
+  }
+
+  document.addEventListener("pointerdown", event => {
+    if (aberto && !aberto.menu.contains(event.target) && !aberto.botao.contains(event.target)) fechar();
+  }, true);
+  document.addEventListener("keydown", event => { if (event.key === "Escape") fechar(); });
+  window.addEventListener("resize", posicionar);
+  window.addEventListener("scroll", fechar, true);
+  window.visualViewport?.addEventListener("resize", posicionar);
+  media.addEventListener("change", fechar);
+  const carregar = () => ids.forEach(id => iniciar(document.getElementById(id)));
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", carregar);
+  else carregar();
+})();

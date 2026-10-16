@@ -6,7 +6,7 @@
    - editar / desativar / apagar com confirmação
 ========================================================= */
 
-console.log("🛡️ BDR OWNER CORE V8 carregado - busca automática + reativar");
+void 0;
 
 /* ALTERE AQUI */
 const BDR_OWNER_LOGIN = "saulo";
@@ -141,7 +141,7 @@ function bdrCliqueSecretoOwner(e){
   if(e) e.stopPropagation();
 
   bdrOwnerCliques++;
-  console.log("BDR CORE cliques:", bdrOwnerCliques);
+  void 0;
 
   clearTimeout(bdrOwnerTimer);
   bdrOwnerTimer = setTimeout(() => bdrOwnerCliques = 0, BDR_OWNER_TEMPO);
@@ -776,4 +776,4 @@ window.bdrOwnerSetFiltroStatus = bdrOwnerSetFiltroStatus;
   }
 })();
 
-console.log("✅ ATLAS OWNER REGRA OFICIAL - somente usuário ID 1");
+void 0;

@@ -211,6 +211,226 @@
     return { ...pedido, status: statusNovo, status_anterior: statusAnterior };
   }
 
+  async function criarTransferenciaDireta({ patrimonio, obraDestino, observacao }){
+    const banco = db();
+    if(!banco) throw new Error("Supabase não carregado.");
+    if(!patrimonio?.id) throw new Error("Patrimônio inválido para transferência.");
+    if(!obraDestino?.id) throw new Error("Obra destino inválida.");
+
+    const origemId = patrimonio.obra_id ? Number(patrimonio.obra_id) : null;
+    const destinoId = Number(obraDestino.id);
+    if(!origemId) throw new Error("O patrimônio não possui obra de origem válida.");
+    if(origemId === destinoId) throw new Error("Origem e destino da transferência são iguais.");
+
+    const u = usuarioAtual();
+    const agora = new Date().toISOString();
+    const codigo = "TR-" + agora.slice(0,10).replace(/-/g, "") + "-" + String(Date.now()).slice(-6);
+    const nomeDestino = obraDestino.nome || obraDestino.codigo_obra || ("Obra " + destinoId);
+
+    // Segurança: um patrimônio não pode participar de duas transferências ativas.
+    const { data:itensAtivos, error:erroItensAtivos } = await banco
+      .from("itens_retirada")
+      .select("pedido_id")
+      .eq("patrimonio_id", patrimonio.id)
+      .neq("status", STATUS.CANCELADO);
+    if(erroItensAtivos) throw erroItensAtivos;
+
+    if(Array.isArray(itensAtivos) && itensAtivos.length){
+      const pedidoIds = [...new Set(itensAtivos.map(i => i.pedido_id).filter(Boolean))];
+      if(pedidoIds.length){
+        const { data:pedidosAtivos, error:erroPedidosAtivos } = await banco
+          .from("pedidos_retirada")
+          .select("id,codigo,status")
+          .in("id", pedidoIds)
+          .in("status", [STATUS.AGUARDANDO_RETIRADA, STATUS.EM_TRANSITO, "AGUARDANDO_CONFERENCIA"]);
+        if(erroPedidosAtivos) throw erroPedidosAtivos;
+        if(Array.isArray(pedidosAtivos) && pedidosAtivos.length){
+          const existente = pedidosAtivos[0];
+          throw new Error("Este patrimônio já possui uma transferência ativa (" + (existente.codigo || ("#" + existente.id)) + "). Conclua ou cancele a remessa antes de criar outra.");
+        }
+      }
+    }
+
+    const pedidoPayload = {
+      codigo,
+      status:STATUS.AGUARDANDO_RETIRADA,
+      solicitante:u?.nome || u?.usuario || "Usuário",
+      usuario_criacao:u?.nome || u?.usuario || "Usuário",
+      obra_id:destinoId,
+      obra_destino_id:destinoId,
+      obra_nome:nomeDestino,
+      obra_origem_id:origemId,
+      observacao:observacao || "Transferência direta de patrimônio."
+    };
+
+    const { data:pedido, error:erroPedido } = await banco
+      .from("pedidos_retirada")
+      .insert([pedidoPayload])
+      .select()
+      .single();
+    if(erroPedido) throw erroPedido;
+
+    const itemPayload = {
+      pedido_id:pedido.id,
+      patrimonio_id:patrimonio.id,
+      patrimonio_codigo:patrimonio.codigo_qr || patrimonio.codigo_bem || patrimonio.etiqueta || null,
+      patrimonio_nome:patrimonio.nome_bem || patrimonio.descricao || "Patrimônio",
+      // A posição de separação deve ser o endereço físico do patrimônio.
+      // `localizacao` identifica obra/setor e não pode virar QR END-.
+      endereco_codigo:patrimonio.endereco_estoque || patrimonio.localizacao_fisica || null,
+      obra_origem_id:origemId,
+      obra_destino_id:destinoId,
+      status:"RESERVADO",
+      quantidade:1
+    };
+
+    const { data:itens, error:erroItem } = await banco
+      .from("itens_retirada")
+      .insert([itemPayload])
+      .select();
+
+    if(erroItem){
+      try{ await banco.from("pedidos_retirada").delete().eq("id", pedido.id); }catch(e){}
+      throw erroItem;
+    }
+
+    const { data:patrimonioAtualizado, error:erroStatusPatrimonio } = await banco
+      .from("patrimonio")
+      .update({ status:"EM_TRANSFERENCIA" })
+      .eq("id", patrimonio.id)
+      .select("id,status")
+      .maybeSingle();
+    if(erroStatusPatrimonio || !patrimonioAtualizado || String(patrimonioAtualizado.status||"").toUpperCase() !== "EM_TRANSFERENCIA"){
+      try{ await banco.from("itens_retirada").delete().eq("pedido_id", pedido.id); }catch(e){}
+      try{ await banco.from("pedidos_retirada").delete().eq("id", pedido.id); }catch(e){}
+      throw erroStatusPatrimonio || new Error("O banco não confirmou a alteração do patrimônio para EM_TRANSFERENCIA. Verifique RLS/permissões da tabela patrimonio.");
+    }
+
+    // Guarda o estado anterior para que um cancelamento ANTES da saída consiga
+    // restaurar exatamente o patrimônio, sem presumir ESTOQUE ou EM_USO.
+    const { error:erroMovCriacao } = await banco.from("movimentacoes").insert([{
+      patrimonio_id:patrimonio.id,
+      empresa_id:patrimonio.empresa_id || obraDestino.empresa_id || null,
+      obra_origem_id:origemId,
+      obra_destino_id:destinoId,
+      tipo:"TRANSFERENCIA_CRIADA",
+      status_anterior:String(patrimonio.status || "EM_USO").toUpperCase(),
+      status_novo:"EM_TRANSFERENCIA",
+      observacao:"Remessa " + codigo + " - " + (observacao || "Transferência direta de patrimônio."),
+      usuario:nomeUsuario(),
+      data_movimentacao:agora,
+      ativo:true
+    }]);
+    if(erroMovCriacao){
+      // Não deixa nascer uma transferência sem trilha suficiente para desfazer com segurança.
+      try{ await banco.from("patrimonio").update({ status:patrimonio.status || "EM_USO" }).eq("id", patrimonio.id); }catch(e){}
+      try{ await banco.from("itens_retirada").delete().eq("pedido_id", pedido.id); }catch(e){}
+      try{ await banco.from("pedidos_retirada").delete().eq("id", pedido.id); }catch(e){}
+      throw erroMovCriacao;
+    }
+
+    await registrarHistoricoPedido({
+      pedido_id:pedido.id,
+      status_anterior:null,
+      status_novo:STATUS.AGUARDANDO_RETIRADA,
+      observacao:"Transferência direta criada por " + nomeUsuario() + ". Aguardando retirada/transporte."
+    });
+
+    try{
+      await banco.from("patrimonio_movimentacoes").insert([{
+        patrimonio_id:patrimonio.id,
+        pedido_id:pedido.id,
+        empresa_id:patrimonio.empresa_id || obraDestino.empresa_id || null,
+        obra_origem_id:origemId,
+        obra_destino_id:destinoId,
+        status:STATUS.AGUARDANDO_RETIRADA,
+        solicitado_por:nomeUsuario(),
+        data_solicitacao:agora,
+        observacao:observacao || "Transferência direta criada pelo módulo Patrimônio."
+      }]);
+    }catch(e){
+      console.warn("AtlasWorkflow: remessa criada, mas o histórico patrimonial não pôde ser registrado.", e?.message || e);
+    }
+
+    let notificacaoDestino = { ok:false, notificacoes:0, destinatarios:[] };
+    try{
+      const gestor = gestorNotificacoes();
+      if(gestor?.notificarTransferenciaCriada){
+        notificacaoDestino = await gestor.notificarTransferenciaCriada(pedido, itens || []);
+      }
+    }catch(e){
+      console.warn("AtlasWorkflow: transferência criada, mas a notificação do destino falhou.", e?.message || e);
+    }
+
+    emitirAtlas("transferencia.criada", {
+      modulo:"PATRIMONIO",
+      pedido_id:pedido.id,
+      codigo:pedido.codigo,
+      patrimonio_id:patrimonio.id,
+      obra_origem_id:origemId,
+      obra_destino_id:destinoId,
+      status:STATUS.AGUARDANDO_RETIRADA,
+      notificacoes:notificacaoDestino.notificacoes || 0
+    });
+
+    return {
+      ok:true,
+      pedido,
+      itens:itens || [],
+      codigo:pedido.codigo,
+      notificacaoDestino
+    };
+  }
+
+  async function cancelarTransferenciaPatrimonio(pedidoId, motivo){
+    const banco = db();
+    if(!banco) throw new Error("Supabase não carregado.");
+
+    const motivoLimpo = String(motivo || "").trim();
+    if(motivoLimpo.length < 5){
+      throw new Error("Informe o motivo do cancelamento com pelo menos 5 caracteres.");
+    }
+
+    const idPedido = Number(pedidoId);
+    if(!Number.isFinite(idPedido) || idPedido <= 0){
+      throw new Error("Transferência inválida.");
+    }
+
+    // Cancelamento crítico é executado atomicamente no PostgreSQL.
+    // A identidade e as permissões são validadas pela sessão Supabase Auth
+    // dentro da RPC; o navegador não escolhe quem está cancelando.
+    const { data, error } = await banco.rpc("atlas_cancelar_transferencia", {
+      p_pedido_id: idPedido,
+      p_motivo: motivoLimpo
+    });
+
+    if(error) throw error;
+    if(!data?.ok){
+      throw new Error(data?.message || "Não foi possível cancelar a transferência.");
+    }
+
+    emitirAtlas("transferencia.cancelada", {
+      modulo:"PATRIMONIO",
+      pedido_id:data.pedido_id || idPedido,
+      codigo:data.codigo || null,
+      patrimonio_id:data.patrimonio_id || null,
+      obra_origem_id:data.obra_restaurada || null,
+      status_restaurado:data.status_restaurado || null,
+      cancelado_por:data.cancelado_por || null,
+      motivo:motivoLimpo
+    });
+
+    return {
+      ok:true,
+      pedido:{ id:data.pedido_id || idPedido, codigo:data.codigo || null, status:STATUS.CANCELADO },
+      patrimonio_id:data.patrimonio_id || null,
+      status_restaurado:data.status_restaurado || null,
+      obra_restaurada:data.obra_restaurada || null,
+      cancelado_por:data.cancelado_por || null,
+      restauracoes:1
+    };
+  }
+
   async function registrarMovimentacaoSolicitada(pedidoId){
     const banco = db();
     if(!banco) throw new Error("Supabase não carregado.");
@@ -346,7 +566,9 @@
             status: STATUS.RECUSADO,
             motivo_recusa: motivo,
             usuario_recusa: usuario,
-            data_recusa: agora
+            data_recusa: agora,
+            reservado: false,
+            estoque_reservado: false
           })
           .eq("id", item.id);
         if(error) throw error;
@@ -362,10 +584,15 @@
     if(aprovados === total) statusPedido = STATUS.APROVADO;
     if(recusados === total) statusPedido = STATUS.RECUSADO;
 
-    await banco
+    const { error: erroAtualizacaoPedido } = await banco
       .from("pedidos_retirada")
-      .update({ status: statusPedido })
+      .update({
+        status: statusPedido,
+        usuario_autorizacao: aprovados > 0 ? usuario : null,
+        data_autorizacao: aprovados > 0 ? agora : null
+      })
       .eq("id", pedidoId);
+    if(erroAtualizacaoPedido) throw erroAtualizacaoPedido;
 
     await registrarHistoricoPedido({
       pedido_id: pedidoId,
@@ -417,7 +644,11 @@
 
       const { error:erroPedidoSeparacao } = await banco
         .from("pedidos_retirada")
-        .update({ status: STATUS.EM_SEPARACAO })
+        .update({
+          status: STATUS.EM_SEPARACAO,
+          usuario_autorizacao: usuario,
+          data_autorizacao: agora
+        })
         .eq("id", pedidoId);
       if(erroPedidoSeparacao) throw erroPedidoSeparacao;
 
@@ -483,12 +714,13 @@
           }
         : {
             tipo:"PEDIDO_APROVADO",
-            titulo:"✅ Pedido aprovado",
+            titulo:"✅ Pedido aprovado — aguardando separação",
             mensagem:
               "Seu pedido " + (pedido.codigo || "#" + pedido.id) +
               " foi aprovado por " + usuario +
-              " e encaminhado ao almoxarifado da origem para separação. " +
-              "Nenhuma ação é necessária.",
+              " e agora aguarda preparação na obra de origem.",
+            // Informativa (verde): o solicitante acompanha o andamento e não
+            // recebe uma tarefa operacional desta etapa.
             link:null
           };
 
@@ -538,15 +770,19 @@
       return atual;
     }
 
-    const pedido = await alterarStatusPedido(pedidoId, STATUS.AGUARDANDO_RETIRADA, "Separação finalizada. Aguardando motorista/retirada.");
+    const agoraFinalizacao = new Date().toISOString();
+    const pedido = await alterarStatusPedido(pedidoId, STATUS.AGUARDANDO_RETIRADA, "Separação finalizada. Aguardando motorista/retirada.", {
+      usuario_finalizacao_separacao: nomeUsuario(),
+      data_finalizacao_separacao: agoraFinalizacao
+    });
     await atualizarMovimentacoesPedido(pedidoId, {
       status: STATUS.AGUARDANDO_RETIRADA,
       separado_por: nomeUsuario(),
-      data_separacao: new Date().toISOString()
+      data_separacao: agoraFinalizacao
     });
     await notificarSolicitantePedido(
       pedido,"PEDIDO_AGUARDANDO_RETIRADA","📦 Seu pedido foi separado",
-      "Pedido " + (pedido.codigo || "#" + pedido.id) + " foi separado por " + nomeUsuario() + " e aguarda transporte. Nenhuma ação é necessária.",null
+      "Pedido " + (pedido.codigo || "#" + pedido.id) + " foi separado por " + nomeUsuario() + " e aguarda transporte.",null
     );
     try{
       if(gestorNotificacoes()?.notificarRetiradaPedido){
@@ -563,6 +799,12 @@
     const motorista = dadosTransporte?.motorista_nome || dadosTransporte?.motorista || "-";
     const placa = dadosTransporte?.veiculo_placa || dadosTransporte?.placa || "-";
 
+    const itensEnvio = await buscarItensPedido(pedidoId);
+    for(const item of itensEnvio.filter(i => i.patrimonio_id && String(i.status || "").toUpperCase() !== STATUS.RECUSADO)){
+      const { error:erroPat } = await db().from("patrimonio").update({ status:"EM_TRANSITO" }).eq("id", item.patrimonio_id);
+      if(erroPat) throw erroPat;
+    }
+
     await atualizarMovimentacoesPedido(pedidoId, {
       status: STATUS.EM_TRANSITO,
       enviado_por: nomeUsuario(),
@@ -572,7 +814,15 @@
       data_envio: new Date().toISOString()
     });
 
-    await notificarSolicitantePedido(pedido, "PEDIDO_EM_TRANSITO", "🛣 Pedido em trânsito", "Pedido " + (pedido.codigo || "#" + pedido.id) + " saiu com motorista " + motorista + ", placa " + placa + ".", "expedicao.html?aba=transito");
+    // A saída é um evento do DESTINO. Não notifica quem acabou de enviar.
+    // Para transferência direta isso evita o antigo comportamento em que o
+    // criador/origem recebia a própria notificação de trânsito.
+    const gestor = gestorNotificacoes();
+    if(gestor?.notificarTransferenciaEmTransito){
+      await gestor.notificarTransferenciaEmTransito(pedido, itensEnvio, dadosTransporte || {});
+    }else{
+      await notificarSolicitantePedido(pedido, "PEDIDO_EM_TRANSITO", "🚚 Remessa em trânsito", "Remessa " + (pedido.codigo || "#" + pedido.id) + " saiu com motorista " + motorista + ", placa " + placa + ".", "expedicao.html?aba=receber");
+    }
     return pedido;
   }
 
@@ -580,52 +830,70 @@
     const banco = db();
     if(!banco) throw new Error("Supabase não carregado.");
 
-    const pedido = await buscarPedido(pedidoId);
-    const statusFinal = dadosRecebimento?.divergencia ? "RECEBIDO_COM_DIVERGENCIA" : STATUS.RECEBIDO;
-    const atualizado = await alterarStatusPedido(pedidoId, statusFinal, dadosRecebimento?.observacao || "Pedido recebido.");
+    const pedidoAntes = await buscarPedido(pedidoId);
+    const statusPatrimonio = String(dadosRecebimento?.status_final || "ESTOQUE").toUpperCase();
 
-    await atualizarMovimentacoesPedido(pedidoId, {
-      status: statusFinal,
-      recebido_por: nomeUsuario(),
-      conferencia_status: dadosRecebimento?.divergencia ? "COM_DIVERGENCIA" : "SEM_DIVERGENCIA",
-      conferencia_observacao: dadosRecebimento?.observacao || null,
-      data_recebimento: new Date().toISOString()
+    const { data:transacao, error:erroTransacao } = await banco.rpc("atlas_receber_pedido", {
+      p_pedido_id:Number(pedidoId),
+      p_usuario:nomeUsuario(),
+      p_divergencia:!!dadosRecebimento?.divergencia,
+      p_observacao:dadosRecebimento?.observacao || null,
+      p_status_patrimonio:statusPatrimonio
     });
 
-    if(!dadosRecebimento?.divergencia){
-      const itens = await buscarItensPedido(pedidoId);
-      for(const item of itens.filter(i => i.patrimonio_id && String(i.status || "").toUpperCase() !== STATUS.RECUSADO)){
-        await banco
-          .from("patrimonio")
-          .update({
-            obra_id: item.obra_destino_id || pedido.obra_destino_id || pedido.obra_id || null,
-            status: "EM_USO"
-          })
-          .eq("id", item.patrimonio_id);
+    if(erroTransacao) throw erroTransacao;
+
+    const pedido = await buscarPedido(pedidoId);
+    const itensRecebimento = await buscarItensPedido(pedidoId);
+
+    // A transação no PostgreSQL é a autoridade sobre estoque, patrimônio,
+    // itens e status do pedido. Notificações só são disparadas após COMMIT.
+    if(!transacao?.ja_processado){
+      try{
+        await gestorNotificacoes().notificarOrigemPedido(
+          pedido,
+          "PEDIDO_RECEBIDO",
+          dadosRecebimento?.divergencia
+            ? "⚠️ Pedido recebido com divergência"
+            : "✅ Pedido entregue",
+          "Pedido " + (pedido.codigo || "#" + pedido.id) +
+            " foi recebido por " + nomeUsuario() +
+            ". Conferência: " +
+            (dadosRecebimento?.divergencia ? "com divergência" : "sem divergência") +
+            ".",
+          null
+        );
+      }catch(e){
+        console.warn("AtlasWorkflow: recebimento concluído, mas a notificação da origem não pôde ser enviada.", e?.message || e);
+      }
+
+      try{
+        const gestor = gestorNotificacoes();
+        if(gestor?.notificarOwnerTransferenciaConcluida){
+          await gestor.notificarOwnerTransferenciaConcluida(
+            pedido,
+            itensRecebimento,
+            { ...dadosRecebimento, recebido_por:nomeUsuario() }
+          );
+        }
+      }catch(e){
+        console.warn("AtlasWorkflow: recebimento concluído, mas o controle de conclusão para o OWNER não pôde ser notificado.", e?.message || e);
       }
     }
 
-    await gestorNotificacoes().notificarOrigemPedido(
-      pedido,
-      "PEDIDO_RECEBIDO",
-      dadosRecebimento?.divergencia
-        ? "⚠️ Pedido recebido com divergência"
-        : "✅ Pedido entregue",
-      "Pedido " + (pedido.codigo || "#" + pedido.id) +
-        " foi recebido por " + nomeUsuario() +
-        ". Conferência: " +
-        (dadosRecebimento?.divergencia ? "com divergência" : "sem divergência") +
-        ".",
-      null
-    );
-
-    return atualizado;
+    return {
+      ...pedido,
+      status_anterior:pedidoAntes.status || null,
+      transacao:transacao || null
+    };
   }
 
   AtlasWorkflow.STATUS = STATUS;
   AtlasWorkflow.buscarPedido = buscarPedido;
   AtlasWorkflow.buscarItensPedido = buscarItensPedido;
   AtlasWorkflow.registrarHistoricoPedido = registrarHistoricoPedido;
+  AtlasWorkflow.criarTransferenciaDireta = criarTransferenciaDireta;
+  AtlasWorkflow.cancelarTransferenciaPatrimonio = cancelarTransferenciaPatrimonio;
   AtlasWorkflow.registrarMovimentacaoSolicitada = registrarMovimentacaoSolicitada;
   AtlasWorkflow.alterarStatusPedido = alterarStatusPedido;
   AtlasWorkflow.notificarOrigemPedidoCriado = notificarOrigemPedidoCriado;
@@ -641,5 +909,5 @@
 
   window.AtlasWorkflow = AtlasWorkflow;
 
-  console.log("✅ ATLAS WORKFLOW V3.3 carregado - separação avisa solicitante e transporte");
+  void 0;
 })();

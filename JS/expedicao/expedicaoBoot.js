@@ -1,5 +1,5 @@
 /* =========================================================
-   ATLAS EXPEDIÇÃO — CARREGADOR DE MÓDULOS
+   ATLAS EXPEDIÇÃO NOVA — CARREGADOR DE MÓDULOS V1.2
 ========================================================= */
 (function(global){
   'use strict';
@@ -8,50 +8,41 @@
 
   const carregados = new Map();
 
-  const inicioBoot = performance.now();
-
   const base = {
     modal:['./JS/AtlasModal.js'],
-    workflow:['./JS/atlasWorkflow.js'],
+    workflow:['./JS/atlasGestorNotificacoes.js','./JS/atlasWorkflow.js'],
     reservas:['./JS/AtlasGestorReservas.js'],
     logistica:[
       './JS/AtlasModal.js',
+      './JS/atlasGestorNotificacoes.js',
       './JS/atlasWorkflow.js',
       './JS/AtlasLogistica.js'
     ],
     fiscal:[
       './JS/AtlasModal.js',
+      './JS/atlasGestorNotificacoes.js',
       './JS/atlasWorkflow.js',
-      './JS/AtlasFiscal.js'
+      './JS/AtlasLogistica.js',
+      './JS/AtlasFiscal.js',
+      './JS/AtlasRomaneio.js'
     ],
     scanner:[
       'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
       './JS/AtlasModal.js',
+      './JS/atlasGestorNotificacoes.js',
       './JS/atlasWorkflow.js',
       './JS/AtlasLogistica.js',
       './JS/AtlasFiscal.js',
+      './JS/AtlasRomaneio.js',
       './JS/AtlasSeparacaoQR.js'
     ],
     visual:[
       './JS/bdrUppercase.js',
       './JS/AtlasMotion.js',
-      './JS/bdrMenuMobileAtivo.js'
+      './JS/bdrMenuMobileAtivo.js',
+      './JS/atlasTopbar.js'
     ],
-    pwa:['./JS/pwa-update.js'],
-    infraBase:[
-      './JS/offlineDB.js',
-      './JS/offlineQueue.js',
-      './JS/atlasEvents.js'
-    ],
-    infraSync:[
-      './JS/bdrSyncEngine.js',
-      './JS/bdrSyncCenter.js'
-    ],
-    infraNotif:[
-      './JS/atlasEventStore.js',
-      './JS/atlasGestorNotificacoes.js',
-      './JS/atlasAudio/atlasAudio.js'
-    ]
+    pwa:['./JS/pwa-update.js']
   };
 
   function carregarScript(src){
@@ -99,7 +90,7 @@
   async function prepararAba(nome){
     if(nome==='solicitacoes') await modulo('fiscal');
     if(nome==='separacao') await modulo('scanner');
-    if(nome==='retirada'||nome==='transito') await modulo('logistica');
+    if(nome==='retirada'||nome==='transito'||nome==='receber') await modulo('logistica');
     return true;
   }
 
@@ -129,9 +120,10 @@
     const mapa={
       iniciarSeparacaoAtlas:'scanner',
       abrirSeparacaoQR:'scanner',
-      finalizarSeparacaoAtlas:'logistica',
+      finalizarSeparacaoAtlas:'fiscal',
       enviarPedidoAtlas:'logistica',
       receberPedidoAtlas:'logistica',
+      confirmarRecebimentoAtlas:'logistica',
       abrirDadosFiscais:'fiscal',
       autorizarTodosAtlas:'fiscal',
       confirmarAprovacaoParcialAtlas:'fiscal',
@@ -172,42 +164,16 @@
     });
   }
 
-  async function carregarInfraBackground(){
-    // Infraestrutura importante, mas não bloqueia a primeira pintura da Expedição.
-    // A ordem é preservada para respeitar dependências entre offline/sync/eventos.
-    try{
-      await modulo('infraBase');
-      await Promise.allSettled([modulo('infraSync'),modulo('infraNotif')]);
-      console.info(`⚡ ATLAS EXPEDIÇÃO infraestrutura pronta em ${Math.round(performance.now()-inicioBoot)} ms`);
-    }catch(e){
-      console.warn('Expedição: infraestrutura em segundo plano',e?.message||e);
-    }
-  }
-
   async function iniciar(){
     try{
       if(typeof global.verificarLogin==='function') global.verificarLogin();
 
-      await carregarScript('./JS/expedicao/expedicaoCatalogo.js');
-      await carregarScript('./JS/expedicao/expedicaoPedidos.js');
+      await carregarScript('./JS/expedicao/expedicaoImagens.js');
       await carregarScript('./JS/expedicao/expedicaoCore.js');
-
-      // Fluxos especializados: substituem as antigas camadas empilhadas no Core.
-      await carregarScript('./JS/expedicao/fluxo/expedicaoAprovacao.js');
-      await carregarScript('./JS/expedicao/fluxo/expedicaoSolicitacoes.js');
-      await carregarScript('./JS/expedicao/fluxo/expedicaoLogistica.js');
-      await carregarScript('./JS/expedicao/fluxo/expedicaoFiscal.js');
-      await carregarScript('./JS/expedicao/fluxo/expedicaoPermissoes.js');
-
-      // Só agora a primeira consulta de dados é iniciada.
-      global.BDRExpedicao?.iniciar?.();
 
       instalarAbaLazy();
       instalarAcoesLazy();
       esconderLoading();
-
-      // A interface já está utilizável. O restante da infraestrutura entra sem bloquear.
-      void carregarInfraBackground();
 
       const aba=new URLSearchParams(location.search).get('aba');
 
@@ -218,13 +184,33 @@
         await global.abrirAba?.(aba,btn||null);
       }
 
+      /* Deep-link: abre diretamente o pedido indicado, em qualquer etapa da Expedição. */
+      const pedidoDireto=Number(new URLSearchParams(location.search).get('pedido'));
+      if(Number.isFinite(pedidoDireto) && pedidoDireto > 0){
+        try{ if(typeof global.carregarTudo==='function') await global.carregarTudo(); }catch(_){ }
+        let tentativas=0;
+        const abrirPedido=()=>{
+          tentativas++;
+          const existe=(global.pedidos||[]).some(p=>Number(p.id)===pedidoDireto);
+          const acaoDireta=new URLSearchParams(location.search).get('acao');
+          if(acaoDireta==='romaneio'){
+            modulo('fiscal').then(()=>global.AtlasRomaneio?.abrir?.(pedidoDireto));
+            return;
+          }
+          if(existe && typeof global.abrirDetalhePedidoAtlas==='function'){
+            global.abrirDetalhePedidoAtlas(pedidoDireto);
+            return;
+          }
+          if(tentativas<20) setTimeout(abrirPedido,150);
+        };
+        setTimeout(abrirPedido,80);
+      }
+
       const idle=global.requestIdleCallback||((fn)=>setTimeout(fn,800));
       idle(()=>modulo('visual').catch(console.warn));
       idle(()=>modulo('pwa').catch(console.warn));
 
-      console.log(
-        `✅ ATLAS EXPEDIÇÃO interface pronta em ${Math.round(performance.now()-inicioBoot)} ms — dados progressivos`
-      );
+      void 0;
     }catch(e){
       esconderLoading();
       console.error('Atlas Expedição Nova: falha na inicialização',e);
@@ -240,6 +226,7 @@
 
   global.AtlasExpedicaoLoader={
     __loaded:true,
+    versao:'1.2-fiscal-workflow-lazy',
     modulo,
     prepararAba,
     iniciar

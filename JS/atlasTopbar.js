@@ -1,5 +1,5 @@
 /* =========================================================
-   ATLAS SaaS - CONTROLADOR OFICIAL DE TOPBAR
+   ATLAS SaaS - CONTROLADOR OFICIAL DE TOPBAR V1.4
    Arquivo: JS/atlasTopbar.js
 
    CORREÇÃO V1.3
@@ -410,92 +410,6 @@
       });
   }
 
-  function carregarAlertasPreventiva(){
-    if(window.AtlasPreventivaAlertas || document.querySelector('script[data-atlas-preventiva-alertas]')){
-      return;
-    }
-
-    const script=document.createElement("script");
-    script.src="./JS/manutencao/atlasManutencaoPreventivaAlertas.js";
-    script.defer=true;
-    script.dataset.atlasPreventivaAlertas="true";
-    document.head.appendChild(script);
-  }
-
-  function carregarAtlasPush(){
-    if(window.AtlasPush || document.querySelector('script[data-atlas-push]')) return;
-    const script=document.createElement("script");
-    script.src="./JS/notificacoes/atlasPush.js";
-    script.defer=true;
-    script.dataset.atlasPush="true";
-    document.head.appendChild(script);
-  }
-
-
-  /* =========================================================
-     OWNER CORE — restaura o painel administrativo secreto do ID 1.
-     O painel só é carregado para o OWNER; a autorização real continua
-     sendo validada pelo próprio core e pelo banco.
-  ========================================================= */
-  function usuarioOwnerAtual(){
-    for(const chave of ["usuario_logado", "usuarioLogado"]){
-      try{
-        const u=JSON.parse(localStorage.getItem(chave)||"null");
-        if(Number(u?.id)===1) return u;
-      }catch(_){ }
-    }
-    return null;
-  }
-
-  function carregarOwnerCore(){
-    if(!usuarioOwnerAtual()) return;
-
-    if(!document.querySelector('link[data-bdr-owner-core-css]')){
-      const link=document.createElement("link");
-      link.rel="stylesheet";
-      link.href="./CSS/bdr-owner-core.css";
-      link.dataset.bdrOwnerCoreCss="true";
-      document.head.appendChild(link);
-    }
-
-    const prepararGatilho=()=>{
-      const alvo=document.getElementById("usuarioPerfil") || firstVisible(SELECTORS.userButton);
-      if(!alvo || alvo.dataset.bdrOwnerTrigger==="true") return;
-      alvo.dataset.bdrOwnerTrigger="true";
-      alvo.title="OWNER";
-      if(alvo.id==="usuarioPerfil") alvo.textContent="OWNER";
-      alvo.addEventListener("click",event=>{
-        if(!usuarioOwnerAtual()) return;
-        // No texto OWNER, o clique é reservado ao painel secreto e não abre
-        // o dropdown normal do usuário.
-        if(alvo.id==="usuarioPerfil"){
-          event.preventDefault();
-          event.stopPropagation();
-        }
-        if(typeof window.bdrCliqueSecretoOwner==="function"){
-          window.bdrCliqueSecretoOwner(event);
-        }
-      },true);
-    };
-
-    if(typeof window.bdrCliqueSecretoOwner==="function"){
-      prepararGatilho();
-      return;
-    }
-
-    if(document.querySelector('script[data-bdr-owner-core]')){
-      setTimeout(prepararGatilho,300);
-      return;
-    }
-
-    const script=document.createElement("script");
-    script.src="./JS/bdr-owner-core.js";
-    script.defer=true;
-    script.dataset.bdrOwnerCore="true";
-    script.addEventListener("load",prepararGatilho,{once:true});
-    document.head.appendChild(script);
-  }
-
   /* =========================================================
      9. INICIALIZAÇÃO
   ========================================================= */
@@ -507,10 +421,7 @@
     document.documentElement.dataset.atlasTopbarReady = "true";
 
     normalizeMarkup();
-    carregarAtlasPush();
-    carregarOwnerCore();
     getPortal();
-    carregarAlertasPreventiva();
 
     document.addEventListener("click", onDocumentClick, true);
     document.addEventListener("keydown", onKeydown);
@@ -566,18 +477,15 @@
   };
 
   window.AtlasTopbar = Object.freeze({
-    versao: "padrao-unico",
+    versao: "1.4-acessibilidade-focus-inert",
     init,
     close: closeActive,
-    closeAll: closeActive,
     refresh: normalizeMarkup,
     position: positionDropdown,
     getZoom: getBodyZoom
   });
 
-  console.log(
-    "✅ ATLAS TOPBAR carregado - padrão único de usuário e notificações"
-  );
+  void 0;
 
   if(document.readyState === "loading"){
     document.addEventListener(

@@ -196,7 +196,7 @@
     criarNavegacao(); prepararOwner(); adicionarNotaEscopo(); aplicarEscopoPermissoes(); protegerFuncoes();
     setTimeout(()=>{ aplicarEscopoPermissoes(); protegerFuncoes(); },700);
     setTimeout(()=>{ aplicarEscopoPermissoes(); protegerFuncoes(); },1800);
-    console.log('✅ ATLAS USUÁRIOS ADMIN V1.0 carregado - OWNER exclusivo ID 1 e escopo de permissões');
+    void 0;
   }
 
   global.AtlasUsuariosAdmin={__loaded:true,OWNER_ID,ehOwner,podeConceder,abrirAba,aplicarEscopoPermissoes};

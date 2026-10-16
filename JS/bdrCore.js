@@ -52,7 +52,7 @@ if (!window.client && window.supabase && window.supabase.createClient) {
   window.supabaseClient = window.client;
 }
 
-console.log("✔ BDR CORE 9.1 carregado SAFE OFFLINE");
+void 0;
 
 function formatarStatus(status) {
   const map = {
@@ -220,33 +220,6 @@ async function registrarMovimentacao({
     alert("Erro inesperado: " + err.message);
   }
 }
-document.addEventListener("input", function(e){
-  const campo = e.target;
-
-  if(
-    (campo.tagName === "INPUT" || campo.tagName === "TEXTAREA") &&
-    !campo.matches(
-      "#usuario, #login, #senha, #formUsuario, #formEmail, #formSenha, [type='email'], [type='password'], [type='number'], [data-bdr-sem-uppercase]"
-    )
-  ){
-    const inicio = typeof campo.selectionStart === "number" ? campo.selectionStart : null;
-    const fim = typeof campo.selectionEnd === "number" ? campo.selectionEnd : null;
-    const original = campo.value;
-    const maiusculo = original.toUpperCase();
-
-    // Só escreve novamente quando realmente houver diferença.
-    // Isso evita reposicionar o cursor para o final a cada tecla.
-    if(original !== maiusculo){
-      campo.value = maiusculo;
-
-      if(inicio !== null && fim !== null && typeof campo.setSelectionRange === "function"){
-        try{
-          campo.setSelectionRange(inicio, fim);
-        }catch(_){}
-      }
-    }
-  }
-});
 
 window.bdrResetOnlineReal = function(){
   __bdrUltimoTesteOnline = null;
@@ -255,47 +228,3 @@ window.bdrResetOnlineReal = function(){
 
 window.bdrOnline = bdrOnline;
 window.bdrOnlineReal = bdrOnlineReal;
-
-/* =========================================================
-   BDR CORE — PROTEÇÃO DE CAMPOS DE E-MAIL
-   Mantém e-mail em minúsculo mesmo quando outros módulos
-   aplicam padronização global de texto.
-========================================================= */
-(function bdrProtegerEmails(){
-  const ehEmail = campo => {
-    if(!campo || campo.tagName !== "INPUT") return false;
-    const id = String(campo.id || "").toLowerCase();
-    const name = String(campo.name || "").toLowerCase();
-    const autocomplete = String(campo.autocomplete || "").toLowerCase();
-    return campo.type === "email" || id.includes("email") || name.includes("email") || autocomplete === "email";
-  };
-
-  const normalizar = campo => {
-    if(!ehEmail(campo)) return;
-    campo.setAttribute("data-bdr-sem-uppercase", "");
-    const valor = String(campo.value || "").trim().toLowerCase();
-    if(campo.value !== valor) campo.value = valor;
-    campo.style.textTransform = "none";
-  };
-
-  ["input","change","blur"].forEach(evento => {
-    document.addEventListener(evento, e => {
-      if(!ehEmail(e.target)) return;
-      queueMicrotask(() => normalizar(e.target));
-    }, true);
-  });
-})();
-
-/* =========================================================
-   BDR CORE — CARREGADOR GLOBAL DE PRESENÇA
-   Mantém o recurso de usuários online em um único arquivo.
-========================================================= */
-(function bdrCarregarPresenca(){
-  if(document.querySelector('script[data-bdr-presenca]')) return;
-  const script = document.createElement('script');
-  const coreSrc = document.currentScript?.src || '';
-  script.src = coreSrc ? new URL('bdrPresenca.js', coreSrc).href : './JS/bdrPresenca.js';
-  script.defer = true;
-  script.dataset.bdrPresenca = '1';
-  document.head.appendChild(script);
-})();

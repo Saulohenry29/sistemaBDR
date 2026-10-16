@@ -21,7 +21,7 @@
   --bdr-muted:#6b7280;
 
   /* Largura do menu lateral */
-  --sidebar-width:72px;
+  --sidebar-width:60px;
 
   /* =====================================================
      CONTROLE DE ZOOM DO SISTEMA INTEIRO
@@ -33,7 +33,7 @@
      0.85 = mais compacto
      0.80 = bem pequeno
   ===================================================== */
-  --screen-zoom:0.85;
+  --screen-zoom:1;
 }
 
 /* =========================================================
@@ -62,7 +62,7 @@ body{
      Ele usa a variável --screen-zoom lá do topo.
      Para mudar tudo, altere só a variável.
   ===================================================== */
-  zoom:var(--screen-zoom);
+  zoom:1;
 }
 
 /* =========================================================
@@ -80,7 +80,7 @@ body{
   margin-left:var(--sidebar-width);
   width:calc(100% - var(--sidebar-width));
   min-height:100vh;
-  padding:12px;
+  padding:8px;
 }
 
 /* =========================================================
@@ -106,7 +106,7 @@ body{
   align-items:center;
 
   /* AQUI VOCÊ DESCE O MENU */
-  padding:40px 0 6px 0;
+  padding:26px 0 6px 0;
 
   z-index:1000;
   box-shadow:4px 0 18px rgba(0,0,0,.18);
@@ -120,8 +120,8 @@ body{
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:16px;
-  margin-top:10px; /* empurra menu um pouco pra baixo */
+  gap:10px;
+  margin-top:6px; /* empurra menu um pouco pra baixo */
 }
 
 .bdr-menu-footer{
@@ -133,14 +133,14 @@ body{
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:12px;
+  gap:8px;
 }
 
 .bdr-menu-btn{
-  width:46px;
-  height:46px;
+  width:40px;
+  height:40px;
   border:none;
-  border-radius:14px;
+  border-radius:12px;
   background:transparent;
   color:white;
   cursor:pointer;
@@ -164,7 +164,7 @@ body{
 
 .bdr-menu-icon i{
   color:white;
-  font-size:18px;
+  font-size:16px;
 }
 
 .bdr-menu-footer{
@@ -205,8 +205,8 @@ body{
     radial-gradient(circle at right top, rgba(164,22,26,.12), transparent 35%),
     linear-gradient(135deg,#ffffff,#f8fafc);
   border-radius:16px;
-  padding:12px 14px;
-  margin-bottom:10px;
+  padding:9px 12px;
+  margin-bottom:8px;
   display:flex;
   align-items:center;
   justify-content:space-between;
@@ -222,14 +222,14 @@ body{
 
 .bdr-topbar-title,
 .hero-title{
-  font-size:19px;
+  font-size:17px;
   font-weight:900;
   color:var(--bdr-red);
 }
 
 .hero-sub{
   color:#4b5563;
-  font-size:12px;
+  font-size:11px;
 }
 
 .hero-right{
@@ -712,6 +712,18 @@ canvas{
 .badge.MANUTENCAO,
 .MANUTENCAO{
   background:#f97316;
+}
+
+.status-EM-TRANSFERENCIA,
+.badge.EM_TRANSFERENCIA,
+.EM_TRANSFERENCIA{
+  background:#7c3aed;
+}
+
+.status-EM-TRANSITO,
+.badge.EM_TRANSITO,
+.EM_TRANSITO{
+  background:#ea580c;
 }
 
 .status-BAIXADO,
@@ -1274,47 +1286,105 @@ button{
 }
 
 /* =========================================================
-   ROLAGEM E CONTENÇÃO RESPONSIVA — PADRÃO ATLAS / BDR
-
-   Regra:
-   - a página principal rola somente no eixo vertical;
-   - componentes internos podem ter sua própria rolagem horizontal
-     quando isso for necessário (menu inferior, tabela, carrossel);
-   - evita o "balanço" da página para esquerda/direita no celular/PWA.
+   BDR FIX SCROLL PWA / DASHBOARD
+   Corrige rolagem travada no PWA, navegador e touchpad
 ========================================================= */
 
 html,
 body{
-  width:100%;
-  max-width:100%;
   min-height:100%;
   height:auto !important;
-
   overflow-y:auto !important;
-  overflow-x:hidden !important; /* fallback */
-  overflow-x:clip !important;
-
-  overscroll-behavior-x:none;
-  overscroll-behavior-y:auto;
-  -webkit-overflow-scrolling:touch;
+  overflow-x:hidden !important;
+  overscroll-behavior-y:auto !important;
+  -webkit-overflow-scrolling:touch !important;
 }
 
-.app-layout,
-.bdr-app,
 .bdr-main,
 main,
 .content{
-  min-width:0 !important;
-  max-width:100% !important;
+  min-height:100vh;
+  height:auto !important;
+  overflow:visible !important;
 }
 
 .app-layout,
 .bdr-app{
   min-height:100vh;
   height:auto !important;
-  overflow-x:hidden !important; /* fallback */
-  overflow-x:clip !important;
-  overflow-y:visible !important;
+  overflow:visible !important;
+}
+
+/* Evita que cards/grids travem a rolagem */
+.card,
+.dashboard-grid,
+.left-stack,
+.right-stack{
+  overflow:visible !important;
+}
+
+/* Mobile/PWA: garante espaço para menu inferior */
+
+/* =========================================================
+   BDR RESPONSIVO OFICIAL - MENU INFERIOR MOBILE/TABLET
+   Local: CSS/layout-bdr.css
+
+   =========================================================
+   ✅ ONDE MEXER NO TAMANHO DO MENU MOBILE
+   =========================================================
+
+   1) ALTURA DA FAIXA ESCURA DO MENU:
+      --bdr-mobile-menu-altura
+
+      Exemplo:
+      64px = mais baixo / estreito
+      70px = padrão atual
+      78px = mais alto
+
+   2) TAMANHO DOS BOTÕES:
+      --bdr-mobile-menu-btn
+
+      Exemplo:
+      44px = menor
+      48px = padrão atual
+      54px = maior
+
+   3) TAMANHO DOS ÍCONES:
+      --bdr-mobile-menu-icone
+
+      Exemplo:
+      17px = menor
+      18px = padrão atual
+      21px = maior
+
+   4) ESPAÇO ENTRE OS BOTÕES:
+      --bdr-mobile-menu-gap
+
+      Exemplo:
+      6px = mais junto
+      8px = padrão atual
+      12px = mais separado
+
+   5) ESPAÇO DO CONTEÚDO ACIMA DO MENU:
+      --bdr-mobile-content-bottom
+
+      Aumente se o último card ficar escondido atrás do menu.
+
+   COMPORTAMENTO:
+   - Desktop/notebook acima de 1200px NÃO MUDA.
+   - Tablet/celular até 1200px usa menu inferior.
+   - Se couber todos os botões, ficam CENTRALIZADOS.
+   - Se não couber, continua podendo arrastar para o lado.
+========================================================= */
+
+html,
+body{
+  min-height:100%;
+  height:auto !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  overscroll-behavior-y:auto !important;
+  -webkit-overflow-scrolling:touch !important;
 }
 
 .bdr-main,
@@ -1322,81 +1392,21 @@ main,
 .content{
   min-height:100vh;
   height:auto !important;
-  overflow-x:hidden !important; /* fallback */
-  overflow-x:clip !important;
-  overflow-y:visible !important;
+  overflow:visible !important;
 }
 
-/* Filhos não podem empurrar a largura da página. */
-.bdr-main > *,
-.content > *,
+.app-layout,
+.bdr-app{
+  min-height:100vh;
+  height:auto !important;
+  overflow:visible !important;
+}
+
 .card,
 .dashboard-grid,
 .left-stack,
 .right-stack{
-  min-width:0;
-  max-width:100%;
-}
-
-/* Mídia nunca deve aumentar a largura do documento. */
-img,
-video,
-canvas,
-svg{
-  max-width:100%;
-}
-
-/* =========================================================
-   CONTENÇÃO MOBILE / PWA
-========================================================= */
-@media(max-width:1200px){
-  html,
-  body{
-    touch-action:pan-y pinch-zoom;
-  }
-
-  .bdr-main,
-  main,
-  .content{
-    width:100% !important;
-    max-width:100% !important;
-    touch-action:pan-y pinch-zoom;
-  }
-
-  /*
-    Elementos que realmente precisam rolar para o lado continuam
-    responsáveis por sua própria rolagem.
-  */
-  .bdr-sidebar,
-  .bdr-menu,
-  [data-horizontal-scroll="true"],
-  .table-scroll,
-  .table-responsive{
-    touch-action:pan-x pinch-zoom;
-  }
-
-  /*
-    Contenção segura para os padrões de modal já existentes no sistema.
-    Não muda aparência; apenas impede o modal de ultrapassar o viewport.
-  */
-  .modal-bg,
-  .modal-overlay,
-  .triagem-modal-bg,
-  .atlas-manut-modal-bg,
-  .atlas-conf-modal-bg{
-    max-width:100%;
-    overflow-x:hidden;
-  }
-
-  .modal,
-  .modal-card,
-  .modal-side,
-  .triagem-modal,
-  .atlas-manut-modal,
-  .atlas-conf-modal{
-    min-width:0 !important;
-    max-width:100% !important;
-  }
+  overflow:visible !important;
 }
 
 /* =========================================================
@@ -1686,21 +1696,12 @@ svg{
     overflow:visible !important;
   }
 
-  /*
-    Camadas do desktop:
-    o conteúdo continua abaixo da sidebar, mas o topbar precisa ficar
-    acima dos cards/formulários para seus dropdowns aparecerem por cima.
-  */
+  /* Cabeçalho e conteúdo ficam abaixo do menu */
   .bdr-main,
+  .bdr-topbar,
   .hero,
   .card{
     z-index:1 !important;
-  }
-
-  .bdr-topbar{
-    position:relative !important;
-    z-index:5000 !important;
-    overflow:visible !important;
   }
 
   /* Nome exibido ao passar o mouse */
@@ -1744,4 +1745,78 @@ svg{
     opacity:1 !important;
     visibility:visible !important;
   }
+}
+/* =========================================================
+   ATLAS — DENSIDADE DESKTOP 100% (PADRÃO OFICIAL)
+   Objetivo: aparência equivalente ao navegador em ~90%,
+   mantendo zoom real 100% e coordenadas nativas.
+   NÃO usar zoom/scale neste bloco.
+========================================================= */
+@media (min-width:1201px){
+  :root{
+    --sidebar-width:54px;
+    --screen-zoom:1;
+  }
+
+  html{font-size:13px;}
+  body{font-size:12px; zoom:1 !important;}
+
+  .bdr-main{
+    margin-left:var(--sidebar-width);
+    width:calc(100% - var(--sidebar-width));
+    padding:7px;
+  }
+
+  .bdr-sidebar{
+    width:var(--sidebar-width);
+    padding-top:23px;
+  }
+
+  .bdr-menu{gap:7px; margin-top:5px;}
+  .bdr-menu-btn{width:36px; height:36px; border-radius:11px;}
+  .bdr-menu-icon i{font-size:15px;}
+  .bdr-menu-btn::after{left:52px !important; font-size:11px !important; padding:6px 10px !important;}
+
+  .bdr-topbar,
+  .hero{
+    border-radius:14px;
+    padding:8px 11px;
+    margin-bottom:7px;
+  }
+  .bdr-topbar-title,
+  .hero-title{font-size:15px;}
+  .bdr-topbar-sub,
+  .hero-sub{font-size:10px;}
+
+  .card{
+    border-radius:14px;
+    padding:10px;
+    margin-bottom:9px;
+  }
+  .card h3{margin-bottom:9px; font-size:14px;}
+
+  .grid{grid-template-columns:repeat(auto-fit,minmax(171px,1fr)); gap:7px;}
+
+  input,
+  select,
+  textarea{
+    padding:7px;
+    border-radius:8px;
+    font-size:11px;
+  }
+
+  button{padding:7px 9px; border-radius:7px;}
+  .btn-small{padding:7px 9px; font-size:11px; border-radius:9px;}
+
+  .kpi-grid{gap:7px; margin-bottom:9px;}
+  .kpi{border-radius:14px; padding:8px; min-height:70px;}
+}
+
+/* =========================================================
+   ATLAS SHELL - ALINHAMENTO PADRÃO DOS MÓDULOS EMBUTIDOS
+   O shell já fornece o recuo horizontal da área útil. Evita
+   somar um segundo recuo à esquerda dentro do iframe.
+========================================================= */
+html.atlas-embedded .bdr-main{
+  padding-left:0 !important;
 }

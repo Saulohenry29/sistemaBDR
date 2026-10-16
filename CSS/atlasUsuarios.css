@@ -1,3 +1,4 @@
+@scope (.atlas-shell-module[data-module="usuarios"]) {
 
 /* =========================================================
    ATLAS USUÁRIOS — CONTEÚDO OFICIAL
@@ -9,7 +10,7 @@
    - Este arquivo NÃO altera menu, sininho, usuário ou topbar.
 ========================================================= */
 
-:root{
+:scope{
   --usuarios-vermelho:#b5121b;
   --usuarios-vermelho-escuro:#8f0e15;
   --usuarios-fundo:#eef2f7;
@@ -20,6 +21,36 @@
   --usuarios-verde:#15803d;
   --usuarios-azul:#1d4ed8;
   --usuarios-sombra:0 8px 24px rgba(15,23,42,.07);
+
+  /* =======================================================
+     AJUSTE DE DENSIDADE DO MÓDULO USUÁRIOS
+     MEXA SOMENTE NESTES VALORES PARA O AJUSTE FINO.
+     Isso NÃO usa zoom/scale e NÃO altera menu/topo do Shell.
+
+     Dica: para deixar mais compacto, diminua 1–3 px por vez.
+     Para aumentar novamente, faça o contrário.
+  ======================================================= */
+  --usr-painel-padding:7px;      /* espaço interno da coluna esquerda */
+  --usr-gap-geral:8px;           /* espaço entre lista e painel direito */
+  --usr-titulo:25px;              /* “Lista de usuários” */
+  --usr-texto:10px;               /* textos/controles principais */
+  --usr-texto-menor:8px;          /* e-mail, legendas e textos auxiliares */
+  --usr-campo-altura:30px;        /* busca, filtros e botões */
+  --usr-linha-altura:42px;        /* altura de cada funcionário na lista */
+  --usr-avatar-lista:35px;        /* avatar na lista */
+  --usr-avatar-detalhe:60px;      /* avatar do funcionário selecionado */
+  --usr-detalhe-padding-y:9px;   /* altura do cabeçalho do painel direito */
+  --usr-detalhe-padding-x:13px;
+  --usr-aba-altura:10px;          /* altura das abas Dados/Permissões/... */
+  --usr-conteudo-padding:var(--usr-painel-padding);    /* espaço interno do conteúdo à direita */
+  --usr-card-padding:10px;        /* caixas de Dados do funcionário */
+  --usr-card-gap:8px;             /* distância entre as caixas */
+  --usr-rodape-padding-y:17px;     /* rodapé Limpar/Salvar */
+  --usr-rodape-padding-x:12px;
+
+  width:100%;
+  min-height:0;
+  overflow:hidden;
 }
 
 *{box-sizing:border-box}
@@ -29,10 +60,6 @@
   display:none!important;
 }
 
-body{
-  background:var(--usuarios-fundo);
-  color:var(--usuarios-texto);
-}
 
 /* =========================================================
    ESTRUTURA — aproveita toda a altura abaixo do topo
@@ -40,9 +67,10 @@ body{
 .atlas-users-main{
   display:flex!important;
   flex-direction:column!important;
-  height:100vh!important;
-  min-height:100vh!important;
-  padding:12px!important;
+  height:100%!important;
+  max-height:100%!important;
+  min-height:0!important;
+  padding:0!important;
   overflow:hidden!important;
 }
 
@@ -59,7 +87,7 @@ body{
   flex:1 1 auto!important;
   display:grid!important;
   grid-template-columns:minmax(440px,35%) minmax(0,65%)!important;
-  gap:12px!important;
+  gap:var(--usr-gap-geral)!important;
   min-height:0!important;
   width:100%!important;
   padding:0!important;
@@ -81,7 +109,7 @@ body{
 .atlas-users-list-panel{
   display:flex;
   flex-direction:column;
-  padding:15px;
+  padding:var(--usr-painel-padding);
 }
 
 .atlas-user-detail-panel{
@@ -104,13 +132,13 @@ body{
   align-items:center;
   justify-content:space-between;
   gap:12px;
-  margin-bottom:13px;
+  margin-bottom:10px;
 }
 
 .atlas-panel-title h2{
   margin:0;
   color:#111827;
-  font-size:18px;
+  font-size:var(--usr-titulo);
   font-weight:900;
 }
 
@@ -127,11 +155,11 @@ body{
   align-items:center;
   justify-content:center;
   gap:7px;
-  min-height:38px;
-  padding:0 14px;
+  min-height:var(--usr-campo-altura);
+  padding:0 8px;
   border:1px solid transparent;
   border-radius:10px;
-  font-size:12px;
+  font-size:var(--usr-texto);
   font-weight:900;
   cursor:pointer;
 }
@@ -167,7 +195,7 @@ body{
   display:flex;
   align-items:center;
   gap:9px;
-  min-height:42px;
+  min-height:var(--usr-campo-altura);
   padding:0 12px;
   border:1px solid #d7dee8;
   border-radius:11px;
@@ -185,26 +213,26 @@ body{
   outline:0;
   background:transparent;
   color:#172033;
-  font-size:13px;
+  font-size:var(--usr-texto);
 }
 
 .atlas-filter-grid{
   display:grid;
   grid-template-columns:1fr 1fr .78fr;
-  gap:9px;
-  margin:11px 0;
+  gap:8px;
+  margin:9px 0;
 }
 
 .atlas-filter-grid select{
   width:100%;
   min-width:0;
-  height:39px;
+  height:var(--usr-campo-altura);
   padding:0 10px;
   border:1px solid #d7dee8;
   border-radius:10px;
   background:#fff;
   color:#172033;
-  font-size:12px;
+  font-size:var(--usr-texto);
 }
 
 .atlas-users-table-head,
@@ -217,7 +245,7 @@ body{
 
 .atlas-users-table-head{
   flex:0 0 auto;
-  padding:9px 8px;
+  padding:7px 8px;
   color:#526074;
   font-size:10px;
   font-weight:900;
@@ -227,18 +255,24 @@ body{
 .atlas-users-list{
   flex:1 1 auto;
   min-height:0;
-  overflow-y:auto;
-  overscroll-behavior:contain;
-  scrollbar-width:thin;
+  overflow:hidden;
+  overflow-x:hidden;
+  overscroll-behavior:none;
+  scrollbar-width:none;
+}
+
+.atlas-users-list::-webkit-scrollbar{
+  display:none;
 }
 
 .atlas-user-row{
   position:relative;
-  min-height:60px;
-  padding:9px 8px;
+  min-height:var(--usr-linha-altura);
+  padding:6px 8px;
   border-top:1px solid #edf1f5;
   border-radius:10px;
   cursor:pointer;
+  overflow:hidden;
   transition:.14s ease;
 }
 
@@ -256,7 +290,7 @@ body{
 .atlas-user-cell{
   display:flex;
   align-items:center;
-  gap:10px;
+  gap:8px;
   min-width:0;
 }
 
@@ -296,14 +330,14 @@ body{
 }
 
 .atlas-avatar.row{
-  width:36px;
-  height:36px;
+  width:var(--usr-avatar-lista);
+  height:var(--usr-avatar-lista);
   font-size:11px;
 }
 
 .atlas-avatar.selected{
-  width:64px;
-  height:64px;
+  width:var(--usr-avatar-detalhe);
+  height:var(--usr-avatar-detalhe);
   font-size:23px;
 }
 
@@ -313,8 +347,8 @@ body{
   align-items:center;
   justify-content:center;
   max-width:100%;
-  min-height:24px;
-  padding:4px 7px;
+  min-height:22px;
+  padding:3px 6px;
   overflow:hidden;
   border-radius:6px;
   font-size:9px;
@@ -355,22 +389,22 @@ body{
   align-items:center;
   justify-content:center;
   gap:6px;
-  min-height:47px;
-  padding:10px 0 0;
+  min-height:42px;
+  padding:7px 0 0;
 }
 
 .atlas-pagination button{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  min-width:34px;
-  height:34px;
+  min-width:31px;
+  height:31px;
   padding:0 9px;
   border:1px solid #d7dee8;
   border-radius:9px;
   background:#fff;
   color:#334155;
-  font-size:12px;
+  font-size:var(--usr-texto);
   font-weight:900;
   cursor:pointer;
 }
@@ -421,7 +455,7 @@ body{
 
 .atlas-no-selection p{
   margin:0;
-  font-size:12px;
+  font-size:var(--usr-texto);
 }
 
 .atlas-selected-header{
@@ -430,7 +464,7 @@ body{
   align-items:center;
   justify-content:space-between;
   gap:18px;
-  padding:20px 22px 15px;
+  padding:var(--usr-detalhe-padding-y) var(--usr-detalhe-padding-x);
 }
 
 .atlas-selected-main{
@@ -498,14 +532,14 @@ body{
 .excel-tabs .atlas-tab{
   position:relative;
   flex:0 0 auto;
-  min-height:42px;
-  padding:10px 15px;
+  min-height:var(--usr-aba-altura);
+  padding:8px 12px;
   border:1px solid transparent;
   border-bottom:0;
   border-radius:9px 9px 0 0;
   background:transparent;
   color:#64748b;
-  font-size:12px;
+  font-size:var(--usr-texto);
   font-weight:900;
   white-space:nowrap;
   cursor:pointer;
@@ -533,7 +567,7 @@ body{
 
 .atlas-tab-content{
   display:none;
-  padding:16px;
+  padding:var(--usr-conteudo-padding);
 }
 
 .atlas-tab-content.active{
@@ -586,14 +620,14 @@ body{
 .atlas-data-grid{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:10px;
+  gap:var(--usr-card-gap);
 }
 
 .atlas-data-card,
 .atlas-module-card,
 .atlas-mode-card{
   min-width:0;
-  padding:13px;
+  padding:var(--usr-card-padding);
   border:1px solid var(--usuarios-borda);
   border-radius:12px;
   background:#fff;
@@ -611,7 +645,7 @@ body{
   display:block;
   overflow-wrap:anywhere;
   color:#0f172a;
-  font-size:12px;
+  font-size:var(--usr-texto);
 }
 
 .atlas-master-switch{
@@ -687,7 +721,7 @@ body{
   align-items:center;
   justify-content:space-between;
   margin:0 0 9px;
-  font-size:12px;
+  font-size:var(--usr-texto);
 }
 
 .atlas-permission-row{
@@ -695,7 +729,7 @@ body{
   align-items:center;
   justify-content:space-between;
   gap:10px;
-  min-height:38px;
+  min-height:var(--usr-campo-altura);
   padding:7px 0;
   border-top:1px solid #f0f3f6;
 }
@@ -768,7 +802,7 @@ body{
 
 .atlas-mode-summary strong{
   margin:4px 0 7px;
-  font-size:12px;
+  font-size:var(--usr-texto);
 }
 
 .atlas-mode-card{
@@ -777,7 +811,7 @@ body{
 
 .atlas-mode-card h3{
   margin:0 0 8px;
-  font-size:12px;
+  font-size:var(--usr-texto);
 }
 
 .atlas-mode-card label{
@@ -873,7 +907,7 @@ body{
 
 .atlas-history-item strong{
   display:block;
-  font-size:12px;
+  font-size:var(--usr-texto);
 }
 
 .atlas-history-item span{
@@ -889,7 +923,7 @@ body{
   align-items:center;
   justify-content:space-between;
   gap:12px;
-  padding:12px 16px;
+  padding:var(--usr-rodape-padding-y) var(--usr-rodape-padding-x);
   border-top:1px solid var(--usuarios-borda);
   background:#fff;
 }
@@ -954,12 +988,12 @@ body{
 .atlas-modal h2{
   margin:0;
   color:var(--usuarios-vermelho);
-  font-size:17px;
+  font-size:var(--usr-titulo);
 }
 
 .atlas-modal header button{
-  width:32px;
-  height:32px;
+  width:var(--usr-avatar-lista);
+  height:var(--usr-avatar-lista);
   border:0;
   border-radius:9px;
   background:#fee2e2;
@@ -1016,7 +1050,7 @@ body{
 
 .atlas-profile-card h3{
   margin:7px 0 4px;
-  font-size:12px;
+  font-size:var(--usr-texto);
 }
 
 .atlas-profile-card p{
@@ -1058,7 +1092,7 @@ body{
   border-radius:11px;
   background:#effcf3;
   box-shadow:0 15px 40px rgba(22,163,74,.2);
-  font-size:12px;
+  font-size:var(--usr-texto);
   font-weight:900;
   opacity:0;
   transform:translate(-50%,-15px);
@@ -1193,195 +1227,59 @@ body{
 }
 
 /* =========================================================
-   ATLAS USUÁRIOS — CORREÇÃO DEFINITIVA DE ALTURA
-   Mantém menu e topbar nos arquivos oficiais.
-   Faz o módulo preencher toda a área útil da tela.
+   ALTURA DO MÓDULO NO SHELL
+   Uma única regra de altura. Não usa position:fixed, zoom ou scale.
+   O Shell continua responsável pelo menu e pelo topo.
 ========================================================= */
-
-/*
-  DESKTOP
-  O conteúdo fica preso entre:
-  - o menu lateral à esquerda;
-  - o topo da janela;
-  - o final real da janela.
-*/
 @media (min-width:1201px){
-
-  html,
-  body{
-    width:100%!important;
-    height:100%!important;
-    min-height:0!important;
-    overflow:hidden!important;
+  :scope{
+    height:calc(100dvh - var(--atlas-header-height, 74px) - var(--atlas-content-gap, 12px));
   }
 
-  .app-layout{
-    width:100%!important;
-    height:100vh!important;
-    height:100dvh!important;
-    min-height:0!important;
-    overflow:hidden!important;
-  }
-
-  /*
-    O menu oficial ocupa aproximadamente 68px.
-    O módulo começa depois dele e termina no final da janela.
-  */
-  .bdr-main.atlas-users-main{
-    position:fixed!important;
-    inset:0 0 0 68px!important;
-
-    display:flex!important;
-    flex-direction:column!important;
-
-    width:auto!important;
-    max-width:none!important;
-
-    height:auto!important;
-    min-height:0!important;
-    max-height:none!important;
-
-    margin:0!important;
-    padding:12px!important;
-
-    overflow:hidden!important;
-  }
-
-  .bdr-main.atlas-users-main > .bdr-topbar{
-    flex:0 0 auto!important;
-    width:100%!important;
-    margin:0 0 10px!important;
-  }
-
-  .bdr-main.atlas-users-main > .atlas-users-workspace{
-    flex:1 1 0!important;
-
-    display:grid!important;
-    grid-template-columns:minmax(440px,35%) minmax(0,65%)!important;
-
-    width:100%!important;
-    height:auto!important;
-    min-height:0!important;
-    max-height:none!important;
-
-    margin:0!important;
-    padding:0!important;
-
-    overflow:hidden!important;
-  }
-
+  .atlas-users-main,
+  .atlas-users-workspace,
   .atlas-users-list-panel,
-  .atlas-user-detail-panel{
-    align-self:stretch!important;
-
-    width:auto!important;
-    height:auto!important;
-    min-height:0!important;
-    max-height:none!important;
-
-    margin:0!important;
-
-    overflow:hidden!important;
-  }
-
-  .atlas-users-list-panel{
-    display:flex!important;
-    flex-direction:column!important;
+  .atlas-user-detail-panel,
+  #conteudoUsuario{
+    height:100%;
+    min-height:0;
   }
 
   .atlas-users-list{
-    flex:1 1 0!important;
-
-    height:auto!important;
-    min-height:0!important;
-    max-height:none!important;
-
-    overflow-y:auto!important;
-  }
-
-  .atlas-user-detail-panel{
-    display:flex!important;
-    flex-direction:column!important;
-  }
-
-  #semUsuario{
-    flex:1 1 0!important;
-    min-height:0!important;
-  }
-
-  #conteudoUsuario{
-    flex:1 1 0!important;
-
-    display:flex!important;
-    flex-direction:column!important;
-
-    width:100%!important;
-    height:auto!important;
-    min-height:0!important;
-    max-height:none!important;
-
-    overflow:hidden!important;
-  }
-
-  #conteudoUsuario[hidden]{
-    display:none!important;
+    flex:1 1 auto;
+    min-height:0;
+    overflow:hidden;
   }
 
   .atlas-tab-scroll-area{
-    flex:1 1 0!important;
-
-    height:auto!important;
-    min-height:0!important;
-    max-height:none!important;
-
-    overflow-y:auto!important;
+    flex:1 1 auto;
+    min-height:0;
+    overflow-y:auto;
   }
 
   .atlas-save-footer{
-    flex:0 0 auto!important;
-    position:relative!important;
-    inset:auto!important;
-    margin:0!important;
+    flex:0 0 auto;
+    margin-top:auto;
   }
 }
 
-/*
-  TELAS MENORES
-  Mantém rolagem normal e o menu mobile oficial.
-*/
 @media (max-width:1200px){
-
-  html,
-  body{
-    min-height:100%!important;
+  :scope{
+    height:auto;
+    min-height:0;
+    overflow:visible;
   }
 
-  .bdr-main.atlas-users-main{
-    position:relative!important;
-    inset:auto!important;
-
-    width:auto!important;
-    height:auto!important;
-    min-height:100vh!important;
-    min-height:100dvh!important;
-
-    margin:0!important;
+  .atlas-users-main,
+  .atlas-users-workspace,
+  .atlas-users-list-panel,
+  .atlas-user-detail-panel,
+  #conteudoUsuario{
+    height:auto;
   }
 }
 
-/* Evita rolagem horizontal */
-.atlas-users-list-panel{
-    overflow-x:hidden;
-}
-
-.atlas-users-list{
-    overflow-x:hidden;
-}
-
-.atlas-user-row{
-    overflow:hidden;
-}
-
+/* Textos longos permanecem contidos nas colunas da lista. */
 .atlas-user-cell{
     min-width:0;
 }
@@ -1424,7 +1322,7 @@ body{
 
 .atlas-modo-aviso-topo strong{
   color:#172033;
-  font-size:12px;
+  font-size:var(--usr-texto);
 }
 
 .atlas-modo-aviso-topo small{
@@ -1436,7 +1334,7 @@ body{
 .atlas-modo-opcoes{
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:10px;
+  gap:var(--usr-card-gap);
 }
 
 .atlas-modo-opcao{
@@ -1722,7 +1620,7 @@ body{
 #modalExpedicaoObras .atlas-expedition-work-text strong{
   overflow:hidden;
   color:#1f2937;
-  font-size:12px;
+  font-size:var(--usr-texto);
   text-overflow:ellipsis;
   white-space:nowrap;
 }
@@ -1749,7 +1647,7 @@ body{
 }
 
 #modalExpedicaoObras #btnSalvarExpedicaoObras{
-  min-height:38px;
+  min-height:var(--usr-campo-altura);
   padding:8px 13px;
   border:0;
   border-radius:9px;
@@ -1774,3 +1672,32 @@ body{
     flex-direction:column;
   }
 }
+
+}
+
+/* Avatar de usuário - armazenamento Atlas Files */
+.atlas-avatar{overflow:hidden}
+.atlas-avatar-img{display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.atlas-avatar-editor{display:flex;align-items:center;gap:14px;padding:17px 17px 0}
+.atlas-avatar-editor>div:last-child{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.atlas-avatar-editor strong{width:100%;font-size:11px}
+.atlas-avatar-editor small{width:100%;color:var(--usuarios-muted);font-size:10px}
+.atlas-avatar-upload{position:relative;cursor:pointer}
+
+
+/* Obras de atuação no cadastro/edição de usuário */
+.atlas-work-picker{
+  display:flex;width:100%;height:39px;margin-top:5px;padding:0 10px;align-items:center;justify-content:space-between;
+  border:1px solid #d7dee8;border-radius:9px;background:#fff;color:#172033;cursor:pointer;font:inherit;text-align:left;
+}
+.atlas-work-picker:hover{border-color:var(--usuarios-vermelho)}
+.atlas-work-picker-modal header>div p{margin:3px 0 0;color:var(--usuarios-muted);font-size:11px}
+.atlas-work-picker-tools{display:flex;align-items:center;gap:12px;padding:14px 17px 8px}
+.atlas-work-picker-tools .atlas-search{flex:1}
+.atlas-work-picker-tools>span{white-space:nowrap;font-size:11px;font-weight:800;color:var(--usuarios-muted)}
+.atlas-work-picker-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;max-height:48vh;overflow:auto;padding:8px 17px 17px}
+@media(max-width:760px){.atlas-work-picker-list{grid-template-columns:1fr}}
+
+
+/* Acesso seguro - migração gradual Supabase Auth */
+.atlas-auth-card{display:flex;align-items:center;gap:14px;margin:0 0 16px;padding:14px 16px;border:1px solid #dfe5ec;border-radius:14px;background:#fff}.atlas-auth-icon{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:#f1f5f9;font-size:18px}.atlas-auth-info{min-width:0;display:flex;flex:1;flex-direction:column;gap:2px}.atlas-auth-info small{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;font-weight:800}.atlas-auth-info strong{font-size:14px;color:#172033}.atlas-auth-info span{font-size:12px;color:#64748b;line-height:1.35}.atlas-auth-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}.atlas-auth-badge{display:inline-flex;align-items:center;justify-content:center;min-width:82px;padding:6px 10px;border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.05em}.atlas-auth-badge.legacy{background:#f1f5f9;color:#475569}.atlas-auth-badge.pending{background:#fff7ed;color:#9a3412}.atlas-auth-badge.active{background:#ecfdf5;color:#047857}@media(max-width:760px){.atlas-auth-card{align-items:flex-start;flex-wrap:wrap}.atlas-auth-actions{width:100%;justify-content:flex-start;padding-left:56px}}

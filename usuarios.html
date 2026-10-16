@@ -1,308 +1,145 @@
-<!DOCTYPE html>
-<html lang="pt-br" class="atlas-users-loading">
+<!doctype html>
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="data:,">
-  <title>Usuários</title>
-  <link rel="stylesheet" href="./CSS/layout-bdr.css">
-  <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260805-users-v8">
-  <link rel="stylesheet" href="./CSS/atlas-topbar.css?v=20260724-v3">
-  <link rel="stylesheet" href="./CSS/atlasUsuarios.css?v=20260806-modo-compacto">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usuários</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="./CSS/atlasUsuarios.css?v=20260917-shell">
+<style>html,body{width:100%;height:100%;margin:0;overflow:hidden}body>.bdr-main{width:100%;height:100%;min-height:0}.atlas-shell-module[data-module="usuarios"]{display:block;width:100%;height:100%;min-height:0}</style>
 </head>
 <body>
-<script src="./JS/auth.js"></script>
-<script>verificarLogin();</script>
-<div class="app-layout">
-  <aside class="bdr-sidebar">
-    <div class="bdr-brand"><div class="bdr-brand-icon bdr-logo-menu"></div></div>
-    <nav class="bdr-menu">
-
-  <!-- DASHBOARD -->
-  <button
-    data-permissao="DASHBOARD_VER"
-    class="bdr-menu-btn"
-    data-tip="Dashboard"
-    onclick="location.href='dashboard.html'">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-chart-simple"></i>
-    </span>
-  </button>
-
-  <!-- ENTRADA -->
-  <button
-    data-permissao="ENTRADA_VER"
-    class="bdr-menu-btn"
-    data-tip="Entrada"
-    onclick="location.href='entrada.html'">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-arrow-down-wide-short"></i>
-    </span>
-  </button>
-
-  <!-- TRIAGEM -->
-  <button
-    data-permissao="TRIAGEM_VER"
-    class="bdr-menu-btn"
-    data-tip="Triagem"
-    onclick="location.href='triagem.html'">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-vials"></i>
-    </span>
-  </button>
-
-  <!-- ESTOQUE -->
-  <button
-    data-permissao="ESTOQUE_VER"
-    class="bdr-menu-btn"
-    data-tip="Estoque"
-    onclick="location.href='estoque.html'">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-boxes-stacked"></i>
-    </span>
-  </button>
-
-  <!-- PATRIMÔNIO -->
-  <button
-    data-permissao="PATRIMONIO_VER"
-    class="bdr-menu-btn"
-    data-tip="Patrimônio"
-    onclick="location.href='patrimonio.html'">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-tags"></i>
-    </span>
-  </button>
-  
-  <!-- MANUTENÇÃO -->
-  <button
-    data-permissao="MANUTENCAO_VER"
-    class="bdr-menu-btn"
-    data-tip="Manutenção"
-    onclick="location.href='manutencao.html'">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-screwdriver-wrench"></i>
-    </span>
-  </button>
-
-  <!-- EXPEDIÇÃO -->
-  <button
-    data-permissao="EXPEDICAO_VER"
-    class="bdr-menu-btn"
-    data-tip="Expedição"
-    onclick="location.href='expedicao.html'">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-truck-fast"></i>
-    </span>
-  </button>
-
-  <!-- MOVIMENTAÇÕES -->
-  <button
-    data-permissao="MOVIMENTACOES_VER"
-    class="bdr-menu-btn"
-    data-tip="Movimentações"
-    onclick="location.href='movimentacoes.html'">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-right-left"></i>
-    </span>
-  </button>
-
-
-  <!-- RELATÓRIOS -->
-  <button
-    data-permissao="RELATORIOS_VER"
-    class="bdr-menu-btn"
-    data-tip="Relatórios"
-    onclick="location.href='relatorios.html'">
-    <span class="bdr-menu-icon">
-      <i class="fa-regular fa-file-lines"></i>
-    </span>
-  </button>
-
-  <!-- EMPRESAS -->
-  <button
-    data-permissao="EMPRESAS_VER"
-    class="bdr-menu-btn"
-    data-tip="Empresas"
-    onclick="location.href='empresa.html'">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-building"></i>
-    </span>
-  </button>
-
-  <!-- USUÁRIOS -->
-  <button
-    data-permissao="USUARIOS_VER"
-    class="bdr-menu-btn active"
-    data-tip="Usuários"
-    onclick="location.href='usuarios.html'">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-users"></i>
-    </span>
-  </button>
-
-</nav>
-  </aside>
-
-  <main class="bdr-main atlas-users-main">
-    <div class="bdr-topbar">
-      <div>
-        <div class="bdr-topbar-title">👥 BDR Usuários</div>
-        <div class="bdr-topbar-sub">Cadastre funcionários, organize acessos, notificações e obras liberadas.</div>
-      </div>
-      <div class="bdr-top-actions">
-        <div class="notif-wrap">
-          <button class="notif-btn" type="button" data-atlas-toggle="notifications" aria-label="Abrir notificações" title="Notificações"><i class="fa-regular fa-bell"></i><span id="notifBadge" class="notif-badge">0</span></button>
-          <div id="notifDropdown" class="notif-dropdown" onclick="event.stopPropagation()"><div class="notif-head">🔔 Central de notificações</div><div id="notifLista" class="notif-list"><div class="notif-item">Nenhuma notificação no momento.</div></div></div>
-        </div>
-        <div class="user-menu" id="atlasUserMenu" data-atlas-toggle="user" aria-label="Abrir menu do usuário">
-          <div class="user-mini"><b id="usuarioNome">Olá, usuário</b><small id="usuarioPerfil">-</small></div>
-          <div class="avatar"><i class="fa-solid fa-user"></i></div>
-          <div id="dropdownUser" class="dropdown-user">
-            <button type="button" onclick="location.href='MinhaConta/minha-conta.html';event.stopPropagation()">
-              <i class="fa-solid fa-circle-user"></i> Minha conta
-            </button>
-            <button type="button" class="logout-btn" onclick="logout();event.stopPropagation()"><i class="fa-solid fa-right-from-bracket"></i> Sair do sistema</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <section class="atlas-users-workspace">
-      <aside class="atlas-users-list-panel">
-        <div class="atlas-panel-title"><div><h2>Lista de usuários</h2><span id="totalUsuarios">0 usuários</span></div><button id="btnNovoUsuario" class="atlas-btn primary" type="button"><i class="fa-solid fa-plus"></i> Novo</button></div>
-        <div class="atlas-search"><i class="fa-solid fa-magnifying-glass"></i><input id="filtroBusca" placeholder="Buscar nome, usuário ou e-mail..."></div>
-        <div class="atlas-filter-grid">
-          <select id="filtroPerfil"><option value="">Todos os perfis</option></select>
-          <select id="filtroObra"><option value="">Todas as obras</option></select>
-          <select id="filtroStatus"><option value="">Status</option><option value="ATIVO">Ativo</option><option value="INATIVO">Inativo</option></select>
-        </div>
-        <div class="atlas-users-table-head"><span>Usuário</span><span>Perfil</span><span>Obra</span><span>Status</span></div>
-        <div id="listaUsuarios" class="atlas-users-list"><div class="atlas-empty">Carregando usuários...</div></div>
-        <div id="paginacaoUsuarios" class="atlas-pagination"></div>
-      </aside>
-
-      <section class="atlas-user-detail-panel" id="atlasUserDetailPanel">
-        <div id="semUsuario" class="atlas-no-selection"><i class="fa-solid fa-user-check"></i><h2>Selecione um funcionário</h2><p>O cadastro será aberto aqui, sem pular a página.</p></div>
-        <div id="conteudoUsuario" hidden>
-          <div class="atlas-selected-header">
-            <div class="atlas-selected-main"><div id="selectedAvatar" class="atlas-avatar selected">--</div><div><h2 id="selectedName">-</h2><p id="selectedLogin">-</p><span id="selectedStatus" class="atlas-status active">ATIVO</span></div></div>
-            <div class="atlas-selected-meta"><div><small>Perfil atual</small><strong id="selectedProfile">-</strong></div><div><small>Último acesso</small><strong id="selectedLastAccess">Não informado</strong></div><div><small>Obra principal</small><strong id="selectedWork">-</strong></div></div>
-          </div>
-
-          <nav class="atlas-tabs excel-tabs" role="tablist">
-            <button class="atlas-tab active" data-tab="dados"><i class="fa-regular fa-id-card"></i> Dados</button>
-            <button class="atlas-tab" data-tab="permissoes"><i class="fa-solid fa-key"></i> Permissões</button>
-            <button class="atlas-tab" data-tab="notificacoes"><i class="fa-regular fa-bell"></i> Notificações</button>
-            <button class="atlas-tab" data-tab="obras"><i class="fa-solid fa-building"></i> Obras</button>
-            <button class="atlas-tab" data-tab="historico"><i class="fa-solid fa-clock-rotate-left"></i> Histórico</button>
-          </nav>
-
-          <div class="atlas-tab-scroll-area">
-            <div id="tabDados" class="atlas-tab-content active">
-              <div class="atlas-data-hero">
-                <div><h3>Dados do funcionário</h3><p>Cadastre a pessoa primeiro e depois avance pelas abas.</p></div>
-                <div class="atlas-step-badge">Etapa 1 de 5</div>
-              </div>
-              <div class="atlas-selected-actions data-actions">
-                <button id="btnEditarUsuario" class="atlas-btn primary"><i class="fa-solid fa-pen"></i> Editar dados</button>
-                <button id="btnTrocarSenha" class="atlas-btn light"><i class="fa-solid fa-lock"></i> Trocar senha</button>
-                <button id="btnPerfilRapido" class="atlas-btn dark"><i class="fa-solid fa-user-gear"></i> Aplicar perfil rápido</button>
-              </div>
-              <div id="dataSummary" class="atlas-data-grid"></div>
-            </div>
-
-            <div id="tabPermissoes" class="atlas-tab-content">
-              <div class="atlas-data-hero"><div><h3>Permissões do sistema</h3><p>Defina exatamente o que o funcionário poderá acessar e executar.</p></div><div class="atlas-step-badge">Etapa 2 de 5</div></div>
-              <div class="atlas-master-switch"><div><strong>Permissões gerais</strong><span>Habilitar ou desabilitar todas as permissões visíveis.</span></div><label class="atlas-switch"><input id="switchTodasPermissoes" type="checkbox"><span></span></label></div>
-              <div id="permissionModules" class="atlas-module-grid"></div>
-            </div>
-
-            <div id="tabNotificacoes" class="atlas-tab-content">
-              <div class="atlas-data-hero"><div><h3>Notificações</h3><p>A Expedição acompanha a responsabilidade do funcionário. Patrimônio e avisos opcionais podem ser escolhidos.</p></div><div class="atlas-step-badge">Etapa 3 de 5</div></div>
-              <div class="atlas-notif-intro"><div class="atlas-bell-circle"><i class="fa-solid fa-bell"></i></div><div><strong>Preferências de notificações</strong><p>Escolha os avisos opcionais e o modo de aviso.</p></div><div class="atlas-mode-summary"><small>Modo atual</small><strong id="modoAtualTexto">Som e aviso</strong></div></div>
-              <div id="notificationModules" class="atlas-module-grid notifications"></div>
-              <section class="atlas-modo-aviso-card">
-                <div class="atlas-modo-aviso-topo">
-                  <div>
-                    <strong><i class="fa-solid fa-volume-high"></i> Modo de aviso</strong>
-                    <small>Escolha como este funcionário receberá os avisos.</small>
-                  </div>
-
-                  <button id="btnTestarSom" type="button" class="atlas-btn light small">
-                    <i class="fa-solid fa-volume-high"></i> Testar som
-                  </button>
-                </div>
-
-                <div class="atlas-modo-opcoes">
-                  <label class="atlas-modo-opcao">
-                    <input type="radio" name="notificationMode" value="NOTIF_MODO_SOM">
-                    <span class="atlas-modo-conteudo">
-                      <span class="atlas-modo-icone"><i class="fa-solid fa-bell"></i></span>
-                      <span>
-                        <strong>Som e aviso</strong>
-                        <small>Tocar som e mostrar no sininho.</small>
-                      </span>
-                    </span>
-                  </label>
-
-                  <label class="atlas-modo-opcao">
-                    <input type="radio" name="notificationMode" value="NOTIF_MODO_VISUAL">
-                    <span class="atlas-modo-conteudo">
-                      <span class="atlas-modo-icone"><i class="fa-regular fa-bell"></i></span>
-                      <span>
-                        <strong>Apenas aviso</strong>
-                        <small>Mostrar somente a notificação visual.</small>
-                      </span>
-                    </span>
-                  </label>
-
-                  <label class="atlas-modo-opcao">
-                    <input type="radio" name="notificationMode" value="NOTIF_MODO_SILENCIOSO">
-                    <span class="atlas-modo-conteudo">
-                      <span class="atlas-modo-icone"><i class="fa-solid fa-moon"></i></span>
-                      <span>
-                        <strong>Silencioso</strong>
-                        <small>Sem som; os avisos continuam no sininho.</small>
-                      </span>
-                    </span>
-                  </label>
-                </div>
-              </section>
-            </div>
-
-            <div id="tabObras" class="atlas-tab-content">
-              <div class="atlas-data-hero"><div><h3>Obras e setores</h3><p>Escolha a obra principal e os outros locais que este funcionário poderá acessar.</p></div><div class="atlas-step-badge">Etapa 4 de 5</div></div>
-              <div class="atlas-work-toolbar"><div class="atlas-search"><i class="fa-solid fa-magnifying-glass"></i><input id="buscaObrasInline" placeholder="Buscar obra ou setor..."></div><div><button id="btnMarcarObrasInline" class="atlas-btn light">Marcar todas</button><button id="btnDesmarcarObrasInline" class="atlas-btn light">Desmarcar</button></div></div>
-              <div id="listaObrasInline" class="atlas-work-list inline"></div>
-            </div>
-
-            <div id="tabHistorico" class="atlas-tab-content">
-              <div class="atlas-data-hero"><div><h3>Histórico do usuário</h3><p>Resumo das informações de criação, atualização e último acesso disponíveis atualmente.</p></div><div class="atlas-step-badge">Etapa 5 de 5</div></div>
-              <div id="historyTimeline" class="atlas-history-timeline"></div>
-            </div>
-          </div>
-
-          <footer class="atlas-save-footer"><span id="pendingChangesText">Nenhuma alteração pendente</span><div><button id="btnDescartar" class="atlas-btn light"><i class="fa-solid fa-rotate-left"></i> Limpar alterações</button><button id="btnSalvarPermissoes" class="atlas-btn primary"><i class="fa-solid fa-floppy-disk"></i> Salvar alterações</button></div></footer>
-        </div>
-      </section>
-    </section>
-  </main>
+<main class="bdr-main">
+<section aria-hidden="true" class="atlas-shell-module" data-module="usuarios">
+<div class="atlas-users-main">
+<section class="atlas-users-workspace">
+<aside class="atlas-users-list-panel">
+<div class="atlas-panel-title"><div><h2>Lista de usuários</h2><span id="totalUsuarios">0 usuários</span></div><button class="atlas-btn primary" id="btnNovoUsuario" type="button"><i class="fa-solid fa-plus"></i> Novo</button></div>
+<div class="atlas-search"><i class="fa-solid fa-magnifying-glass"></i><input id="filtroBusca" type="search" name="atlas_busca_usuario" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Buscar nome, usuário ou e-mail..."/></div>
+<div class="atlas-filter-grid">
+<select id="filtroPerfil"><option value="">Todos os perfis</option></select>
+<select id="filtroObraUsuario"><option value="">Todas as obras</option></select>
+<select id="filtroStatusUsuario"><option value="">Status</option><option value="ATIVO">Ativo</option><option value="INATIVO">Inativo</option></select>
 </div>
+<div class="atlas-users-table-head"><span>Usuário</span><span>Perfil</span><span>Obra</span><span>Status</span></div>
+<div class="atlas-users-list" id="listaUsuarios"><div class="atlas-empty">Carregando usuários...</div></div>
+<div class="atlas-pagination" id="paginacaoUsuarios"></div>
+</aside>
+<section class="atlas-user-detail-panel" id="atlasUserDetailPanel">
+<div class="atlas-no-selection" id="semUsuario"><i class="fa-solid fa-user-check"></i><h2>Selecione um funcionário</h2><p>O cadastro será aberto aqui, sem pular a página.</p></div>
+<div hidden="" id="conteudoUsuario">
+<div class="atlas-selected-header">
+<div class="atlas-selected-main"><div class="atlas-avatar selected" id="selectedAvatar">--</div><div><h2 id="selectedName">-</h2><p id="selectedLogin">-</p><span class="atlas-status active" id="selectedStatus">ATIVO</span></div></div>
+<div class="atlas-selected-meta"><div><small>Perfil atual</small><strong id="selectedProfile">-</strong></div><div><small>Último acesso</small><strong id="selectedLastAccess">Não informado</strong></div><div><small>Obras de atuação</small><strong id="selectedWork">-</strong></div></div>
+</div>
+<nav class="atlas-tabs excel-tabs" role="tablist">
+<button class="atlas-tab active" data-tab="dados"><i class="fa-regular fa-id-card"></i> Dados</button>
+<button class="atlas-tab" data-tab="permissoes"><i class="fa-solid fa-key"></i> Permissões</button>
+<button class="atlas-tab" data-tab="notificacoes"><i class="fa-regular fa-bell"></i> Notificações</button>
+<button class="atlas-tab" data-tab="obras"><i class="fa-solid fa-building"></i> Obras</button>
+<button class="atlas-tab" data-tab="historico"><i class="fa-solid fa-clock-rotate-left"></i> Histórico</button>
+</nav>
+<div class="atlas-tab-scroll-area">
+<div class="atlas-tab-content active" id="tabDados">
+<div class="atlas-data-hero">
+<div><h3>Dados do funcionário</h3><p>Cadastre a pessoa primeiro e depois avance pelas abas.</p></div>
+<div class="atlas-step-badge">Etapa 1 de 5</div>
+</div>
+<div class="atlas-selected-actions data-actions">
+<button class="atlas-btn primary" id="btnEditarUsuario"><i class="fa-solid fa-pen"></i> Editar dados</button>
+<button class="atlas-btn light" id="btnTrocarSenha"><i class="fa-solid fa-lock"></i> Trocar senha</button>
+<button class="atlas-btn dark" id="btnPerfilRapido"><i class="fa-solid fa-user-gear"></i> Aplicar perfil rápido</button>
+</div>
+<section class="atlas-auth-card" id="atlasAuthCard">
+<div class="atlas-auth-icon"><i class="fa-solid fa-shield-halved"></i></div>
+<div class="atlas-auth-info">
+<small>Acesso seguro</small>
+<strong id="authStatusTitulo">Carregando...</strong>
+<span id="authStatusDescricao">Verificando autenticação deste usuário.</span>
+</div>
+<div class="atlas-auth-actions">
+<span class="atlas-auth-badge legacy" id="authStatusBadge">LEGADO</span>
+<button class="atlas-btn light small" id="btnAtivarAcessoSeguro" type="button" hidden><i class="fa-solid fa-shield-halved"></i> Ativar acesso seguro</button>
+</div>
+</section>
+<div class="atlas-data-grid" id="dataSummary"></div>
+</div>
+<div class="atlas-tab-content" id="tabPermissoes">
+<div class="atlas-data-hero"><div><h3>Permissões do sistema</h3><p>Defina exatamente o que o funcionário poderá acessar e executar.</p></div><div class="atlas-step-badge">Etapa 2 de 5</div></div>
+<div class="atlas-master-switch"><div><strong>Permissões gerais</strong><span>Habilitar ou desabilitar todas as permissões visíveis.</span></div><label class="atlas-switch"><input id="switchTodasPermissoes" type="checkbox"><span></span></input></label></div>
+<div class="atlas-module-grid" id="permissionModules"></div>
+</div>
+<div class="atlas-tab-content" id="tabNotificacoes">
+<div class="atlas-data-hero"><div><h3>Notificações</h3><p>A Expedição acompanha a responsabilidade do funcionário. Patrimônio e avisos opcionais podem ser escolhidos.</p></div><div class="atlas-step-badge">Etapa 3 de 5</div></div>
+<div class="atlas-notif-intro"><div class="atlas-bell-circle"><i class="fa-solid fa-bell"></i></div><div><strong>Preferências de notificações</strong><p>Escolha os avisos opcionais e o modo de aviso.</p></div><div class="atlas-mode-summary"><small>Modo atual</small><strong id="modoAtualTexto">Som e aviso</strong></div></div>
+<div class="atlas-module-grid notifications" id="notificationModules"></div>
+<section class="atlas-modo-aviso-card">
+<div class="atlas-modo-aviso-topo">
+<div>
+<strong><i class="fa-solid fa-volume-high"></i> Modo de aviso</strong>
+<small>Escolha como este funcionário receberá os avisos.</small>
+</div>
+<button class="atlas-btn light small" id="btnTestarSom" type="button">
+<i class="fa-solid fa-volume-high"></i> Testar som
+                  </button>
+</div>
+<div class="atlas-modo-opcoes">
+<label class="atlas-modo-opcao">
+<input name="notificationMode" type="radio" value="NOTIF_MODO_SOM">
+<span class="atlas-modo-conteudo">
+<span class="atlas-modo-icone"><i class="fa-solid fa-bell"></i></span>
+<span>
+<strong>Som e aviso</strong>
+<small>Tocar som e mostrar no sininho.</small>
+</span>
+</span>
+</input></label>
+<label class="atlas-modo-opcao">
+<input name="notificationMode" type="radio" value="NOTIF_MODO_VISUAL">
+<span class="atlas-modo-conteudo">
+<span class="atlas-modo-icone"><i class="fa-regular fa-bell"></i></span>
+<span>
+<strong>Apenas aviso</strong>
+<small>Mostrar somente a notificação visual.</small>
+</span>
+</span>
+</input></label>
+<label class="atlas-modo-opcao">
+<input name="notificationMode" type="radio" value="NOTIF_MODO_SILENCIOSO">
+<span class="atlas-modo-conteudo">
+<span class="atlas-modo-icone"><i class="fa-solid fa-moon"></i></span>
+<span>
+<strong>Silencioso</strong>
+<small>Sem som; os avisos continuam no sininho.</small>
+</span>
+</span>
+</input></label>
+</div>
+</section>
+</div>
+<div class="atlas-tab-content" id="tabObras">
+<div class="atlas-data-hero"><div><h3>Obras e setores</h3><p>Marque exatamente as obras em que este funcionário poderá visualizar e atuar, conforme as permissões concedidas.</p></div><div class="atlas-step-badge">Etapa 4 de 5</div></div>
+<div class="atlas-work-toolbar"><div class="atlas-search"><i class="fa-solid fa-magnifying-glass"></i><input id="buscaObrasInline" placeholder="Buscar obra ou setor..."/></div><div><button class="atlas-btn light" id="btnMarcarObrasInline">Marcar todas</button><button class="atlas-btn light" id="btnDesmarcarObrasInline">Desmarcar</button></div></div>
+<div class="atlas-work-list inline" id="listaObrasInline"></div>
+</div>
+<div class="atlas-tab-content" id="tabHistorico">
+<div class="atlas-data-hero"><div><h3>Histórico do usuário</h3><p>Resumo das informações de criação, atualização e último acesso disponíveis atualmente.</p></div><div class="atlas-step-badge">Etapa 5 de 5</div></div>
+<div class="atlas-history-timeline" id="historyTimeline"></div>
+</div>
+</div>
+<footer class="atlas-save-footer"><span id="pendingChangesText">Nenhuma alteração pendente</span><div><button class="atlas-btn light" id="btnDescartar"><i class="fa-solid fa-rotate-left"></i> Limpar alterações</button><button class="atlas-btn primary" id="btnSalvarPermissoes"><i class="fa-solid fa-floppy-disk"></i> Salvar alterações</button></div></footer>
+</div>
+</section>
+</section>
+<div class="atlas-modal-backdrop" hidden id="modalConfirmarAcessoSeguro"><div class="atlas-modal"><header><div><h2><i class="fa-solid fa-shield-halved"></i> Ativar acesso seguro</h2><p>BDR Gestão</p></div><button type="button" data-close-modal="modalConfirmarAcessoSeguro">×</button></header><div class="atlas-modal-help"><strong id="confirmarAcessoSeguroNome">Usuário</strong><br><span id="confirmarAcessoSeguroEmail"></span><p>O BDR Gestão preparará a conta segura. O usuário continuará acessando normalmente e poderá criar a nova senha dentro do próprio sistema.</p></div><footer><button class="atlas-btn light" type="button" data-close-modal="modalConfirmarAcessoSeguro">Cancelar</button><button class="atlas-btn primary" id="btnConfirmarAcessoSeguro" type="button"><i class="fa-solid fa-shield-halved"></i> Ativar acesso seguro</button></footer></div></div>
+<div class="atlas-modal-backdrop" hidden="" id="modalUsuario"><div class="atlas-modal"><header><h2 id="modalUsuarioTitulo">Novo usuário</h2><button data-close-modal="modalUsuario">×</button></header><div class="atlas-avatar-editor"><div class="atlas-avatar selected" id="formAvatarPreview">--</div><div><strong>Foto do usuário</strong><small>JPG, PNG ou WebP. A imagem será protegida, recortada e convertida para WebP pelo servidor.</small><label class="atlas-btn light atlas-avatar-upload">Escolher foto<input id="formFotoArquivo" type="file" accept="image/jpeg,image/png,image/webp" hidden></label><button class="atlas-btn light" id="btnRemoverFoto" type="button">Remover foto</button></div></div><div class="atlas-form-grid"><label>Nome completo<input id="formNome"/></label><label>Usuário<input id="formUsuario"/></label><label>E-mail<input id="formEmail" type="email"/></label><label>Perfil<select id="formPerfil"></select></label><label>Empresa<select id="formEmpresa"><option value="">Selecione</option></select></label><label>Obras de atuação<button class="atlas-work-picker" id="btnFormObras" type="button"><span id="formObrasResumo">Selecionar obras</span><i class="fa-solid fa-chevron-down"></i></button></label><label>Base operacional da Expedição<select id="formObraOperacional"><option value="">Sem base operacional</option></select><small>Define de qual obra este usuário opera a logística. Deve estar entre as obras de atuação.</small></label><label>Status<select id="formAtivo"><option value="true">Ativo</option><option value="false">Inativo</option></select></label><label>Senha provisória<input autocomplete="new-password" id="formSenha" type="password"/></label><input id="formId" type="hidden"/></div><footer><button class="atlas-btn light" data-close-modal="modalUsuario">Cancelar</button><button class="atlas-btn primary" id="btnSalvarUsuario">Salvar usuário</button></footer></div></div>
 
-<div id="modalUsuario" class="atlas-modal-backdrop" hidden><div class="atlas-modal"><header><h2 id="modalUsuarioTitulo">Novo usuário</h2><button data-close-modal="modalUsuario">×</button></header><div class="atlas-form-grid"><label>Nome completo<input id="formNome"></label><label>Usuário<input id="formUsuario"></label><label>E-mail<input id="formEmail" type="email"></label><label>Perfil<select id="formPerfil"></select></label><label>Empresa<select id="formEmpresa"><option value="">Selecione</option></select></label><label>Obra principal<select id="formObra"><option value="">Selecione</option></select></label><label>Status<select id="formAtivo"><option value="true">Ativo</option><option value="false">Inativo</option></select></label><label>Senha provisória<input id="formSenha" type="password" autocomplete="new-password"></label><input id="formId" type="hidden"></div><footer><button class="atlas-btn light" data-close-modal="modalUsuario">Cancelar</button><button id="btnSalvarUsuario" class="atlas-btn primary">Salvar usuário</button></footer></div></div>
-<div id="modalPerfis" class="atlas-modal-backdrop" hidden><div class="atlas-modal wide"><header><h2>Aplicar perfil rápido</h2><button data-close-modal="modalPerfis">×</button></header><p class="atlas-modal-help">O perfil apenas preenche a tela. Nada será gravado até clicar em <strong>Salvar alterações</strong>.</p><div id="quickProfiles" class="atlas-profile-grid"></div><footer><button class="atlas-btn light" data-close-modal="modalPerfis">Fechar</button></footer></div></div>
-<div id="modalEditarPerfil" class="atlas-modal-backdrop" hidden><div class="atlas-modal"><header><h2>Editar perfil rápido</h2><button data-close-modal="modalEditarPerfil">×</button></header><div class="atlas-form-grid"><input id="editProfileId" type="hidden"><label>Nome do perfil<input id="editProfileName"></label><label>Descrição<input id="editProfileDescription"></label></div><p class="atlas-modal-help">O modelo será salvo com as permissões marcadas na tela.</p><footer><button class="atlas-btn light" data-close-modal="modalEditarPerfil">Cancelar</button><button id="btnSalvarModeloPerfil" class="atlas-btn primary">Salvar modelo</button></footer></div></div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script src="./JS/supabaseClient.js"></script>
-<script src="./JS/bdrCore.js"></script>
-<script src="./JS/bdrMenuPermissoes.js"></script>
-<script src="./JS/atlasControleAcesso.js?v=20260805-users-oficial"></script>
-<script src="./JS/atlasAudio/atlasAudio.js"></script>
-<script src="./JS/bdrNotificacoes.js"></script>
-<script src="JS/atlasTopbar.js"></script>
-<script src="./JS/atlasUsuarios.js?v=20260806-modo-compacto"></script>
-<script src="./JS/bdrMenuMobileAtivo.js?v=20260702-3"></script>
+<div class="atlas-modal-backdrop" hidden id="modalFormObras"><div class="atlas-modal wide atlas-work-picker-modal"><header><div><h2>Obras de atuação</h2><p>Marque as obras em que este funcionário poderá trabalhar.</p></div><button data-close-modal="modalFormObras">×</button></header><div class="atlas-work-picker-tools"><div class="atlas-search"><i class="fa-solid fa-magnifying-glass"></i><input id="buscaFormObras" placeholder="Buscar obra ou setor..."></div><span id="formObrasContador">0 selecionadas</span></div><div class="atlas-work-list atlas-work-picker-list" id="listaFormObras"></div><footer><button class="atlas-btn light" data-close-modal="modalFormObras">Cancelar</button><button class="atlas-btn primary" id="btnAplicarFormObras" type="button">Aplicar obras</button></footer></div></div>
+<div class="atlas-modal-backdrop" hidden="" id="modalPerfis"><div class="atlas-modal wide"><header><h2>Aplicar perfil rápido</h2><button data-close-modal="modalPerfis">×</button></header><p class="atlas-modal-help">O perfil apenas preenche a tela. Nada será gravado até clicar em <strong>Salvar alterações</strong>.</p><div class="atlas-profile-grid" id="quickProfiles"></div><footer><button class="atlas-btn light" data-close-modal="modalPerfis">Fechar</button></footer></div></div>
+<div class="atlas-modal-backdrop" hidden="" id="modalEditarPerfil"><div class="atlas-modal"><header><h2>Editar perfil rápido</h2><button data-close-modal="modalEditarPerfil">×</button></header><div class="atlas-form-grid"><input id="editProfileId" type="hidden"/><label>Nome do perfil<input id="editProfileName"/></label><label>Descrição<input id="editProfileDescription"/></label></div><p class="atlas-modal-help">O modelo será salvo com as permissões marcadas na tela.</p><footer><button class="atlas-btn light" data-close-modal="modalEditarPerfil">Cancelar</button><button class="atlas-btn primary" id="btnSalvarModeloPerfil">Salvar modelo</button></footer></div></div>
+</div>
+</section>
+</main>
+<script src="./JS/atlasUsuarios.js?v=20260917-shell"></script>
 </body>
 </html>

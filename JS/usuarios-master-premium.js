@@ -1,7 +1,7 @@
 /* =========================================================
    ATUALIZADO: USUÁRIOS COM OFFLINE BDR
 ========================================================= */
-console.log("✅ BDR USUÁRIOS PREMIUM V5 carregado - arquivo correto");
+void 0;
 /* =========================================================
    BDR ERP 9.0 - USUÁRIOS MASTER PREMIUM
    Arquivo: JS/usuarios-master-premium.js
@@ -312,12 +312,12 @@ async function buscarUsuariosComFallback(){
 
       if(!resp.error && Array.isArray(resp.data) && resp.data.length > 0){
         TABELA_USUARIOS = tabela;
-        console.log("✅ Usuários carregados da tabela:", tabela, resp.data.length);
+        void 0;
         return resp.data;
       }
 
       if(!resp.error && Array.isArray(resp.data)){
-        console.log("⚠️ Tabela existe, mas sem usuários:", tabela);
+        void 0;
       }
 
       if(resp.error){
@@ -401,7 +401,7 @@ async function carregarPerfisRapidos(){
     }
 
     montarMapaPerfisRapidos(ativos);
-    console.log("✅ Perfis rápidos carregados do banco:", ativos.length);
+    void 0;
   }catch(e){
     console.warn("⚠️ Falha inesperada nos perfis rápidos. Usando fallback.", e);
     montarMapaPerfisRapidos(PERFIS_PADRAO_FALLBACK);
@@ -1216,7 +1216,7 @@ async function salvarPermissoesSelecionado(mostrarMsg){
   }
 
   if(mostrarMsg){
-    console.log("Permissões atualizadas.");
+    void 0;
   }
 
   renderizarUsuarios();
@@ -1836,7 +1836,7 @@ window.renderizarQuadroPermissoesNovoBDR = renderizarQuadroPermissoesNovoBDR;
     if(e.target?.id === 'modalPerfilRapido' && typeof fecharModalPerfilRapido === 'function') fecharModalPerfilRapido();
   });
 
-  console.log('✅ BDR USUÁRIOS FINAL V2 carregado');
+  void 0;
 })();
 
 
@@ -1915,7 +1915,7 @@ window.renderizarQuadroPermissoesNovoBDR = renderizarQuadroPermissoesNovoBDR;
   document.addEventListener('DOMContentLoaded',()=>obs.observe(document.body,{childList:true,subtree:true}));
   window.addEventListener('load',()=>setTimeout(aplicar,100));
   window.AtlasUsuariosEscopo={aplicar,owner,podeGerenciar,podeConceder};
-  console.log('✅ ATLAS USUÁRIOS V6.0 carregado - OWNER ID 1, escopo por permissão e sem flash');
+  void 0;
 })();
 
 
@@ -2073,9 +2073,7 @@ window.renderizarQuadroPermissoesNovoBDR = renderizarQuadroPermissoesNovoBDR;
     aplicar:aplicarOrganizacao
   };
 
-  console.log(
-    "✅ ATLAS USUÁRIOS ORGANIZAÇÃO V2.1 carregada - módulos, perfis e notificações organizados"
-  );
+  void 0;
 })();
 
 
@@ -2144,7 +2142,7 @@ window.renderizarQuadroPermissoesNovoBDR = renderizarQuadroPermissoesNovoBDR;
 
   window.addEventListener("load", () => setTimeout(ocultarModulosVazios, 200));
 
-  console.log("✅ ATLAS USUÁRIOS MÓDULOS V2.2 carregado - permissões separadas por módulo");
+  void 0;
 })();
 
 
@@ -2341,9 +2339,7 @@ window.renderizarQuadroPermissoesNovoBDR = renderizarQuadroPermissoesNovoBDR;
 
     sincronizarPreferencias();
 
-    console.log(
-      "✅ Perfil rápido carregado na tela. Clique em Salvar permissões para confirmar."
-    );
+    void 0;
 
     return true;
   };
@@ -2407,7 +2403,5 @@ window.renderizarQuadroPermissoesNovoBDR = renderizarQuadroPermissoesNovoBDR;
     }
   });
 
-  console.log(
-    "✅ ATLAS USUÁRIOS V3.1 carregado - funcionário selecionado antes de editar e salvar"
-  );
+  void 0;
 })();
