@@ -2017,7 +2017,8 @@ let dadosPatrimonios = patResp.data || [];
 let dadosMovimentacoes = movResp.data || [];
 
 /* DADOS: filtra por permissão nova, não por perfil. */
-const podeTodasObras = temPermissaoRelatoriosBDR("TODAS_OBRAS_VER", usuario);
+const podeTodasObras = temPermissaoRelatoriosBDR("RELATORIOS_TODAS_OBRAS", usuario)
+  || temPermissaoRelatoriosBDR("TODAS_OBRAS_VER", usuario);
 const podePropriaObra = temPermissaoRelatoriosBDR("PROPRIA_OBRA_VER", usuario);
 
 if(usuario && !podeTodasObras){
