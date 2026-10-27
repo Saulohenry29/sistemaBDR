@@ -982,3 +982,11 @@ solução correta sem remendos.
 - RPC nova `atlas_admin_criar_usuario_com_base` recebe `p_obra_operacional_id` e valida pertencimento a `v_obras`, preservando a função antiga.
 - Edge `atlas-admin-usuarios` passa a chamar a nova RPC; implantar SQL antes da Edge.
 - SQL não executado; testes reais de Supabase pendentes.
+
+
+## Expedição — preparação local da permissão (24/10/2026)
+
+- Pedido 55 EXP-2026-561000-89 confirmado EM_TRANSITO de obra 22 para 33, saída por Thayanne; recebimento ainda não registrado.
+- Thayanne ID 2 tem acesso a ambas em usuario_obras e Supabase Auth vinculado.
+- Nesta etapa, apenas catálogo visual de permissões inclui EXPEDICAO_RECEBER_PROPRIA_REMESSA.
+- PENDENTE: validação obrigatória no servidor, seleção segura da obra de destino, conferência física e correção da RPC atlas_receber_pedido. NÃO habilitar ou testar recebimento real ainda.

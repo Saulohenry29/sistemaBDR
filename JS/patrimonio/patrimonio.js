@@ -1108,6 +1108,15 @@ async function carregarObras(){
     // Falha na RPC não deve habilitar destinos por fallback de cache ou empresa.
     if(consultaDestinos.error) console.error("Patrimônio: destinos de transferência indisponíveis.",consultaDestinos.error);
     const todas=consultaObras.data||[];
+    // A lista online é a fonte de verdade: uma obra excluída não pode continuar travada.
+    const idsAtuais = new Set(todas.map(o => String(o.id)));
+    const obraAnterior = String(window.obraAtiva?.id || localStorage.getItem("obraAtivaId") || "");
+    if(obraAnterior && !idsAtuais.has(obraAnterior)){
+      window.obraAtiva = null;
+      window.obraTravada = false;
+      localStorage.removeItem("obraAtivaId");
+      localStorage.removeItem("obraTravada");
+    }
     if(window.BDROfflineDB?.salvarTabela) await BDROfflineDB.salvarTabela("obras",todas);
     preencher(todas,consultaDestinos.error ? [] : (consultaDestinos.data||[]));
   }catch(erro){
@@ -1279,7 +1288,8 @@ function obterObraParaLancamento(){
   }
 
   if(window.obraTravada && window.obraAtiva){
-    return window.obraAtiva;
+    // Não confiar no objeto antigo guardado em memória: conferir o catálogo carregado.
+    return (obras || []).find(o => String(o.id) === String(window.obraAtiva.id)) || null;
   }
 
   const obra_id = document.getElementById("obraSelect").value;
@@ -5037,6 +5047,12 @@ async function iniciar(){
         window.obraAtiva = existe;
         window.obraTravada = true;
         document.getElementById("obraSelect").value = obraSalva;
+      }else if(BDR_PATRIMONIO_ONLINE_REAL){
+        // Seleção persistida não existe mais na lista autorizada e atualizada.
+        window.obraAtiva = null;
+        window.obraTravada = false;
+        localStorage.removeItem("obraAtivaId");
+        localStorage.removeItem("obraTravada");
       }
     }
   }else{

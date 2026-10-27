@@ -13,10 +13,10 @@
 
 <!-- CSS PADRÃO DO SISTEMA -->
 <link rel="stylesheet" href="./CSS/layout-bdr.css">
-<link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css?v=20260724-padrao-profissional-v1">
-<link rel="stylesheet" href="./CSS/atlas-topbar.css?v=20260724-padrao-profissional-v1">
+
+
 <script src="./JS/atlasDialog.js?v=20260724-padrao-profissional-v1"></script>
-<script src="./JS/bdrNotificacoes.js?v=20260724-padrao-profissional-v1"></script>
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
 <style>
@@ -66,6 +66,13 @@ body{background:var(--bdr-bg)!important;}
 
 
 
+/* Dentro da Shell Atlas: sem menu/topbar próprios e sem deslocamento lateral. */
+.estoque-conteudo{
+  width:100%;
+  min-width:0;
+  margin:0;
+  padding:8px;
+}
 /* CARDS E FILTROS */
 .card{background:#fff;border-radius:16px;padding:14px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.08);border:1px solid #eef2f7;}
 .card h3{margin:0 0 10px;color:var(--bdr-red);font-weight:900;}
@@ -870,124 +877,13 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active{outline:none
 <script src="./JS/offlineDB.js"></script>
 <script src="./JS/bdrSyncEngine.js"></script>
 <script src="./JS/bdrSyncCenter.js"></script>
-<script src="./JS/bdrMenuPermissoes.js"></script>
-<script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260629-2"></script>
-<script src="./JS/bdr-menu-permissoes-hard-fix.js?v=20260629-1"></script>
+
+
+
 
 <script>verificarLogin();</script>
 
-<div class="app-layout">
-<aside class="bdr-sidebar">
-  <div class="bdr-brand">
-  <div class="bdr-brand-icon bdr-logo-menu"></div>
-</div>
-
-   <!-- MENU PRINCIPAL FIXO -->
- <nav class="bdr-menu">
-
-  <!-- DASHBOARD -->
-  <button data-permissao="DASHBOARD_VER" class="bdr-menu-btn" data-tip="Dashboard" onclick="ir('dashboard.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-chart-simple"></i>
-    </span>
-  </button>
-
-  <!-- ENTRADA -->
-  <button data-permissao="ENTRADA_VER" class="bdr-menu-btn" data-tip="Entrada" onclick="ir('entrada.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-arrow-down-wide-short"></i>
-    </span>
-  </button>
-
-  <!-- TRIAGEM -->
-  <button data-permissao="TRIAGEM_VER" class="bdr-menu-btn" data-tip="Triagem" onclick="ir('triagem.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-vials"></i>
-    </span>
-  </button>
-
-  <!-- Estoque -->
-  <button data-permissao="ESTOQUE_VER" class="bdr-menu-btn active" data-tip="Estoque" onclick="ir('estoque.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-boxes-stacked"></i>
-    </span>
-  </button>
-
-  <!-- PATRIMÔNIO -->
-  <button data-permissao="PATRIMONIO_VER" class="bdr-menu-btn" data-tip="Patrimônio" onclick="ir('patrimonio.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-tags"></i>
-    </span>
-  </button>
-
-  <!-- EXPEDIÇÃO -->
-   <button data-permissao="EXPEDICAO_VER" class="bdr-menu-btn " data-tip="Expedição" onclick="ir('expedicao.html')">
-     <span class="bdr-menu-icon">
-       <i class="fa-solid fa-truck-fast"></i>
-      </span>
-    </button>
-
-    <!-- MOVIMENTAÇÕES -->
-  <button data-permissao="MOVIMENTACOES_VER" class="bdr-menu-btn" data-tip="Movimentações" onclick="ir('movimentacoes.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-right-left"></i>
-    </span>
-  </button>  
-  
-  <!-- RELATÓRIOS -->
-  <button data-permissao="RELATORIOS_VER" class="bdr-menu-btn" data-tip="Relatórios" onclick="ir('relatorios.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-regular fa-file-lines"></i>
-    </span>
-  </button>
-
-  <!-- EMPRESAS -->
-  <button data-permissao="EMPRESAS_VER" class="bdr-menu-btn" data-tip="Empresas" onclick="ir('empresa.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-building"></i>
-    </span>
-  </button>
-
-  <!-- USUÁRIOS -->
-  <button data-permissao="USUARIOS_VER" class="bdr-menu-btn" data-tip="Usuários" onclick="ir('usuarios.html')">
-    <span class="bdr-menu-icon">
-      <i class="fa-solid fa-users"></i>
-    </span>
-  </button>
-
-</nav>
-</aside>
-
-<main class="bdr-main">
-  <div class="bdr-topbar">
-    <div>
-      <div class="bdr-topbar-title">📦 BDR Estoque</div>
-      <div class="bdr-topbar-sub">Estoque geral: consumo + patrimônios, por CD, obra e setor, com controle de acesso.</div>
-    </div>
-
-    <div class="bdr-top-actions">
-      <div class="notif-wrap">
-        <button class="notif-btn" type="button" title="Notificações" data-atlas-toggle="notifications" aria-label="Abrir notificações">
-          <i class="fa-regular fa-bell"></i>
-          <span id="notifBadge" class="notif-badge">0</span>
-        </button>
-        <div id="notifDropdown" class="notif-dropdown">
-          <div class="notif-head">🔔 Central de notificações</div>
-          <div id="notifLista" class="notif-list"><div class="notif-item">Nenhuma notificação no momento.</div></div>
-        </div>
-      </div>
-
-      <div class="user-menu" data-atlas-toggle="user" aria-label="Abrir menu do usuário">
-        <div class="user-mini"><b id="usuarioNome">Olá, -</b><small id="usuarioPerfil">-</small></div>
-        <div class="avatar"><i class="fa-solid fa-user"></i></div>
-        <div id="dropdownUser" class="dropdown-user">
-          <button data-permissao="USUARIOS_VER" type="button" onclick="ir('usuarios.html'); event.stopPropagation();"><i class="fa-solid fa-user-gear"></i> Meu perfil / usuários</button>
-          <button type="button" class="logout-btn" onclick="logout(); event.stopPropagation();"><i class="fa-solid fa-right-from-bracket"></i> Sair do sistema</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
+<main class="estoque-conteudo">
   <!-- MARCAÇÃO 1: CONTEXTO DE ACESSO -->
   <div class="contexto-estoque" id="contextoEstoque">
     <div>
@@ -1069,7 +965,6 @@ button:focus,button:active,.bdr-menu-btn:focus,.bdr-menu-btn:active{outline:none
     <div id="listaProdutos" class="lista-estoque"></div>
   </section>
 </main>
-</div>
 
 <!-- MARCAÇÃO 5: MODAL LATERAL CLICÁVEL -->
 <div class="modal-bg" id="modalProdutoBg" onclick="fecharModalProdutoFora(event)">
@@ -1746,10 +1641,10 @@ window.addEventListener("DOMContentLoaded", () => {
 <script defer src="./JS/estoque.js"></script>
 <script src="./JS/bdrUppercase.js"></script>
 <script src="./JS/bdr-localizador-prateleira.js?v=1"></script>
-<script src="./JS/bdrMenuMobileAtivo.js?v=20260702-3"></script>
+
 
   <!-- ATLAS: controlador oficial da Topbar (último script da página) -->
 
-<script src="./JS/atlasTopbar.js?v=20260724-padrao-profissional-v1"></script>
+
 </body>
 </html>

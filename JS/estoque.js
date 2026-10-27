@@ -24,6 +24,9 @@
   let movimentacoesPatrimonio = [];
   let obraSelecionadaId = "";
   let podeVerTudo = false;
+  let paginaEstoque = 1;
+  const itensPorPagina = 40;
+  let carregamentoEmAndamento = null;
 
   // =========================================================
   // MARCAÇÃO 1: FUNÇÕES BÁSICAS / GLOBAIS
@@ -320,6 +323,13 @@ if(st === "ESTOQUE" || st === "DISPONIVEL") return "ESTOQUE";
   }
 
   async function carregarDados(){
+    if(carregamentoEmAndamento) return carregamentoEmAndamento;
+    carregamentoEmAndamento = executarCarregamentoDados();
+    try{ return await carregamentoEmAndamento; }
+    finally{ carregamentoEmAndamento = null; }
+  }
+
+  async function executarCarregamentoDados(){
     const banco = db();
     const offline = window.BDROfflineSync;
 
@@ -594,14 +604,14 @@ if(st === "ESTOQUE" || st === "DISPONIVEL") return "ESTOQUE";
   };
 
   function renderizarTudo(){
-    atualizarResumo();
     renderizarProdutos();
   }
 
   // =========================================================
   // MARCAÇÃO 7: LISTA COMPACTA DO ESTOQUE GERAL
   // =========================================================
-  window.renderizarProdutos = function(){
+  window.renderizarProdutos = function(manterPagina = false){
+    if(!manterPagina) paginaEstoque = 1;
     atualizarResumo();
 
     const lista = listaFiltrada();
@@ -612,6 +622,35 @@ if(st === "ESTOQUE" || st === "DISPONIVEL") return "ESTOQUE";
       box.innerHTML = `<p style="color:#6b7280;font-weight:800;">Nenhum item encontrado para este filtro/permissão.</p>`;
       return;
     }
+
+    const totalPaginas = Math.max(1, Math.ceil(lista.length / itensPorPagina));
+    paginaEstoque = Math.min(paginaEstoque, totalPaginas);
+    const inicio = (paginaEstoque - 1) * itensPorPagina;
+    const pagina = lista.slice(inicio, inicio + itensPorPagina);
+    const linhas = pagina.map(p => {
+      const qtd = Number(p.quantidade || 0);
+      const status = statusEstoque(p);
+      const baixo = p.origem === "ESTOQUE" && (qtd <= Number(p.estoque_minimo || 0) || qtd <= 0);
+      let badgeClasse = "badge-ok";
+      if(p.origem === "PATRIMONIO") badgeClasse = "badge-pat";
+      if(status === "EM_USO") badgeClasse = "badge-uso";
+      if(status === "MANUTENCAO") badgeClasse = "badge-baixo";
+      if(status === "BAIXADO" || baixo) badgeClasse = "badge-zero";
+      const uidSeguro = JSON.stringify(p.uid);
+      const tipoLinha = p.origem === "PATRIMONIO" ? "PATRIMÔNIO" : (p.tipo_controle || "CONSUMO");
+      return `
+        <div class="estoque-linha" onclick='abrirProduto(${uidSeguro})'>
+          <div class="prod-codigo">${p.codigo || p.uid}</div>
+          <div>
+            <div class="prod-nome" title="${p.descricao || "-"}">${p.descricao || "-"}</div>
+            <div class="prod-sub">${tipoLinha} • ${formatarMoeda(p.valor_unitario)}</div>
+          </div>
+          <div class="prod-obra" title="${nomeObra(p.obra_id)}">${nomeObra(p.obra_id)}</div>
+          <div class="prod-qtd">${qtd}</div>
+          <div><span class="badge ${badgeClasse}">${baixo ? "BAIXO/ZERADO" : textoStatus(p)}</span></div>
+          <div class="prod-local" title="${p.localizacao_fisica || "-"}">${p.localizacao_fisica || "-"}</div>
+        </div>`;
+    }).join("");
 
     box.innerHTML = `
       <div class="estoque-header">
@@ -624,34 +663,21 @@ if(st === "ESTOQUE" || st === "DISPONIVEL") return "ESTOQUE";
       </div>
     `;
 
-    lista.forEach(p => {
-      const qtd = Number(p.quantidade || 0);
-      const status = statusEstoque(p);
-      const baixo = p.origem === "ESTOQUE" && (qtd <= Number(p.estoque_minimo || 0) || qtd <= 0);
-      let badgeClasse = "badge-ok";
-      if(p.origem === "PATRIMONIO") badgeClasse = "badge-pat";
-      if(status === "EM_USO") badgeClasse = "badge-uso";
-      if(status === "MANUTENCAO") badgeClasse = "badge-baixo";
-      if(status === "BAIXADO") badgeClasse = "badge-zero";
-      if(baixo) badgeClasse = "badge-zero";
+    box.insertAdjacentHTML("beforeend", linhas);
+    if(totalPaginas > 1){
+      box.insertAdjacentHTML("beforeend", `
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:18px;flex-wrap:wrap;">
+          <button type="button" onclick="mudarPaginaEstoque(-1)" ${paginaEstoque === 1 ? "disabled" : ""}>Anterior</button>
+          <span>Página ${paginaEstoque} de ${totalPaginas} • ${lista.length} itens</span>
+          <button type="button" onclick="mudarPaginaEstoque(1)" ${paginaEstoque === totalPaginas ? "disabled" : ""}>Próxima</button>
+        </div>`);
+    }
+  };
 
-      const uidSeguro = JSON.stringify(p.uid);
-      const tipoLinha = p.origem === "PATRIMONIO" ? "PATRIMÔNIO" : (p.tipo_controle || "CONSUMO");
-
-      box.innerHTML += `
-        <div class="estoque-linha" onclick='abrirProduto(${uidSeguro})'>
-          <div class="prod-codigo">${p.codigo || p.uid}</div>
-          <div>
-            <div class="prod-nome" title="${p.descricao || "-"}">${p.descricao || "-"}</div>
-            <div class="prod-sub">${tipoLinha} • ${formatarMoeda(p.valor_unitario)}</div>
-          </div>
-          <div class="prod-obra" title="${nomeObra(p.obra_id)}">${nomeObra(p.obra_id)}</div>
-          <div class="prod-qtd">${qtd}</div>
-          <div><span class="badge ${badgeClasse}">${baixo ? "BAIXO/ZERADO" : textoStatus(p)}</span></div>
-          <div class="prod-local" title="${p.localizacao_fisica || "-"}">${p.localizacao_fisica || "-"}</div>
-        </div>
-      `;
-    });
+  window.mudarPaginaEstoque = function(direcao){
+    paginaEstoque += direcao;
+    renderizarProdutos(true);
+    document.getElementById("listaProdutos")?.scrollIntoView({behavior:"smooth",block:"start"});
   };
 
   // =========================================================

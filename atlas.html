@@ -192,8 +192,8 @@ html,body{height:100%!important;min-height:100%!important;margin:0!important;pad
   const frameWrap = document.getElementById('atlasFrameWrap');
   const frames = new Map();
   let moduloAtivo = null;
-  const titulos={dashboard:['Dashboard','Visão geral do sistema'],entrada:['Entrada','Recebimentos e entradas'],triagem:['Triagem','Triagem de materiais'],estoque:['Estoque','Consulta e movimentação de estoque'],patrimonio:['Patrimônio','Gestão patrimonial'],manutencao:['Manutenção','Gestão de manutenções'],expedicao:['Expedição','Solicitações, separação e retirada'],movimentacoes:['Movimentações','Histórico de movimentações'],relatorios:['Relatórios','Relatórios do sistema'],empresa:['Empresas','Empresas e obras'],usuarios:['Usuários','Usuários e permissões'],'minha-conta':['Minha conta','Perfil, preferências e acessos']};
-  const paginas={dashboard:'dashboard.html',entrada:'entrada.html',triagem:'triagem.html',estoque:'estoque.html',patrimonio:'patrimonio.html',manutencao:'manutencao.html',expedicao:'expedicao.html',movimentacoes:'movimentacoes.html',relatorios:'relatorios.html',empresa:'empresa.html',usuarios:'usuarios.html','minha-conta':'MinhaConta/minha-conta.html'};
+  const titulos={dashboard:['Dashboard','Visão geral do sistema'],entrada:['Entrada','Recebimentos e entradas'],triagem:['Triagem','Triagem de materiais'],estoque:['Estoque','Consulta e movimentação de estoque'],patrimonio:['Patrimônio','Gestão patrimonial'],manutencao:['Manutenção','Gestão de manutenções'],expedicao:['Expedição','Solicitações, separação e retirada'],movimentacoes:['Movimentações','Histórico de movimentações'],relatorios:['Relatórios','Relatórios do sistema'],empresa:['Empresas','Empresas e obras'],usuarios:['Usuários','Usuários e permissões'],'minha-conta':['Minha conta','Perfil, preferências e acessos'],sentinela:['Saúde e Segurança','Atlas Sentinela · Diagnóstico e auditoria']};
+  const paginas={dashboard:'dashboard.html',entrada:'entrada.html',triagem:'triagem.html',estoque:'estoque.html',patrimonio:'patrimonio.html',manutencao:'manutencao.html',expedicao:'expedicao.html',movimentacoes:'movimentacoes.html',relatorios:'relatorios.html',empresa:'empresa.html',usuarios:'usuarios.html','minha-conta':'MinhaConta/minha-conta.html',sentinela:'sentinela.html'};
   function prepararPaginas(){
     const atual=contextoDaUrl().modulo;
     const prioridade=['dashboard','patrimonio','expedicao','estoque','manutencao','movimentacoes'];
@@ -266,6 +266,10 @@ html,body{height:100%!important;min-height:100%!important;margin:0!important;pad
   function abrir(modulo, push=true, parametros=''){
     if(!acessoShellLiberado) return;
     if(!paginas[modulo]) modulo='dashboard';
+    if(modulo==='sentinela' && Number(usuarioAtualShell()?.id)!==1){
+      if(typeof window.bdrAvisoAtlas==='function') window.bdrAvisoAtlas('Acesso restrito ao proprietário do Atlas.');
+      modulo='dashboard';
+    }
     fecharOverlaysShell();
     atualizarTopo(modulo);
     const frame=obterFrame(modulo,parametros);
