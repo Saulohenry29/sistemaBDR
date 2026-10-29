@@ -380,9 +380,10 @@ html,body{height:100%!important;min-height:100%!important;margin:0!important;pad
         redirecionarShell('login.html');
         return false;
       }
-      if(typeof senhaEhTemporariaBDR==='function' && senhaEhTemporariaBDR(atual)){
+      if(identidade.user.app_metadata?.atlas_troca_senha_pendente === true ||
+          (typeof senhaEhTemporariaBDR==='function' && senhaEhTemporariaBDR(atual))){
         // Atualiza o cache para a página de troca reconhecer o estado atual.
-        const sincronizado={...usuario,...atual};
+        const sincronizado={...usuario,...atual,trocar_senha:true};
         localStorage.setItem('usuario_logado',JSON.stringify(sincronizado));
         localStorage.setItem('usuarioLogado',JSON.stringify(sincronizado));
         redirecionarShell('alterar-senha.html');
