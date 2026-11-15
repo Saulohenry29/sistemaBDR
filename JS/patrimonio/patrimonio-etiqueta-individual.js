@@ -234,19 +234,40 @@
       return !!usuario?.id && localStorage.getItem(`atlas:impressora:${usuario.id}`) === "niimbot-b1";
     } catch (_) { return false; }
   }
+  function obterDriverB1(){
+    // Bluefy funcionou em documento principal, não na integração dentro de iframes.
+    // O shell Atlas é same-origin e carrega uma instância própria do MESMO driver.
+    // Assim o requestDevice(), GATT e toda a impressão pertencem à janela principal,
+    // mantendo o clique, o modal e a imagem gerada pelo Patrimônio intactos.
+    try {
+      const principal = global.top;
+      if(principal && principal !== global &&
+         principal.location.origin === global.location.origin &&
+         principal.document?.getElementById("atlasFrameWrap")) {
+        return principal.Niimbot || null;
+      }
+    } catch(error) {
+      console.warn("ATLAS B1: janela principal inacessível", error);
+    }
+    // Acesso direto a patrimonio.html continua funcionando no notebook/Android.
+    return global.Niimbot || null;
+  }
+
   async function imprimirB1(frame){
     if(imprimindoB1) return;
-    const api = global.Niimbot;
-    if(!api?.isSupported()){
-      informarImpressao("Bluetooth indisponível. No iPhone, abra o Atlas pelo Bluefy.", true);
-      global.atlasAvisoEtiqueta?.("Bluetooth indisponível neste navegador. No iPhone, use o Bluefy.");
+    const api = obterDriverB1();
+    if(!api?.isSupported?.()){
+      const mensagem = global.top !== global
+        ? "Bluetooth da janela principal não disponível. Feche e abra o Atlas atualizado no Bluefy."
+        : "Bluetooth indisponível. No iPhone, abra o Atlas pelo Bluefy.";
+      informarImpressao(mensagem, true);
+      global.atlasAvisoEtiqueta?.(mensagem);
       return;
     }
 
-    // O exemplo que imprimiu fisicamente no Bluefy usa printImage() DIRETAMENTE.
-    // Não fazer connect() separado, nem forçar BUNDLE ou temporizadores de GATT:
-    // o próprio driver estabelece a conexão, identifica a B1 e envia a imagem.
-    // Tudo começa no mesmo gesto do usuário exigido pela Web Bluetooth API.
+    // Mesmo fluxo direto da demonstração validada fisicamente no Bluefy:
+    // um clique chama printImage(), sem connect() separado e sem esperas extras.
+    // Quando embutido no shell, a chamada usa o BLE do documento principal.
     imprimindoB1 = true;
     const botao = document.getElementById("btnImprimirEtiquetaOficial");
     if(botao) botao.disabled = true;
