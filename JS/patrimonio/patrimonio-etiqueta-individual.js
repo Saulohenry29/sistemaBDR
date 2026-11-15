@@ -237,54 +237,62 @@
   async function imprimirB1(frame){
     if(imprimindoB1) return;
     const api = global.Niimbot;
-    if(!api?.isSupported()) {
+    if(!api?.isSupported()){
+      informarImpressao("Bluetooth indisponível. No iPhone, abra o Atlas pelo Bluefy.", true);
       global.atlasAvisoEtiqueta?.("Bluetooth indisponível neste navegador. No iPhone, use o Bluefy.");
       return;
     }
+
+    // O exemplo que imprimiu fisicamente no Bluefy usa printImage() DIRETAMENTE.
+    // Não fazer connect() separado, nem forçar BUNDLE ou temporizadores de GATT:
+    // o próprio driver estabelece a conexão, identifica a B1 e envia a imagem.
+    // Tudo começa no mesmo gesto do usuário exigido pela Web Bluetooth API.
     imprimindoB1 = true;
     const botao = document.getElementById("btnImprimirEtiquetaOficial");
     if(botao) botao.disabled = true;
-    // O Bluefy usa CoreBluetooth: a B1 recebe melhor pacotes individuais
-    // (sem agrupamentos de até 240 bytes) no iOS. Outras plataformas mantidas.
-    const ios=/iPhone|iPad|iPod/i.test(navigator.userAgent || "");
-    const bundleAnterior=ios?api.BUNDLE:null;
-    try {
-      if(ios)api.BUNDLE=false;
-      informarImpressao("Preparando conexão Bluetooth...");
-      // A solicitação de pareamento começa diretamente no clique do usuário.
-      const model = { name_prefixes:["B1", "NIIMBOT"], task:"b1", density:3, label_type:1, speed:3 };
-      const size = { w_px:384, h_px:240, dpi:203 };
-      // Lê o PNG já exibido ao usuário, sem fazer novo render depois
-      // do pareamento Bluetooth. A prévia e a impressão ficam idênticas.
+    try{
       const imagem = frame.contentWindow.AtlasEtiquetaImagemB1.obterImagem();
-      await api.connect(model, (etapa) => informarImpressao(etapa));
-      informarImpressao("Conectada. Enviando dados da etiqueta...");
+      if(typeof imagem !== "string" || !imagem.startsWith("data:image/png")){
+        throw new Error("A imagem PNG da prévia ainda não está pronta.");
+      }
+
+      // Mesma seleção e parâmetros da B1 no registry.json do projeto de
+      // referência (exceto offset_y_px, já incorporado na arte do Atlas).
+      const model = {
+        name_prefixes:["B1"], task:"b1", density:3,
+        label_type:1, speed:1
+      };
+      const size = { w_px:384, h_px:240, dpi:203 };
+      informarImpressao("Selecione a NIIMBOT B1 na janela Bluetooth...");
       await api.printImage(imagem, {
-        model,size,copies:1,
+        model, size, density:3, copies:1,
         onProgress:(etapa)=>{
-          const traducao={
-            "connecting…":"Confirmando conexão...",
-            "configuring…":"Configurando a B1...",
-            "sending image…":"Enviando imagem para a B1...",
-            "printing…":"Aguardando confirmação da impressão...",
+          const s = String(etapa||"");
+          const traducao = {
+            "connecting…":"Selecione a NIIMBOT B1 na janela Bluetooth...",
+            "configuring…":"B1 conectada. Configurando impressão...",
+            "sending image…":"Enviando a imagem para a B1...",
+            "printing…":"Aguardando a confirmação da impressão...",
             "ok":"Impressão confirmada pela B1."
           };
-          informarImpressao(traducao[etapa]||etapa);
+          informarImpressao(traducao[s] || (s.startsWith("printing… ")
+            ? "Imprimindo: "+s.slice("printing… ".length)
+            : s));
         }
       });
       global.atlasAvisoEtiqueta?.("Etiqueta enviada à NIIMBOT B1. Confira a impressão.");
       fechar();
-    } catch (error) {
-      console.error("ATLAS B1: impressão não confirmada",error);
-      const motivo=String(error?.message||error||"Falha desconhecida");
-      informarImpressao("B1 não confirmou: "+motivo+" Confira a impressora antes de repetir.",true);
+    }catch(error){
+      console.error("ATLAS B1: impressão não confirmada", error);
+      const motivo = String(error?.message||error||"Falha desconhecida");
+      informarImpressao("B1 não confirmou: "+motivo+" Confira a impressora antes de repetir.", true);
       global.atlasAvisoEtiqueta?.("NIIMBOT: "+motivo);
-    } finally {
-      if(ios)api.BUNDLE=bundleAnterior;
+    }finally{
       imprimindoB1 = false;
-      if(botao) botao.disabled = false;
+      if(botao) botao.disabled = !etiquetaPronta;
     }
   }
+
   function imprimir(){
     if(!etiquetaPronta){
       if(typeof global.atlasAvisoEtiqueta === "function"){
@@ -336,6 +344,9 @@
     }
 
     if(mensagem.tipo === "ATLAS_ETIQUETA_PRONTA"){
+      // Uma notificação tardia da prévia não pode ocultar o andamento da
+      // conexão Bluetooth ou reabilitar o botão enquanto a B1 imprime.
+      if(imprimindoB1) return;
       const tokenRecebido = Number(mensagem.token || 0);
 
       if(
