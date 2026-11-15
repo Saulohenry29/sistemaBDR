@@ -15,7 +15,7 @@ if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent || ""))
 <script src="./JS/atlasPrintCenter.js?v=4.0.0"></script>
 <script src="./JS/atlasQRCode/qrcode.min.js?v=1.0.0"></script>
 <script src="./JS/atlasQRCode.js?v=20261115-b1-unificado01"></script>
-<script src="./JS/impressao/atlasEtiquetaImagemB1.js?v=20261115-b1-unificado01"></script>
+<script src="./JS/impressao/atlasEtiquetaImagemB1.js?v=20261115-b1-preview-png01"></script>
 <style>
 *{box-sizing:border-box}
 /* Impede ajuste automático de fontes no WebView/PWA móvel.
@@ -101,12 +101,28 @@ html,body{margin:0;padding:0;width:var(--papel-w);height:var(--papel-h);overflow
  body.embed{padding:12px}
  body.embed .paper{outline:0;box-shadow:none}
 }
+/* Na NIIMBOT B1, a prévia não é mais um segundo desenho em HTML:
+   é exatamente o PNG 384 × 240 que será transmitido ao Bluetooth. */
+.atlas-b1-preview-png{
+  display:none;
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  background:#fff;
+  pointer-events:none;
+  z-index:20;
+}
+.paper.atlas-b1-preview-ativa .label{visibility:hidden}
+.paper.atlas-b1-preview-ativa .atlas-b1-preview-png{display:block}
 @media print{html,body{width:var(--papel-w);height:var(--papel-h)}.loading{display:none!important}}
 </style>
 </head>
 <body>
 <div class="paper" id="paper">
   <div class="loading">Preparando etiqueta...</div>
+  <img class="atlas-b1-preview-png" id="atlasB1Preview" alt="Imagem final da etiqueta NIIMBOT B1">
   <div class="label" id="label">
     <div class="label-top">
       <div class="brand">
@@ -217,6 +233,10 @@ async function atualizarEtiqueta(dados={}){
 
   codigoAtual = codigo;
   document.body.classList.remove("ready");
+  document.getElementById("paper").classList.remove("atlas-b1-preview-ativa");
+  const imagemPreview = document.getElementById("atlasB1Preview");
+  imagemPreview.removeAttribute("src");
+  window.AtlasEtiquetaImagemB1?.invalidarImagem();
   document.querySelector(".loading").textContent = "Preparando etiqueta...";
 
   document.getElementById("codigo").textContent = codigo;
@@ -254,8 +274,31 @@ async function atualizarEtiqueta(dados={}){
     document.body.classList.add("preview-centralizado");
   }
 
+  // A configuração e o QR já estão prontos. O Canvas exige a classe
+  // ready; o modal externo continuará oculto até o PNG estar pronto.
   document.body.classList.add("ready");
 
+  if(isEmbed && dados.impressora_b1 === true){
+    const gerador = window.AtlasEtiquetaImagemB1;
+    if(!gerador?.gerar || !gerador?.fixarImagem)
+      throw new Error("Rasterizador da NIIMBOT B1 indisponível.");
+
+    const png = await gerador.gerar();
+    if(token !== atualizacaoToken) return;
+
+    imagemPreview.src = png;
+    if(typeof imagemPreview.decode === "function"){
+      try{await imagemPreview.decode();}catch(error){
+        if(!imagemPreview.complete || !imagemPreview.naturalWidth)throw error;
+      }
+    }
+    if(token !== atualizacaoToken) return;
+
+    gerador.fixarImagem(png);
+    document.getElementById("paper").classList.add("atlas-b1-preview-ativa");
+  }
+
+  if(token !== atualizacaoToken) return;
   avisar("ATLAS_ETIQUETA_PRONTA", {
     codigo,
     token:dados.token || null
@@ -332,6 +375,9 @@ window.addEventListener("message", event => {
           error
         );
 
+        document.body.classList.remove("ready");
+        window.AtlasEtiquetaImagemB1?.invalidarImagem();
+        document.getElementById("paper").classList.remove("atlas-b1-preview-ativa");
         document.querySelector(".loading").textContent =
           "Não foi possível preparar a etiqueta.";
 
@@ -373,6 +419,7 @@ async function iniciar(){
 
 iniciar().catch(error => {
   console.error("Atlas Etiqueta: falha ao preparar etiqueta.", error);
+  document.body.classList.remove("ready");
   document.querySelector(".loading").textContent =
     "Não foi possível preparar a etiqueta.";
 });

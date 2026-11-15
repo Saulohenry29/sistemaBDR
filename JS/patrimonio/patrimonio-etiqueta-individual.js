@@ -22,7 +22,7 @@
   let dadosPendentes = null;
 
   const FRAME_URL =
-    "etiqueta-impressao.html?embed=1&preview=1&fast=1&b1=20261115-unificado01";
+    "etiqueta-impressao.html?embed=1&preview=1&fast=1&b1=20261115-b1-preview-png01";
 
   function patrimonioAtual(){
     try{
@@ -105,7 +105,10 @@
         p.obra_nome ||
         "SEM OBRA",
       obra_id:p.obra_id || null,
-      perfil_id:p.perfil_impressao_id || null
+      perfil_id:p.perfil_impressao_id || null,
+      // Apenas a NIIMBOT B1 usa a prévia em PNG. Outras impressoras
+      // continuam com a visualização e impressão HTML tradicionais.
+      impressora_b1:preferenciaB1()
     };
   }
 
@@ -235,8 +238,10 @@
       // A solicitação de pareamento começa diretamente no clique do usuário.
       const model = { name_prefixes:["B1", "NIIMBOT"], task:"b1", density:3, label_type:1, speed:3 };
       const size = { w_px:384, h_px:240, dpi:203 };
+      // Lê o PNG já exibido ao usuário, sem fazer novo render depois
+      // do pareamento Bluetooth. A prévia e a impressão ficam idênticas.
+      const imagem = frame.contentWindow.AtlasEtiquetaImagemB1.obterImagem();
       await api.connect(model);
-      const imagem = await frame.contentWindow.AtlasEtiquetaImagemB1.gerar();
       await api.printImage(imagem, {model,size,copies:1});
       global.atlasAvisoEtiqueta?.("Etiqueta enviada à NIIMBOT B1. Confira a impressão.");
       fechar();

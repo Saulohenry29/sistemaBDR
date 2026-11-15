@@ -281,6 +281,23 @@
     }
   }
 
-  global.AtlasEtiquetaImagemB1={gerar};
+  // A prévia B1 é o próprio PNG aprovado para a impressão.
+  // Não rasterizar novamente depois de abrir o seletor Bluetooth:
+  // isso evitaria uma divergência causada por novo reflow da página.
+  let imagemAprovada=null;
+  function invalidarImagem(){imagemAprovada=null;}
+  function fixarImagem(png){
+    if(typeof png!=="string" || !png.startsWith("data:image/png;base64,"))
+      throw new Error("Imagem B1 inválida.");
+    imagemAprovada=png;
+    return png;
+  }
+  function obterImagem(){
+    if(!imagemAprovada)
+      throw new Error("A prévia B1 ainda não está pronta. Abra novamente a etiqueta.");
+    return imagemAprovada;
+  }
+
+  global.AtlasEtiquetaImagemB1={gerar,invalidarImagem,fixarImagem,obterImagem};
 
 })(window);
