@@ -3,19 +3,34 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<script>
+/* Somente o raster móvel: desliga ampliação automática de fontes.
+   Não altera o layout aprovado no notebook. */
+if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent || ""))
+  document.documentElement.classList.add("atlas-b1-mobile");
+</script>
 <title>Etiqueta Patrimônio Atlas</title>
 <!-- ATLAS ETIQUETA INDIVIDUAL RÁPIDA V1 -->
 <script src="./JS/atlasEtiquetaConfig.js?v=8.1.2"></script>
 <script src="./JS/atlasPrintCenter.js?v=4.0.0"></script>
 <script src="./JS/atlasQRCode/qrcode.min.js?v=1.0.0"></script>
-<script src="./JS/atlasQRCode.js?v=1.0.0"></script>
-<script src="./JS/impressao/atlasEtiquetaImagemB1.js?v=20261114-b1x2mm01"></script>
+<script src="./JS/atlasQRCode.js?v=20261115-b1-unificado01"></script>
+<script src="./JS/impressao/atlasEtiquetaImagemB1.js?v=20261115-b1-unificado01"></script>
 <style>
 *{box-sizing:border-box}
 /* Impede ajuste automático de fontes no WebView/PWA móvel.
    O layout oficial continua com medidas em mm e não muda no notebook. */
 @media screen and (max-width:768px){
   html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+}
+/* Android e iOS: não deixar o navegador aumentar letras automaticamente
+   dentro do iframe da etiqueta. O tamanho físico continua definido em mm. */
+html.atlas-b1-mobile,
+html.atlas-b1-mobile body,
+html.atlas-b1-mobile .label,
+html.atlas-b1-mobile .label *{
+  -webkit-text-size-adjust:none!important;
+  text-size-adjust:none!important;
 }
 :root{
 --papel-w:55mm;--papel-h:35mm;--arte-w:53mm;--arte-h:33mm;--padding:1.7mm;--borda:.45mm;--raio:1.8mm;

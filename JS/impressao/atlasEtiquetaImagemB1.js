@@ -112,14 +112,11 @@
     if(style.textOverflow==="ellipsis")
       value=tamanhoTexto(ctx,value,width);
 
-    // O Canvas aceita um maxWidth que comprime os glifos horizontalmente.
-    // No Android, métricas de fontes diferentes das do Windows podem provocar
-    // exatamente esse efeito. Em dispositivos móveis, preferimos truncar o
-    // texto ao espaço disponível, sem deformar o desenho da fonte.
-    const movel=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent||"");
-    if(movel && ctx.measureText(value).width>width){
+    // Mesmo tratamento em todas as plataformas. Os textos informativos
+    // são truncados, enquanto marca e número preservam o encaixe oficial.
+    const encaixeMarca=elemento.matches(".bdr, .sub, .codigo");
+    if(!encaixeMarca && ctx.measureText(value).width>width)
       value=tamanhoTexto(ctx,value,width);
-    }
     const measured=ctx.measureText(value).width;
     const align=style.textAlign;
 
@@ -136,8 +133,8 @@
     const fs=parseFloat(style.fontSize)||12;
 
     const ty=y+Math.max(0,(r.height-fs)/2);
-    if(movel)ctx.fillText(value,tx,ty);
-    else ctx.fillText(value,tx,ty,width); // notebook: mantém saída já validada
+    if(encaixeMarca)ctx.fillText(value,tx,ty,width);
+    else ctx.fillText(value,tx,ty);
 
     ctx.restore();
   }
@@ -216,13 +213,23 @@
     const scale=Math.min(escalaOriginal,(W-MARGIN-dx)/base.width);
     const dy=(H-base.height*scale)/2;
 
+    // Guardamos a posição física do QR antes da transformação do layout.
+    // O QR será desenhado no canvas final, sem suavização nem escala fracionária.
+    const qrRect=qr.getBoundingClientRect();
+    const qrFinal={
+      x:dx+(qrRect.left-base.left)*scale,
+      y:dy+(qrRect.top-base.top)*scale,
+      tamanho:Math.min(qrRect.width,qrRect.height)*scale
+    };
+
+    ctx.save();
     ctx.translate(dx,dy);
     ctx.scale(scale,scale);
 
     ctx.fillStyle="#fff";
     ctx.fillRect(0,0,base.width,base.height);
 
-    for(const element of [gear,qr]){
+    for(const element of [gear]){
       const r=element.getBoundingClientRect();
 
       ctx.drawImage(
@@ -253,6 +260,17 @@
       base.height,
       getComputedStyle(label)
     );
+    ctx.restore();
+
+    // Mesmo conteúdo da prévia, agora desenhado ponto a ponto diretamente
+    // nos 384 × 240 pixels que serão enviados à NIIMBOT B1.
+    if(!global.AtlasQRCode || typeof global.AtlasQRCode.desenharEmCanvas!=="function")
+      throw new Error("Gerador de QR Code para impressão B1 indisponível.");
+    const codigo=label.querySelector(".codigo")?.textContent?.trim();
+    global.AtlasQRCode.desenharEmCanvas(ctx,codigo,{
+      ...qrFinal,
+      nivel:"M"
+    });
 
     try{
       return corrigirInclinacao(canvas).toDataURL("image/png");
