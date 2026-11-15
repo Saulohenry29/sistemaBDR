@@ -22,7 +22,7 @@
   let dadosPendentes = null;
 
   const FRAME_URL =
-    "etiqueta-impressao.html?embed=1&preview=1&fast=1&b1=20261115-b1-preview-png01";
+    "etiqueta-impressao.html?embed=1&preview=1&fast=1&b1=20261115-b1-marca03";
 
   function patrimonioAtual(){
     try{
@@ -43,6 +43,16 @@
       p.codigo_bem ||
       ""
     ).trim();
+  }
+
+  function informarImpressao(texto, erro=false){
+    const status=document.getElementById("statusEtiquetaOficial");
+    if(status){
+      status.textContent=texto;
+      status.classList.toggle("pronto",!erro);
+      status.setAttribute("role","status");
+      status.setAttribute("aria-live","polite");
+    }
   }
 
   function definirEstado(pronta, texto){
@@ -234,21 +244,43 @@
     imprimindoB1 = true;
     const botao = document.getElementById("btnImprimirEtiquetaOficial");
     if(botao) botao.disabled = true;
+    // O Bluefy usa CoreBluetooth: a B1 recebe melhor pacotes individuais
+    // (sem agrupamentos de até 240 bytes) no iOS. Outras plataformas mantidas.
+    const ios=/iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+    const bundleAnterior=ios?api.BUNDLE:null;
     try {
+      if(ios)api.BUNDLE=false;
+      informarImpressao("Preparando conexão Bluetooth...");
       // A solicitação de pareamento começa diretamente no clique do usuário.
       const model = { name_prefixes:["B1", "NIIMBOT"], task:"b1", density:3, label_type:1, speed:3 };
       const size = { w_px:384, h_px:240, dpi:203 };
       // Lê o PNG já exibido ao usuário, sem fazer novo render depois
       // do pareamento Bluetooth. A prévia e a impressão ficam idênticas.
       const imagem = frame.contentWindow.AtlasEtiquetaImagemB1.obterImagem();
-      await api.connect(model);
-      await api.printImage(imagem, {model,size,copies:1});
+      await api.connect(model, (etapa) => informarImpressao(etapa));
+      informarImpressao("Conectada. Enviando dados da etiqueta...");
+      await api.printImage(imagem, {
+        model,size,copies:1,
+        onProgress:(etapa)=>{
+          const traducao={
+            "connecting…":"Confirmando conexão...",
+            "configuring…":"Configurando a B1...",
+            "sending image…":"Enviando imagem para a B1...",
+            "printing…":"Aguardando confirmação da impressão...",
+            "ok":"Impressão confirmada pela B1."
+          };
+          informarImpressao(traducao[etapa]||etapa);
+        }
+      });
       global.atlasAvisoEtiqueta?.("Etiqueta enviada à NIIMBOT B1. Confira a impressão.");
       fechar();
     } catch (error) {
       console.error("ATLAS B1: impressão não confirmada",error);
-      global.atlasAvisoEtiqueta?.(`Impressão B1 não confirmada: ${error.message || error}. Não reenvie sem conferir a impressora.`);
+      const motivo=String(error?.message||error||"Falha desconhecida");
+      informarImpressao("B1 não confirmou: "+motivo+" Confira a impressora antes de repetir.",true);
+      global.atlasAvisoEtiqueta?.("NIIMBOT: "+motivo);
     } finally {
+      if(ios)api.BUNDLE=bundleAnterior;
       imprimindoB1 = false;
       if(botao) botao.disabled = false;
     }
@@ -324,7 +356,7 @@
     if(mensagem.tipo === "ATLAS_ETIQUETA_ERRO"){
       definirEstado(
         false,
-        "Não foi possível preparar a etiqueta."
+        "Erro na prévia: " + String(mensagem.erro||"Não foi possível preparar a etiqueta.")
       );
     }
   });

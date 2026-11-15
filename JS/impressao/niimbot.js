@@ -507,8 +507,29 @@
     }
   }
 
-  async function connect(model) {
-    if (characteristic && device && device.gatt.connected) return;
+  async function connect(model, onStage) {
+    const stage = (message) => {
+      try { if (typeof onStage === "function") onStage(message); } catch (_) {}
+    };
+    // A escolha do dispositivo é livre; apenas operações GATT iniciadas depois
+    // da seleção têm limite, para não deixar o botão travado no Bluefy.
+    const bounded = async (promise, name, ms = 16000) => {
+      let timer;
+      try {
+        return await Promise.race([
+          promise,
+          new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error(
+              `Tempo excedido em ${name}. Desligue/ligue a B1 e tente novamente.`
+            )), ms);
+          })
+        ]);
+      } finally { clearTimeout(timer); }
+    };
+    if (characteristic && device && device.gatt.connected) {
+      stage("NIIMBOT B1 já conectada.");
+      return;
+    }
     logMsg(`Niimbot ${VERSION} — connecting (task=${(model && model.task) || "?"})`);
     // `!navigator.bluetooth` has two different causes and they need different advice.
     // `isSecureContext` is what the browser itself gates the API on, so it is the
@@ -541,15 +562,21 @@
     const req = prefixes.length
       ? { filters: prefixes.map((p) => ({ namePrefix: p })), optionalServices: [SVC_UUID] }
       : { acceptAllDevices: true, optionalServices: [SVC_UUID] };
-    device = await navigator.bluetooth.requestDevice(req);
+    stage("Selecione sua NIIMBOT B1 na janela Bluetooth.");
+    device = await bounded(navigator.bluetooth.requestDevice(req), "seleção Bluetooth", 30000);
+    stage("Impressora selecionada. Estabelecendo conexão Bluetooth...");
     logMsg(`device name: "${device.name || "?"}"`);
-    const server = await device.gatt.connect();
-    const svc = await server.getPrimaryService(SVC_UUID);
-    characteristic = await svc.getCharacteristic(CHAR_UUID);
+    try {
+      const server = await bounded(device.gatt.connect(), "conexão GATT");
+      stage("Bluetooth conectado. Procurando serviço NIIMBOT...");
+      const svc = await bounded(server.getPrimaryService(SVC_UUID), "serviço NIIMBOT");
+      const char = await bounded(svc.getCharacteristic(CHAR_UUID), "canal de impressão");
+      characteristic = char;
+      stage("Canal localizado. Ativando respostas da impressora...");
     const props = characteristic.properties || {};
     writeMode = "fast";   // safe default for the tiny connect/detect packets; set per task below
     logMsg(`char props: write=${!!props.write} writeNoResp=${!!props.writeWithoutResponse}`);
-    await characteristic.startNotifications();
+    await bounded(characteristic.startNotifications(), "notificações da B1");
     characteristic.addEventListener("characteristicvaluechanged", onNotify);
     // SAY IT. The printer drops the link on its own — it powers down when idle, and BLE
     // links die for their own reasons. O driver limpa a conexão e a interface
@@ -560,9 +587,10 @@
       if (wasConnected) logMsg("printer disconnected (link dropped — reconnect to continue)");
     });
     // Initial connection packet (raw, 0x03 prefix — same as niimblue).
-    await writeRaw(new Uint8Array([0x03, 0x55, 0x55, 0xc1, 0x01, 0x01, 0xc1, 0xaa, 0xaa]));
+    stage("Canal ativo. Identificando o modelo B1...");
+    await bounded(writeRaw(new Uint8Array([0x03, 0x55, 0x55, 0xc1, 0x01, 0x01, 0xc1, 0xaa, 0xaa])), "inicialização da B1");
     await sleep(200);
-    await detectPrinter();                 // identify B1 vs B1 Pro (same BLE name)
+    await bounded(detectPrinter(), "identificação da B1");                 // identify B1 vs B1 Pro (same BLE name)
     // Flow control + arming follow the ACTUAL printer (detected), falling back to the
     // caller's pick when unidentified — so an identify-then-print flow (or a wrong
     // pick) still paces and arms a real B1 correctly.
@@ -581,7 +609,15 @@
     // O modo detectado e o pacing não mudam com o controle de logs.
     logAlways(`writeMode=${writeMode} override=${writeOverride || "auto"} effective=${effectiveWriteMode()} forcePacing=${writeOverride === "paced"} bundle=${effectiveBundle()} (detected=${_bundleAllowed}) mac=${IS_MAC} [${MAC_SOURCE}] pace=${PACE_MS} (task=${task || "?"}, model=${(meta && meta.label) || "?"}, write=${!!props.write}, writeNoResp=${!!props.writeWithoutResponse})`);
     warnOverrideVsModel();   // now that the model is identified, an override that fights it is worth saying
-    if (task === "b1") await b1Handshake();
+    if (task === "b1") {
+      stage("B1 identificada. Preparando a impressão...");
+      await bounded(b1Handshake(), "preparação da B1", 20000);
+    }
+    stage("NIIMBOT B1 conectada e pronta para receber a etiqueta.");
+    } catch (error) {
+      await disconnect();
+      throw error;
+    }
   }
 
   // Drop the BLE connection so a different printer can be paired/identified. Clears

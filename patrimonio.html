@@ -714,12 +714,12 @@ html.atlas-embedded .bdr-main{
 <div class="bdr-etiqueta-modal">
 <div class="bdr-etiqueta-modal-head">
 <h2>🏷 Etiqueta oficial<small class="bdr-etiqueta-help"> ESC fecha • ENTER imprime somente quando estiver pronta</small></h2>
-<button class="bdr-etiqueta-close" onclick="fecharModalEtiqueta()" title="Fechar" type="button">X</button>
+<button class="bdr-etiqueta-close" onclick="fecharModalEtiqueta()" aria-label="Fechar etiqueta" type="button">X</button>
 </div>
 <div class="bdr-etiqueta-preview-area">
 <iframe class="bdr-etiqueta-frame" id="bdrEtiquetaFrame" title="Prévia da etiqueta BDR"></iframe>
 </div>
-<div class="bdr-etiqueta-footer"><div class="bdr-etiqueta-status" id="statusEtiquetaOficial">Aguardando prévia...</div><button class="bdr-etiqueta-print-btn" disabled="" id="btnImprimirEtiquetaOficial" onclick="imprimirEtiquetaModalBDR()" type="button">⏳ Carregando etiqueta...</button></div>
+<div class="bdr-etiqueta-footer"><div class="bdr-etiqueta-status" id="statusEtiquetaOficial" aria-live="polite">Aguardando prévia...</div><button class="bdr-etiqueta-print-btn" disabled="" id="btnImprimirEtiquetaOficial" onclick="imprimirEtiquetaModalBDR()" type="button">⏳ Carregando etiqueta...</button></div>
 </div>
 </div>
 
@@ -776,7 +776,7 @@ html.atlas-embedded .bdr-main{
 <script src="./JS/atlasWorkflow.js"></script>
 <script src="./JS/patrimonio/patrimonio.js?v=20261110-escopo-obra01"></script>
 <script src="./JS/patrimonio/patrimonio-remessas.js?v=20261110-escopo-obra01"></script>
-<script src="./JS/patrimonio/patrimonio-etiqueta-individual.js?v=20261115-b1-preview-png01"></script>
+<script src="./JS/patrimonio/patrimonio-etiqueta-individual.js?v=20261115-b1-marca03"></script>
 <script src="./JS/bdrUppercase.js"></script>
 <script src="./JS/patrimonio/patrimonio-permissoes.js?v=20260725-v1"></script>
 <script src="./JS/bdrMenuMobileAtivo.js?v=20260702-3"></script>
@@ -793,6 +793,6 @@ html.atlas-embedded .bdr-main{
 <script src="./JS/atlasOwnerMode.js"></script>
 <!-- ATLAS: controlador oficial da Topbar (último script da página) -->
 <script src="./JS/atlasTopbar.js?v=20260728-v1-3-scroll-interno"></script>
-<script src="./JS/impressao/niimbot.js?v=20261114-b1quiet01"></script>
+<script src="./JS/impressao/niimbot.js?v=20261115-ios-ble-status02"></script>
 </body>
 </html>

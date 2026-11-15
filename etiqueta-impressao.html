@@ -15,7 +15,7 @@ if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent || ""))
 <script src="./JS/atlasPrintCenter.js?v=4.0.0"></script>
 <script src="./JS/atlasQRCode/qrcode.min.js?v=1.0.0"></script>
 <script src="./JS/atlasQRCode.js?v=20261115-b1-unificado01"></script>
-<script src="./JS/impressao/atlasEtiquetaImagemB1.js?v=20261115-b1-preview-png01"></script>
+<script src="./JS/impressao/atlasEtiquetaImagemB1.js?v=20261115-b1-marca03"></script>
 <style>
 *{box-sizing:border-box}
 /* Impede ajuste automático de fontes no WebView/PWA móvel.
@@ -283,7 +283,7 @@ async function atualizarEtiqueta(dados={}){
     if(!gerador?.gerar || !gerador?.fixarImagem)
       throw new Error("Rasterizador da NIIMBOT B1 indisponível.");
 
-    const png = await gerador.gerar();
+    const png = await gerador.gerar(cfg);
     if(token !== atualizacaoToken) return;
 
     imagemPreview.src = png;
@@ -383,7 +383,8 @@ window.addEventListener("message", event => {
 
         avisar("ATLAS_ETIQUETA_ERRO", {
           codigo:mensagem?.dados?.codigo || null,
-          token:mensagem?.dados?.token || null
+          token:mensagem?.dados?.token || null,
+          erro:String(error?.message||error||"erro desconhecido")
         });
       });
   }
