@@ -148,8 +148,24 @@ async function fazerLogin(){
 
       // Segurança crítica: o UUID autenticado deve ser exatamente o vinculado ao cadastro Atlas.
       if(String(authData.user.id).toLowerCase() !== String(usuario.auth_user_id).toLowerCase()){
-        await db.auth.signOut();
+        await db.auth.signOut({scope:"local"});
         mostrarMensagemAuth("Identidade de autenticação inválida.");
+        return;
+      }
+
+      // Não exibir o Atlas como conectado se a sessão Auth não foi persistida.
+      // O cadastro administrativo depende dessa mesma sessão nas telas internas.
+      const {data:sessaoVerificada,error:erroSessao}=await db.auth.getSession();
+      const token=sessaoVerificada?.session?.access_token;
+      if(erroSessao || !token){
+        await db.auth.signOut({scope:"local"});
+        mostrarMensagemAuth("Não foi possível manter a sessão segura. Atualize a página e entre novamente.");
+        return;
+      }
+      const {data:contaVerificada,error:erroConta}=await db.auth.getUser(token);
+      if(erroConta || String(contaVerificada?.user?.id||"").toLowerCase()!==String(usuario.auth_user_id).toLowerCase()){
+        await db.auth.signOut({scope:"local"});
+        mostrarMensagemAuth("Sua sessão segura não pôde ser confirmada. Entre novamente.");
         return;
       }
     }else{

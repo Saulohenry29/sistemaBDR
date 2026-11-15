@@ -33,3 +33,11 @@ credenciais/
 .DS_Store
 Thumbs.db
 .vscode/settings.json
+
+# Atlas - API privada e banco de dados
+/atlas-admin-usuarios/
+/supabase/
+*.sql
+
+# Documentacao privada do projeto Atlas
+/CONTEXTO_ATLAS.md

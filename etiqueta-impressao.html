@@ -9,9 +9,14 @@
 <script src="./JS/atlasPrintCenter.js?v=4.0.0"></script>
 <script src="./JS/atlasQRCode/qrcode.min.js?v=1.0.0"></script>
 <script src="./JS/atlasQRCode.js?v=1.0.0"></script>
-<script src="./JS/impressao/atlasEtiquetaImagemB1.js"></script>
+<script src="./JS/impressao/atlasEtiquetaImagemB1.js?v=20261114-b1x2mm01"></script>
 <style>
 *{box-sizing:border-box}
+/* Impede ajuste automático de fontes no WebView/PWA móvel.
+   O layout oficial continua com medidas em mm e não muda no notebook. */
+@media screen and (max-width:768px){
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+}
 :root{
 --papel-w:55mm;--papel-h:35mm;--arte-w:53mm;--arte-h:33mm;--padding:1.7mm;--borda:.45mm;--raio:1.8mm;
 --topo-h:13.5mm;--gear-size:8mm;--bdr-size:10.2mm;--sub-size:2.5mm;--qr-size:12.5mm;

@@ -279,6 +279,8 @@ const A = window.AtlasEtiquetaConfig;
 const QR = window.AtlasQRCode;
 const params = new URLSearchParams(location.search);
 const isEmbed = params.get("embed") === "1" || window.self !== window.top;
+const modoB1 = params.get("b1") === "1";
+const loteToken = params.get("loteToken") || "";
 if(isEmbed){
   document.body.classList.add("embed");
 }
@@ -413,6 +415,89 @@ async function buscarPatrimonios(){
   return resposta.data || [];
 }
 
+/*
+ * B1: gera cada PNG no MESMO documento/Canvas da etiqueta individual.
+ * O iframe residente é filho desta página, isolando os eventos da etiqueta
+ * individual do modal do Patrimônio. Nenhum ajuste é feito no layout oficial.
+ */
+function esperarMensagemB1(frame, tipo, token=null, prazo=25000){
+  return new Promise((resolve,reject) => {
+    let timer;
+    function limpar(){
+      clearTimeout(timer);
+      window.removeEventListener("message", receber);
+    }
+    function receber(event){
+      if(event.origin !== location.origin || event.source !== frame.contentWindow) return;
+      const dados = event.data || {};
+      if(token !== null && String(dados.token || "") !== String(token)) return;
+      if(dados.tipo === tipo){
+        limpar();
+        resolve(dados);
+      }else if(dados.tipo === "ATLAS_ETIQUETA_ERRO"){
+        limpar();
+        reject(new Error("Falha ao gerar etiqueta " + (dados.codigo || "")));
+      }
+    }
+    window.addEventListener("message", receber);
+    timer = setTimeout(() => {
+      limpar();
+      reject(new Error("Tempo excedido ao preparar a imagem da etiqueta."));
+    }, prazo);
+  });
+}
+
+function criarGeradorB1(itens, ausentes){
+  let gerando = false;
+  return {
+    pronta:ausentes.length === 0 && itens.length === codigos.length,
+    total:itens.length,
+    ausentes:ausentes.slice(),
+    async gerarImagens(onProgress){
+      if(this.pronta !== true) throw new Error("Existem patrimônios não encontrados; impressão bloqueada.");
+      if(gerando) throw new Error("As imagens deste lote já estão sendo preparadas.");
+      gerando = true;
+      const frame = document.createElement("iframe");
+      frame.setAttribute("title", "Gerador de etiquetas NIIMBOT B1");
+      frame.setAttribute("aria-hidden", "true");
+      frame.style.cssText = "position:fixed;left:-12000px;top:0;width:700px;height:420px;opacity:0;pointer-events:none;border:0";
+      document.body.appendChild(frame);
+      const imagens = [];
+      try{
+        const bridgePronta = esperarMensagemB1(frame,"ATLAS_ETIQUETA_BRIDGE_PRONTA");
+        frame.src = "etiqueta-impressao.html?embed=1&preview=1&fast=1&v=20261114-b1auto02";
+        await bridgePronta;
+        for(let i=0;i<itens.length;i++){
+          const p = itens[i];
+          const token = `b1-lote-${loteToken}-${i}`;
+          const pronta = esperarMensagemB1(frame,"ATLAS_ETIQUETA_PRONTA",token);
+          frame.contentWindow.postMessage({
+            tipo:"ATLAS_ETIQUETA_ATUALIZAR",
+            dados:{
+              token,
+              codigo:p.codigo,
+              codigo_qr:p.codigo,
+              local:p.local,
+              item:p.item,
+              obra_id:p.obra_id,
+              perfil_id:p.perfil_id
+            }
+          },location.origin);
+          await pronta;
+          const gerador = frame.contentWindow.AtlasEtiquetaImagemB1;
+          if(!gerador?.gerar) throw new Error("Gerador oficial da NIIMBOT indisponível.");
+          imagens.push(await gerador.gerar());
+          if(typeof onProgress === "function") onProgress(i+1,itens.length);
+        }
+        return imagens;
+      }finally{
+        frame.remove();
+        gerando = false;
+      }
+    }
+  };
+}
+
 async function carregar(){
   if(!codigos.length){
     container.innerHTML =
@@ -471,12 +556,43 @@ async function carregar(){
 
   await aguardarImagens();
 
+  if(modoB1){
+    const ausentes = codigos.filter(codigo => !mapa.has(String(codigo)));
+    const itens = codigos.filter(codigo => mapa.has(String(codigo))).map(codigo => {
+      const p = mapa.get(String(codigo));
+      return {
+        codigo:String(codigo),
+        local:p.localizacao || p.obra_nome || "SEM OBRA",
+        item:p.nome_bem || "ITEM",
+        obra_id:p.obra_id || null,
+        perfil_id:p.perfil_impressao_id || null
+      };
+    });
+    window.AtlasEtiquetasLoteB1 = criarGeradorB1(itens,ausentes);
+    window.parent.postMessage({
+      tipo:"ATLAS_ETIQUETAS_LOTE_B1_PRONTAS",
+      loteToken,
+      total:itens.length,
+      ausentes
+    },location.origin);
+  }
+
   if(params.get("auto") === "1" && !isEmbed){
     requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
   }
 }
 
-carregar();
+carregar().catch(error => {
+  console.error("Atlas: erro ao preparar etiquetas em lote", error);
+  container.innerHTML = '<div class="estado">Não foi possível preparar as etiquetas.</div>';
+  if(modoB1){
+    window.parent.postMessage({
+      tipo:"ATLAS_ETIQUETAS_LOTE_B1_ERRO",
+      loteToken,
+      erro:String(error?.message || error)
+    },location.origin);
+  }
+});
 </script>
 </body>
 </html>

@@ -111,7 +111,11 @@
   }
 
   function permissaoConcedivelAtual(token){
-    return currentIsOwner()||permissoesConcediveisAtual().has(String(token||"").trim());
+    const nome=norm(token);
+    // Acesso global e delegação privilegiada são exclusivos do OWNER,
+    // mesmo que uma conta MASTER antiga ainda tenha esses tokens.
+    if(!currentIsOwner() && ["TODAS_OBRAS_VER","RELATORIOS_TODAS_OBRAS","ADMINISTRACAO_DELEGADA"].includes(nome))return false;
+    return currentIsOwner()||permissoesConcediveisAtual().has(nome);
   }
 
   function obrasDoUsuario(u){
@@ -152,9 +156,149 @@
   const canManagePermissions=()=>currentIsOwner()||hasCurrentPerm("USUARIOS_PERMISSOES");
   const isOwnSelected=()=>Number(STATE.selected?.id||0)===currentId();
   const selectedIsOwner=()=>Number(STATE.selected?.id||0)===OWNER_ID;
-  const canEditSelected=()=>currentIsOwner()||(canEditUsers()&&!isOwnSelected()&&!selectedIsOwner()&&!!STATE.selected&&!STATE.selected._consulta_resumida&&norm(STATE.selected.perfil)!=="MASTER"&&(norm(current()?.perfil)!=="GESTOR"||["ADMIN","ALMOXARIFE"].includes(norm(STATE.selected.perfil))));
-  const canManageSelectedAccess=()=>currentIsOwner()||(canManagePermissions()&&!isOwnSelected()&&!selectedIsOwner()&&!!STATE.selected&&!STATE.selected._consulta_resumida&&norm(STATE.selected.perfil)!=="MASTER"&&(norm(current()?.perfil)!=="GESTOR"||["ADMIN","ALMOXARIFE"].includes(norm(STATE.selected.perfil))));
-  const canCreateUsers=()=>currentIsOwner()||(["MASTER","GESTOR"].includes(norm(current()?.perfil))&&hasCurrentPerm("USUARIOS_CRIAR"));
+  const HIERARQUIA_PERFIS=["ALMOXARIFE","ADMIN","GESTOR","MASTER"];
+  const nivelPerfil=perfil=>HIERARQUIA_PERFIS.indexOf(norm(perfil));
+  const podeGerenciarPerfil=perfil=>currentIsOwner() ||
+    (nivelPerfil(perfil)>=0 && nivelPerfil(current()?.perfil)>=nivelPerfil(perfil));
+  // O botão pode responder imediatamente; os dados completos e a autorização
+  // continuam obrigatórios no servidor ANTES de abrir o formulário de edição.
+  const podeSolicitarEdicaoSelecionada=()=>!!STATE.selected && !STATE.selected._consulta_negada &&
+    (currentIsOwner() || (canEditUsers() && !isOwnSelected() && !selectedIsOwner() && podeGerenciarPerfil(STATE.selected.perfil)));
+  const canEditSelected=()=>podeSolicitarEdicaoSelecionada() && !STATE.selected._consulta_resumida;
+  const canManageSelectedAccess=()=>!!STATE.selected && !STATE.selected._consulta_resumida &&
+    (currentIsOwner() || (canManagePermissions() && !isOwnSelected() && !selectedIsOwner() && podeGerenciarPerfil(STATE.selected.perfil)));
+  const canCreateUsers=()=>currentIsOwner() || (nivelPerfil(current()?.perfil)>=0 && hasCurrentPerm("USUARIOS_CRIAR"));
+  // Cada perfil gerencia até o seu próprio nível. Obras e permissões não são herdadas por hierarquia.
+  const perfisCriaveis=()=>currentIsOwner()?[...HIERARQUIA_PERFIS].reverse():
+    HIERARQUIA_PERFIS.filter(p=>nivelPerfil(p)<=nivelPerfil(current()?.perfil)).reverse();
+  const podeCriarPerfil=perfil=>canCreateUsers() && perfisCriaveis().includes(norm(perfil));
+
+  // O login visual legado não é uma credencial para operações administrativas.
+  // Exigir a identidade confirmada pelo Auth e nunca confiar no id do localStorage
+  // como autorização do servidor. O backend repete todas as verificações.
+  let reautenticacaoPendente=null;
+  let cadastroEmAndamento=false;
+  async function sessaoCadastroValida(){
+    const cliente=db();
+    const usuario=current();
+    if(!cliente?.auth || !usuario?.auth_user_id || (usuario.auth_status && norm(usuario.auth_status)!=="ATIVO")) return false;
+    try{
+      const {data,error}=await cliente.auth.getSession();
+      const token=data?.session?.access_token;
+      if(error || !token) return false;
+      const {data:identidade,error:erroIdentidade}=await cliente.auth.getUser(token);
+      return !erroIdentidade &&
+        String(identidade?.user?.id||"").toLowerCase() === String(usuario.auth_user_id).toLowerCase();
+    }catch(_){return false;}
+  }
+
+  function solicitarReautenticacaoCadastro(){
+    if(reautenticacaoPendente) return reautenticacaoPendente;
+    reautenticacaoPendente=new Promise(resolve=>{
+      const usuario=current()||{};
+      const email=String(usuario.email||"").trim().toLowerCase();
+      const identidadeEsperada=String(usuario.auth_user_id||"").trim().toLowerCase();
+      if(!email || !identidadeEsperada || (usuario.auth_status && norm(usuario.auth_status)!=="ATIVO")){
+        alert("Sua conta ainda não está vinculada ao Supabase Auth. Entre novamente no Atlas com sua conta segura ou solicite a ativação ao administrador.");
+        resolve(false);return;
+      }
+      const fundo=document.createElement("div");
+      fundo.id="atlasReauthModal";
+      fundo.className="atlas-reauth-fundo";
+      const caixa=document.createElement("form");
+      caixa.className="atlas-reauth-caixa";
+      caixa.setAttribute("role","dialog");
+      caixa.setAttribute("aria-modal","true");
+      caixa.setAttribute("aria-labelledby","atlasReauthTitulo");
+      caixa.noValidate=true;
+      const titulo=document.createElement("h2");
+      titulo.id="atlasReauthTitulo";
+      titulo.textContent="Confirmar acesso seguro";
+      const explicacao=document.createElement("p");
+      explicacao.textContent="Para cadastrar funcionários, confirme sua própria senha do Atlas. Isso renova a sessão Supabase Auth sem apagar o formulário. Nenhuma permissão será alterada.";
+      const conta=document.createElement("div");
+      conta.className="atlas-reauth-conta";
+      conta.textContent=email;
+      const rotulo=document.createElement("label");
+      rotulo.setAttribute("for","atlasReauthSenha");
+      rotulo.textContent="Sua senha de acesso";
+      const senha=document.createElement("input");
+      senha.id="atlasReauthSenha";
+      senha.type="password";
+      senha.autocomplete="current-password";
+      senha.required=true;
+      senha.maxLength=128;
+      const erro=document.createElement("p");
+      erro.className="atlas-reauth-erro";
+      erro.setAttribute("role","alert");
+      erro.setAttribute("aria-live","polite");
+      const acoes=document.createElement("div");
+      acoes.className="atlas-reauth-acoes";
+      const cancelar=document.createElement("button");
+      cancelar.type="button";
+      cancelar.className="atlas-btn light";
+      cancelar.textContent="Cancelar";
+      const confirmar=document.createElement("button");
+      confirmar.type="submit";
+      confirmar.className="atlas-btn primary";
+      confirmar.textContent="Confirmar acesso";
+      let emAndamento=false;
+      const fechar=(resultado)=>{
+        senha.value="";
+        fundo.removeEventListener("keydown",aoTeclado);
+        fundo.remove();
+        resolve(resultado);
+      };
+      const aoTeclado=event=>{
+        if(event.key==="Escape" && !emAndamento){event.preventDefault();fechar(false);}
+        if(event.key==="Tab"){
+          const botoes=[senha,cancelar,confirmar];
+          const atual=botoes.indexOf(document.activeElement);
+          if(event.shiftKey && atual===0){event.preventDefault();confirmar.focus();}
+          else if(!event.shiftKey && atual===2){event.preventDefault();senha.focus();}
+        }
+      };
+      cancelar.onclick=()=>{if(!emAndamento)fechar(false);};
+      caixa.onsubmit=async event=>{
+        event.preventDefault();
+        if(emAndamento) return;
+        if(!senha.value){erro.textContent="Informe sua senha de acesso.";senha.focus();return;}
+        emAndamento=true;
+        confirmar.disabled=true;cancelar.disabled=true;
+        confirmar.textContent="Verificando...";
+        erro.textContent="";
+        try{
+          const cliente=db();
+          if(!cliente?.auth) throw new Error("Serviço Supabase Auth indisponível.");
+          const resultado=await cliente.auth.signInWithPassword({email,password:senha.value});
+          if(resultado.error || !resultado.data?.user) throw new Error("Senha incorreta ou conta indisponível.");
+          if(String(resultado.data.user.id).toLowerCase()!==identidadeEsperada){
+            await cliente.auth.signOut({scope:"local"});
+            throw new Error("A conta autenticada não corresponde ao usuário atual do Atlas. Saia e entre novamente com a conta correta.");
+          }
+          if(!await sessaoCadastroValida()) throw new Error("A sessão não foi confirmada. Verifique a conexão e tente novamente.");
+          fechar(true);
+        }catch(falha){erro.textContent=falha?.message||"Falha ao validar o acesso.";}
+        finally{senha.value="";emAndamento=false;confirmar.disabled=false;cancelar.disabled=false;confirmar.textContent="Confirmar acesso";}
+      };
+      acoes.append(cancelar,confirmar);
+      caixa.append(titulo,explicacao,conta,rotulo,senha,erro,acoes);
+      fundo.appendChild(caixa);
+      fundo.addEventListener("keydown",aoTeclado);
+      document.body.appendChild(fundo);
+      senha.focus();
+    }).finally(()=>{reautenticacaoPendente=null;});
+    return reautenticacaoPendente;
+  }
+
+  async function garantirSessaoCadastro(){
+    if(await sessaoCadastroValida()) return true;
+    if(!navigator.onLine){
+      alert("O cadastro exige conexão com a internet para verificar o Supabase Auth. Reconecte e tente novamente.");
+      return false;
+    }
+    return solicitarReautenticacaoCadastro();
+  }
 
   /*
     Preferências pessoais:
@@ -187,27 +331,20 @@
   ];
 
   function aplicarPadraoRelatorios(permissoes){
-    const p = permissoes instanceof Set ? permissoes : new Set(permissoes || []);
-
+    const p=permissoes instanceof Set?permissoes:new Set(permissoes||[]);
+    // Limitação de obras é SEMPRE validada pelo servidor. Permissões de
+    // exportação e de consulta não podem ser impostas contra a decisão
+    // explícita de um administrador habilitado.
     if(!p.has("RELATORIOS_VER")){
       p.delete("RELATORIOS_OBRAS_PERMITIDAS");
       p.delete("RELATORIOS_TODAS_OBRAS");
       p.delete("RELATORIOS_EXPORTAR");
       return p;
     }
-
-    // Acesso padrão ao Relatório:
-    // - mesmas obras liberadas na aba Obras;
-    // - imprimir/exportar Excel/CSV.
-    // Recursos avançados continuam opcionais.
-    p.add("RELATORIOS_EXPORTAR");
-
-    if(p.has("RELATORIOS_TODAS_OBRAS")){
-      p.delete("RELATORIOS_OBRAS_PERMITIDAS");
-    }else{
-      p.add("RELATORIOS_OBRAS_PERMITIDAS");
-    }
-
+    // Não apagar tokens históricos sem o usuário desmarcá-los.
+    // Concessões globais continuam proibidas para não-owner no formulário
+    // e, principalmente, na Edge Function.
+    if(p.has("RELATORIOS_TODAS_OBRAS"))p.delete("RELATORIOS_OBRAS_PERMITIDAS");
     return p;
   }
 
@@ -274,121 +411,112 @@
 
   async function loadUsersScoped(){
     const cliente=db();
-    const owner=currentIsOwner();
-    if(!owner && norm(current()?.perfil)==="GESTOR"){
-      const sessao=await cliente.auth.getSession();
-      if(sessao.error||!sessao.data?.session) throw new Error("GESTOR exige sessão Supabase Auth. A listagem legada foi bloqueada por segurança.");
+    const sessao=await cliente?.auth?.getSession();
+    const token=sessao?.data?.session?.access_token;
+    if(sessao?.error || !token){
+      throw new Error("Sua sessão segura expirou. Entre novamente no Atlas para consultar funcionários.");
     }
-
-    // Listagem autenticada do MASTER: o servidor valida a identidade e as
-    // obras compartilhadas. A RPC não fornece dados para editar permissões.
-    if(!owner){
-      const sessao=await cliente.auth.getSession();
-      if(sessao.error) throw sessao.error;
-      if(sessao.data?.session){
-        const resultado=await cliente.rpc("atlas_usuarios_listar_autorizados");
-        if(resultado.error) throw resultado.error;
-        return (resultado.data||[]).map(u=>({
-          ...u,
-          _consulta_resumida:true,
-          _obras_vinculadas:u.obras_compartilhadas||[]
-        }));
-      }
+    // A listagem é autorizada pelo próprio servidor a partir de auth.uid().
+    // Nunca fazer fallback para SELECT direto, nem usar localStorage como prova de acesso.
+    const identidade=await cliente.auth.getUser(token);
+    if(identidade.error || String(identidade.data?.user?.id||"").toLowerCase()!==String(current()?.auth_user_id||"").toLowerCase()){
+      throw new Error("A sessão não corresponde à conta atual do Atlas. Saia e faça login novamente.");
     }
-
-    // Mantém o fluxo existente do OWNER e das sessões legadas.
-    // A migração do login legado exige uma etapa de segurança separada.
-    const obrasPermitidas=owner?null:[...idsObrasPermitidasAtual()].map(Number).filter(Number.isFinite);
-    if(!owner&&!obrasPermitidas.length) return [];
-
-    // Nunca selecionar senha: o cadastro legado ainda possui essa coluna.
-    // A consulta obedece a RLS; nao usar chaves privilegiadas no navegador.
-    let vinculos=[];
-    let idsUsuarios=null;
-    if(!owner){
-      const resposta=await cliente.from("usuario_obras")
-        .select("usuario_id,obra_id").in("obra_id",obrasPermitidas);
-      if(resposta.error) throw resposta.error;
-      vinculos=resposta.data||[];
-      idsUsuarios=[...new Set(vinculos.map(v=>Number(v.usuario_id)).filter(Number.isFinite))];
-      if(!idsUsuarios.length) return [];
-    }
-
-    let consulta=cliente.from("usuarios_sistema").select(USUARIOS_COLUNAS).order("nome");
-    if(!owner) consulta=consulta.in("id",idsUsuarios);
-    const resultado=await consulta;
+    const resultado=await cliente.rpc("atlas_usuarios_listar_autorizados");
     if(resultado.error) throw resultado.error;
-    const usuarios=resultado.data||[];
-
-    if(owner&&usuarios.length){
-      // Para o OWNER, carregar os vinculos de todos os usuarios retornados.
-      const ids=usuarios.map(u=>u.id);
-      for(let i=0;i<ids.length;i+=200){
-        const r=await cliente.from("usuario_obras")
-          .select("usuario_id,obra_id").in("usuario_id",ids.slice(i,i+200));
-        if(r.error) throw r.error;
-        vinculos.push(...(r.data||[]));
-      }
-    }
-
-    const mapa=new Map();
-    vinculos.forEach(v=>{
-      const chave=String(v.usuario_id);
-      if(!mapa.has(chave)) mapa.set(chave,new Set());
-      mapa.get(chave).add(String(v.obra_id));
-    });
-    return usuarios.map(u=>({
+    return (resultado.data||[]).map(u=>({
       ...u,
-      _obras_vinculadas:mapa.has(String(u.id))?[...mapa.get(String(u.id))]:null
-    })).filter(usuarioDentroDoEscopo);
+      _consulta_resumida:true,
+      _obras_vinculadas:Array.isArray(u.obras_compartilhadas)?u.obras_compartilhadas:[]
+    }));
   }
 
   async function load(){
     if(!db())throw new Error("Supabase não carregado.");
-    const ids=idsObrasPermitidasAtual();
-    if(currentIsOwner()){
-      STATE.works=await loadSafe("obras","nome");
-    }else{
-      const obraIds=[...ids].map(Number).filter(Number.isFinite);
-      if(obraIds.length){
-        const r=await db().from("obras").select("*").in("id",obraIds).order("nome");
-        if(r.error) throw r.error;
-        STATE.works=r.data||[];
-      }else STATE.works=[];
+    // Não aceitar uma sessão visual antiga como credencial para listar funcionários.
+    STATE.users=[];
+    STATE.selected=null;
+    STATE.draft=null;
+    if(!await sessaoCadastroValida()){
+      // A sessão local do Atlas pode existir sem uma sessão Supabase Auth válida.
+      // Solicita a confirmação segura já implementada, sem liberar consultas anônimas.
+      const autenticado=await garantirSessaoCadastro();
+      if(!autenticado || !await sessaoCadastroValida()){
+        throw new Error("Consulta de funcionários cancelada: confirme sua conta Supabase Auth para continuar.");
+      }
     }
-
-    const empresasPermitidas=new Set(STATE.works.map(w=>String(w.empresa_id||"")).filter(Boolean));
-    if(current()?.empresa_id) empresasPermitidas.add(String(current().empresa_id));
-
-    /* Empresas e perfis rápidos passam pela RPC transitória do módulo.
-       Não abrimos SELECT direto nessas tabelas e não mexemos no Supabase Auth agora. */
-    const aux=await db().rpc("atlas_usuarios_carregar_auxiliares",{
-      p_executor_id:currentId()
-    });
-    if(aux.error) throw aux.error;
+    const ids=idsObrasPermitidasAtual();
+    // Redes independentes em paralelo: obras, modelos e listagem segura.
+    // Apenas a listagem usa a RPC autorizada pelo Supabase Auth.
+    const obterObras=async()=>{
+      if(currentIsOwner())return await loadSafe("obras","nome");
+      const obraIds=[...ids].map(Number).filter(Number.isFinite);
+      if(!obraIds.length)return [];
+      const r=await db().from("obras").select("*").in("id",obraIds).order("nome");
+      if(r.error)throw r.error;
+      return r.data||[];
+    };
+    const [obras,aux,usuarios]=await Promise.all([
+      obterObras(),
+      db().rpc("atlas_usuarios_carregar_auxiliares",{p_executor_id:currentId()}),
+      loadUsersScoped()
+    ]);
+    if(aux.error)throw aux.error;
+    STATE.works=obras;
     const auxData=Array.isArray(aux.data)?(aux.data[0]||{}):(aux.data||{});
     const empresasAux=Array.isArray(auxData.empresas)?auxData.empresas:[];
     const perfisAux=Array.isArray(auxData.perfis_rapidos)?auxData.perfis_rapidos:[];
-
+    const empresasPermitidas=new Set(STATE.works.map(w=>String(w.empresa_id||"")).filter(Boolean));
+    if(current()?.empresa_id)empresasPermitidas.add(String(current().empresa_id));
     STATE.companies=currentIsOwner()
       ? empresasAux
       : empresasAux.filter(e=>empresasPermitidas.has(String(e.id)));
-
     STATE.table="usuarios_sistema";
-    STATE.users=await loadUsersScoped();
+    STATE.users=usuarios;
     STATE.profiles=perfisAux;
     STATE.profiles=STATE.profiles
-      .filter(p=>p.ativo!==false)
-      .filter(p=>currentIsOwner()||norm(p.nome)!=="MASTER")
+      .filter(p=>p.ativo!==false && podeGerenciarPerfil(p.nome))
       .map(p=>currentIsOwner()?p:{...p,permissoes:normalizarPermissoesPerfilRapido(p.permissoes).filter(permissaoConcedivelAtual).join(",")});
     fillFilters();renderUsers();renderProfiles();
     if($("#btnNovoUsuario")) $("#btnNovoUsuario").hidden=!canCreateUsers();
     document.documentElement.classList.remove("atlas-users-loading");
   }
 
-  function visibleUsers(){return STATE.users.filter(u=>norm(current()?.perfil)==="GESTOR" ? (["ADMIN","ALMOXARIFE"].includes(norm(u.perfil)) && String(u.empresa_id)===String(current()?.empresa_id)) : (u._consulta_resumida||usuarioDentroDoEscopo(u)))}
+  function visibleUsers(){return STATE.users.filter(u=>usuarioDentroDoEscopo(u) && podeGerenciarPerfil(u.perfil))}
   function filteredUsers(){const term=norm($("#filtroBusca").value);const pf=norm($("#filtroPerfil").value);const work=$("#filtroObraUsuario").value;const st=$("#filtroStatusUsuario").value;return visibleUsers().filter(u=>(!term||norm(`${u.nome} ${u.usuario} ${u.email}`).includes(term))&&(!pf||norm(u.perfil)===pf)&&(!work||obrasDoUsuario(u).has(String(work)))&&(!st||(st==="ATIVO")===(u.ativo!==false)))}
-  function fillFilters(){const perf=[...new Set([...visibleUsers().map(u=>String(u.perfil||"").trim()),"ADMIN","ALMOXARIFE",...(currentIsOwner()?["MASTER","GESTOR"]:[])].filter(Boolean))].sort();$("#filtroPerfil").innerHTML='<option value="">Todos os perfis</option>'+perf.map(p=>`<option>${esc(p)}</option>`).join("");$("#formPerfil").innerHTML=perf.filter(p=>currentIsOwner()||(["ADMIN","ALMOXARIFE"].includes(norm(p)))).map(p=>`<option>${esc(p)}</option>`).join("")||'<option>ALMOXARIFE</option>';const opts=STATE.works.map(w=>`<option value="${w.id}">${esc(workText(w.id))}</option>`).join("");$("#filtroObraUsuario").innerHTML='<option value="">Todas as obras</option>'+opts;$("#formEmpresa").innerHTML='<option value="">Selecione</option>'+STATE.companies.map(e=>`<option value="${e.id}">${esc(e.nome||e.razao_social||e.id)}</option>`).join("");const base=$("#formObraOperacional");if(base)base.innerHTML='<option value="">Sem base operacional</option>'+STATE.works.map(w=>`<option value="${w.id}">${esc(workText(w.id))}</option>`).join("")}
+  function fillFilters(){
+    const perf=[...new Set([...visibleUsers().map(u=>String(u.perfil||"").trim()),...perfisCriaveis()].filter(Boolean))].sort();
+    $("#filtroPerfil").innerHTML='<option value="">Todos os perfis</option>'+perf.map(p=>`<option>${esc(p)}</option>`).join("");
+    $("#formPerfil").innerHTML=perfisCriaveis().map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join("");
+    const opts=STATE.works.map(w=>`<option value="${w.id}">${esc(workText(w.id))}</option>`).join("");
+    $("#filtroObraUsuario").innerHTML='<option value="">Todas as obras</option>'+opts;
+    $("#formEmpresa").innerHTML='<option value="">Selecione</option>'+STATE.companies.map(e=>`<option value="${e.id}">${esc(e.nome||e.razao_social||e.id)}</option>`).join("");
+    const base=$("#formObraOperacional");
+    if(base)base.innerHTML='<option value="">Sem base operacional</option>'+STATE.works.map(w=>`<option value="${w.id}">${esc(workText(w.id))}</option>`).join("");
+  }
+
+  // O banco mantém os modelos oficiais em perfis_rapidos. Exibição não concede acesso.
+  function modeloPermissoesCadastro(perfil){
+    const modelo=STATE.profiles.find(p=>norm(p.nome)===norm(perfil));
+    return modelo?normalizarPermissoesPerfilRapido(modelo.permissoes).filter(permissaoConcedivelAtual):[];
+  }
+  function atualizarResumoPerfilCadastro(){
+    const campo=$("#formPerfil");
+    if(!campo)return;
+    let resumo=$("#atlasPerfilPadraoResumo");
+    if(!resumo){
+      resumo=document.createElement("small");
+      resumo.id="atlasPerfilPadraoResumo";
+      resumo.style.cssText="display:block;font-size:11px;line-height:1.45;color:#53657b;margin-top:4px";
+      campo.insertAdjacentElement("afterend",resumo);
+    }
+    const editando=!!$("#formId")?.value;
+    if(editando){resumo.textContent="Ao mudar o perfil, as permissões padrão serão sugeridas. Você pode personalizá-las sem ultrapassar seu próprio acesso.";return;}
+    const quantidade=modeloPermissoesCadastro(campo.value).length;
+    resumo.textContent=quantidade
+      ?`${quantidade} permissões padrão do perfil ${campo.value}. Limitadas às suas permissões e obras.`
+      :`Não foi possível encontrar o modelo de ${campo.value}. Atualize a página antes de cadastrar.`;
+  }
 
   function renderPagination(totalPages){
     const box = $("#paginacaoUsuarios");
@@ -534,13 +662,21 @@
 
   async function carregarObraOperacionalUsuario(user){
     if(!user?.id) return null;
-    const {data,error}=await db().rpc("atlas_obra_operacional_expedicao",{p_usuario_id:Number(user.id)});
-    if(error){
-      console.warn("Atlas Usuários: não foi possível carregar a base operacional.",error.message);
-      return null;
-    }
-    const linha=Array.isArray(data)?(data[0]||null):data;
-    return linha?.obra_id?Number(linha.obra_id):null;
+    if(user._base_operacional_carregada) return user._obra_operacional_id||null;
+    if(user._base_operacional_pendente) return user._base_operacional_pendente;
+    user._base_operacional_pendente=(async()=>{
+      const {data,error}=await db().rpc("atlas_obra_operacional_expedicao",{p_usuario_id:Number(user.id)});
+      if(error){
+        console.warn("Atlas Usuários: não foi possível consultar a base operacional.",error.message);
+        return null;
+      }
+      const linha=Array.isArray(data)?(data[0]||null):data;
+      const obraId=linha?.obra_id?Number(linha.obra_id):null;
+      user._obra_operacional_id=obraId;
+      user._base_operacional_carregada=true;
+      return obraId;
+    })().finally(()=>{user._base_operacional_pendente=null;});
+    return user._base_operacional_pendente;
   }
 
   async function selectUser(id){
@@ -549,11 +685,8 @@
         item => String(item.id) === String(id)
       );
 
-      if(!user){
-        console.warn(
-          "Atlas Usuários: funcionário não encontrado.",
-          id
-        );
+      if(!user || !usuarioDentroDoEscopo(user)){
+        console.warn("Atlas Usuários: funcionário não encontrado ou fora das obras autorizadas.", id);
         return false;
       }
 
@@ -568,21 +701,33 @@
       // ocorre em segundo plano, sem bloquear a seleção nem repetir um 403.
       if(user._consulta_resumida && !user._consulta_em_andamento && !user._consulta_negada){
         user._consulta_em_andamento=true;
-        db().functions.invoke("atlas-admin-usuarios",{
+        // A promessa é compartilhada com o botão Editar, evitando uma segunda
+        // chamada quando o funcionário clica antes de a ficha terminar de carregar.
+        user._consulta_promessa=db().functions.invoke("atlas-admin-usuarios",{
           body:{acao:"consultar",usuario_id:Number(user.id)}
-        }).then(({data:resposta,error:erroConsulta})=>{
+        }).then(async ({data:resposta,error:erroConsulta})=>{
           if(erroConsulta || resposta?.sucesso!==true || !resposta?.funcionario){
-            // O servidor pode negar detalhes de funcionários com obras fora
-            // do escopo. Preservamos a listagem sem conceder edição.
+            let mensagem=resposta?.erro||"Não foi possível validar o acesso a este funcionário.";
+            try{
+              const detalhe=await erroConsulta?.context?.json?.();
+              mensagem=detalhe?.erro||mensagem;
+            }catch(_){ }
             user._consulta_negada=true;
-            return;
+            user._consulta_erro=mensagem;
+            return false;
           }
           Object.assign(user,resposta.funcionario,{_consulta_resumida:false});
           if(String(STATE.selected?.id)===String(user.id)) selectUser(user.id);
+          return true;
         }).catch(error=>{
           console.warn("Atlas Usuários: consulta de detalhes indisponível.",error?.message||error);
-          user._consulta_negada=true;
-        }).finally(()=>{user._consulta_em_andamento=false;});
+          user._consulta_erro="Falha de conexão ao verificar o acesso. Selecione o funcionário novamente para tentar.";
+          // Falha de rede não deve conceder edição; reabrir a ficha permite nova tentativa.
+          return false;
+        }).finally(()=>{
+          user._consulta_em_andamento=false;
+          user._consulta_promessa=null;
+        });
       }
 
       STATE.selected = user;
@@ -660,29 +805,12 @@
           (user.ativo === false ? "inactive" : "active");
       }
 
-      const sections = [
-        ["dados", renderData],
-        ["permissões", renderPermissions],
-        ["notificações", renderNotifications],
-        ["obras", renderWorksInline],
-        ["histórico", renderHistory],
-        ["resumo", renderSummary]
-      ];
-
-      sections.forEach(([name, render]) => {
-        try{
-          render();
-        }catch(error){
-          console.error(
-            `Atlas Usuários: erro em ${name}.`,
-            error
-          );
-        }
-      });
+      // As abas pesadas são montadas apenas quando o usuário as abre.
+      // activateTab("dados") mostra imediatamente a ficha principal.
 
       renderUsers();
 
-      if($("#btnEditarUsuario")) $("#btnEditarUsuario").disabled=!canEditSelected();
+      if($("#btnEditarUsuario")) $("#btnEditarUsuario").disabled=!podeSolicitarEdicaoSelecionada();
       if($("#btnPerfilRapido")) $("#btnPerfilRapido").disabled=!canManageSelectedAccess();
 
       atualizarVisibilidadeAbasUsuario();
@@ -758,26 +886,28 @@
 
   function moduleHtml(m){
     const bloqueado=!canManageSelectedAccess();
-    const itensVisiveis=m.items.filter(([p])=>permissaoConcedivelAtual(p));
-    const acessoVisivel=!m.access||permissaoConcedivelAtual(m.access);
-    if(!currentIsOwner()&&!acessoVisivel&&!itensVisiveis.length) return "";
+    const originais=permsOf(STATE.selected);
+    // Um gestor autorizado pode REVOGAR permissões preexistentes de um
+    // subordinado, mas somente conceder permissões que ele próprio detém.
+    // Uma permissão não concedível, quando retirada, permanece visível
+    // e desabilitada para impedir que seja adicionada novamente.
+    const podeExibir=p=>permissaoConcedivelAtual(p)||originais.has(p);
+    const itensVisiveis=m.items.filter(([p])=>podeExibir(p));
+    const acessoVisivel=!m.access||podeExibir(m.access);
+    if(!currentIsOwner()&&!acessoVisivel&&!itensVisiveis.length)return "";
 
     const switchCabecalho=m.access
-      ? `<label class="atlas-switch"><input type="checkbox" class="module-access" data-module="${m.id}" value="${m.access}" ${STATE.draft.permissions.has(m.access)?"checked":""} ${bloqueado?"disabled":""}><span></span></label>`
+      ? `<label class="atlas-switch"><input type="checkbox" class="module-access" data-module="${m.id}" value="${m.access}" ${STATE.draft.permissions.has(m.access)?"checked":""} ${(bloqueado||(!permissaoConcedivelAtual(m.access)&&!STATE.draft.permissions.has(m.access)))?"disabled":""}><span></span></label>`
       : `<label class="atlas-switch"><input type="checkbox" class="module-master" data-module="${m.id}" ${bloqueado?"disabled":""}><span></span></label>`;
 
     const linhas=itensVisiveis.map(([p,l])=>{
-      const padraoRelatorio = m.id === "RELATORIOS" &&
-        (p === "RELATORIOS_OBRAS_PERMITIDAS" || p === "RELATORIOS_EXPORTAR");
-      const travadoPadrao = padraoRelatorio &&
-        STATE.draft.permissions.has("RELATORIOS_VER") &&
-        !(p === "RELATORIOS_OBRAS_PERMITIDAS" && STATE.draft.permissions.has("RELATORIOS_TODAS_OBRAS"));
-
+      const soRevogacao=!permissaoConcedivelAtual(p);
+      const desabilitado=bloqueado||(soRevogacao&&!STATE.draft.permissions.has(p));
       return `
-      <div class="atlas-permission-row ${padraoRelatorio ? "atlas-permission-default" : ""}">
-        <label>${esc(l)}${padraoRelatorio ? '<small>Padrão ao liberar Relatórios</small>' : ''}</label>
+      <div class="atlas-permission-row">
+        <label>${esc(l)}${soRevogacao?'<small>Pode remover, mas não conceder</small>':''}</label>
         <label class="atlas-switch">
-          <input type="checkbox" class="permission-toggle" value="${p}" ${STATE.draft.permissions.has(p)?"checked":""} ${(bloqueado || travadoPadrao)?"disabled":""}>
+          <input type="checkbox" class="permission-toggle" value="${p}" ${STATE.draft.permissions.has(p)?"checked":""} ${desabilitado?"disabled":""}>
           <span></span>
         </label>
       </div>`;
@@ -1117,9 +1247,10 @@
     const concediveis=currentIsOwner()?list:list.filter(permissaoConcedivelAtual);
     STATE.draft.permissions=new Set([...preservadas,...concediveis]);
     aplicarPadraoRelatorios(STATE.draft.permissions);
+    // Perfil rápido define modelo de permissões, NÃO promove/rebaixa
+    // a hierarquia estrutural do funcionário já cadastrado.
     STATE.draft.perfil_rapido=profile.nome;
-    STATE.draft.perfil=profile.nome;
-    $("#selectedProfile").textContent=profile.nome;
+    $("#selectedProfile").textContent=STATE.draft.perfil||STATE.selected.perfil;
     renderPermissions();
     renderNotifications();
     renderSummary();
@@ -1129,7 +1260,21 @@
   }
 
 
-  function activateTab(nome){$$('.atlas-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===nome));$$('.atlas-tab-content').forEach(x=>x.classList.remove('active'));const alvo=$('#tab'+nome.charAt(0).toUpperCase()+nome.slice(1));if(alvo)alvo.classList.add('active');const area=$('.atlas-tab-scroll-area');if(area)area.scrollTop=0}
+  function activateTab(nome){
+    $$('.atlas-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===nome));
+    $$('.atlas-tab-content').forEach(x=>x.classList.remove('active'));
+    const alvo=$('#tab'+nome.charAt(0).toUpperCase()+nome.slice(1));
+    if(alvo)alvo.classList.add('active');
+    if(STATE.selected){
+      const funcoes={dados:renderData,permissoes:renderPermissions,
+        notificacoes:renderNotifications,obras:renderWorksInline,
+        historico:renderHistory,resumo:renderSummary};
+      // dataset sem acento pode variar entre páginas; preservar também os nomes originais.
+      const render=funcoes[norm(nome).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')];
+      if(render) try{render();}catch(e){console.error('Falha ao abrir aba de usuários',e);}
+    }
+    const area=$('.atlas-tab-scroll-area');if(area)area.scrollTop=0;
+  }
   function authStatusInfo(u){
     const status=String(u?.auth_status||'LEGADO').trim().toUpperCase();
     if(status==='ATIVO'&&u?.auth_user_id){
@@ -1378,11 +1523,10 @@
     const p=new Set(
       [...STATE.draft.permissions]
         .filter(x=>!LEGACY_MODULE_TOKENS.has(norm(x)))
-        .filter(x=>currentIsOwner()||permissaoConcedivelAtual(x))
+        // Manter tokens preexistentes que não podem ser CONCEDIDOS,
+        // sem recolocar aqueles que o gestor removeu voluntariamente.
+        .filter(x=>currentIsOwner()||permissaoConcedivelAtual(x)||originais.has(x))
     );
-    if(!currentIsOwner()){
-      [...originais].filter(x=>!permissaoConcedivelAtual(x)).forEach(x=>p.add(x));
-    }
 
     aplicarPadraoRelatorios(p);
     p.add("RECEBER_NOTIFICACOES");
@@ -1551,17 +1695,70 @@
     botao.title=descricao;
   }
 
+  // Ao selecionar uma pessoa, a lista autorizada fornece o resumo imediatamente.
+  // A confirmação de acesso da Edge Function pode demorar: o botão responde ao
+  // clique, mas o formulário só abre APÓS a autorização segura terminar.
+  async function abrirEdicaoSelecionada(){
+    const usuario=STATE.selected;
+    if(!usuario || !podeSolicitarEdicaoSelecionada()) return;
+    const botao=$("#btnEditarUsuario");
+    const htmlOriginal=botao?.innerHTML||"Editar dados";
+    try{
+      if(usuario._consulta_resumida){
+        if(botao){
+          botao.disabled=true;
+          botao.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Validando acesso...';
+        }
+        // Normalmente a consulta já foi iniciada ao selecionar o funcionário.
+        if(!usuario._consulta_promessa && !usuario._consulta_negada){
+          await selectUser(usuario.id);
+        }
+        if(usuario._consulta_promessa) await usuario._consulta_promessa;
+        if(usuario._consulta_resumida){
+          alert(usuario._consulta_erro||"Acesso de edição não confirmado. Selecione o funcionário novamente ou verifique sua permissão para a obra.");
+          return;
+        }
+      }
+      if(STATE.selected!==usuario || !canEditSelected()){
+        alert("Sua sessão não permite editar este funcionário ou a seleção mudou. Selecione-o novamente.");
+        return;
+      }
+      await openUserModal(usuario);
+    }catch(erro){
+      alert("Não foi possível abrir a edição: "+(erro?.message||"verifique sua conexão e tente novamente."));
+    }finally{
+      if(botao){
+        botao.innerHTML=htmlOriginal;
+        botao.disabled=!podeSolicitarEdicaoSelecionada();
+      }
+    }
+  }
+
   async function openUserModal(user=null,focusPassword=false){
     if(user?(!canEditSelected()):(!canCreateUsers()))return;
     if(user&&Number(user.id)===OWNER_ID&&!currentIsOwner())return;
+    // Solicita a reautenticação ANTES do preenchimento para não perder o trabalho.
+    if(!user && !await garantirSessaoCadastro()) return;
     fotoArquivoPendente=null; removerFotoPendente=false;
-    $("#formId").value=user?.id||"";$("#formNome").value=user?.nome||"";$("#formUsuario").value=user?.usuario||"";$("#formEmail").value=user?.email||"";$("#formPerfil").value=user?.perfil||$("#formPerfil option")?.value||"ALMOXARIFE";$("#formEmpresa").value=user?.empresa_id||"";$("#formAtivo").value=String(user?.ativo!==false);$("#formSenha").value="";
+    // Menor privilégio por padrão. MASTER/GESTOR continuam disponíveis somente
+    // mediante escolha explícita de administrador autorizado.
+    $("#formId").value=user?.id||"";$("#formNome").value=user?.nome||"";$("#formUsuario").value=user?.usuario||"";$("#formEmail").value=user?.email||"";$("#formPerfil").value=user?.perfil||"ALMOXARIFE";$("#formEmpresa").value=user?.empresa_id||"";$("#formAtivo").value=String(user?.ativo!==false);$("#formSenha").value="";
+    // Qualquer administrador autorizado edita perfis até seu nível; o backend confirma.
+    $("#formPerfil").disabled=!!user && !canManageSelectedAccess();
+    atualizarResumoPerfilCadastro();
     STATE.formWorksDraft=obrasDoUsuario(user||{});
-    const obraOperacional=user?await carregarObraOperacionalUsuario(user):null;
-    if(user) user._obra_operacional_id=obraOperacional;
+    const obraOperacional=user?user._obra_operacional_id:null;
     const baseOperacional=$("#formObraOperacional");
-    if(baseOperacional) baseOperacional.value=obraOperacional?String(obraOperacional):"";
     sincronizarBaseOperacional();
+    if(baseOperacional&&obraOperacional)baseOperacional.value=String(obraOperacional);
+    // Abrir o formulário sem aguardar uma chamada de rede; atualizar a base depois.
+    if(user&&!user._base_operacional_carregada){
+      carregarObraOperacionalUsuario(user).then(id=>{
+        if($("#modalUsuario")?.hidden || String($("#formId")?.value)!==String(user.id))return;
+        const seletor=$("#formObraOperacional");
+        if(seletor && !seletor.value && id)seletor.value=String(id);
+      });
+    }
     atualizarResumoFormObras();
     if($("#formFotoArquivo")) $("#formFotoArquivo").value="";
     $("#modalUsuarioTitulo").textContent=user?"Editar usuário":"Novo usuário";
@@ -1644,6 +1841,7 @@
       // A Edge Function atlas-senhas autoriza redefinicao de legado somente ao OWNER.
       const podeRedefinir=info.status==='LEGADO'?currentIsOwner():(currentIsOwner()||hasCurrentPerm("ADMINISTRACAO_DELEGADA"));
       botao.disabled=!user || info.status==='AGUARDANDO' || !podeRedefinir;
+      botao.hidden=!user; // Cadastro novo usa somente senha Supabase Auth ao salvar.
       botao.title="A redefinição é autorizada no servidor conforme o perfil e as obras.";
       const aviso=senhaLabel.querySelector("#avisoSenhaSeparada")||document.createElement("small");
       aviso.id="avisoSenhaSeparada";
@@ -1651,6 +1849,7 @@
       aviso.className="atlas-senha-aviso";
       if(!aviso.parentNode)senhaLabel.appendChild(aviso);
     }
+    atualizarPermissoesFormulario(true);
     atualizarPreviewFoto(user); modal("modalUsuario",true);if(focusPassword&&user)setTimeout(()=>$("#formSenha").focus(),80)
   }
   async function enviarAvatarAtlas(arquivo){
@@ -1703,6 +1902,67 @@
     finally{if(botao)botao.disabled=false;}
   }
 
+  // O formulário apresenta os modelos que já existem em perfis_rapidos.
+  // Sem personalização, salvar usa o modelo selecionado. Na edição sem mudança,
+  // preserva as permissões atuais do usuário; não reescreve tudo silenciosamente.
+  let formularioPermissoes=new Set();
+  function atualizarPermissoesFormulario(recarregar=false){
+    const perfil=$("#formPerfil")?.value||"";
+    const id=$("#formId")?.value||"";
+    const mudou=!!id && norm(perfil)!==norm(STATE.selected?.perfil);
+    if(recarregar){
+      formularioPermissoes=new Set(id&&!mudou?permsOf(STATE.selected):modeloPermissoesCadastro(perfil));
+      const detalhe=$("#atlasPersonalizarPermissoes");
+      if(detalhe)detalhe.open=false;
+    }
+    const painel=$("#atlasPermissoesCadastro");
+    const legenda=$("#atlasLegendaPermissoesCadastro");
+    if(!painel)return;
+    const edicaoPermitida=!id || canManageSelectedAccess();
+    const catalogo=new Map();
+    PERMISSION_MODULES.forEach(modulo=>{
+      if(modulo.access)catalogo.set(modulo.access,`${modulo.title} — Acesso`);
+      modulo.items.forEach(([p,descricao])=>catalogo.set(p,`${modulo.title} — ${descricao}`));
+    });
+    const originais=id?permsOf(STATE.selected):new Set();
+    const opcoes=[...new Set([...catalogo.keys(),...formularioPermissoes,...originais])]
+      .filter(p=>permissaoConcedivelAtual(p) || originais.has(p))
+      .sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    painel.innerHTML=opcoes.map(p=>{
+      const podeLigar=permissaoConcedivelAtual(p)||formularioPermissoes.has(p);
+      const marcado=formularioPermissoes.has(p);
+      return `<label style="display:flex;gap:8px;align-items:flex-start;margin:5px 0"><input type="checkbox" class="atlas-form-perm" value="${esc(p)}" ${marcado?'checked':''} ${!edicaoPermitida||(!marcado&&!podeLigar)?'disabled':''}><span>${esc(catalogo.get(p)||p)}</span></label>`;
+    }).join('');
+    if(legenda)legenda.textContent=`${formularioPermissoes.size} permissões selecionadas. ${id&&!mudou?'Mantidas do cadastro atual.':'Carregadas do perfil '+perfil+'.'} Ajustes são limitados ao seu acesso.`;
+  }
+  function permissoesFormularioCadastro(){return [...formularioPermissoes].filter(p=>
+    currentIsOwner() || permissaoConcedivelAtual(p) || (!!$("#formId")?.value && permsOf(STATE.selected).has(p)));
+  }
+
+  // Conferência rápida dos registros que o administrador está autorizado a visualizar.
+  // A trava definitiva contra duplicações permanece no servidor/banco.
+  function detectarDuplicidadeVisivel(cadastro){
+    const chave=valor=>String(valor??"").trim().replace(/\s+/g," ").toUpperCase();
+    const email=chave(cadastro.email);
+    const login=chave(cadastro.usuario);
+    const nome=chave(cadastro.nome);
+    const empresa=String(cadastro.empresa_id??"");
+    for(const existente of STATE.users){
+      if(!usuarioDentroDoEscopo(existente))continue;
+      const identificacao=String(existente.nome||"funcionário já cadastrado");
+      if(email && chave(existente.email)===email){
+        return `O e-mail já pertence a ${identificacao}. Abra o cadastro existente em vez de criar outro.`;
+      }
+      if(login && chave(existente.usuario)===login){
+        return `O nome de usuário já pertence a ${identificacao}. Escolha o cadastro existente ou outro login.`;
+      }
+      if(nome && empresa && String(existente.empresa_id??"")===empresa && chave(existente.nome)===nome){
+        return `${identificacao} já está cadastrado nesta empresa. Confira antes de continuar.`;
+      }
+    }
+    return null;
+  }
+
   async function saveUser(){
     const id=$("#formId").value;
 
@@ -1740,7 +2000,12 @@
     if(!currentIsOwner()){
       if(!id && [...STATE.formWorksDraft].some(obraId=>!obraPermitidaAtual(obraId))){alert("Você só pode vincular usuários às suas obras liberadas.");return}
       if(payload.empresa_id&&!empresaPermitidaAtual(payload.empresa_id)){alert("Você só pode vincular usuários às suas empresas liberadas.");return}
-      if(["MASTER","GESTOR"].includes(norm(payload.perfil))){alert("Somente o OWNER ID 1 pode cadastrar MASTER ou GESTOR.");return}
+      if(!id && !podeCriarPerfil(payload.perfil)){
+        alert("Você não pode cadastrar um perfil superior ao seu. Solicite a um administrador de nível adequado.");return;
+      }
+      if(id && !podeGerenciarPerfil(payload.perfil)){
+        alert("Você não pode promover este funcionário para um nível superior ao seu.");return;
+      }
     }
     if(!payload.nome||!payload.usuario){alert("Informe nome e usuário.");return}
     if(!payload.empresa_id){alert("Selecione a empresa do funcionário.");return}
@@ -1764,8 +2029,11 @@
 
     if(!id){
       if(!payload.email){alert("Informe o e-mail do funcionário para enviar a ativação segura.");return}
+      payload.email=String(payload.email).toLowerCase();
+      const duplicado=detectarDuplicidadeVisivel(payload);
+      if(duplicado){alert(duplicado);return;}
       const prof=STATE.profiles.find(p=>norm(p.nome)===norm(payload.perfil));
-      const perfilPerms=normalizarPermissoesPerfilRapido(prof?.permissoes||"").filter(permissaoConcedivelAtual);
+      const perfilPerms=permissoesFormularioCadastro();
       Object.assign(payload,{
         permissoes:perfilPerms.join(","),
         perfil_rapido:prof?.nome||payload.perfil,
@@ -1810,14 +2078,18 @@
     }
 
     if(!id){
+      if(cadastroEmAndamento) return;
+      cadastroEmAndamento=true;
+      const botaoCadastro=$("#btnSalvarUsuario");
+      if(botaoCadastro) botaoCadastro.disabled=true;
       try{
-        const {data:{session},error:erroSessao}=await db().auth.getSession();
-        if(erroSessao || !session?.access_token) throw new Error("Para criar funcionários é necessário entrar com uma conta Supabase Auth autorizada.");
+        // Reconfere o token e a identidade mesmo se a sessão expirou com o formulário aberto.
+        if(!await garantirSessaoCadastro()) return;
         const permissoesCadastro=String(payload.permissoes||"").split(",").map(p=>p.trim().toUpperCase()).filter(Boolean);
         if(!STATE.formWorksDraft.size) throw new Error("Selecione pelo menos uma obra de atuação.");
         if(!permissoesCadastro.length) throw new Error("O perfil escolhido não possui permissões definidas. Configure um perfil rápido antes de cadastrar.");
         if(!["ADMIN","ALMOXARIFE","MASTER","GESTOR"].includes(norm(payload.perfil))) throw new Error("Perfil incompatível com o cadastro seguro.");
-        if(norm(current()?.perfil)==="GESTOR"&&! ["ADMIN","ALMOXARIFE"].includes(norm(payload.perfil))) throw new Error("GESTOR só pode cadastrar ADMIN ou ALMOXARIFE.");
+        if(!podeCriarPerfil(payload.perfil)) throw new Error("Seu perfil não pode cadastrar esse nível de usuário.");
         if(payload.ativo!==true) throw new Error("Cadastro inicial de usuário inativo ainda não está disponível no fluxo seguro.");
         if(fotoArquivoPendente) throw new Error("Cadastre primeiro o funcionário; o envio da foto será feito após a criação.");
         const {data:retorno,error:erroFuncao}=await db().functions.invoke("atlas-admin-usuarios",{
@@ -1845,13 +2117,29 @@
         await load();
         await selectUser(retorno.funcionario.id);
         toast(retorno.mensagem||"Usuário criado no Supabase Auth.");
-      }catch(erro){alert("Cadastro seguro não concluído: "+erro.message)}
+      }catch(erro){
+        const mensagem=erro?.message||"Falha desconhecida no cadastro.";
+        alert("Cadastro seguro não concluído: "+mensagem);
+      }finally{
+        cadastroEmAndamento=false;
+        if(botaoCadastro) botaoCadastro.disabled=false;
+      }
       return;
     }
 
     if(id && !currentIsOwner()){
       try{
         const alteracoes={nome:payload.nome,usuario:payload.usuario,email:payload.email};
+        const mudouPerfil=norm(payload.perfil)!==norm(STATE.selected.perfil);
+        const originais=permsOf(STATE.selected);
+        const escolhidas=permissoesFormularioCadastro();
+        const mudouPermissoes=escolhidas.length!==originais.size || escolhidas.some(p=>!originais.has(p));
+        if(mudouPerfil || mudouPermissoes){
+          if(!canManageSelectedAccess()) throw new Error("Você não possui permissão para alterar perfil ou acessos deste funcionário.");
+          alteracoes.perfil=payload.perfil;
+          alteracoes.perfil_rapido=payload.perfil;
+          alteracoes.permissoes=escolhidas;
+        }
         if(payload.ativo!==STATE.selected.ativo){
           if(!hasCurrentPerm("USUARIOS_BLOQUEAR"))throw new Error("Sem permissão para bloquear ou reativar usuários.");
           alteracoes.ativo=payload.ativo;
@@ -1868,12 +2156,29 @@
       }catch(erro){alert("Alteração não concluída: "+erro.message)}
       return;
     }
-    const r=await db().rpc("atlas_usuarios_salvar",{
-      p_acao:id?"ATUALIZAR":"CRIAR",
-      p_usuario_id:id?Number(id):null,
-      p_dados:payload,
-      p_executor_id:currentId()
-    });
+    // Edição OWNER também passa pela Edge Function para aplicar a mesma hierarquia
+    // e evitar caminhos de salvamento diferentes para o mesmo formulário.
+    let r;
+    if(id){
+      try{
+        const alteracoes={nome:payload.nome,usuario:payload.usuario,email:payload.email};
+        if(payload.ativo!==STATE.selected.ativo)alteracoes.ativo=payload.ativo;
+        const mudouPerfil=norm(payload.perfil)!==norm(STATE.selected.perfil);
+        const originais=permsOf(STATE.selected);
+        const escolhidas=permissoesFormularioCadastro();
+        if(mudouPerfil || escolhidas.length!==originais.size || escolhidas.some(p=>!originais.has(p))){
+          alteracoes.perfil=payload.perfil;
+          alteracoes.perfil_rapido=payload.perfil;
+          alteracoes.permissoes=escolhidas;
+        }
+        if([...STATE.formWorksDraft].sort().join(",")!==[...obrasDoUsuario(STATE.selected)].sort().join(","))
+          throw new Error("Alterar as obras de atuação exige o fluxo específico de obras. Nenhuma mudança foi gravada.");
+        const resposta=await adminSupabase({acao:"editar",usuario_id:Number(id),alteracoes});
+        r={data:resposta.funcionario,error:null};
+      }catch(error){r={error};}
+    }else{
+      r={error:new Error("Cadastro seguro obrigatório: use a Edge Function.")};
+    }
     if(r.error){
       alert((id && senha ? "A senha foi redefinida, mas os demais dados do cadastro NÃO foram salvos: " : "Erro ao salvar usuário: ")+r.error.message);
       return;
@@ -1977,7 +2282,7 @@
     });
 
     if($("#btnNovoUsuario"))$("#btnNovoUsuario").onclick=()=>openUserModal();
-    if($("#btnEditarUsuario"))$("#btnEditarUsuario").onclick=()=>openUserModal(STATE.selected);
+    if($("#btnEditarUsuario"))$("#btnEditarUsuario").onclick=abrirEdicaoSelecionada;
     if($("#btnTrocarSenha"))$("#btnTrocarSenha").onclick=()=>{
       if(isOwnSelected() && !currentIsOwner()){
         location.href="alterar-senha.html";
@@ -1992,6 +2297,24 @@
     if($("#btnRemoverFoto"))$("#btnRemoverFoto").onclick=()=>{fotoArquivoPendente=null;removerFotoPendente=true;if($("#formFotoArquivo"))$("#formFotoArquivo").value="";atualizarPreviewFoto(STATE.selected)};
     if($("#formNome"))$("#formNome").addEventListener("input",()=>{if(!fotoArquivoPendente&&!STATE.selected?.foto_url)atualizarPreviewFoto(STATE.selected)});
     if($("#formEmpresa")) $("#formEmpresa").addEventListener("change",sincronizarBaseOperacional);
+    $("#formPerfil")?.addEventListener("change",()=>{atualizarResumoPerfilCadastro();atualizarPermissoesFormulario(true);});
+    // O modelo já é carregado ao escolher o perfil. Este controle apenas permite
+    // restaurá-lo depois de personalizações, sem gravar nada no banco.
+    $("#btnRestaurarPermissoesPerfil")?.addEventListener("click",()=>{
+      formularioPermissoes=new Set(modeloPermissoesCadastro($("#formPerfil")?.value||"ALMOXARIFE"));
+      atualizarPermissoesFormulario(false);
+      atualizarResumoPerfilCadastro();
+      toast("Permissões padrão restauradas. Elas serão gravadas somente ao salvar o funcionário.");
+    });
+    $("#atlasPermissoesCadastro")?.addEventListener("change",event=>{
+      if(!event.target.classList.contains("atlas-form-perm"))return;
+      if(event.target.checked&&!permissaoConcedivelAtual(event.target.value)){
+        event.target.checked=false;
+        alert("Você não pode conceder uma permissão que não possui.");return;
+      }
+      event.target.checked?formularioPermissoes.add(event.target.value):formularioPermissoes.delete(event.target.value);
+      atualizarPermissoesFormulario(false);
+    });
     if($("#btnFormObras")) $("#btnFormObras").onclick=abrirFormObras;
     if($("#buscaFormObras")) $("#buscaFormObras").oninput=renderFormObras;
     $("#listaFormObras")?.addEventListener("change",event=>{
@@ -2033,6 +2356,9 @@
       if(event.target.classList.contains("permission-toggle")){
         const valor = event.target.value;
 
+        if(event.target.checked&&!permissaoConcedivelAtual(valor)){
+          renderPermissions();return;
+        }
         if(valor === "RELATORIOS_OBRAS_PERMITIDAS" && event.target.checked){
           STATE.draft.permissions.delete("RELATORIOS_TODAS_OBRAS");
         }
@@ -2048,6 +2374,9 @@
 
       if(event.target.classList.contains("module-access")){
         const valor = event.target.value;
+        if(event.target.checked&&!permissaoConcedivelAtual(valor)){
+          renderPermissions();return;
+        }
         updatePerm(valor,event.target.checked);
 
         if(valor === "RELATORIOS_VER"){
@@ -2062,9 +2391,11 @@
         if(!modulo)return;
 
         modulo.items.forEach(([permission])=>{
-          event.target.checked
-            ? STATE.draft.permissions.add(permission)
-            : STATE.draft.permissions.delete(permission);
+          if(event.target.checked){
+            if(permissaoConcedivelAtual(permission))STATE.draft.permissions.add(permission);
+          }else{
+            STATE.draft.permissions.delete(permission);
+          }
         });
 
         renderPermissions();
@@ -2232,7 +2563,18 @@
       }
     }
     iniciado=true;
-    try{await load()}catch(e){document.documentElement.classList.remove("atlas-users-loading");alert(e.message||"Não foi possível carregar usuários.")}
+    try{await load()}catch(e){
+      STATE.users=[];
+      STATE.selected=null;
+      STATE.draft=null;
+      const vazio=$("#semUsuario");
+      const conteudo=$("#conteudoUsuario");
+      if(vazio){vazio.hidden=false;vazio.style.display="flex";}
+      if(conteudo){conteudo.hidden=true;conteudo.style.display="none";}
+      renderUsers();
+      document.documentElement.classList.remove("atlas-users-loading");
+      alert(e.message||"Não foi possível carregar usuários.");
+    }
   }
 
   global.AtlasUsuarios = {loaded:true,state:STATE,selectUser,load,iniciar:init};

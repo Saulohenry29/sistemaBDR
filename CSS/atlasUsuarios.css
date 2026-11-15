@@ -1721,3 +1721,17 @@
 #modalUsuario .atlas-senha-definir:disabled{opacity:.55;cursor:not-allowed}
 #modalUsuario .atlas-senha-aviso{display:block;margin-top:6px;font-size:11px;line-height:1.35;color:#667085;font-weight:400}
 @media(max-width:760px){#modalUsuario .atlas-senha-acoes{flex-wrap:wrap}#modalUsuario .atlas-senha-botao{min-width:110px}}
+
+/* Reautenticação administrativa: senha nunca é salva nem enviada fora do Auth. */
+.atlas-reauth-fundo{position:fixed;inset:0;z-index:2147483647;background:rgba(13,27,49,.72);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box}
+.atlas-reauth-caixa{box-sizing:border-box;width:min(460px,100%);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;border-radius:16px;padding:26px;box-shadow:0 20px 65px #0005;display:flex;flex-direction:column;gap:12px;color:#183047}
+.atlas-reauth-caixa h2{margin:0;color:#ab1624;font-size:23px;line-height:1.25}
+.atlas-reauth-caixa p{margin:0;line-height:1.5;font-size:14px}
+.atlas-reauth-conta{background:#f1f5fa;border-radius:9px;padding:11px 12px;font-weight:600;overflow-wrap:anywhere;font-size:14px}
+.atlas-reauth-caixa label{font-size:13px;font-weight:700}
+.atlas-reauth-caixa input{box-sizing:border-box;width:100%;border:1px solid #cbd5e1;border-radius:9px;padding:12px;font:inherit}
+.atlas-reauth-caixa input:focus{outline:2px solid #2563eb;outline-offset:1px}
+.atlas-reauth-erro{color:#b91c1c;min-height:1.1em;font-weight:600}
+.atlas-reauth-acoes{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:9px;margin-top:4px}
+.atlas-reauth-acoes button{cursor:pointer}
+@media(max-width:500px){.atlas-reauth-caixa{padding:20px}.atlas-reauth-acoes button{flex:1}}

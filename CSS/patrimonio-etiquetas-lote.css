@@ -139,3 +139,50 @@ body.atlas-modal-aberto{
     width:100%;
   }
 }
+
+/* NIIMBOT B1: painel compacto de progresso, sem prévia ou segunda confirmação.
+   O iframe continua montado fora da tela, com dimensões reais, pois o
+   gerador Canvas precisa medir o layout para imprimir corretamente. */
+.atlas-etiquetas-lote-estado{
+  flex:1;min-width:0;display:flex;flex-direction:column;gap:9px;
+}
+.atlas-etiquetas-lote-estado progress{
+  width:100%;height:9px;accent-color:#16a34a;
+}
+.atlas-etiquetas-lote-estado progress[hidden]{display:none}
+.atlas-etiquetas-lote-acoes{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.atlas-etiquetas-lote-bg.modo-b1{
+  background:transparent;backdrop-filter:none;
+  align-items:flex-end;justify-content:flex-end;
+  pointer-events:none;padding:20px;
+}
+.atlas-etiquetas-lote-bg.modo-b1 .atlas-etiquetas-lote-modal{
+  width:min(440px,calc(100vw - 32px));height:auto;
+  max-height:min(340px,70vh);pointer-events:auto;
+  border:1px solid #dbe3ee;border-radius:14px;
+  box-shadow:0 16px 52px rgba(15,23,42,.27);
+}
+.atlas-etiquetas-lote-bg.modo-b1 .atlas-etiquetas-lote-head{
+  padding:13px 16px;
+}
+.atlas-etiquetas-lote-bg.modo-b1 .atlas-etiquetas-lote-preview{
+  position:absolute;left:-12000px;top:0;
+  width:980px;height:720px;min-height:0;
+  opacity:0;pointer-events:none;overflow:hidden;
+}
+.atlas-etiquetas-lote-bg.modo-b1 .atlas-etiquetas-lote-preview iframe{
+  width:980px;height:720px;
+}
+.atlas-etiquetas-lote-bg.modo-b1 .atlas-etiquetas-lote-footer{
+  padding:14px 16px;align-items:flex-start;
+}
+.atlas-etiquetas-lote-bg.modo-b1 .atlas-etiquetas-lote-footer #atlasEtiquetasLoteStatus{
+  line-height:1.45;overflow-wrap:anywhere;
+}
+@media(max-width:680px){
+  .atlas-etiquetas-lote-bg.modo-b1{padding:12px}
+  .atlas-etiquetas-lote-bg.modo-b1 .atlas-etiquetas-lote-modal{
+    width:100%;height:auto;border-radius:14px;
+  }
+  .atlas-etiquetas-lote-bg.modo-b1 .atlas-etiquetas-lote-acoes{width:100%}
+}

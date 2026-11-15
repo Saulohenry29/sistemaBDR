@@ -9,6 +9,7 @@
     ['patrimonio', 'patrimonio.html', 'PATRIMONIO_VER', 'Patrimônio', 'fa-solid fa-tags'],
     ['manutencao', 'manutencao.html', 'MANUTENCAO_VER', 'Manutenção', 'fa-solid fa-screwdriver-wrench'],
     ['expedicao', 'expedicao.html', 'EXPEDICAO_VER', 'Expedição', 'fa-solid fa-truck-fast'],
+    ['scanner', 'scanner.html', 'SCANNER_ACESSAR', 'Scanner Inteligente', 'fa-solid fa-qrcode'],
     ['movimentacoes', 'movimentacoes.html', 'MOVIMENTACOES_VER', 'Movimentações', 'fa-solid fa-right-left'],
     ['relatorios', 'relatorios.html', 'RELATORIOS_VER', 'Relatórios', 'fa-regular fa-file-lines'],
     ['empresa', 'empresa.html', 'EMPRESAS_VER', 'Empresas', 'fa-solid fa-building'],

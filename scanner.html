@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atlas | Scanner Inteligente</title>
+<link rel="icon" href="./icons/favicon branco.png">
+<link rel="stylesheet" href="./CSS/atlas-scanner.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer src="./JS/supabaseClient.js"></script>
+<script defer src="./JS/bdrMenuPermissoes.js"></script>
+<script defer src="./JS/bdrAcessoObras.js"></script>
+<script defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script defer src="./JS/atlasScanner.js"></script>
+</head>
+<body>
+<main class="as-app">
+  <header class="as-header"><div><h1><i class="fa-solid fa-qrcode"></i> Scanner Inteligente</h1><p>Bipe, confira e siga para a transferência ou recebimento.</p></div><span class="as-pill">ATLAS</span></header>
+  <section class="as-panel" aria-label="Modo de operação">
+    <div class="as-mode" role="group" aria-label="Operação">
+      <button type="button" data-modo="automatico" class="ativo"><i class="fa-solid fa-wand-magic-sparkles"></i> Automático</button>
+      <button type="button" data-modo="enviar"><i class="fa-solid fa-truck-fast"></i> Enviar</button>
+      <button type="button" data-modo="receber"><i class="fa-solid fa-box-open"></i> Receber</button>
+    </div>
+    <div class="as-obra-wrap"><label for="asObra">Obra onde você está operando <small>(origem para enviar, destino para receber)</small></label>
+      <select id="asObra" aria-label="Selecione a obra da operação"><option value="">Carregando obras liberadas...</option></select></div>
+    <p class="as-contexto" id="asContexto">Identificando obra e permissão...</p>
+    <div class="as-cam-area">
+      <div id="asReader" class="as-reader" hidden><video id="asNativeVideo" playsinline muted autoplay hidden></video><div id="asHtml5Reader"></div></div>
+      <div id="asCamPlaceholder" class="as-cam-placeholder"><i class="fa-solid fa-camera"></i><strong>Leitor de QR Code</strong><small>Use a câmera ou digite o número gravado na peça.</small></div>
+      <button id="asCamera" type="button" class="as-btn as-outline"><i class="fa-solid fa-camera"></i> Abrir câmera</button>
+    </div>
+    <form id="asForm" class="as-input-row" autocomplete="off">
+      <label for="asCodigo">Código do patrimônio / gravação com micro-retífica</label>
+      <div class="as-input-controls"><input id="asCodigo" required spellcheck="false" autocomplete="off" placeholder="Ex.: PAT-7280557 ou 7280557"><button class="as-btn as-primary" type="submit"><i class="fa-solid fa-plus"></i> Adicionar</button></div>
+    </form>
+    <div id="asAviso" role="status" aria-live="polite" class="as-aviso">Pronto para ler.</div>
+  </section>
+  <section class="as-panel" aria-label="Lista de patrimônios lidos">
+    <div class="as-list-head"><h2>Patrimônios conferidos <span id="asTotal" class="as-count">0</span></h2><button type="button" class="as-btn as-text" id="asLimpar">Limpar lista</button></div>
+    <div class="as-kpis"><div class="as-kpi"><strong id="asEnvioCount">0</strong><span>Para enviar</span></div><div class="as-kpi"><strong id="asReceberCount">0</strong><span>Com remessa</span></div><div class="as-kpi as-amber"><strong id="asDiretoCount">0</strong><span>Sem remessa</span></div></div>
+    <div id="asLista" class="as-lista"><div class="as-empty">Nenhum patrimônio lido ainda.</div></div>
+    <div id="asGrupos" class="as-grupos"></div>
+    <p id="asObservacao" class="as-nota">Nenhuma movimentação é gravada durante a leitura. Somente a confirmação no fluxo oficial altera o patrimônio.</p>
+    <button type="button" class="as-btn as-primary as-continue" id="asContinuar" disabled>Conferir transferência</button>
+  </section>
+</main>
+</body>
+</html>

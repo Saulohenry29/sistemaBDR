@@ -77,7 +77,7 @@ html.atlas-embedded .bdr-main{
 <link href="./CSS/layout-bdr.css" rel="stylesheet"/>
 <link href="./CSS/bdr-fix-menu-final.css?v=20260724-padrao-profissional-v1" rel="stylesheet"/>
 <link href="./CSS/atlas-topbar.css?v=20260724-padrao-profissional-v1" rel="stylesheet"/><link href="./CSS/patrimonio-lote.css?v=20260727-alinhamento-dinamico" rel="stylesheet"/>
-<link href="./CSS/patrimonio-etiquetas-lote.css?v=20260726-v1" rel="stylesheet"/>
+<link href="./CSS/patrimonio-etiquetas-lote.css?v=20261114-b1auto02" rel="stylesheet"/>
 <link href="./CSS/patrimonio.css?v=20260727-layout-final" rel="stylesheet"/>
 <link href="./CSS/patrimonio-remessas.css" rel="stylesheet"/>
 <script src="./JS/atlasDialog.js?v=20260724-padrao-profissional-v1"></script>
@@ -745,9 +745,14 @@ html.atlas-embedded .bdr-main{
     </div>
 
     <div class="atlas-etiquetas-lote-footer">
-      <span id="atlasEtiquetasLoteStatus">Carregando...</span>
-      <button type="button" class="atlas-etiquetas-lote-cancelar"
-        onclick="AtlasEtiquetasLote.fechar()">Cancelar</button>
+      <div class="atlas-etiquetas-lote-estado">
+        <span id="atlasEtiquetasLoteStatus" role="status" aria-live="polite">Carregando...</span>
+        <progress id="atlasEtiquetasLoteB1Progresso" max="100" value="0" hidden></progress>
+      </div>
+      <div class="atlas-etiquetas-lote-acoes">
+        <button type="button" class="atlas-etiquetas-lote-cancelar"
+          onclick="AtlasEtiquetasLote.fechar()">Fechar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -766,7 +771,7 @@ html.atlas-embedded .bdr-main{
 <script src="./JS/bdrSyncEngine.js"></script>
 <script src="./JS/bdrSyncCenter.js"></script>
 <script src="./JS/patrimonio/patrimonio-lote.js?v=20260727-alinhamento-dinamico"></script>
-<script src="./JS/patrimonio/patrimonio-etiquetas-lote.js?v=20260726-v1"></script>
+<script src="./JS/patrimonio/patrimonio-etiquetas-lote.js?v=20261114-b1auto02"></script>
 <script src="./JS/atlasGestorNotificacoes.js?v=20261110-escopo-obra01"></script>
 <script src="./JS/atlasWorkflow.js"></script>
 <script src="./JS/patrimonio/patrimonio.js?v=20261110-escopo-obra01"></script>
@@ -788,6 +793,6 @@ html.atlas-embedded .bdr-main{
 <script src="./JS/atlasOwnerMode.js"></script>
 <!-- ATLAS: controlador oficial da Topbar (último script da página) -->
 <script src="./JS/atlasTopbar.js?v=20260728-v1-3-scroll-interno"></script>
-<script src="./JS/impressao/niimbot.js"></script>
+<script src="./JS/impressao/niimbot.js?v=20261114-b1quiet01"></script>
 </body>
 </html>
