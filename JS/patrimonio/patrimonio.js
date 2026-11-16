@@ -1387,17 +1387,40 @@ function atlasChaveCatalogoPatrimonio(item){
 }
 
 async function atlasCarregarCatalogoGlobalPatrimonio(){
-  // `carregarPatrimonios()` já traz os registros completos e os grava no
-  // IndexedDB. O catálogo reaproveita essa mesma fonte, evitando uma segunda
-  // consulta ao Supabase e mantendo as sugestões disponíveis offline.
-  let fonte = Array.isArray(patrimonios) ? patrimonios : [];
+  // Fonte independente das obras autorizadas: apenas campos tecnicos
+  // da tabela de catalogo, nunca registros completos de outras obras.
+  const tabelaCache = 'atlas_catalogo_patrimonio';
+  let fonte = [];
+
+  if(await patrimonioOnlineReal() && db()){
+    try{
+      const tamanhoPagina = 1000;
+      for(let inicio=0; ; inicio+=tamanhoPagina){
+        const {data,error}=await db()
+          .from('atlas_catalogo_patrimonio')
+          .select('chave,nome_bem,marca,modelo,tipo_item,tipo_outro,combustivel,potencia,ncm')
+          .order('chave',{ascending:true})
+          .range(inicio,inicio+tamanhoPagina-1);
+        if(error) throw error;
+        const pagina=data||[];
+        fonte.push(...pagina);
+        if(pagina.length<tamanhoPagina) break;
+      }
+      if(window.BDROfflineDB?.salvarTabela){
+        await BDROfflineDB.salvarTabela(tabelaCache,fonte);
+      }
+    }catch(e){
+      console.warn('Atlas Patrimonio: catalogo tecnico online indisponivel.',e?.message||e);
+      fonte=[];
+    }
+  }
 
   if(!fonte.length && window.BDROfflineDB?.lerTabela){
     try{
-      fonte = await BDROfflineDB.lerTabela("patrimonio") || [];
+      fonte=await BDROfflineDB.lerTabela(tabelaCache)||[];
     }catch(e){
-      console.warn("Atlas Patrimônio: cache do catálogo indisponível.",e?.message||e);
-      fonte = [];
+      console.warn('Atlas Patrimonio: cache tecnico indisponivel.',e?.message||e);
+      fonte=[];
     }
   }
 
@@ -1406,10 +1429,17 @@ async function atlasCarregarCatalogoGlobalPatrimonio(){
     const nome=String(item?.nome_bem||'').trim();
     if(!nome) return;
     const registro={
-      id:item.id,
+      id:null,
+      catalogo:true,
+      chave:String(item?.chave||''),
       nome_bem:nome.toUpperCase(),
       marca:String(item?.marca||'').trim().toUpperCase(),
-      modelo:String(item?.modelo||'').trim().toUpperCase()
+      modelo:String(item?.modelo||'').trim().toUpperCase(),
+      tipo_item:String(item?.tipo_item||'').trim().toUpperCase(),
+      tipo_outro:String(item?.tipo_outro||'').trim().toUpperCase(),
+      combustivel:String(item?.combustivel||'').trim().toUpperCase(),
+      potencia:String(item?.potencia||'').trim().toUpperCase(),
+      ncm:String(item?.ncm||'').trim()
     };
     const chave=atlasChaveCatalogoPatrimonio(registro);
     if(chave && !mapa.has(chave)) mapa.set(chave,registro);
@@ -1420,20 +1450,29 @@ async function atlasCarregarCatalogoGlobalPatrimonio(){
 }
 
 function atlasCatalogoNomesPatrimonio(){
-  const locais=(window.patrimonios||patrimonios||[]).map(p=>({
+  // Os patrimonios locais complementam a busca, sem ampliar o escopo da obra.
+  const locais=(patrimonios||[]).map(p=>({
     id:p?.id,
+    catalogo:false,
     nome_bem:String(p?.nome_bem||'').trim().toUpperCase(),
     marca:String(p?.marca||'').trim().toUpperCase(),
-    modelo:String(p?.modelo||'').trim().toUpperCase()
+    modelo:String(p?.modelo||'').trim().toUpperCase(),
+    tipo_item:String(p?.tipo_item||'').trim().toUpperCase(),
+    tipo_outro:String(p?.tipo_outro||'').trim().toUpperCase(),
+    combustivel:String(p?.combustivel||'').trim().toUpperCase(),
+    potencia:String(p?.potencia||'').trim().toUpperCase(),
+    ncm:String(p?.ncm||'').trim()
   })).filter(p=>p.nome_bem);
 
-  const padrao=ATLAS_NOMES_PATRIMONIO_PADRAO.map(nome=>({id:null,nome_bem:nome,marca:'',modelo:''}));
+  const padrao=ATLAS_NOMES_PATRIMONIO_PADRAO.map(nome=>({
+    id:null,catalogo:false,nome_bem:nome,marca:'',modelo:''
+  }));
   const mapa=new Map();
   [...atlasCatalogoGlobalPatrimonio,...locais,...padrao].forEach(item=>{
     const chave=atlasChaveCatalogoPatrimonio(item);
     if(chave && !mapa.has(chave)) mapa.set(chave,item);
   });
-  return [...mapa.values()];
+  return [...mapa.values()].sort((a,b)=>a.nome_bem.localeCompare(b.nome_bem,'pt-BR'));
 }
 
 function atlasAtualizarSugestoesPatrimonio(){
@@ -1456,8 +1495,8 @@ function atlasAtualizarSugestoesPatrimonio(){
     const detalhe=[item.marca,item.modelo].filter(Boolean).join(' • ');
     return `<button type="button" class="atlas-sugestao" data-indice="${indice}"
       onmousedown="event.preventDefault(); atlasEscolherSugestaoPatrimonioIndice(${indice})">
-      ${item.nome_bem}
-      <small>${detalhe||'Nome padronizado do catálogo'}</small>
+      ${atlasEscaparHTML(item.nome_bem)}
+      <small>${atlasEscaparHTML(detalhe||'Nome padronizado do catálogo')}</small>
     </button>`;
   }).join('');
   lista.classList.add('ativo');
@@ -1478,30 +1517,27 @@ function atlasDefinirCampoSeExiste(id,valorCampo){
 async function atlasAplicarPatrimonioComoModelo(registro){
   if(!registro) return;
 
-  // Primeiro define o tipo para o Atlas criar os campos dinâmicos corretos.
   atlasDefinirCampoSeExiste('nome_bem',registro.nome_bem);
   const campoTipo=document.getElementById('tipo_item');
   if(campoTipo) campoTipo.value=String(registro.tipo_item||'');
   mostrarCampos();
 
-  // Copia somente características reutilizáveis. Identificadores individuais,
-  // obra/localização e medições atuais permanecem vazios para o novo patrimônio.
-  const campos=[
-    'tipo_outro','estado_conservacao','valor_bem',
-    'marca','modelo','cor','combustivel','potencia','ano_fabricacao','ano_modelo',
-    'especificacoes','descricao','fornecedor','departamento','responsavel',
-    'endereco_estoque','ncm'
-  ];
-  campos.forEach(id=>{
+  // Apenas caracteristicas reutilizaveis do modelo, nunca dados de uma unidade.
+  ['tipo_outro','marca','modelo','combustivel','potencia','ncm'].forEach(id=>{
     atlasDefinirCampoSeExiste(id,registro[id]);
   });
 
-  // Nunca copiar dados que identificam uma unidade específica.
-  ['numero_serie','placa','renavam','chassi','codigo_antigo','quilometragem','horimetro','numero_nfe','observacao']
-    .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  // Nao herdar valor, estado, cor, fornecedor, local, pessoa, NF-e ou identificadores.
+  [
+    'estado_conservacao','valor_bem','cor','ano_fabricacao','ano_modelo',
+    'especificacoes','descricao','fornecedor','departamento','responsavel',
+    'endereco_estoque','numero_serie','placa','renavam','chassi',
+    'codigo_antigo','quilometragem','horimetro','numero_nfe','observacao'
+  ].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.value='';
+  });
 
-  // Novo patrimônio começa sempre EM_USO; o status do patrimônio usado como modelo
-  // não deve ser herdado.
   const statusInicial=document.getElementById('status_inicial');
   if(statusInicial){
     statusInicial.value='EM_USO';
@@ -1509,9 +1545,6 @@ async function atlasAplicarPatrimonioComoModelo(registro){
   }
 
   window.AtlasPatrimonioLote?.resetar?.();
-
-  // O formulário já está renderizado neste ponto. O foco segue direto para o
-  // único dado individual que falta informar, sem uma segunda renderização.
   const serie=document.getElementById('numero_serie');
   if(serie && !serie.disabled && serie.offsetParent!==null){
     serie.focus();
@@ -1527,6 +1560,11 @@ async function atlasEscolherSugestaoPatrimonioIndice(indice){
   if(!item) return;
 
   atlasFecharSugestoesPatrimonio();
+
+  if(item.catalogo){
+    await atlasAplicarPatrimonioComoModelo(item);
+    return;
+  }
 
   if(!item.id){
     atlasDefinirCampoSeExiste('nome_bem',item.nome_bem);
@@ -1748,13 +1786,15 @@ function atlasListaUnica(valores){
 }
 
 function atlasOpcoesAutocomplete(tipo){
+  // Marca e modelo seguem o mesmo catalogo tecnico global do nome do bem.
+  const fonte=[...(atlasCatalogoGlobalPatrimonio||[]),...(patrimonios||[])];
   if(tipo === "marca"){
-    return atlasListaUnica((patrimonios || []).map(item => item?.marca));
+    return atlasListaUnica(fonte.map(item => item?.marca));
   }
 
   const marca = atlasTextoMaiusculo(document.getElementById("marca")?.value);
   return atlasListaUnica(
-    (patrimonios || [])
+    fonte
       .filter(item => !marca || atlasTextoMaiusculo(item?.marca) === marca)
       .map(item => item?.modelo)
   );
@@ -5104,6 +5144,7 @@ async function bdrTentarSincronizarPendenciasPatrimonio(){
     }
 
     await carregarPatrimonios();
+    await atlasCarregarCatalogoGlobalPatrimonio();
     await carregarManutencoesPatrimonio();
   }catch(e){
     console.warn("Patrimônio: tentativa de sincronização automática falhou:", e);
