@@ -1514,6 +1514,54 @@ function atlasDefinirCampoSeExiste(id,valorCampo){
   el.value=String(valorCampo);
 }
 
+function atlasNormalizarModeloParaNCM(texto){
+  return atlasNormalizarTextoSugestao(texto).replace(/[^A-Z0-9]/g,'');
+}
+
+function atlasNcmDoCatalogoPatrimonio(registro){
+  // NCM so e reaproveitado quando o nome coincide exatamente e nao ha
+  // codigos fiscais conflitantes entre modelos compativeis.
+  const nome=atlasNormalizarTextoSugestao(registro?.nome_bem);
+  if(!nome) return '';
+
+  const modelo=atlasNormalizarModeloParaNCM(registro?.modelo);
+  const nomeCompacto=atlasNormalizarModeloParaNCM(registro?.nome_bem);
+  const codigos=new Set();
+  const adicionarCodigo=valor=>{
+    const codigo=String(valor||'').trim();
+    if(/^\d{8}$/.test(codigo)) codigos.add(codigo);
+  };
+
+  adicionarCodigo(registro?.ncm);
+
+  (atlasCatalogoGlobalPatrimonio||[]).forEach(item=>{
+    if(atlasNormalizarTextoSugestao(item?.nome_bem)!==nome) return;
+    const modeloCandidato=atlasNormalizarModeloParaNCM(item?.modelo);
+
+    // Modelos diferentes nao podem compartilhar NCM por suposicao.
+    if(modelo && modeloCandidato && modelo!==modeloCandidato) return;
+    // Sem modelo em um dos registros, exige que ele esteja explicito no nome.
+    if(modelo && !modeloCandidato && !nomeCompacto.includes(modelo)) return;
+    if(!modelo && modeloCandidato && !nomeCompacto.includes(modeloCandidato)) return;
+    adicionarCodigo(item?.ncm);
+  });
+
+  return codigos.size===1 ? [...codigos][0] : '';
+}
+
+function atlasCompletarNcmPeloNomePatrimonio(){
+  const campo=document.getElementById('ncm');
+  const nome=document.getElementById('nome_bem');
+  if(!campo||!nome||String(campo.value||'').trim()) return;
+
+  const ncm=atlasNcmDoCatalogoPatrimonio({
+    nome_bem:nome.value,
+    marca:document.getElementById('marca')?.value,
+    modelo:document.getElementById('modelo')?.value
+  });
+  if(ncm) campo.value=ncm;
+}
+
 async function atlasAplicarPatrimonioComoModelo(registro){
   if(!registro) return;
 
@@ -1523,9 +1571,13 @@ async function atlasAplicarPatrimonioComoModelo(registro){
   mostrarCampos();
 
   // Apenas caracteristicas reutilizaveis do modelo, nunca dados de uma unidade.
-  ['tipo_outro','marca','modelo','combustivel','potencia','ncm'].forEach(id=>{
+  ['tipo_outro','marca','modelo','combustivel','potencia'].forEach(id=>{
     atlasDefinirCampoSeExiste(id,registro[id]);
   });
+  // Limpa o NCM anterior se o novo modelo nao tiver codigo confiavel.
+  // NF-e nunca e copiada do catalogo.
+  const campoNcm=document.getElementById('ncm');
+  if(campoNcm) campoNcm.value=atlasNcmDoCatalogoPatrimonio(registro);
 
   // Nao herdar valor, estado, cor, fornecedor, local, pessoa, NF-e ou identificadores.
   [
