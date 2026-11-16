@@ -22,7 +22,7 @@
   let dadosPendentes = null;
 
   const FRAME_URL =
-    "etiqueta-impressao.html?embed=1&preview=1&fast=1&b1=20261115-b1-marca03";
+    "etiqueta-impressao.html?embed=1&preview=1&fast=1&b1=20261116-b1-referencia-git07";
 
   function patrimonioAtual(){
     try{
