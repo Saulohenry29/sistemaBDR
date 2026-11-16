@@ -15,6 +15,7 @@ let impressaoIniciada = false;
 let modoB1 = false;
 let b1Pronta = false;
 let imprimindoB1 = false;
+let envioB1EmAndamento = false;
 let quantidadeAtual = 0;
 let preparacaoB1 = null;
 
@@ -43,6 +44,24 @@ function preferenciaB1(){
     const usuario = JSON.parse(raw || "null");
     return !!usuario?.id && localStorage.getItem(`atlas:impressora:${usuario.id}`) === "niimbot-b1";
   }catch(_){ return false; }
+}
+
+// Compartilha a mesma instância BLE já validada na etiqueta individual.
+// No shell Atlas, o driver reside na janela principal: usar o driver deste
+// iframe criaria uma segunda conexão e abriria novamente o seletor do Bluefy.
+function obterDriverB1(){
+  try{
+    const principal = global.top;
+    if(principal && principal !== global &&
+       principal.location.origin === global.location.origin &&
+       principal.document?.getElementById("atlasFrameWrap")){
+      return principal.Niimbot || null;
+    }
+  }catch(error){
+    console.warn("ATLAS B1 lote: janela principal inacessível", error);
+  }
+  // Patrimônio fora do shell: usa o driver já carregado nesta janela.
+  return global.Niimbot || null;
 }
 
 function criarEsperaB1(token){
@@ -204,7 +223,7 @@ function abrir(codigos){
 
 async function imprimirB1Automatico(token){
   if(!modoB1 || imprimindoB1 || token !== tokenAtual) return;
-  const api = global.Niimbot;
+  const api = obterDriverB1();
   if(!api?.isSupported?.()){
     definirStatus("Bluetooth indisponível. Use Chrome ou Edge em HTTPS ou localhost.");
     limparEsperaB1("Bluetooth indisponível.");
@@ -213,7 +232,7 @@ async function imprimirB1Automatico(token){
 
   imprimindoB1 = true;
   const espera = preparacaoB1?.promessa;
-  const model = {name_prefixes:["B1","NIIMBOT"], task:"b1", density:3, label_type:1, speed:3};
+  const model = {name_prefixes:["B1"], task:"b1", density:3, label_type:1, speed:1};
   const size = {w_px:384, h_px:240, dpi:203};
   let sucesso = false;
   let envioIniciado = false;
@@ -245,6 +264,7 @@ async function imprimirB1Automatico(token){
 
     definirStatus(`Enviando ${imagens.length} etiquetas à NIIMBOT B1...`);
     envioIniciado = true;
+    envioB1EmAndamento = true;
     await api.printBatch(imagens, {
       model, size,
       onProgress(mensagem){
@@ -274,6 +294,7 @@ async function imprimirB1Automatico(token){
       definirStatus(mensagem);
     }
   }finally{
+    envioB1EmAndamento = false;
     imprimindoB1 = false;
     limparEsperaB1("Envio encerrado.");
     if(sucesso && token === tokenAtual) finalizar();
@@ -281,9 +302,11 @@ async function imprimirB1Automatico(token){
 }
 
 function fechar(){
-  if(imprimindoB1){
-    definirStatus("Envio ou conexão em andamento. Aguarde ou cancele a seleção Bluetooth.");
-    return;
+  // Fechar deve funcionar mesmo se a seleção Bluetooth estiver pendente.
+  // O token invalida o processamento do lote após a seleção; nenhum envio
+  // novo começa. Um printBatch já iniciado continua sem desconectar a B1.
+  if(envioB1EmAndamento){
+    global.atlasAvisoEtiqueta?.("Janela fechada. O lote já iniciado continuará sendo enviado à B1.");
   }
   tokenAtual += 1;
   clearTimeout(timerSeguranca);
