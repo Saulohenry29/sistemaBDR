@@ -341,7 +341,7 @@ html.atlas-embedded .bdr-main{
 <h3>➕ Novo Patrimônio</h3>
 <div class="grid">
 <div class="atlas-autocomplete-wrap">
-<input autocomplete="off" id="nome_bem" onfocus="atlasAtualizarSugestoesPatrimonio()" oninput="atlasAtualizarSugestoesPatrimonio()" onkeydown="atlasTeclaSugestaoPatrimonio(event)" onblur="setTimeout(atlasFecharSugestoesPatrimonio,160)" placeholder="Nome do patrimônio. Ex.: Esmerilhadeira"/>
+<input autocomplete="off" id="nome_bem" onfocus="atlasAtualizarSugestoesPatrimonio()" oninput="atlasAtualizarSugestoesPatrimonio()" onkeydown="atlasTeclaSugestaoPatrimonio(event)" onblur="atlasCompletarNcmPeloNomePatrimonio(); setTimeout(atlasFecharSugestoesPatrimonio,160)" placeholder="Nome do patrimônio. Ex.: Esmerilhadeira"/>
 <div class="atlas-sugestoes" id="atlasSugestoesPatrimonio"></div>
 </div>
 <select id="tipo_item" onchange="mostrarCampos()">
@@ -774,7 +774,7 @@ html.atlas-embedded .bdr-main{
 <script src="./JS/patrimonio/patrimonio-etiquetas-lote.js?v=20261116-b1-reuso-shell01"></script>
 <script src="./JS/atlasGestorNotificacoes.js?v=20261110-escopo-obra01"></script>
 <script src="./JS/atlasWorkflow.js"></script>
-<script src="./JS/patrimonio/patrimonio.js?v=20261116-catalogo-global01"></script>
+<script src="./JS/patrimonio/patrimonio.js?v=20261116-ncm-automatico01"></script>
 <script src="./JS/patrimonio/patrimonio-remessas.js?v=20261110-escopo-obra01"></script>
 <script src="./JS/patrimonio/patrimonio-etiqueta-individual.js?v=20261116-b1-referencia-git07"></script>
 <script src="./JS/bdrUppercase.js"></script>
