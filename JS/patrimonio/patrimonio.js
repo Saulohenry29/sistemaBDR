@@ -3010,11 +3010,17 @@ function renderizarPatrimonios(){
       (!busca || bdrRelevanciaBuscaPatrimonio(p, buscaOriginal) !== null);
   });
 
-  // Ordenar antes de paginar: resultados pelo nome vêm antes dos encontrados pela obra.
+  // Ordenar antes de paginar: na pesquisa, manter relevancia; ao filtrar
+  // uma obra, exibir pela numeracao PAT (nao pelo ID de criacao).
   const correspondencias = new Map();
   if(busca){
     filtrados.forEach(p=>correspondencias.set(p,bdrRelevanciaBuscaPatrimonio(p,buscaOriginal)));
     filtrados.sort((a,b)=>(correspondencias.get(b)?.pontos||0)-(correspondencias.get(a)?.pontos||0));
+  }else if(filtroObra){
+    filtrados.sort((a,b)=>
+      (Number(b.sequencial)||0)-(Number(a.sequencial)||0) ||
+      (Number(b.id)||0)-(Number(a.id)||0)
+    );
   }
 
   const total = filtrados.length;
