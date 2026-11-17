@@ -3166,7 +3166,20 @@ function bdrSelecionarPaginaEtiquetas(marcado){
   });
 }
 
+// A selecao visual pode ser restaurada pelo navegador apos atualizar a lista.
+// Reconciliar somente itens da pagina atual; preserva os selecionados de outras paginas.
+function bdrSincronizarSelecaoVisivel(){
+  if(!bdrModoSelecaoEtiquetas) return;
+  document.querySelectorAll(".bdr-etiqueta-check").forEach(check => {
+    const codigo=String(check.dataset.codigo || "").trim();
+    if(!codigo) return;
+    if(check.checked) bdrEtiquetasSelecionadas.add(codigo);
+    else bdrEtiquetasSelecionadas.delete(codigo);
+  });
+}
+
 function bdrAtualizarContadorEtiquetas(){
+  bdrSincronizarSelecaoVisivel();
   const quantidade = bdrEtiquetasSelecionadas.size;
   const el = document.getElementById("bdrQtdEtiquetasSelecionadas");
   const ajuda = document.getElementById("bdrLoteAjuda");
@@ -3197,6 +3210,7 @@ function bdrEntrarModoSelecaoPatrimonios(){
 }
 
 function bdrPatrimoniosSelecionadosAtuais(){
+  bdrSincronizarSelecaoVisivel();
   const codigos = new Set(Array.from(bdrEtiquetasSelecionadas).map(v=>String(v)));
   return patrimonios.filter(p=>codigos.has(String(p.codigo_qr || "")));
 }
@@ -3250,6 +3264,7 @@ function bdrAcaoPrincipalEtiquetas(){
 }
 
 function bdrImprimirEtiquetasSelecionadas(){
+  bdrSincronizarSelecaoVisivel();
   if(!usuarioTemPermissao("PATRIMONIO_IMPRIMIR")){
     alert("Você não tem permissão para imprimir etiquetas.");
     return;
