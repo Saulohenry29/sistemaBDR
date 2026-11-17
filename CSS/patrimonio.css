@@ -2361,15 +2361,67 @@ html,body{max-width:100%;overflow-x:hidden!important}
 .atlas-destino-opcao.selecionada{background:#fef2f2;color:#991b1b;font-weight:700}
 .atlas-destino-vazio{padding:13px;color:#64748b;font-size:12px;text-align:center}
 
-/* ATLAS: fonte minima de 16px nos campos editaveis em telas pequenas.
-   Safari/Chrome iOS ampliam o viewport ao focar inputs menores que 16px.
-   Sem alterar user-scalable e sem impedir o zoom manual do usuario. */
-@media (max-width:700px) {
-  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
-  select,
-  textarea,
-  .atlas-combo-input,
-  .atlas-destino-busca {
+/* ATLAS | mobile/tablet | fix do zoom ao focar campos
+   Prioridade real: regras anteriores '#cardEntradaPatrimonio input'
+   tinham mais especificidade do que o antigo 'input:not(...)'.
+   Preserva zoom manual (nao muda maximum-scale/user-scalable). */
+@media screen and (max-width:1199px), screen and (pointer:coarse) {
+  html, body {
+    -webkit-text-size-adjust:100%;
+    text-size-adjust:100%;
+  }
+
+  #cardEntradaPatrimonio input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  #cardEntradaPatrimonio select,
+  #cardEntradaPatrimonio textarea,
+  #cardObraLancamento input:not([type="checkbox"]),
+  #cardObraLancamento select,
+  .card:has(#busca) input:not([type="checkbox"]),
+  .card:has(#busca) select,
+  .card:has(#busca) .atlas-combo-input,
+  #modalBg input:not([type="checkbox"]),
+  #modalBg select,
+  #modalBg textarea,
+  .atlas-destino-combo .atlas-destino-busca {
+    font-size:16px!important;
+  }
+
+  #cardEntradaPatrimonio input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  #cardEntradaPatrimonio select,
+  #cardObraLancamento input:not([type="checkbox"]),
+  #cardObraLancamento select {
+    height:44px!important;
+    min-height:44px!important;
+    box-sizing:border-box!important;
+  }
+}
+
+/* Celular em retrato: campos ocupam somente a largura util do aparelho.
+   Tablet pode manter a grade em colunas existente. */
+@media screen and (max-width:600px) {
+  #cardEntradaPatrimonio .grid,
+  #cardEntradaPatrimonio #camposExtras {
+    grid-template-columns:minmax(0,1fr)!important;
+    width:100%!important;
+    max-width:100%!important;
+  }
+  #cardEntradaPatrimonio .grid > *,
+  #cardEntradaPatrimonio #camposExtras > *,
+  #cardEntradaPatrimonio .atlas-autocomplete-wrap {
+    min-width:0!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+  }
+}
+
+/* iPad com ponteiro/mouse: WebKit ainda pode usar media queries de desktop.
+   Garante 16px no formulario inclusive em iframe no modo iPadOS desktop. */
+@supports (-webkit-touch-callout: none) {
+  #cardEntradaPatrimonio input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  #cardEntradaPatrimonio select,
+  #cardEntradaPatrimonio textarea,
+  #cardObraLancamento input:not([type="checkbox"]),
+  #cardObraLancamento select {
     font-size:16px!important;
   }
 }
