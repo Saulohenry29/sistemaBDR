@@ -1606,7 +1606,16 @@ async function atlasAplicarPatrimonioComoModelo(registro){
 
   // Recupera somente a referencia tecnica quando ela ja existe no registro.
   // O catalogo global nao compartilha identificadores, locais nem dados financeiros.
-  atlasDefinirCampoSeExiste('especificacoes',registro.especificacoes);
+  // Os registros armazenam especificacoes no texto de observacao:
+  // "Observacao livre | Especificações: i5, 8 GB ...".
+  // Reaproveitar somente a parte explicitamente tecnica e autorizada.
+  const notaTecnica=String(registro.observacao||'')
+    .split(/\s+\|\s+/)
+    .map(trecho=>trecho.trim())
+    .find(trecho=>/^especificações\s*:/i.test(trecho));
+  const especificacoes=registro.especificacoes ||
+    (notaTecnica ? notaTecnica.replace(/^especificações\s*:\s*/i,'') : '');
+  atlasDefinirCampoSeExiste('especificacoes',especificacoes);
 
   // Regra oficial para novo cadastro: a conservacao e sempre um valor valido.
   // Antes este campo era apagado e o select aparecia completamente em branco.
