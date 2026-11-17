@@ -2360,3 +2360,16 @@ html,body{max-width:100%;overflow-x:hidden!important}
 .atlas-destino-opcao:hover,.atlas-destino-opcao:focus-visible{background:#f1f5f9;outline:none}
 .atlas-destino-opcao.selecionada{background:#fef2f2;color:#991b1b;font-weight:700}
 .atlas-destino-vazio{padding:13px;color:#64748b;font-size:12px;text-align:center}
+
+/* ATLAS: fonte minima de 16px nos campos editaveis em telas pequenas.
+   Safari/Chrome iOS ampliam o viewport ao focar inputs menores que 16px.
+   Sem alterar user-scalable e sem impedir o zoom manual do usuario. */
+@media (max-width:700px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  select,
+  textarea,
+  .atlas-combo-input,
+  .atlas-destino-busca {
+    font-size:16px!important;
+  }
+}
