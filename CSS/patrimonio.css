@@ -2387,3 +2387,21 @@ html,body{max-width:100%;overflow-x:hidden!important}
 .atlas-destino-opcao:hover,.atlas-destino-opcao:focus-visible{background:#f1f5f9;outline:none}
 .atlas-destino-opcao.selecionada{background:#fef2f2;color:#991b1b;font-weight:700}
 .atlas-destino-vazio{padding:13px;color:#64748b;font-size:12px;text-align:center}
+
+/* ATLAS 2026-11-17: seletores nativos no celular.
+   Evita que menus personalizados fechem durante o gesto de rolagem.
+   Mantem o <select> original e seus eventos onchange. */
+@media (max-width:700px) {
+  #tipo_item.atlas-mobile-select-original,
+  #status_inicial.atlas-mobile-select-original,
+  #estado_conservacao.atlas-mobile-select-original {
+    display:block!important;
+    appearance:auto!important;
+    -webkit-appearance:menulist!important;
+    pointer-events:auto!important;
+    visibility:visible!important;
+  }
+  .atlas-mobile-select-trigger {
+    display:none!important;
+  }
+}
