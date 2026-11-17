@@ -1451,7 +1451,16 @@ async function atlasCarregarCatalogoGlobalPatrimonio(){
 
 function atlasCatalogoNomesPatrimonio(){
   // Os patrimonios locais complementam a busca, sem ampliar o escopo da obra.
-  const locais=(patrimonios||[]).map(p=>({
+  // Preferir o patrimonio cadastrado na obra ativa e o registro mais recente.
+  // O catalogo global segue disponivel quando nao existe modelo local.
+  const obraAtual=String(atlasObraSelecionadaAtual()?.id || window.obraAtiva?.id || '');
+  const locais=[...(patrimonios||[])]
+    .sort((a,b)=>{
+      const aObra=obraAtual && String(a?.obra_id)===obraAtual ? 1 : 0;
+      const bObra=obraAtual && String(b?.obra_id)===obraAtual ? 1 : 0;
+      return bObra-aObra || (Number(b?.id)||0)-(Number(a?.id)||0);
+    })
+    .map(p=>({
     id:p?.id,
     catalogo:false,
     nome_bem:String(p?.nome_bem||'').trim().toUpperCase(),
@@ -1468,7 +1477,9 @@ function atlasCatalogoNomesPatrimonio(){
     id:null,catalogo:false,nome_bem:nome,marca:'',modelo:''
   }));
   const mapa=new Map();
-  [...atlasCatalogoGlobalPatrimonio,...locais,...padrao].forEach(item=>{
+  // Se ha um modelo autorizado da propria obra, ele tem precedencia
+  // sobre a ficha global sem preco. Nunca consulta ativos de obras ocultas.
+  [...locais,...atlasCatalogoGlobalPatrimonio,...padrao].forEach(item=>{
     const chave=atlasChaveCatalogoPatrimonio(item);
     if(chave && !mapa.has(chave)) mapa.set(chave,item);
   });
@@ -1616,6 +1627,20 @@ async function atlasAplicarPatrimonioComoModelo(registro){
   const especificacoes=registro.especificacoes ||
     (notaTecnica ? notaTecnica.replace(/^especificações\s*:\s*/i,'') : '');
   atlasDefinirCampoSeExiste('especificacoes',especificacoes);
+
+  // Recupera o valor de referencia e dados reutilizaveis dos patrimônios
+  // que ja estao na lista autorizada do usuario. Esse valor e EDITAVEL:
+  // o operador deve conferir se corresponde a unidade que esta cadastrando.
+  // A ficha global nao distribui precos/fornecedores de outras obras.
+  if(!registro.catalogo && registro.id != null){
+    const valorReferencia=Number(registro.valor_bem);
+    if(Number.isFinite(valorReferencia) && valorReferencia>0){
+      atlasDefinirCampoSeExiste('valor_bem',valorReferencia);
+    }
+    ['cor','ano_fabricacao','ano_modelo','descricao','fornecedor'].forEach(id=>{
+      atlasDefinirCampoSeExiste(id,registro[id]);
+    });
+  }
 
   // Regra oficial para novo cadastro: a conservacao e sempre um valor valido.
   // Antes este campo era apagado e o select aparecia completamente em branco.
