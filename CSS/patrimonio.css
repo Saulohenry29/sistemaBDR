@@ -2414,6 +2414,20 @@ html,body{max-width:100%;overflow-x:hidden!important}
   }
 }
 
+/* Tablet e iPhone na horizontal: reduzem colunas sem ampliar a pagina. */
+@media screen and (min-width:601px) and (max-width:900px) {
+  #cardEntradaPatrimonio .grid,
+  #cardEntradaPatrimonio #camposExtras {
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+}
+@media screen and (min-width:901px) and (max-width:1199px) {
+  #cardEntradaPatrimonio .grid,
+  #cardEntradaPatrimonio #camposExtras {
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  }
+}
+
 /* iPad com ponteiro/mouse: WebKit ainda pode usar media queries de desktop.
    Garante 16px no formulario inclusive em iframe no modo iPadOS desktop. */
 @supports (-webkit-touch-callout: none) {
