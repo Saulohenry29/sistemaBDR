@@ -1484,15 +1484,29 @@ function atlasAtualizarSugestoesPatrimonio(){
   atlasIndiceSugestaoPatrimonio=-1;
   if(termo.length<2){atlasFecharSugestoesPatrimonio();return;}
 
+  // Cada palavra da busca pode estar no nome, marca ou modelo, mesmo
+  // em ordem diferente. Prioriza correspondencia exata e modelos completos.
+  const palavras=termo.split(/\s+/).filter(Boolean);
   atlasSugestoesPatrimonioAtuais=atlasCatalogoNomesPatrimonio()
-    .filter(item=>[item.nome_bem,item.marca,item.modelo]
-      .some(v=>atlasNormalizarTextoSugestao(v).includes(termo)))
-    .slice(0,10);
+    .map(item=>{
+      const nome=atlasNormalizarTextoSugestao(item.nome_bem);
+      const modelo=atlasNormalizarTextoSugestao(item.modelo);
+      const texto=[nome,item.marca,modelo].map(atlasNormalizarTextoSugestao).join(' ');
+      if(!palavras.every(palavra=>texto.includes(palavra))) return null;
+      const pontos=(nome===termo?1000:0)+(nome.startsWith(termo)?150:0)+
+        (modelo===termo?120:0)+(item.catalogo?10:0)+
+        (item.marca?5:0)+(item.modelo?8:0)+(/^\d{8}$/.test(item.ncm||'')?12:0);
+      return {item,pontos};
+    })
+    .filter(Boolean)
+    .sort((a,b)=>b.pontos-a.pontos||a.item.nome_bem.localeCompare(b.item.nome_bem,'pt-BR'))
+    .slice(0,20)
+    .map(resultado=>resultado.item);
 
   if(!atlasSugestoesPatrimonioAtuais.length){atlasFecharSugestoesPatrimonio();return;}
 
   lista.innerHTML=atlasSugestoesPatrimonioAtuais.map((item,indice)=>{
-    const detalhe=[item.marca,item.modelo].filter(Boolean).join(' • ');
+    const detalhe=[item.marca,item.modelo,item.ncm ? 'NCM '+item.ncm : ''].filter(Boolean).join(' • ');
     return `<button type="button" class="atlas-sugestao" data-indice="${indice}"
       onmousedown="event.preventDefault(); atlasEscolherSugestaoPatrimonioIndice(${indice})">
       ${atlasEscaparHTML(item.nome_bem)}
@@ -1579,16 +1593,25 @@ async function atlasAplicarPatrimonioComoModelo(registro){
   const campoNcm=document.getElementById('ncm');
   if(campoNcm) campoNcm.value=atlasNcmDoCatalogoPatrimonio(registro);
 
-  // Nao herdar valor, estado, cor, fornecedor, local, pessoa, NF-e ou identificadores.
+  // Dados individuais e fiscais da unidade nao podem ser herdados.
   [
-    'estado_conservacao','valor_bem','cor','ano_fabricacao','ano_modelo',
-    'especificacoes','descricao','fornecedor','departamento','responsavel',
-    'endereco_estoque','numero_serie','placa','renavam','chassi',
-    'codigo_antigo','quilometragem','horimetro','numero_nfe','observacao'
+    'valor_bem','cor','ano_fabricacao','ano_modelo','descricao',
+    'fornecedor','departamento','responsavel','endereco_estoque',
+    'numero_serie','placa','renavam','chassi','codigo_antigo',
+    'quilometragem','horimetro','numero_nfe','observacao'
   ].forEach(id=>{
     const el=document.getElementById(id);
     if(el) el.value='';
   });
+
+  // Recupera somente a referencia tecnica quando ela ja existe no registro.
+  // O catalogo global nao compartilha identificadores, locais nem dados financeiros.
+  atlasDefinirCampoSeExiste('especificacoes',registro.especificacoes);
+
+  // Regra oficial para novo cadastro: a conservacao e sempre um valor valido.
+  // Antes este campo era apagado e o select aparecia completamente em branco.
+  const estado=document.getElementById('estado_conservacao');
+  if(estado) estado.value='BOM';
 
   const statusInicial=document.getElementById('status_inicial');
   if(statusInicial){
@@ -2492,10 +2515,34 @@ usuario_cadastro:
     );
   }
   limparFormularioCadastro();
+  bdrMostrarPatrimonioRecemSalvo(obra.id);
   renderizarPatrimonios();
   window.__BDR_PATRIMONIO_SALVANDO__ = false;
   bdrSetGerandoPatrimonio(false);
 }
+// Mostra imediatamente o patrimonio salvo, inclusive se havia filtros ativos
+// ou a pagina estava em outro intervalo de resultados.
+function bdrMostrarPatrimonioRecemSalvo(obraId){
+  ['busca','filtroStatus','filtroTipo','filtroUsuario'].forEach(id=>{
+    const campo=document.getElementById(id);
+    if(campo) campo.value='';
+  });
+  const antigo=document.getElementById('filtroAntigo');
+  if(antigo){
+    antigo.setAttribute('aria-pressed','false');
+    antigo.classList.remove('ativo');
+  }
+  const filtroObra=document.getElementById('filtroObra');
+  if(filtroObra){
+    const obra=String(obraId||'');
+    // A lista de opcoes ja e filtrada pelas obras liberadas.
+    filtroObra.value=[...filtroObra.options].some(op=>op.value===obra)?obra:'';
+  }
+  atlasMostrarInativos=false;
+  bdrPatrimonioPaginaAtual=1;
+  bdrPatrimonioUltimaChaveFiltro='';
+}
+
 function limparFormularioCadastro(){
   document.getElementById("nome_bem").value = "";
   document.getElementById("tipo_item").value = "";
@@ -2802,7 +2849,19 @@ async function carregarPatrimonios(){
       dadosCache = dadosCache.filter(p => permitidas.has(String(p.obra_id)));
     }
 
-    patrimonios = dadosCache;
+    // Se o banco falhou apos um cadastro bem-sucedido, o cache pode estar
+    // atrasado. Preserva os registros ja exibidos na memoria desta sessao.
+    const anteriores=(patrimonios||[]).filter(p =>
+      (visualizarInativos ? p.ativo===false : p.ativo!==false) &&
+      (!usuario || usuarioPodeVerTodasObras() ||
+       idsObrasAtuacaoUsuarioBDR().includes(String(p.obra_id)))
+    );
+    const unicos=new Map();
+    [...anteriores,...dadosCache].forEach(p=>{
+      const chave=String(p.id||p.codigo_qr||'');
+      if(chave && !unicos.has(chave)) unicos.set(chave,p);
+    });
+    patrimonios=[...unicos.values()];
     BDR_PATRIMONIO_ONLINE_REAL = false;
     renderizarPatrimonios();
     mostrarAvisoModoOffline();
