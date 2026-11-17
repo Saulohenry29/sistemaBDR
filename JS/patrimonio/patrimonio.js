@@ -5512,7 +5512,14 @@ window.AtlasPatrimonioAPI = Object.freeze({
       aberto = {menu, botao};
       botao.setAttribute("aria-expanded", "true");
       posicionar();
-      menu.querySelector(".selecionado")?.scrollIntoView({block:"nearest"});
+      // Nao usar scrollIntoView aqui: no celular ele pode rolar a pagina
+      // (inclusive o iframe do Atlas) e fechar o menu imediatamente.
+      const selecionada = menu.querySelector(".selecionado");
+      if (selecionada) {
+        const destino = selecionada.offsetTop - menu.offsetTop -
+          Math.max(0, (menu.clientHeight - selecionada.offsetHeight) / 2);
+        menu.scrollTop = Math.max(0, destino);
+      }
     });
   }
 
@@ -5521,7 +5528,12 @@ window.AtlasPatrimonioAPI = Object.freeze({
   }, true);
   document.addEventListener("keydown", event => { if (event.key === "Escape") fechar(); });
   window.addEventListener("resize", posicionar);
-  window.addEventListener("scroll", fechar, true);
+  // O scroll das proprias opcoes nao pode encerrar a lista.
+  // Quando a pagina/iframe rolar, reposiciona sem descartar a selecao.
+  window.addEventListener("scroll", event => {
+    if (!aberto || aberto.menu.contains(event.target)) return;
+    posicionar();
+  }, true);
   window.visualViewport?.addEventListener("resize", posicionar);
   media.addEventListener("change", fechar);
   const carregar = () => ids.forEach(id => iniciar(document.getElementById(id)));
