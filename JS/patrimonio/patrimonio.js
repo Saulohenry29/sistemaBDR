@@ -2351,6 +2351,29 @@ function atlasAlternarDadosFiscais(forcarEstado){
   }
 }
 
+// Preferencias individuais ja salvas em Minha conta / usuarios_sistema.
+// Mesmo que 'Som e aviso' esteja ativo, a categoria Patrimonio criado
+// desmarcada impede o som. A confirmacao visual continua independente.
+function atlasPodeTocarSomCriacaoPatrimonio(){
+  const permissoes=permissoesUsuarioBDR(usuarioAtual());
+  return permissoes.includes('NOTIF_PATRIMONIO_CRIACAO')
+    && !permissoes.includes('NOTIF_MODO_VISUAL')
+    && !permissoes.includes('NOTIF_MODO_SILENCIOSO');
+}
+function atlasTocarSomCriacaoPatrimonio(){
+  if(!atlasPodeTocarSomCriacaoPatrimonio()) return false;
+  try{
+    const motor=window.AtlasAudio || (window.parent!==window ? window.parent.AtlasAudio : null);
+    if(typeof motor?.concluido==='function'){
+      void motor.concluido();
+      return true;
+    }
+  }catch(e){
+    console.warn('Atlas Patrimonio: som opcional indisponivel.',e?.message||e);
+  }
+  return false;
+}
+
 async function gerarPatrimonio(){
 
   if(window.__BDR_PATRIMONIO_SALVANDO__){
@@ -2548,7 +2571,7 @@ usuario_cadastro:
       "\nSerá sincronizado automaticamente quando a internet voltar."
     );
   }else{
-    window.AtlasAudio?.concluido?.();
+    atlasTocarSomCriacaoPatrimonio();
     atlasAvisoPatrimonio(
       "✅ Patrimônio cadastrado",
       `Código ${codigo_qr} salvo e sincronizado com sucesso.`
