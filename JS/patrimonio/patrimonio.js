@@ -1398,7 +1398,7 @@ async function atlasCarregarCatalogoGlobalPatrimonio(){
       for(let inicio=0; ; inicio+=tamanhoPagina){
         const {data,error}=await db()
           .from('atlas_catalogo_patrimonio')
-          .select('chave,nome_bem,marca,modelo,tipo_item,tipo_outro,combustivel,potencia,ncm')
+          .select('chave,nome_bem,marca,modelo,tipo_item,tipo_outro,combustivel,potencia,ncm,valor_referencia,valor_referencia_amostras')
           .order('chave',{ascending:true})
           .range(inicio,inicio+tamanhoPagina-1);
         if(error) throw error;
@@ -1439,7 +1439,9 @@ async function atlasCarregarCatalogoGlobalPatrimonio(){
       tipo_outro:String(item?.tipo_outro||'').trim().toUpperCase(),
       combustivel:String(item?.combustivel||'').trim().toUpperCase(),
       potencia:String(item?.potencia||'').trim().toUpperCase(),
-      ncm:String(item?.ncm||'').trim()
+      ncm:String(item?.ncm||'').trim(),
+      valor_referencia:Number(item?.valor_referencia)||null,
+      valor_referencia_amostras:Math.max(0,Number(item?.valor_referencia_amostras)||0)
     };
     const chave=atlasChaveCatalogoPatrimonio(registro);
     if(chave && !mapa.has(chave)) mapa.set(chave,registro);
@@ -1470,7 +1472,9 @@ function atlasCatalogoNomesPatrimonio(){
     tipo_outro:String(p?.tipo_outro||'').trim().toUpperCase(),
     combustivel:String(p?.combustivel||'').trim().toUpperCase(),
     potencia:String(p?.potencia||'').trim().toUpperCase(),
-    ncm:String(p?.ncm||'').trim()
+    ncm:String(p?.ncm||'').trim(),
+    valor_referencia:Number(p?.valor_bem)||null,
+    valor_referencia_amostras:1
   })).filter(p=>p.nome_bem);
 
   const padrao=ATLAS_NOMES_PATRIMONIO_PADRAO.map(nome=>({
@@ -1517,7 +1521,11 @@ function atlasAtualizarSugestoesPatrimonio(){
   if(!atlasSugestoesPatrimonioAtuais.length){atlasFecharSugestoesPatrimonio();return;}
 
   lista.innerHTML=atlasSugestoesPatrimonioAtuais.map((item,indice)=>{
-    const detalhe=[item.marca,item.modelo,item.ncm ? 'NCM '+item.ncm : ''].filter(Boolean).join(' • ');
+    const valorRef=Number(item.valor_referencia);
+    const resumoValor=Number.isFinite(valorRef) && valorRef>0
+      ? 'Valor ref. R$ '+valorRef.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})
+      : '';
+    const detalhe=[item.marca,item.modelo,item.ncm ? 'NCM '+item.ncm : '',resumoValor].filter(Boolean).join(' • ');
     return `<button type="button" class="atlas-sugestao" data-indice="${indice}"
       onmousedown="event.preventDefault(); atlasEscolherSugestaoPatrimonioIndice(${indice})">
       ${atlasEscaparHTML(item.nome_bem)}
@@ -1628,15 +1636,13 @@ async function atlasAplicarPatrimonioComoModelo(registro){
     (notaTecnica ? notaTecnica.replace(/^especificações\s*:\s*/i,'') : '');
   atlasDefinirCampoSeExiste('especificacoes',especificacoes);
 
-  // Recupera o valor de referencia e dados reutilizaveis dos patrimônios
-  // que ja estao na lista autorizada do usuario. Esse valor e EDITAVEL:
-  // o operador deve conferir se corresponde a unidade que esta cadastrando.
-  // A ficha global nao distribui precos/fornecedores de outras obras.
+  // O valor sugerido pode vir do proprio patrimonio autorizado OU de um
+  // resumo por modelo no catalogo. Nunca herda PAT, obra, serie ou NF-e.
+  const valorReferencia=Number(registro.catalogo ? registro.valor_referencia : registro.valor_bem);
+  if(Number.isFinite(valorReferencia) && valorReferencia>0){
+    atlasDefinirCampoSeExiste('valor_bem',valorReferencia);
+  }
   if(!registro.catalogo && registro.id != null){
-    const valorReferencia=Number(registro.valor_bem);
-    if(Number.isFinite(valorReferencia) && valorReferencia>0){
-      atlasDefinirCampoSeExiste('valor_bem',valorReferencia);
-    }
     ['cor','ano_fabricacao','ano_modelo','descricao','fornecedor'].forEach(id=>{
       atlasDefinirCampoSeExiste(id,registro[id]);
     });
