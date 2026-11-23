@@ -296,7 +296,7 @@ function carregarChecksObrasSienge(){
     box.innerHTML += `
       <label class="obra-check">
         <input type="checkbox" class="obra-sienge-check" value="${o.id}" onchange="alternarObraRelatorio(this)">
-        <span>${o.codigo_sienge || o.codigo_obra || "-"} - ${o.nome || "-"} (${qtd})</span>
+        <span>${o.codigo_obra || o.codigo_sienge || "-"} - ${o.nome || "-"} (${qtd})</span>
       </label>
     `;
   });
@@ -3774,7 +3774,10 @@ function codigoSetorObraInicialSienge(p){
     Código setor/obra inicial deve ser o código da OBRA/SETOR,
     não o código da empresa.
   */
+  // O setor/obra inicial no CSV e o codigo operacional da obra.
+  // codigo_sienge e um identificador distinto e so entra como fallback.
   return primeiroCodigoNumerico(
+    obra?.codigo_obra,
     p.codigo_setor_obra,
     p.codigo_setor_obra_sienge,
     p.codigo_obra_sienge,
