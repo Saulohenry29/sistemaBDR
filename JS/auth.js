@@ -243,6 +243,8 @@ async function logout(){
     if(db?.auth) await db.auth.signOut();
   }catch(_e){}
 
+  // Não manter badge privado após saída explícita do usuário.
+  try{ window.AtlasBadge?.limpar?.(); }catch(_){ }
   localStorage.removeItem("usuario_logado");
   localStorage.removeItem("usuarioLogado");
   localStorage.removeItem("perfil_usuario");
