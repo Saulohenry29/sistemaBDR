@@ -667,6 +667,8 @@
   function atualizarBadge(total){
     const qtd = Number(total || 0);
     BDR_NOTIF.ultimoTotal = qtd;
+    // O sininho é a fonte da contagem exibida também no ícone do aplicativo.
+    try{ window.AtlasBadge?.atualizar?.(qtd); }catch(_){ }
 
     const badge = badgeEl();
     if(!badge) return;
@@ -814,7 +816,8 @@
 
     if(!(await onlineReal())){
       setIconeOffline(true);
-      atualizarBadge(0);
+      // Offline não significa que as notificações foram lidas.
+      // Mantém a última contagem conhecida, sem inventar novos avisos.
       renderMensagem('📴 Offline. Notificações pausadas.');
       return;
     }
