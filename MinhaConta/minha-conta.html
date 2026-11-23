@@ -62,8 +62,8 @@
         </div>
         <div id="accountPrinterDetails" class="printer-details" hidden>
           <div class="printer-device"><div><strong><i class="fa-solid fa-print"></i> NIIMBOT B1</strong><p id="printerConnectionInfo">Impressora desconectada.</p></div><span class="printer-paper">50 × 30 mm</span></div>
-          <div class="printer-device-actions"><button class="btn dark" id="btnConnectPrinter" type="button"><i class="fa-brands fa-bluetooth-b"></i> Conectar Bluetooth</button><button class="btn secondary" id="btnDisconnectPrinter" type="button" hidden>Desconectar</button></div>
-          <small>Conexão de teste: ao sair de Minha conta, o Atlas libera a B1 para imprimir em Patrimônio. No iPhone, abra o Atlas dentro do Bluefy (Safari/PWA não disponibilizam Web Bluetooth).</small>
+          <div class="printer-device-actions"><button class="btn dark" id="btnConnectPrinter" type="button"><i class="fa-brands fa-bluetooth-b"></i> Conectar pelo Atlas</button><button class="btn secondary" id="btnConnectPrinterAlternative" type="button"><i class="fa-brands fa-bluetooth-b"></i> Conexão alternativa</button><button class="btn secondary" id="btnDisconnectPrinter" type="button" hidden>Desconectar</button></div>
+          <small>Recomendado: conecte pelo Atlas para usar a mesma sessão Bluetooth nas etiquetas individuais e em lote. A opção alternativa mantém o teste Bluetooth anterior; ao sair de Minha Conta, essa conexão de teste é liberada. No iPhone, use o Bluefy.</small>
         </div>
         <small class="printer-help"><i class="fa-solid fa-circle-info"></i> A preferência fica salva por usuário neste navegador. A autorização Bluetooth é específica deste aparelho.</small>
       </div>
@@ -102,6 +102,6 @@
   </div>
 </div>
 
-<script src="./JS/atlasMinhaConta.js?v=20261114-ble01"></script>
+<script src="./JS/atlasMinhaConta.js?v=20261123-ble-compartilhado-fallback01"></script>
 </body>
 </html>
