@@ -101,5 +101,15 @@
   imagem.onerror=()=>{imagemPronta=false;desenhar();};
   imagem.src=hrefOriginal;
 
+  // A shell precisa controlar o Service Worker para receber Push com a página fechada.
+  // Não solicita permissão de notificações ao carregar a página.
+  if("serviceWorker" in navigator){
+    global.addEventListener("load",()=>{
+      navigator.serviceWorker.register("./service-worker.js").catch(error=>{
+        console.warn("BDR: Service Worker indisponível.",error?.message||error);
+      });
+    },{once:true});
+  }
+
   global.AtlasBadge={atualizar,limpar,versao:"20261123-01"};
 })(window);
