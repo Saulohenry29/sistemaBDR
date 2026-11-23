@@ -1,5 +1,5 @@
 /* BDR ERP - Service Worker V4 SAFE OFFLINE */
-const BDR_CACHE_VERSION = "bdr-erp-v4.0.8-navegacao-segura";
+const BDR_CACHE_VERSION = "bdr-erp-v4.0.9-push-badge";
 
 const BDR_ASSETS = [
   "./",
@@ -31,6 +31,7 @@ const BDR_ASSETS = [
   "./CSS/bdr-fix-menu-final.css",
 
   "./JS/pwa-install.js",
+  "./JS/atlasBadge.js",
   "./JS/pwa-update.js",
   "./JS/supabaseClient.js",
   "./JS/auth.js",
@@ -139,6 +140,85 @@ self.addEventListener("fetch", event => {
       return resp;
     }).catch(async () => await caches.match(req))
   );
+});
+
+
+/* ---------------------------------------------------------
+   PUSH EXTERNO — NOTIFICAÇÕES PRIVADAS
+   O servidor autoriza os destinatários; o SW não recebe chaves,
+   credenciais nem dados de outras obras.
+   Mesmo com o app bloqueado, a notificação abre o login do Atlas.
+--------------------------------------------------------- */
+const BDR_PUSH_MODULOS=new Set([
+  "dashboard","patrimonio","expedicao","manutencao","estoque",
+  "usuarios","relatorios","entrada","triagem","movimentacoes",
+  "empresa","scanner"
+]);
+
+function bdrDestinoPush(link){
+  let modulo="dashboard";
+  try{
+    const u=new URL(String(link||""),self.registration.scope);
+    if(u.origin===self.location.origin){
+      const nome=u.pathname.split("/").pop().toLowerCase().replace(/\.html$/i,"");
+      if(nome==="atlas"){
+        const parametros=new URLSearchParams(u.hash.replace(/^#/,""));
+        const m=String(parametros.get("m")||"").toLowerCase();
+        if(BDR_PUSH_MODULOS.has(m))modulo=m;
+      }else if(BDR_PUSH_MODULOS.has(nome)) modulo=nome;
+    }
+  }catch(_){}
+  return new URL("./atlas.html#m="+encodeURIComponent(modulo),self.registration.scope).href;
+}
+
+self.addEventListener("push",event=>{
+  event.waitUntil((async()=>{
+    let dados={};
+    try{
+      dados=event.data?.json()||{};
+    }catch(_){
+      // Um payload malformado não pode impedir a notificação.
+    }
+    if(!dados || typeof dados!=="object") dados={};
+    const dadosMensagem=(dados.data && typeof dados.data==="object")?dados.data:dados;
+    const notificacao=(dados.notification && typeof dados.notification==="object")?dados.notification:{};
+    const id=String(dadosMensagem.notificacao_id||dadosMensagem.id||"").replace(/[^0-9]/g,"").slice(0,30);
+    const destino=bdrDestinoPush(dadosMensagem.link||notificacao.link||"dashboard.html");
+    const tag=id?"atlas-"+id:"atlas-aviso";
+    await self.registration.showNotification("BDR Gestão",{
+      body:"Você tem uma nova notificação. Abra o Atlas para conferir.",
+      icon:new URL("./icons/icon-192.png",self.registration.scope).href,
+      badge:new URL("./icons/icon-192.png",self.registration.scope).href,
+      tag,
+      renotify:false,
+      data:{url:destino},
+    });
+    // O sistema operacional pode apresentar apenas um ponto até
+    // a próxima sincronização da contagem real com o sininho.
+    try{
+      if(typeof self.navigator?.setAppBadge==="function"){
+        await self.navigator.setAppBadge();
+      }
+    }catch(_){}
+  })());
+});
+
+self.addEventListener("notificationclick",event=>{
+  event.notification.close();
+  event.waitUntil((async()=>{
+    const destino=bdrDestinoPush(event.notification?.data?.url||"dashboard.html");
+    const janelas=await self.clients.matchAll({type:"window",includeUncontrolled:true});
+    for(const janela of janelas){
+      try{
+        if(new URL(janela.url).origin!==self.location.origin)continue;
+        if(typeof janela.navigate==="function"){
+          await janela.navigate(destino);
+        }
+        if(typeof janela.focus==="function") return await janela.focus();
+      }catch(_){}
+    }
+    if(self.clients.openWindow) return await self.clients.openWindow(destino);
+  })());
 });
 
 self.addEventListener("message", event => {
