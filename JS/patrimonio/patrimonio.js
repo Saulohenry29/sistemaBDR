@@ -3132,30 +3132,25 @@ function renderizarPatrimonios(){
       (!busca || bdrRelevanciaBuscaPatrimonio(p, buscaOriginal) !== null);
   });
 
-  // Sem busca, agrupar por obra mais recentemente movimentada na listagem
-  // e ordenar cada obra pela sequencia PAT (em vez do ID de criacao).
-  // Assim uma renumeracao feita no banco aparece na posicao correta.
+  // Listagem padrão: data de cadastro mais recente primeiro, em todas as obras.
+  // Nunca usar sequencial/código PAT como indicador de quando foi cadastrado.
+  // Caso a data não exista, usa created_at; em empates, o maior ID vem primeiro.
+  const maisRecentesPrimeiro = (a,b)=>{
+    const dataA = Date.parse(String(a.data_cadastro || a.created_at || "").replace(" ","T")) || 0;
+    const dataB = Date.parse(String(b.data_cadastro || b.created_at || "").replace(" ","T")) || 0;
+    return dataB - dataA || (Number(b.id)||0) - (Number(a.id)||0);
+  };
+
   const correspondencias = new Map();
   if(busca){
+    // Em pesquisas, preservar a relevância e desempatar pelo cadastro mais recente.
     filtrados.forEach(p=>correspondencias.set(p,bdrRelevanciaBuscaPatrimonio(p,buscaOriginal)));
-    filtrados.sort((a,b)=>(correspondencias.get(b)?.pontos||0)-(correspondencias.get(a)?.pontos||0));
+    filtrados.sort((a,b)=>
+      (correspondencias.get(b)?.pontos||0) - (correspondencias.get(a)?.pontos||0) ||
+      maisRecentesPrimeiro(a,b)
+    );
   }else{
-    const ultimoIdPorObra = new Map();
-    for(const p of filtrados){
-      const obra = String(p.obra_id ?? "");
-      const id = Number(p.id) || 0;
-      if(id > (ultimoIdPorObra.get(obra) || 0)) ultimoIdPorObra.set(obra,id);
-    }
-    filtrados.sort((a,b)=>{
-      const obraA = String(a.obra_id ?? "");
-      const obraB = String(b.obra_id ?? "");
-      if(obraA !== obraB){
-        return (ultimoIdPorObra.get(obraB) || 0) - (ultimoIdPorObra.get(obraA) || 0) ||
-          obraB.localeCompare(obraA);
-      }
-      return (Number(b.sequencial)||0) - (Number(a.sequencial)||0) ||
-        (Number(b.id)||0) - (Number(a.id)||0);
-    });
+    filtrados.sort(maisRecentesPrimeiro);
   }
 
   const total = filtrados.length;
