@@ -1816,6 +1816,7 @@ body{font-size:11px !important;}
 <script src="./JS/auth.js"></script>
 <!-- <script src="./JS/bdrSessaoRealtime.js"></script> -->
 <script src="./JS/bdrCore.js"></script>
+<script src="./JS/atlasPatrimonial.js?v=20261124"></script>
 <script src="./JS/bdrAcessoObras.js"></script>
 <script src="./JS/offlineQueue.js"></script>
 <script src="./JS/offlineDB.js"></script>
@@ -2043,12 +2044,12 @@ if (window.self === window.top) verificarLogin();
       <section class="kpi-row">
         <div class="kpi-card purple valor-destaque" data-kpi="VALOR" onclick="alternarValorPatrimonial(event)" ondblclick="abrirResumoValorPatrimonial(event)" title="1 clique: mostrar valor exato · 2 cliques: abrir detalhamento">
           <div class="kpi-icon"><i class="fa-solid fa-dollar-sign"></i></div>
-          <div><div class="kpi-value" id="kpiValor">R$ 0</div><div class="kpi-label">Valor patrimonial total</div><div class="kpi-sub">Soma em R$ da seleção</div></div>
+          <div><div class="kpi-value" id="kpiValor">R$ 0</div><div class="kpi-label">Valor patrimonial total</div><div class="kpi-sub">Ativos, sem baixados e inativos</div></div>
         </div>
 
         <div class="kpi-card active" data-kpi="TODOS" onclick="aplicarFiltroKPI('TODOS')">
           <div class="kpi-icon"><i class="fa-solid fa-cube"></i></div>
-          <div><div class="kpi-value" id="kpiTotal">0</div><div class="kpi-label">Total Patrimônios</div><div class="kpi-sub">Ativos da seleção</div></div>
+          <div><div class="kpi-value" id="kpiTotal">0</div><div class="kpi-label">Total Patrimônios</div><div class="kpi-sub">Cadastros não inativados (inclui baixados)</div></div>
         </div>
 
         <div class="kpi-card blue" data-kpi="EM_USO" onclick="aplicarFiltroKPI('EM_USO')">
@@ -2388,13 +2389,7 @@ function numeroBR(v){
 }
 
 function valorPatrimonio(p){
-  const vb = numeroBR(p?.valor_bem);
-  if(vb > 0) return vb;
-
-  const va = numeroBR(p?.valor_aquisicao);
-  if(va > 0) return va;
-
-  return 0;
+  return window.AtlasPatrimonial.valor(p) ?? 0;
 }
 
 function dataBR(data){
@@ -2504,7 +2499,7 @@ function patrimoniosDoPeriodo(){
 }
 
 function basePatrimoniosDashboard(){
-  const base = patrimonios.filter(p => p.ativo !== false);
+  const base = patrimonios.filter(p => p.ativo === true && window.AtlasPatrimonial.status(p) !== "INATIVO");
 
   if(modoDashboard === "ATUAL"){
     return base;
@@ -2536,7 +2531,7 @@ function aplicarFiltroKPILista(lista){
     if(filtroKPIAtual === "ESTOQUE") return p.status === "ESTOQUE";
     if(filtroKPIAtual === "MANUTENCAO") return p.status === "MANUTENCAO";
     if(filtroKPIAtual === "BAIXADO") return p.status === "BAIXADO";
-    if(filtroKPIAtual === "VALOR") return valorPatrimonio(p) > 0;
+    if(filtroKPIAtual === "VALOR") return window.AtlasPatrimonial.ativo(p) && valorPatrimonio(p) > 0;
     if(filtroKPIAtual === "SEM_VALOR") return valorPatrimonio(p) <= 0;
     return true;
   });
@@ -2779,7 +2774,7 @@ function renderizarModalObras(){
 
   const busca = normalizarBusca(document.getElementById("buscaObraModal")?.value || "");
   const baseContagem = basePatrimoniosDashboard();
-  const baseTotal = patrimonios.filter(p => p.ativo !== false);
+  const baseTotal = patrimonios.filter(p => p.ativo === true && window.AtlasPatrimonial.status(p) !== "INATIVO");
 
   const obrasComQtd = obras
     .map(o => ({
@@ -2879,7 +2874,7 @@ let paginaItensDashboard = 1;
 let tamanhoPaginaItensDashboard = 25;
 
 function baseValorPatrimonialAtivo(){
-  return patrimonioPorFiltrosTela().filter(p => p.status !== "BAIXADO");
+  return patrimonioPorFiltrosTela().filter(window.AtlasPatrimonial.ativo);
 }
 
 function alternarValorPatrimonial(event){
@@ -2905,9 +2900,9 @@ function abrirResumoValorPatrimonial(event){
   if(event){ event.preventDefault(); event.stopPropagation(); }
   if(!usuarioPodeVerValoresBDR()) return;
   const base = patrimonioPorFiltrosTela();
-  const ativos = base.filter(p => p.status !== "BAIXADO");
+  const ativos = base.filter(window.AtlasPatrimonial.ativo);
   const baixados = base.filter(p => p.status === "BAIXADO");
-  const valorAtivo = ativos.reduce((s,p) => s + valorPatrimonio(p), 0);
+  const valorAtivo = window.AtlasPatrimonial.total(ativos);
   const valorBaixado = baixados.reduce((s,p) => s + valorPatrimonio(p), 0);
   const resumo = document.getElementById("resumoItensAlerta");
   if(resumo){
@@ -3072,9 +3067,7 @@ function atualizarKPIs(){
   const baixado = base.filter(p => p.status === "BAIXADO").length;
   const semValor = base.filter(p => valorPatrimonio(p) <= 0).length;
   // Patrimônio baixado permanece contabilizado no card "Baixados", mas não compõe o valor patrimonial ativo.
-  const valorTotal = base
-    .filter(p => p.status !== "BAIXADO")
-    .reduce((s,p) => s + valorPatrimonio(p), 0);
+  const valorTotal = window.AtlasPatrimonial.total(base);
   valorPatrimonialAtualDashboard = valorTotal;
 
   document.getElementById("kpiTotal").innerText = totalReal;
@@ -3683,12 +3676,12 @@ function rankingObrasPatrimonio(){
     const obraNome = nomeObraCurto(p.obra_id);
 
     if(!mapa[obraId]){
-      mapa[obraId] = { obra_id:obraId, nome:obraNome, qtd:0, valor:0, semValor:0, itens:[] };
+      mapa[obraId] = { obra_id:obraId, nome:obraNome, qtd:0, valor:0, valorCentavos:0, semValor:0, itens:[] };
     }
 
     const v = valorPatrimonio(p);
     mapa[obraId].qtd++;
-    if(p.status !== "BAIXADO") mapa[obraId].valor += v;
+    if(window.AtlasPatrimonial.ativo(p)){ mapa[obraId].valorCentavos += window.AtlasPatrimonial.centavos(p); mapa[obraId].valor = mapa[obraId].valorCentavos / 100; }
     if(v <= 0) mapa[obraId].semValor++;
     mapa[obraId].itens.push(p);
   });
@@ -3747,13 +3740,13 @@ function mostrarItensObraRanking(obraId, modo){
   const obra = rankingObrasPatrimonio().find(o => String(o.obra_id) === String(obraId));
   if(!obra) return;
 
-  const lista = [...obra.itens].sort((a,b) => {
+  const lista = (modo === "VALOR" ? obra.itens.filter(window.AtlasPatrimonial.ativo) : [...obra.itens]).sort((a,b) => {
     if(modo === "VALOR") return valorPatrimonio(b) - valorPatrimonio(a);
     return String(a.nome_bem || "").localeCompare(String(b.nome_bem || ""));
   });
 
   const titulo = modo === "VALOR"
-    ? `💰 ${obra.nome} - ${usuarioPodeVerValoresBDR() ? moeda(obra.valor) : "R$ •••"} em patrimônio (${obra.qtd} item(ns))`
+    ? `💰 ${obra.nome} - ${usuarioPodeVerValoresBDR() ? moeda(obra.valor) : "R$ •••"} em patrimônio (${lista.length} item(ns))`
     : `📦 ${obra.nome} - ${obra.qtd} patrimônio(s)`;
 
   renderizarListaItensDashboard(lista, titulo);
