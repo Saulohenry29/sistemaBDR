@@ -409,6 +409,16 @@
     return data;
   }
 
+  async function editarUsuarioSeguro(id, alteracoes, original){
+    const {data,error}=await db().rpc("atlas_usuarios_editar_seguro",{
+      p_usuario_id:Number(id),p_dados:alteracoes,
+      p_obras_anteriores:[...obrasDoUsuario(original)].map(Number)
+    });
+    if(error) throw new Error(error.message||"Falha ao salvar funcionário.");
+    if(data?.sucesso!==true||Number(data.id)!==Number(id)) throw new Error("O servidor não confirmou o salvamento.");
+    return data;
+  }
+
   async function loadUsersScoped(){
     const cliente=db();
     const sessao=await cliente?.auth?.getSession();
@@ -468,9 +478,8 @@
     const perfisAux=Array.isArray(auxData.perfis_rapidos)?auxData.perfis_rapidos:[];
     const empresasPermitidas=new Set(STATE.works.map(w=>String(w.empresa_id||"")).filter(Boolean));
     if(current()?.empresa_id)empresasPermitidas.add(String(current().empresa_id));
-    STATE.companies=currentIsOwner()
-      ? empresasAux
-      : empresasAux.filter(e=>empresasPermitidas.has(String(e.id)));
+    // Somente empresas operacionais confirmadas; registros históricos não são excluídos.
+    STATE.companies=empresasAux.filter(e=>["17","20"].includes(String(e.id)) && e.ativo!==false && e.ativa!==false && (currentIsOwner() || empresasPermitidas.has(String(e.id))));
     STATE.table="usuarios_sistema";
     STATE.users=usuarios;
     STATE.profiles=perfisAux;
@@ -703,21 +712,17 @@
         user._consulta_em_andamento=true;
         // A promessa é compartilhada com o botão Editar, evitando uma segunda
         // chamada quando o funcionário clica antes de a ficha terminar de carregar.
-        user._consulta_promessa=db().functions.invoke("atlas-admin-usuarios",{
-          body:{acao:"consultar",usuario_id:Number(user.id)}
-        }).then(async ({data:resposta,error:erroConsulta})=>{
+        user._consulta_promessa=db().rpc("atlas_usuarios_consultar_ficha",{
+          p_usuario_id:Number(user.id)
+        }).then(({data:resposta,error:erroConsulta})=>{
           if(erroConsulta || resposta?.sucesso!==true || !resposta?.funcionario){
-            let mensagem=resposta?.erro||"Não foi possível validar o acesso a este funcionário.";
-            try{
-              const detalhe=await erroConsulta?.context?.json?.();
-              mensagem=detalhe?.erro||mensagem;
-            }catch(_){ }
-            user._consulta_negada=true;
+            const mensagem=erroConsulta?.message||resposta?.erro||"Não foi possível validar o acesso a este funcionário.";
+            user._consulta_negada=erroConsulta?.code==="42501";
             user._consulta_erro=mensagem;
             return false;
           }
           Object.assign(user,resposta.funcionario,{_consulta_resumida:false});
-          if(String(STATE.selected?.id)===String(user.id)) selectUser(user.id);
+          if(STATE.selected===user && STATE.users.includes(user)) selectUser(user.id);
           return true;
         }).catch(error=>{
           console.warn("Atlas Usuários: consulta de detalhes indisponível.",error?.message||error);
@@ -733,13 +738,15 @@
       STATE.selected = user;
 
       STATE.draft = criarDraftUsuario(user);
-      carregarObraOperacionalUsuario(user).then(obraId=>{
-        if(String(STATE.selected?.id)!==String(user.id)) return;
-        user._obra_operacional_id=obraId;
-        STATE.selected._obra_operacional_id=obraId;
-        if(STATE.draft) STATE.draft._obra_operacional_id=obraId;
-        renderData();
-      });
+      // A ficha autenticada já contém a base operacional; não consultar novamente.
+      if(!user._consulta_resumida && !user._base_operacional_carregada){
+        carregarObraOperacionalUsuario(user).then(obraId=>{
+          if(STATE.selected!==user) return;
+          user._obra_operacional_id=obraId;
+          if(STATE.draft) STATE.draft._obra_operacional_id=obraId;
+          renderData();
+        });
+      }
 
       // Relatórios: ao liberar o módulo, aplica o pacote padrão.
       aplicarPadraoRelatorios(STATE.draft.permissions);
@@ -1289,7 +1296,9 @@
   function renderAuthStatus(){
     if(!STATE.selected)return;
     const u=STATE.draft||STATE.selected;
-    const info=authStatusInfo(u);
+    const info=STATE.selected._consulta_resumida
+      ? {status:"VERIFICANDO",titulo:"Verificando acesso",descricao:"Carregando os dados autorizados do funcionário.",classe:"pending"}
+      : authStatusInfo(u);
     const titulo=$('#authStatusTitulo');
     const descricao=$('#authStatusDescricao');
     const badge=$('#authStatusBadge');
@@ -1570,22 +1579,32 @@
     };
 
     let r;
-    if(!currentIsOwner()){
-      try{
-        if(norm(payload.perfil)!==norm(STATE.selected.perfil))
-          throw new Error("Alteração de perfil hierárquico deve ser feita pelo OWNER.");
-        if([...STATE.worksDraft].sort().join(",")!==[...obrasDoUsuario(STATE.selected)].sort().join(","))
-          throw new Error("Alteração de obras requer transação segura e ainda não está disponível.");
-        const retorno=await adminSupabase({acao:"editar",usuario_id:Number(STATE.selected.id),
-          alteracoes:{permissoes:[...p],perfil_rapido:payload.perfil_rapido}});
-        r={data:retorno.funcionario,error:null};
-      }catch(erro){r={error:erro}}
-    }else{
-      r=await db().rpc("atlas_usuarios_salvar",{
-        p_acao:"ATUALIZAR",p_usuario_id:Number(STATE.selected.id),
-        p_dados:payload,p_executor_id:currentId()
-      });
-    }
+    try{
+      if(isOwnSelected() && currentIsOwner()){
+        r=await db().rpc("atlas_usuarios_salvar",{
+          p_acao:"ATUALIZAR",p_usuario_id:Number(STATE.selected.id),
+          p_dados:payload,p_executor_id:currentId()
+        });
+      }else{
+        const alteracoes={};
+        if(p.size!==originais.size||[...p].some(x=>!originais.has(x))) alteracoes.permissoes=[...p];
+        if(norm(payload.perfil)!==norm(STATE.selected.perfil)){
+          alteracoes.perfil=payload.perfil;
+          alteracoes.perfil_rapido=payload.perfil;
+        }
+        const obras=[...STATE.worksDraft].filter(obraPermitidaAtual).map(Number);
+        if(obras.map(String).sort().join(",")!==[...obrasDoUsuario(STATE.selected)].sort().join(",")){
+          alteracoes.obras=obras;
+          const base=STATE.selected._obra_operacional_id;
+          if(base && !obras.includes(Number(base))) alteracoes.obra_operacional_id=null;
+        }
+        const retorno=await editarUsuarioSeguro(STATE.selected.id,alteracoes,STATE.selected);
+        payload.obras_liberadas=retorno.obras.join(",");
+        payload._obras_vinculadas=retorno.obras;
+        payload._obra_operacional_id=retorno.obra_operacional_id;
+        r={data:retorno,error:null};
+      }
+    }catch(erro){r={error:erro};}
 
     if(r.error){
       setSaving(false);
@@ -1743,6 +1762,10 @@
     // Menor privilégio por padrão. MASTER/GESTOR continuam disponíveis somente
     // mediante escolha explícita de administrador autorizado.
     $("#formId").value=user?.id||"";$("#formNome").value=user?.nome||"";$("#formUsuario").value=user?.usuario||"";$("#formEmail").value=user?.email||"";$("#formPerfil").value=user?.perfil||"ALMOXARIFE";$("#formEmpresa").value=user?.empresa_id||"";$("#formAtivo").value=String(user?.ativo!==false);$("#formSenha").value="";
+    if(user?.empresa_id && !STATE.companies.some(e=>String(e.id)===String(user.empresa_id))){
+      $("#formEmpresa").value="";
+      toast("Este funcionário possui uma empresa antiga. Selecione a empresa correta antes de salvar.","aviso");
+    }
     // Qualquer administrador autorizado edita perfis até seu nível; o backend confirma.
     $("#formPerfil").disabled=!!user && !canManageSelectedAccess();
     atualizarResumoPerfilCadastro();
@@ -1967,19 +1990,19 @@
     const id=$("#formId").value;
 
     if(id && Number(id)===currentId() && !currentIsOwner()){
-      alert("Por segurança, alterações da sua própria conta devem usar as opções pessoais do sistema.");
+      toast("Por segurança, alterações da sua própria conta devem usar as opções pessoais do sistema.","erro");
       return;
     }
     if(id && Number(id)===OWNER_ID && !currentIsOwner()){
-      alert("O usuário OWNER não pode ser alterado.");
+      toast("O usuário OWNER não pode ser alterado.","erro");
       return;
     }
     if(id && !canEditSelected()){
-      alert("Você não possui permissão para editar este usuário.");
+      toast("Você não possui permissão para editar este usuário.","erro");
       return;
     }
     if(!id && !canCreateUsers()){
-      alert("Você não possui permissão para criar usuários.");
+      toast("Você não possui permissão para criar usuários.","erro");
       return;
     }
 
@@ -1998,40 +2021,40 @@
     const senha=$("#formSenha").value.trim();
 
     if(!currentIsOwner()){
-      if(!id && [...STATE.formWorksDraft].some(obraId=>!obraPermitidaAtual(obraId))){alert("Você só pode vincular usuários às suas obras liberadas.");return}
-      if(payload.empresa_id&&!empresaPermitidaAtual(payload.empresa_id)){alert("Você só pode vincular usuários às suas empresas liberadas.");return}
+      if(!id && [...STATE.formWorksDraft].some(obraId=>!obraPermitidaAtual(obraId))){toast("Você só pode vincular usuários às suas obras liberadas.","erro");return}
+      if(payload.empresa_id&&!empresaPermitidaAtual(payload.empresa_id)){toast("Você só pode vincular usuários às suas empresas liberadas.","erro");return}
       if(!id && !podeCriarPerfil(payload.perfil)){
-        alert("Você não pode cadastrar um perfil superior ao seu. Solicite a um administrador de nível adequado.");return;
+        toast("Você não pode cadastrar um perfil superior ao seu. Solicite a um administrador de nível adequado.","erro");return;
       }
       if(id && !podeGerenciarPerfil(payload.perfil)){
-        alert("Você não pode promover este funcionário para um nível superior ao seu.");return;
+        toast("Você não pode promover este funcionário para um nível superior ao seu.","erro");return;
       }
     }
-    if(!payload.nome||!payload.usuario){alert("Informe nome e usuário.");return}
-    if(!payload.empresa_id){alert("Selecione a empresa do funcionário.");return}
+    if(!payload.nome||!payload.usuario){toast("Informe nome e usuário.","erro");return}
+    if(!payload.empresa_id || !STATE.companies.some(e=>Number(e.id)===Number(payload.empresa_id))){toast("Selecione uma empresa válida: BDR CONSTRUART ou SATHTECH, conforme seu acesso.","erro");return}
     const obrasSelecionadas=[...STATE.formWorksDraft].map(id=>STATE.works.find(w=>String(w.id)===String(id)));
     // O OWNER pode autorizar obras de outras empresas sem mudar a empresa principal.
     if(obrasSelecionadas.some(w=>!w)){
-      alert("Uma das obras selecionadas não foi encontrada. Atualize a lista e tente novamente.");return;
+      toast("Uma das obras selecionadas não foi encontrada. Atualize a lista e tente novamente.","erro");return;
     }
     if(!currentIsOwner() && obrasSelecionadas.some(w=>String(w.empresa_id)!==String(payload.empresa_id))){
-      alert("As obras de atuação precisam pertencer à empresa selecionada. Ajuste as obras ou a empresa.");return;
+      toast("As obras de atuação precisam pertencer à empresa selecionada. Ajuste as obras ou a empresa.","erro");return;
     }
-    if(!id && !payload.obra_operacional_id){alert("Selecione a base operacional da Expedição.");return}
+    if(!id && !payload.obra_operacional_id){toast("Selecione a base operacional da Expedição.","erro");return}
     if(payload.obra_operacional_id && !STATE.formWorksDraft.has(String(payload.obra_operacional_id))){
-      alert("A base operacional da Expedição também precisa estar marcada nas Obras de atuação.");
+      toast("A base operacional da Expedição também precisa estar marcada nas Obras de atuação.","erro");
       return;
     }
     // Edição: senha é operação separada, autorizada pelo backend e não pelo RPC de cadastro.
     // Novos usuários nunca recebem senha legada.
     
-    if(senha && !atlasSenhaValida(senha)) { alert("A senha provisória precisa ter de 8 a 128 caracteres."); return; }
+    if(senha && !atlasSenhaValida(senha)) { toast("A senha provisória precisa ter de 8 a 128 caracteres.","erro"); return; }
 
     if(!id){
-      if(!payload.email){alert("Informe o e-mail do funcionário para enviar a ativação segura.");return}
+      if(!payload.email){toast("Informe o e-mail do funcionário para enviar a ativação segura.","erro");return}
       payload.email=String(payload.email).toLowerCase();
       const duplicado=detectarDuplicidadeVisivel(payload);
-      if(duplicado){alert(duplicado);return;}
+      if(duplicado){toast(duplicado,"erro");return;}
       const prof=STATE.profiles.find(p=>norm(p.nome)===norm(payload.perfil));
       const perfilPerms=permissoesFormularioCadastro();
       Object.assign(payload,{
@@ -2043,7 +2066,7 @@
 
     // Redefinição é ação independente, nunca parte de Salvar usuário.
     if(id && senha){
-      alert("Para redefinir a senha, use o botão próprio. Salvar usuário não altera credenciais.");
+      toast("Para redefinir a senha, use o botão próprio. Salvar usuário não altera credenciais.","erro");
       return;
     }
 
@@ -2119,7 +2142,7 @@
         toast(retorno.mensagem||"Usuário criado no Supabase Auth.");
       }catch(erro){
         const mensagem=erro?.message||"Falha desconhecida no cadastro.";
-        alert("Cadastro seguro não concluído: "+mensagem);
+        toast("Cadastro seguro não concluído: "+mensagem,"erro");
       }finally{
         cadastroEmAndamento=false;
         if(botaoCadastro) botaoCadastro.disabled=false;
@@ -2127,65 +2150,72 @@
       return;
     }
 
-    if(id && !currentIsOwner()){
-      try{
-        const alteracoes={nome:payload.nome,usuario:payload.usuario,email:payload.email};
-        const mudouPerfil=norm(payload.perfil)!==norm(STATE.selected.perfil);
-        const originais=permsOf(STATE.selected);
-        const escolhidas=permissoesFormularioCadastro();
-        const mudouPermissoes=escolhidas.length!==originais.size || escolhidas.some(p=>!originais.has(p));
-        if(mudouPerfil || mudouPermissoes){
-          if(!canManageSelectedAccess()) throw new Error("Você não possui permissão para alterar perfil ou acessos deste funcionário.");
-          alteracoes.perfil=payload.perfil;
-          alteracoes.perfil_rapido=payload.perfil;
-          alteracoes.permissoes=escolhidas;
-        }
-        if(payload.ativo!==STATE.selected.ativo){
-          if(!hasCurrentPerm("USUARIOS_BLOQUEAR"))throw new Error("Sem permissão para bloquear ou reativar usuários.");
-          alteracoes.ativo=payload.ativo;
-        }
-        // O formulário também permite escolher obras; não fingir que essa mudança foi salva.
-        if([...STATE.formWorksDraft].sort().join(",")!==[...obrasDoUsuario(STATE.selected)].sort().join(","))
-          throw new Error("A edição de vínculos de obras ainda não está disponível com segurança.");
-        const retorno=await adminSupabase({acao:"editar",usuario_id:Number(id),alteracoes});
-        Object.assign(STATE.selected,retorno.funcionario);
-        modal("modalUsuario",false);
-        await load();
-        await selectUser(id);
-        toast("Dados cadastrais atualizados.");
-      }catch(erro){alert("Alteração não concluída: "+erro.message)}
-      return;
-    }
-    // Edição OWNER também passa pela Edge Function para aplicar a mesma hierarquia
-    // e evitar caminhos de salvamento diferentes para o mesmo formulário.
+    if(cadastroEmAndamento) return;
+    cadastroEmAndamento=true;
+    const botaoEdicao=$("#btnSalvarUsuario");
+    if(botaoEdicao) botaoEdicao.disabled=true;
     let r;
-    if(id){
-      try{
-        const alteracoes={nome:payload.nome,usuario:payload.usuario,email:payload.email};
-        if(payload.ativo!==STATE.selected.ativo)alteracoes.ativo=payload.ativo;
-        const mudouPerfil=norm(payload.perfil)!==norm(STATE.selected.perfil);
-        const originais=permsOf(STATE.selected);
-        const escolhidas=permissoesFormularioCadastro();
-        if(mudouPerfil || escolhidas.length!==originais.size || escolhidas.some(p=>!originais.has(p))){
-          alteracoes.perfil=payload.perfil;
-          alteracoes.perfil_rapido=payload.perfil;
-          alteracoes.permissoes=escolhidas;
+    let somenteObras=null;
+    try{
+      const original=STATE.selected;
+      if(!original || Number(original.id)!==Number(id)) throw new Error("Reabra o cadastro do funcionário.");
+      const alteracoes={};
+      for(const campo of ["nome","usuario","email","ativo","empresa_id"]){
+        if(String(payload[campo]??"")!==String(original[campo]??"")) alteracoes[campo]=payload[campo];
+      }
+      const mudouPerfil=norm(payload.perfil)!==norm(original.perfil);
+      const originais=permsOf(original);
+      const escolhidas=permissoesFormularioCadastro();
+      if(mudouPerfil || escolhidas.length!==originais.size || escolhidas.some(p=>!originais.has(p))){
+        alteracoes.perfil=payload.perfil;
+        alteracoes.perfil_rapido=payload.perfil;
+        alteracoes.permissoes=escolhidas;
+      }
+      const obras=[...STATE.formWorksDraft].map(Number);
+      if(obras.map(String).sort().join(",")!==[...obrasDoUsuario(original)].sort().join(",")){
+        alteracoes.obras=obras;
+        if(!obras.length) throw new Error("Selecione pelo menos uma obra de atuação.");
+      }
+      if(original._base_operacional_carregada && Number(payload.obra_operacional_id||0)!==Number(original._obra_operacional_id||0))
+        alteracoes.obra_operacional_id=payload.obra_operacional_id;
+      if(Number(id)===OWNER_ID && currentIsOwner()){
+        if("obras" in alteracoes || "empresa_id" in alteracoes || "obra_operacional_id" in alteracoes) throw new Error("A conta OWNER possui acesso próprio; seus vínculos não são editados neste formulário.");
+        if(Object.keys(alteracoes).length){
+          const resposta=await adminSupabase({acao:"editar",usuario_id:Number(id),alteracoes});
+          r={data:resposta.funcionario,error:null};
+        }else r={data:{id:Number(id)},error:null};
+      }else{
+        const retorno=await editarUsuarioSeguro(id,alteracoes,original);
+        r={data:{id:retorno.id,_obra_operacional_id:retorno.obra_operacional_id},error:null};
+        payload.obra_operacional_id=retorno.obra_operacional_id;
+        // Atualização pontual somente quando o servidor confirmou os vínculos e nenhum outro dado mudou.
+        if("obras" in alteracoes && Object.keys(alteracoes).every(k=>["obras","obra_operacional_id"].includes(k)) && Array.isArray(retorno.obras)){
+          somenteObras={id:Number(retorno.id),obras_liberadas:retorno.obras.join(","),_obras_vinculadas:retorno.obras,obra_id:null,_obra_operacional_id:retorno.obra_operacional_id??null,_base_operacional_carregada:true};
         }
-        if([...STATE.formWorksDraft].sort().join(",")!==[...obrasDoUsuario(STATE.selected)].sort().join(","))
-          throw new Error("Alterar as obras de atuação exige o fluxo específico de obras. Nenhuma mudança foi gravada.");
-        const resposta=await adminSupabase({acao:"editar",usuario_id:Number(id),alteracoes});
-        r={data:resposta.funcionario,error:null};
-      }catch(error){r={error};}
-    }else{
-      r={error:new Error("Cadastro seguro obrigatório: use a Edge Function.")};
-    }
-    if(r.error){
-      alert((id && senha ? "A senha foi redefinida, mas os demais dados do cadastro NÃO foram salvos: " : "Erro ao salvar usuário: ")+r.error.message);
+      }
+    }catch(error){
+      toast("Erro ao salvar usuário: "+error.message,"erro");
       return;
+    }finally{
+      cadastroEmAndamento=false;
+      if(botaoEdicao) botaoEdicao.disabled=false;
     }
 
     modal("modalUsuario",false);
-    await load();
+    if(somenteObras){
+      const usuario=STATE.users.find(u=>Number(u.id)===somenteObras.id);
+      if(usuario){
+        Object.assign(usuario,somenteObras);
+        await selectUser(usuario.id);
+        fotoArquivoPendente=null; removerFotoPendente=false;
+        toast("Usuário salvo com sucesso.");
+        return;
+      }
+    }
+    try{await load()}catch(error){
+      toast("Alterações gravadas. Não foi possível atualizar a lista; recarregue a página.","aviso");
+      return;
+    }
     const saved=Array.isArray(r.data)?r.data[0]:r.data;
     if(saved?.id){
       saved._obra_operacional_id=payload.obra_operacional_id||null;
@@ -2522,14 +2552,13 @@
   async function atualizarStatusAuthSelecionado(){
     if(atualizandoStatusAuth||!STATE.selected?.id||STATE.dirty||!db()) return;
     atualizandoStatusAuth=true;
+    const usuarioConsultado=STATE.selected;
     try{
       const {data,error}=await db().from("usuarios_sistema")
         .select("id,auth_status,auth_user_id,auth_ativado_em,auth_ativado_por")
-        .eq("id",Number(STATE.selected.id)).maybeSingle();
-      if(error||!data) return;
-      const idx=STATE.users.findIndex(u=>Number(u.id)===Number(data.id));
-      if(idx>=0) Object.assign(STATE.users[idx],data);
-      Object.assign(STATE.selected,data);
+        .eq("id",Number(usuarioConsultado.id)).maybeSingle();
+      if(error||!data||Number(data.id)!==Number(usuarioConsultado.id)||STATE.selected!==usuarioConsultado||!STATE.users.includes(usuarioConsultado)||STATE.dirty) return;
+      Object.assign(usuarioConsultado,data);
       if(STATE.draft) Object.assign(STATE.draft,data);
       renderUsers();
       renderAuthStatus();
