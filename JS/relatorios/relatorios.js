@@ -549,6 +549,9 @@ function atualizarCabecalhoDocumentoRelatorio(){
   setTexto("relatorioDocPeriodoEfetivo", periodoEfetivoLancamentos());
   setTexto("relatorioDocUsuario", usuario?.nome || usuario?.usuario || "Usuário não identificado");
   setTexto("relatorioDocTotal", String(filtradosAtuais.length));
+  const campoValor=document.getElementById("relatorioDocValorAtivoCampo");
+  if(campoValor) campoValor.hidden=modoRelatorioHistorico || !temPermissaoRelatoriosBDR("VALORES_VER");
+  if(!modoRelatorioHistorico && temPermissaoRelatoriosBDR("VALORES_VER")) setTexto("relatorioDocValorAtivo", atlasMovMoeda(window.AtlasPatrimonial.total(filtradosAtuais)));
 }
 
 
@@ -655,7 +658,7 @@ function renderizarTabelaPaginaRelatorio(){
         <td>${identificacaoInteligenteRelatorio(p)}</td>
         <td>${p.nome_bem || "-"}</td>
         <td>${tipoExibicao}</td>
-        <td><span class="status ${p.status || ""}">${statusPatrimonioRelatorio(p).replaceAll("_", " ")}</span></td>
+        <td><span class="status ${statusPatrimonioRelatorio(p)}">${statusPatrimonioRelatorio(p).replaceAll("_", " ")}</span></td>
         <td class="coluna-obra-relatorio">${obraObj ? `${obraObj.codigo_obra || obraObj.codigo_sienge || "-"} - ${obraObj.nome || "-"}` : (p.localizacao || "-")}</td>
         <td>${p.marca || "-"}</td>
         <td>${p.modelo || "-"}</td>
@@ -927,7 +930,7 @@ function renderizarRelatorio(){
   filtradosAtuais.sort(compararIdentificacaoRelatorio);
 
   document.getElementById("resumo").innerText =
-    `Total encontrado: ${filtradosAtuais.length} patrimônio(s)`;
+    `Total encontrado: ${filtradosAtuais.length} patrimônio(s)` + (temPermissaoRelatoriosBDR("VALORES_VER") ? ` · Valor patrimonial ativo: ${atlasMovMoeda(window.AtlasPatrimonial.total(filtradosAtuais))}` : "");
 
   atualizarCabecalhoDocumentoRelatorio();
   atualizarKPIsRelatorio();
@@ -2280,9 +2283,11 @@ function snapshotPatrimoniosConferencia(){
 function assinaturaCorrespondeAoRelatorio(c){
   const itens = Array.isArray(c?.patrimonios_json) ? c.patrimonios_json : [];
   if(itens.length !== filtradosAtuais.length) return false;
-  const atuais = filtradosAtuais.map(codigoPatrimonioConferencia).sort();
-  const assinados = itens.map(i => String(i?.codigo || i?.id || "")).sort();
-  return atuais.every((codigo, indice) => codigo === assinados[indice]);
+  // Uma assinatura antiga não pode validar uma relação cujo valor ou status mudou.
+  const chave=(codigo,status,obra,valor)=>JSON.stringify([String(codigo),String(status||"").trim().toUpperCase(),String(obra??""),window.AtlasPatrimonial.numero(valor)]);
+  const atuais = filtradosAtuais.map(p=>chave(codigoPatrimonioConferencia(p),statusPatrimonioRelatorio(p),p.obra_id,valorNumericoRelatorio(p))).sort();
+  const assinados = itens.map(i=>chave(i?.codigo || i?.id || "",i?.status,i?.obra_id,i?.valor)).sort();
+  return atuais.every((item, indice) => item === assinados[indice]);
 }
 
 function redimensionarCanvasAssinatura(){
@@ -2535,6 +2540,8 @@ async function abrirRelatorioAssinado(indice,imprimir=false){
   renderizarTodosItensParaImpressao();
   document.getElementById("resumo").textContent=`Fotografia oficial assinada: ${snapshot.length} patrimônio(s)`;
   document.getElementById("relatorioDocTotal").textContent=String(snapshot.length);
+  const campoValorHistorico=document.getElementById("relatorioDocValorAtivoCampo");
+  if(campoValorHistorico) campoValorHistorico.hidden=true;
   document.getElementById("relatorioDocPeriodo").textContent=(c.periodo_inicio||c.periodo_fim)
     ? `${c.periodo_inicio ? formatarData(c.periodo_inicio) : "Início"} até ${c.periodo_fim ? formatarData(c.periodo_fim) : "Hoje"}`
     : "Todos os registros no momento da conferência";
@@ -2700,7 +2707,7 @@ function renderizarTodosItensParaImpressao(){
       <td>${identificacaoInteligenteRelatorio(p)}</td>
       <td>${p.nome_bem || "-"}</td>
       <td>${tipo==="MAQUINA" ? "MÁQUINA PESADA" : tipo.replaceAll("_"," ")}</td>
-      <td><span class="status ${p.status || ""}">${String(p.status || "-").replaceAll("_"," ")}</span></td>
+      <td><span class="status ${statusPatrimonioRelatorio(p)}">${statusPatrimonioRelatorio(p).replaceAll("_"," ")}</span></td>
       <td class="coluna-obra-relatorio">${obraObj ? `${obraObj.codigo_obra || obraObj.codigo_sienge || "-"} - ${obraObj.nome || "-"}` : (p.localizacao || "-")}</td>
       <td>${p.marca || "-"}</td><td>${p.modelo || "-"}</td><td>${p.numero_serie || p.placa || "-"}</td>
       <td>${valorPatrimonioRelatorio(p)}</td><td>${formatarDataHoraCadastroPatrimonio(p)}</td><td>${p.usuario_cadastro || p.cadastrado_por || "-"}</td>
