@@ -2152,6 +2152,7 @@
     const botaoEdicao=$("#btnSalvarUsuario");
     if(botaoEdicao) botaoEdicao.disabled=true;
     let r;
+    let somenteObras=null;
     try{
       const original=STATE.selected;
       if(!original || Number(original.id)!==Number(id)) throw new Error("Reabra o cadastro do funcionário.");
@@ -2184,6 +2185,10 @@
         const retorno=await editarUsuarioSeguro(id,alteracoes,original);
         r={data:{id:retorno.id,_obra_operacional_id:retorno.obra_operacional_id},error:null};
         payload.obra_operacional_id=retorno.obra_operacional_id;
+        // Atualização pontual somente quando o servidor confirmou os vínculos e nenhum outro dado mudou.
+        if("obras" in alteracoes && Object.keys(alteracoes).every(k=>["obras","obra_operacional_id"].includes(k)) && Array.isArray(retorno.obras)){
+          somenteObras={id:Number(retorno.id),obras_liberadas:retorno.obras.join(","),_obras_vinculadas:retorno.obras,obra_id:null,_obra_operacional_id:retorno.obra_operacional_id??null,_base_operacional_carregada:true};
+        }
       }
     }catch(error){
       toast("Erro ao salvar usuário: "+error.message,"erro");
@@ -2194,7 +2199,20 @@
     }
 
     modal("modalUsuario",false);
-    await load();
+    if(somenteObras){
+      const usuario=STATE.users.find(u=>Number(u.id)===somenteObras.id);
+      if(usuario){
+        Object.assign(usuario,somenteObras);
+        await selectUser(usuario.id);
+        fotoArquivoPendente=null; removerFotoPendente=false;
+        toast("Usuário salvo com sucesso.");
+        return;
+      }
+    }
+    try{await load()}catch(error){
+      toast("Alterações gravadas. Não foi possível atualizar a lista; recarregue a página.","aviso");
+      return;
+    }
     const saved=Array.isArray(r.data)?r.data[0]:r.data;
     if(saved?.id){
       saved._obra_operacional_id=payload.obra_operacional_id||null;
