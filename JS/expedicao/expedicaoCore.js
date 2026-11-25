@@ -371,8 +371,11 @@ async function aplicarReservasNoCatalogoAtlas(lista){
     const reservaPorPat = {};
     const reservadoPorProd = {};
 
+    // Uma reserva antiga não pode bloquear um item de pedido já encerrado.
+    function pedidoEncerrado(s){return ["RECEBIDO","RECEBIDO_PARCIAL","RECEBIDO_COM_DIVERGENCIA","RECEBIDA","RECEBIDA_DIVERGENCIA","ENTREGUE","RECUSADO","RECUSADA","CANCELADO","CANCELADA","NEGADO","NEGADA"].includes(String(s||"").trim().toUpperCase());}
     reservas.forEach(r => {
       const pedido = pedidosMap[String(r.pedido_id)] || {};
+      if(pedidoEncerrado(pedido.status)) return;
       const info = {
         ...r,
         pedido_codigo: pedido.codigo || ("PED-" + r.pedido_id),

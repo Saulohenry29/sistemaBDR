@@ -621,7 +621,7 @@
     return `<article class="atlas-doc-sign-card ${a?'atlas-doc-assinado':''}">
       <div class="atlas-doc-sign-head"><div><strong>${esc(titulo)}</strong><small>${esc(descricao)}</small></div><span class="atlas-doc-sign-state ${a?'ok':''}">${a?'✓ Assinado':'◷ Pendente'}</span></div>
       <div class="atlas-doc-sign-content">${a?`<img class="atlas-doc-sign-img" src="${esc(a.assinatura_png)}" alt="Assinatura registrada de ${esc(a.nome)}">
-      <strong>${esc(a.nome)}</strong><small>${dataHoraBR(a.assinado_em)} · ${a.registrado_por_nome?`Presencial · aparelho de ${esc(a.registrado_por_nome)}`:a.metodo==='TOKEN_UNICO'?'Link seguro do motorista':'Confirmação no Atlas'}</small>`:
+      <strong>${esc(a.nome)}</strong><small>${dataHoraBR(a.assinado_em)} · ${a.registrado_por_nome?`Presencial · aparelho de ${esc(a.registrado_por_nome)}`:a.metodo==='TOKEN_UNICO'?'Link seguro do motorista':'Confirmação eletrônica'}</small>`:
       `<div class="atlas-doc-sign-empty">Aguardando assinatura</div><small>${papel==='SAIDA'?'O responsável pela saída confirma os bens entregues.':'O motorista confere e confirma a retirada.'}</small>`}</div>
       </article>`;
   }
@@ -813,7 +813,7 @@
       ${empresa?.telefone?`<p><b>Telefone:</b> ${esc(empresa.telefone)}</p>`:''}`;
   }
   function cabecalhoDocumento(doc){
-    return `<header class="atlas-doc-brandbar"><div class="atlas-doc-mark"><strong>BDR</strong><span>Atlas<small>Gestão Patrimonial</small></span></div>
+    return `<header class="atlas-doc-brandbar"><div class="atlas-doc-mark"><strong>BDR</strong><span>CONSTRUART<small>Gestão Patrimonial</small></span></div>
        <div class="atlas-doc-name"><b>ROMANEIO PATRIMONIAL</b><small>Documento de transferência</small></div></header>
        <div class="atlas-doc-stats"><div><small>Remessa</small><b>${esc(doc.numero)}</b></div><div><small>Data / Hora</small><b>${dataHoraBR(doc.data)}</b></div>
        <div><small>Situação</small><b>${esc(formatoStatus(doc.status))}</b></div></div>
@@ -828,8 +828,8 @@
     return `<div class="atlas-doc-printable">${cabecalhoDocumento(doc)}${docTabela(doc)}
       <div class="atlas-doc-total"><b>Total de patrimônios: ${numeroItens(doc).toLocaleString('pt-BR')}</b></div>
       <div class="atlas-doc-print-signatures"><h3>Assinaturas da transferência</h3><div class="atlas-doc-print-sign-grid">${assinaturaImpressao('SAIDA','Responsável pela saída')}${assinaturaImpressao('MOTORISTA','Motorista / transportador')}</div></div>
-      <footer class="atlas-doc-print-footer"><div class="atlas-doc-qr-place"><img id="atlasDocQr" alt="QR Code para consultar o documento no Atlas" style="display:none"><div><b>Consulta do documento</b><small>Escaneie para abrir a remessa no Atlas. É necessário ter acesso à obra.</small></div></div>
-      <div><b>${esc(doc.numero)}</b><small>Atlas · Gestão Patrimonial</small><small>Documento operacional. Não substitui documento fiscal quando exigido.</small></div></footer>
+      <footer class="atlas-doc-print-footer"><div class="atlas-doc-qr-place"><img id="atlasDocQr" alt="QR Code para consultar o documento" style="display:none"><div><b>Consulta do documento</b><small>Escaneie para consultar a remessa. É necessário ter acesso à obra.</small></div></div>
+      <div><b>${esc(doc.numero)}</b><small>BDR CONSTRUART · Gestão Patrimonial</small><small>Documento operacional. Não substitui documento fiscal quando exigido.</small></div></footer>
     </div>`;
   }
   function docAssinaturas(doc){
@@ -1190,7 +1190,7 @@
 
     const doc=iframe.contentDocument;
     doc.open();
-    doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>Romaneio Fiscal</title>
+    doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>BDR - Romaneio</title>
       <style>
         @page{size:A4 portrait;margin:11mm}
         *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#102a4c;background:#fff}

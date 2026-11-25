@@ -125,11 +125,12 @@
         <option value="">Todos os cadastros</option><option value="NOVO">Novos do sistema</option>
         <option value="LEGADO">Patrimônio legado</option><option value="PAT">Códigos PAT</option><option value="ANTIGO">Códigos antigos</option>
       </select></label>
-      <label class="atlas-status-filtro"><span>Status</span><button type="button" class="atlas-status-botao" id="atlasStatusBotao" onclick="atlasAlternarStatusFiltro()">Todos os status ▾</button><div id="atlasStatusOpcoes" class="atlas-status-opcoes" hidden>
+      <label class="atlas-status-filtro"><span>Status</span><button type="button" class="atlas-status-botao" id="atlasStatusBotao" onclick="atlasAlternarStatusFiltro()">Ativos não baixados ▾</button><div id="atlasStatusOpcoes" class="atlas-status-opcoes" hidden>
         <label><input type="checkbox" value="ESTOQUE" onchange="atlasStatusAlterado()"> Estoque</label>
         <label><input type="checkbox" value="EM_USO" onchange="atlasStatusAlterado()"> Em uso</label>
         <label><input type="checkbox" value="MANUTENCAO" onchange="atlasStatusAlterado()"> Manutenção</label>
-        <label><input type="checkbox" value="BAIXADO" onchange="atlasStatusAlterado()"> Baixado</label>
+        <label><input type="checkbox" value="EM_TRANSITO" onchange="atlasStatusAlterado()"> Em trânsito</label>
+        <label><input type="checkbox" value="BAIXADO" onchange="atlasStatusAlterado()"> Baixado (histórico)</label>
         <button type="button" onclick="atlasLimparStatus()">Limpar seleção</button></div>
         <select id="filtroStatus" hidden><option value="">Todos os status</option><option value="ESTOQUE">Estoque</option><option value="EM_USO">Em uso</option><option value="MANUTENCAO">Manutenção</option><option value="BAIXADO">Baixado</option></select>
       </label>
@@ -210,6 +211,7 @@
     <div><b>Período efetivo dos lançamentos:</b> <span id="relatorioDocPeriodoEfetivo">-</span></div>
     <div><b>Relatório emitido por:</b> <span id="relatorioDocUsuario">-</span></div>
     <div><b>Total de patrimônios:</b> <span id="relatorioDocTotal">0</span></div>
+    <div id="relatorioDocValorAtivoCampo" hidden><b>Valor patrimonial ativo:</b> <span id="relatorioDocValorAtivo">-</span></div>
   </div>
 
   <div class="relatorio-doc-declaracao">
@@ -533,6 +535,7 @@ Importar Excel/CSV</h3>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="./JS/supabaseClient.js"></script>
 <script src="./JS/bdrCore.js"></script>
+<script src="./JS/atlasPatrimonial.js?v=20261125"></script>
 <script src="./JS/bdrNotificacoes.js?v=20261110-escopo-obra01"></script>
 <script src="./JS/bdrMenuPermissoes.js"></script>
 <script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260629-2"></script>
@@ -604,7 +607,7 @@ Importar Excel/CSV</h3>
 </div>
 
 <script src="./JS/componentes/atlasPaginacao.js?v=20261109-fix02"></script>
-<script src="./JS/relatorios/relatorios.js?v=20261123-codigo-obra01"></script>
+<script src="./JS/relatorios/relatorios.js?v=20261125-resumo-gerencial"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="./JS/sienge-insumos-fallback.js"></script>
