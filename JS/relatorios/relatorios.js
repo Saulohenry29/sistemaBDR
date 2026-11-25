@@ -1500,7 +1500,7 @@ function atlasMovEventoOperacional(m){
   if(p&&!window.AtlasPatrimonial.cadastrado(p))return false;
   const tipo=String(m?.tipo_movimentacao||m?.tipo||'').trim().toUpperCase();
   const estado=String(m?.status_novo||m?.status||'').trim().toUpperCase();
-  return estado!=='INATIVO'&&!['INATIVACAO','EXCLUSAO_INATIVACAO','REATIVACAO'].includes(tipo);
+  return estado!=='INATIVO'&&!['INATIVACAO','REATIVACAO'].includes(tipo)&&(tipo!=='EXCLUSAO_INATIVACAO'||estado==='BAIXADO');
 }
 function atlasMovFontesSelecionadas(){
   const t=atlasMovSelecoes.tipos;
