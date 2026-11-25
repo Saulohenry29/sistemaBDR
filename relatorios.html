@@ -131,7 +131,6 @@
         <label><input type="checkbox" value="MANUTENCAO" onchange="atlasStatusAlterado()"> Manutenção</label>
         <label><input type="checkbox" value="EM_TRANSITO" onchange="atlasStatusAlterado()"> Em trânsito</label>
         <label><input type="checkbox" value="BAIXADO" onchange="atlasStatusAlterado()"> Baixado (histórico)</label>
-        <label><input type="checkbox" value="INATIVO" onchange="atlasStatusAlterado()"> Inativo (histórico)</label>
         <button type="button" onclick="atlasLimparStatus()">Limpar seleção</button></div>
         <select id="filtroStatus" hidden><option value="">Todos os status</option><option value="ESTOQUE">Estoque</option><option value="EM_USO">Em uso</option><option value="MANUTENCAO">Manutenção</option><option value="BAIXADO">Baixado</option></select>
       </label>
@@ -536,7 +535,7 @@ Importar Excel/CSV</h3>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="./JS/supabaseClient.js"></script>
 <script src="./JS/bdrCore.js"></script>
-<script src="./JS/atlasPatrimonial.js?v=20261124"></script>
+<script src="./JS/atlasPatrimonial.js?v=20261125"></script>
 <script src="./JS/bdrNotificacoes.js?v=20261110-escopo-obra01"></script>
 <script src="./JS/bdrMenuPermissoes.js"></script>
 <script src="./JS/bdr-menu-ocultar-de-verdade.js?v=20260629-2"></script>
@@ -608,7 +607,7 @@ Importar Excel/CSV</h3>
 </div>
 
 <script src="./JS/componentes/atlasPaginacao.js?v=20261109-fix02"></script>
-<script src="./JS/relatorios/relatorios.js?v=20261124-conciliacao02"></script>
+<script src="./JS/relatorios/relatorios.js?v=20261125-conciliacao"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="./JS/sienge-insumos-fallback.js"></script>
