@@ -27,6 +27,21 @@
   gap:8px;
 }
 
+ .obra-endereco-operacional{margin-top:18px;border-top:1px solid #dbe3ee;padding-top:12px}
+.obra-endereco-operacional h4{margin:0 0 10px;color:#26374c}
+.obra-endereco-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:14px}
+.obra-endereco-campos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-content:start}
+.obra-endereco-operacional input{min-width:0;width:100%;box-sizing:border-box}
+.obra-logradouro{grid-column:1/-1}
+.obra-cep-linha{display:flex;gap:6px;align-items:center}
+.obra-cep-linha button{flex-shrink:0}
+.obra-localizacao{border:1px solid #dce6f1;border-radius:10px;padding:12px;background:#f5f8fc;display:flex;flex-direction:column;gap:8px;min-width:0}
+.obra-localizacao h4{margin:0}
+.obra-localizacao-botao{background:#234d80;font-size:12px;padding:10px;white-space:normal}
+.obra-coordenadas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.obra-endereco-operacional small{display:block;color:#52657b;font-size:12px;margin-top:5px}
+@media(max-width:850px){.obra-endereco-layout{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:480px){.obra-endereco-campos{grid-template-columns:minmax(0,1fr)}}
 .empresa-selecao-existente{display:flex;flex-direction:column;gap:5px;margin:2px 0 14px}
 .empresa-selecao-existente>select{max-width:650px}
 .empresa-selecao-existente small{font-size:12px;color:#556a82}
@@ -363,6 +378,30 @@
         </div>
       </div>
 
+      <div class="obra-endereco-operacional" id="novo_obra_painel">
+  <h4>Endereço operacional da obra</h4>
+  <div class="obra-endereco-layout">
+    <div class="obra-endereco-campos">
+      <div><label for="novo_obra_cep">CEP</label><div class="obra-cep-linha"><input id="novo_obra_cep" inputmode="numeric" maxlength="9" placeholder="00000-000" oninput="obraCepDigitado('novo_obra')"><button type="button" class="btn-mini" onclick="obraBuscarCep('novo_obra',true)">Buscar CEP</button></div></div>
+      <div><label for="novo_obra_municipio">Município</label><input id="novo_obra_municipio" maxlength="150" placeholder="Cidade da obra"></div>
+      <div><label for="novo_obra_uf">UF</label><input id="novo_obra_uf" maxlength="2" placeholder="MT"></div>
+      <div><label for="novo_obra_bairro">Bairro / região</label><input id="novo_obra_bairro" maxlength="150" placeholder="Bairro ou zona rural"></div>
+      <div class="obra-logradouro"><label for="novo_obra_logradouro">Logradouro</label><input id="novo_obra_logradouro" maxlength="250" placeholder="Rua, rodovia, estrada ou fazenda"></div>
+      <div><label for="novo_obra_numero">Número</label><input id="novo_obra_numero" maxlength="40" placeholder="Nº ou S/N"></div>
+      <div><label for="novo_obra_complemento">Complemento</label><input id="novo_obra_complemento" maxlength="200" placeholder="Opcional"></div>
+    </div>
+    <aside class="obra-localizacao">
+      <h4><i class="fa-solid fa-location-dot"></i> Localização da obra</h4>
+      <button type="button" class="btn-mini obra-localizacao-botao" onclick="obraCapturarLocalizacao('novo_obra')"><i class="fa-solid fa-location-crosshairs"></i> Usar localização atual</button>
+      <small>Use somente se estiver fisicamente na obra. A captura depende da sua autorização.</small>
+      <div class="obra-coordenadas"><div><label for="novo_obra_latitude">Latitude</label><input id="novo_obra_latitude" inputmode="decimal" maxlength="24" placeholder="Opcional"></div><div><label for="novo_obra_longitude">Longitude</label><input id="novo_obra_longitude" inputmode="decimal" maxlength="24" placeholder="Opcional"></div></div>
+      <button type="button" class="btn-mini" onclick="obraAbrirMapa('novo_obra')"><i class="fa-solid fa-map-location-dot"></i> Ver no mapa</button>
+      <div><label for="novo_obra_referencia">Referência para entrega</label><input id="novo_obra_referencia" maxlength="250" placeholder="Portaria, km da rodovia, acesso..."></div>
+      <small id="novo_obra_geo_status" role="status" aria-live="polite"></small>
+    </aside>
+  </div>
+  <small id="novo_obra_cep_status" role="status" aria-live="polite">CEP opcional. Todos os campos podem ser preenchidos manualmente.</small>
+</div>
       <br>
 
       <label>Observação</label>
@@ -386,6 +425,30 @@
         <div><label>Código Sienge</label><input id="edit_codigo_sienge_obra" maxlength="40"></div>
         <div><label>Tabela de insumo</label><select id="edit_tabela_insumo"><option value="2">Tabela 2</option><option value="3">Tabela 3</option></select></div>
       </div>
+      <div class="obra-endereco-operacional" id="edit_obra_painel">
+  <h4>Endereço operacional da obra</h4>
+  <div class="obra-endereco-layout">
+    <div class="obra-endereco-campos">
+      <div><label for="edit_obra_cep">CEP</label><div class="obra-cep-linha"><input id="edit_obra_cep" inputmode="numeric" maxlength="9" placeholder="00000-000" oninput="obraCepDigitado('edit_obra')"><button type="button" class="btn-mini" onclick="obraBuscarCep('edit_obra',true)">Buscar CEP</button></div></div>
+      <div><label for="edit_obra_municipio">Município</label><input id="edit_obra_municipio" maxlength="150" placeholder="Cidade da obra"></div>
+      <div><label for="edit_obra_uf">UF</label><input id="edit_obra_uf" maxlength="2" placeholder="MT"></div>
+      <div><label for="edit_obra_bairro">Bairro / região</label><input id="edit_obra_bairro" maxlength="150" placeholder="Bairro ou zona rural"></div>
+      <div class="obra-logradouro"><label for="edit_obra_logradouro">Logradouro</label><input id="edit_obra_logradouro" maxlength="250" placeholder="Rua, rodovia, estrada ou fazenda"></div>
+      <div><label for="edit_obra_numero">Número</label><input id="edit_obra_numero" maxlength="40" placeholder="Nº ou S/N"></div>
+      <div><label for="edit_obra_complemento">Complemento</label><input id="edit_obra_complemento" maxlength="200" placeholder="Opcional"></div>
+    </div>
+    <aside class="obra-localizacao">
+      <h4><i class="fa-solid fa-location-dot"></i> Localização da obra</h4>
+      <button type="button" class="btn-mini obra-localizacao-botao" onclick="obraCapturarLocalizacao('edit_obra')"><i class="fa-solid fa-location-crosshairs"></i> Usar localização atual</button>
+      <small>Use somente se estiver fisicamente na obra. A captura depende da sua autorização.</small>
+      <div class="obra-coordenadas"><div><label for="edit_obra_latitude">Latitude</label><input id="edit_obra_latitude" inputmode="decimal" maxlength="24" placeholder="Opcional"></div><div><label for="edit_obra_longitude">Longitude</label><input id="edit_obra_longitude" inputmode="decimal" maxlength="24" placeholder="Opcional"></div></div>
+      <button type="button" class="btn-mini" onclick="obraAbrirMapa('edit_obra')"><i class="fa-solid fa-map-location-dot"></i> Ver no mapa</button>
+      <div><label for="edit_obra_referencia">Referência para entrega</label><input id="edit_obra_referencia" maxlength="250" placeholder="Portaria, km da rodovia, acesso..."></div>
+      <small id="edit_obra_geo_status" role="status" aria-live="polite"></small>
+    </aside>
+  </div>
+  <small id="edit_obra_cep_status" role="status" aria-live="polite">CEP opcional. Todos os campos podem ser preenchidos manualmente.</small>
+</div>
       <div class="form-actions">
         <button class="btn-salvar" type="button" data-acao-permissao="EMPRESAS_EDITAR" onclick="salvarEdicaoObra()">💾 Salvar obra</button>
         <button class="btn-limpar" type="button" onclick="cancelarEdicaoEmpresa()">Cancelar</button>
@@ -663,6 +726,73 @@ function campo(id){
   return el ? String(el.value || "").trim() : "";
 }
 
+
+const obraEnderecoCampos=["cep","municipio","uf","bairro","logradouro","numero","complemento","referencia","latitude","longitude"];
+const obraEnderecoEstado=new Map();
+function obraEstado(p){if(!obraEnderecoEstado.has(p))obraEnderecoEstado.set(p,{versao:0,cepReq:0,geoReq:0,auto:{},timer:null});return obraEnderecoEstado.get(p);}
+function obraCampo(p,k){return document.getElementById(p+'_'+k);}
+function obraMensagem(p,k,msg){const el=obraCampo(p,k+'_status');if(el)el.textContent=msg;}
+function obraPreencherEndereco(p,dados={}){
+  const s=obraEstado(p);clearTimeout(s.timer);s.versao++;s.cepReq++;s.geoReq++;s.auto={};
+  for(const k of obraEnderecoCampos){const el=obraCampo(p,k);if(el)el.value=String(dados?.[k]??'');}
+  const cep=obraCampo(p,'cep');if(/^\d{8}$/.test(cep.value))cep.value=cep.value.replace(/^(\d{5})(\d{3})$/,'$1-$2');
+  obraMensagem(p,'cep','CEP opcional. Todos os campos podem ser preenchidos manualmente.');
+  obraMensagem(p,'geo','');
+}
+function obraLerEndereco(p){
+  const d={};
+  for(const k of obraEnderecoCampos){const v=campo(p+'_'+k);if(v)d[k]=v;}
+  if(d.cep){d.cep=d.cep.replace(/\D/g,'');if(!/^\d{8}$/.test(d.cep))throw Error('CEP da obra deve conter 8 números.');}
+  if(d.uf){d.uf=d.uf.toUpperCase();if(!['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].includes(d.uf))throw Error('UF da obra inválida.');}
+  if((d.latitude===undefined)!==(d.longitude===undefined))throw Error('Informe latitude e longitude juntas, ou deixe ambas vazias.');
+  if(d.latitude!==undefined){const lat=Number(d.latitude.replace(',','.')),lng=Number(d.longitude.replace(',','.'));if(!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180)throw Error('Coordenadas inválidas.');d.latitude=lat;d.longitude=lng;}
+  return d;
+}
+function obraCepDigitado(p){
+  const s=obraEstado(p),el=obraCampo(p,'cep'),v=el.value.replace(/\D/g,'').slice(0,8);
+  el.value=v.length>5?v.slice(0,5)+'-'+v.slice(5):v;clearTimeout(s.timer);s.cepReq++;
+  if(v.length===8)s.timer=setTimeout(()=>obraBuscarCep(p,false),350);
+  else obraMensagem(p,'cep','Informe 8 números para buscar ou preencha manualmente.');
+}
+async function obraBuscarCep(p,manual=false){
+  const s=obraEstado(p);clearTimeout(s.timer);const cep=campo(p+'_cep').replace(/\D/g,'');
+  if(!/^\d{8}$/.test(cep)){obraMensagem(p,'cep','Informe um CEP com 8 números.');return;}
+  const req=++s.cepReq,versao=s.versao;const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),8000);
+  obraMensagem(p,'cep','Consultando CEP...');
+  try{
+    const resp=await fetch('https://viacep.com.br/ws/'+cep+'/json/',{signal:ctrl.signal});
+    if(!resp.ok)throw Error('Consulta indisponível');
+    const d=await resp.json();
+    if(req!==s.cepReq||versao!==s.versao||campo(p+'_cep').replace(/\D/g,'')!==cep)return;
+    if(d.erro){obraMensagem(p,'cep','CEP não encontrado. Preencha o endereço manualmente.');return;}
+    const dados={municipio:d.localidade,uf:d.uf,bairro:d.bairro,logradouro:d.logradouro};
+    const conflitos=Object.entries(dados).filter(([k,v])=>v&&campo(p+'_'+k)&&campo(p+'_'+k)!==v&&campo(p+'_'+k)!==s.auto[k]);
+    const substituir=manual&&conflitos.length&&confirm('Substituir os campos de endereço já preenchidos pelos dados do CEP? Número, complemento e coordenadas serão mantidos.');
+    for(const [k,v] of Object.entries(dados)){if(!v)continue;const el=obraCampo(p,k);if(!el.value||el.value===s.auto[k]||substituir){el.value=v;s.auto[k]=v;}}
+    obraMensagem(p,'cep',conflitos.length&&!substituir?'CEP encontrado. Campos manuais preservados; confira se pertencem ao novo CEP.':'CEP encontrado. Confira os dados e complete número e referência.');
+  }catch(e){if(req===s.cepReq&&versao===s.versao)obraMensagem(p,'cep','Consulta indisponível. Preencha manualmente ou tente novamente.');}
+  finally{clearTimeout(timer);}
+}
+function obraCapturarLocalizacao(p){
+  if(!navigator.geolocation){obraMensagem(p,'geo','Localização indisponível neste navegador. Informe coordenadas manualmente.');return;}
+  if(!confirm('Você está fisicamente na obra? A localização atual será inserida no formulário, sem salvar automaticamente.'))return;
+  const s=obraEstado(p),req=++s.geoReq,versao=s.versao;
+  obraMensagem(p,'geo','Aguardando autorização de localização...');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    if(req!==s.geoReq||versao!==s.versao)return;
+    obraCampo(p,'latitude').value=String(pos.coords.latitude.toFixed(6));
+    obraCampo(p,'longitude').value=String(pos.coords.longitude.toFixed(6));
+    obraMensagem(p,'geo','Localização capturada. Precisão aproximada: '+Math.round(pos.coords.accuracy)+' m. Confira antes de salvar.');
+  },()=>{if(req===s.geoReq&&versao===s.versao)obraMensagem(p,'geo','Não foi possível obter a localização. Confira a permissão ou informe manualmente.');},{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+}
+function obraAbrirMapa(p){
+  let d;try{d=obraLerEndereco(p);}catch(e){alert(e.message);return;}
+  const q=d.latitude!==undefined?[d.latitude,d.longitude].join(','):[d.logradouro,d.numero,d.bairro,d.municipio,d.uf,d.cep,'Brasil'].filter(Boolean).join(', ');
+  if(d.latitude===undefined&&!d.municipio&&!d.cep){alert('Informe coordenadas, município ou CEP para consultar o mapa.');return;}
+  window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q),'_blank','noopener,noreferrer');
+}
+function obraEnderecoIgual(a,b){return obraEnderecoCampos.every(k=>String(a?.[k]??'')===String(b?.[k]??''));}
+
 function obraDaEmpresa(empresaId){
   return obrasEmpresas.find(o => String(o.empresa_id) === String(empresaId)) || null;
 }
@@ -687,8 +817,9 @@ async function salvarEmpresa(){
   if(!empresaId && (!campo("nome") || !campo("codigo_empresa"))){
     alert("Para uma empresa nova informe o nome e o código da empresa.");return;
   }
+  let enderecoOperacional;try{enderecoOperacional=obraLerEndereco("novo_obra");}catch(e){return alert(e.message);}
   const payload={
-    empresa_id:empresaId,codigo_obra:codigoObra,nome_obra:nomeObra,codigo_sienge:codigoSienge,
+    endereco_operacional:enderecoOperacional,empresa_id:empresaId,codigo_obra:codigoObra,nome_obra:nomeObra,codigo_sienge:codigoSienge,
     tabela_insumo:tabela,nome_empresa:campo("nome"),codigo_empresa:campo("codigo_empresa"),
     cnpj:campo("cnpj"),cidade:campo("cidade"),estado:campo("estado"),
     endereco:campo("endereco"),cep:campo("cep"),telefone:campo("telefone"),observacao:campo("observacao")
@@ -943,7 +1074,7 @@ function exibirFormularioEmpresa(tipo=null){
   if(obra) obra.classList.toggle("ativo", tipo === "obra");
   if(empresa) empresa.classList.toggle("ativo", tipo === "empresa");
   // Descarta o identificador de edição anterior quando o usuário troca de formulário.
-  if(tipo !== "obra") document.getElementById("edit_id").value="";
+  if(tipo !== "obra"){document.getElementById("edit_id").value="";obraPreencherEndereco("edit_obra");}
   if(tipo !== "empresa") document.getElementById("edit_empresa_id").value="";
 }
 
@@ -957,6 +1088,7 @@ function editarObra(id){
   document.getElementById("edit_nome_obra").value = obra.nome || "";
   document.getElementById("edit_codigo_sienge_obra").value = obra.codigo_sienge || "";
   document.getElementById("edit_tabela_insumo").value = String(obra.tabela_insumo ?? 2);
+  obraPreencherEndereco("edit_obra",obra.endereco_operacional||{});
   const empresaVinculada=empresas.find(e=>Number(e.id)===Number(obra.empresa_id));
   document.getElementById("editandoEmpresaTitulo").textContent = `${obra.codigo_obra || '-'} - ${obra.nome || '-'} (ID ${obra.id}) · Empresa: ${empresaVinculada?.nome || 'Não localizada'} (ID ${obra.empresa_id || '-'})`;
   exibirFormularioEmpresa("obra");
@@ -973,7 +1105,9 @@ async function salvarEdicaoObra(){
   const codigo_obra=campo("edit_codigo_obra"), nome_obra=campo("edit_nome_obra"),
     codigo_sienge=campo("edit_codigo_sienge_obra"), tabela_insumo=Number(campo("edit_tabela_insumo"));
   if(!codigo_obra||!nome_obra||![2,3].includes(tabela_insumo))return alert("Informe código, nome e tabela de insumo válida.");
+  let enderecoOperacional;try{enderecoOperacional=obraLerEndereco("edit_obra");}catch(e){return alert(e.message);}
   const modificacoes=[];
+  if(!obraEnderecoIgual(obra.endereco_operacional||{},enderecoOperacional))modificacoes.push("Endereço operacional atualizado");
   for(const [rotulo,antigo,novo] of [
     ["Código",obra.codigo_obra,codigo_obra],["Nome",obra.nome,nome_obra],
     ["Código Sienge",obra.codigo_sienge,codigo_sienge],["Tabela de insumo",obra.tabela_insumo,tabela_insumo]
@@ -986,7 +1120,7 @@ async function salvarEdicaoObra(){
   const botao=document.querySelector('#cardEdicaoEmpresa .btn-salvar');
   if(botao)botao.disabled=true;
   try{
-    await operacaoSeguraEmpresaObra("EDITAR_OBRA",{obra_id:id,codigo_obra,nome_obra,codigo_sienge,tabela_insumo});
+    await operacaoSeguraEmpresaObra("EDITAR_OBRA",{obra_id:id,codigo_obra,nome_obra,codigo_sienge,tabela_insumo,endereco_operacional:enderecoOperacional});
     cancelarEdicaoEmpresa();
     await consultarPaginaEmpresas();
     alert("Obra atualizada com sucesso, incluindo a tabela de insumo Sienge.");
@@ -1072,6 +1206,7 @@ async function excluirObraOwner(id){
 }
 
 function limparFormulario(){
+  obraPreencherEndereco("novo_obra");
   document.getElementById("nome").value = "";
   document.getElementById("codigo_empresa").value = "";
   document.getElementById("setor_obra").value = "";
