@@ -478,9 +478,8 @@
     const perfisAux=Array.isArray(auxData.perfis_rapidos)?auxData.perfis_rapidos:[];
     const empresasPermitidas=new Set(STATE.works.map(w=>String(w.empresa_id||"")).filter(Boolean));
     if(current()?.empresa_id)empresasPermitidas.add(String(current().empresa_id));
-    STATE.companies=currentIsOwner()
-      ? empresasAux
-      : empresasAux.filter(e=>empresasPermitidas.has(String(e.id)));
+    // Somente empresas operacionais confirmadas; registros históricos não são excluídos.
+    STATE.companies=empresasAux.filter(e=>["17","20"].includes(String(e.id)) && e.ativo!==false && e.ativa!==false && (currentIsOwner() || empresasPermitidas.has(String(e.id))));
     STATE.table="usuarios_sistema";
     STATE.users=usuarios;
     STATE.profiles=perfisAux;
@@ -713,21 +712,17 @@
         user._consulta_em_andamento=true;
         // A promessa é compartilhada com o botão Editar, evitando uma segunda
         // chamada quando o funcionário clica antes de a ficha terminar de carregar.
-        user._consulta_promessa=db().functions.invoke("atlas-admin-usuarios",{
-          body:{acao:"consultar",usuario_id:Number(user.id)}
-        }).then(async ({data:resposta,error:erroConsulta})=>{
+        user._consulta_promessa=db().rpc("atlas_usuarios_consultar_ficha",{
+          p_usuario_id:Number(user.id)
+        }).then(({data:resposta,error:erroConsulta})=>{
           if(erroConsulta || resposta?.sucesso!==true || !resposta?.funcionario){
-            let mensagem=resposta?.erro||"Não foi possível validar o acesso a este funcionário.";
-            try{
-              const detalhe=await erroConsulta?.context?.json?.();
-              mensagem=detalhe?.erro||mensagem;
-            }catch(_){ }
-            user._consulta_negada=true;
+            const mensagem=erroConsulta?.message||resposta?.erro||"Não foi possível validar o acesso a este funcionário.";
+            user._consulta_negada=erroConsulta?.code==="42501";
             user._consulta_erro=mensagem;
             return false;
           }
           Object.assign(user,resposta.funcionario,{_consulta_resumida:false});
-          if(String(STATE.selected?.id)===String(user.id)) selectUser(user.id);
+          if(STATE.selected===user && STATE.users.includes(user)) selectUser(user.id);
           return true;
         }).catch(error=>{
           console.warn("Atlas Usuários: consulta de detalhes indisponível.",error?.message||error);
@@ -743,13 +738,15 @@
       STATE.selected = user;
 
       STATE.draft = criarDraftUsuario(user);
-      carregarObraOperacionalUsuario(user).then(obraId=>{
-        if(String(STATE.selected?.id)!==String(user.id)) return;
-        user._obra_operacional_id=obraId;
-        STATE.selected._obra_operacional_id=obraId;
-        if(STATE.draft) STATE.draft._obra_operacional_id=obraId;
-        renderData();
-      });
+      // A ficha autenticada já contém a base operacional; não consultar novamente.
+      if(!user._consulta_resumida && !user._base_operacional_carregada){
+        carregarObraOperacionalUsuario(user).then(obraId=>{
+          if(STATE.selected!==user) return;
+          user._obra_operacional_id=obraId;
+          if(STATE.draft) STATE.draft._obra_operacional_id=obraId;
+          renderData();
+        });
+      }
 
       // Relatórios: ao liberar o módulo, aplica o pacote padrão.
       aplicarPadraoRelatorios(STATE.draft.permissions);
@@ -1299,7 +1296,9 @@
   function renderAuthStatus(){
     if(!STATE.selected)return;
     const u=STATE.draft||STATE.selected;
-    const info=authStatusInfo(u);
+    const info=STATE.selected._consulta_resumida
+      ? {status:"VERIFICANDO",titulo:"Verificando acesso",descricao:"Carregando os dados autorizados do funcionário.",classe:"pending"}
+      : authStatusInfo(u);
     const titulo=$('#authStatusTitulo');
     const descricao=$('#authStatusDescricao');
     const badge=$('#authStatusBadge');
@@ -1763,6 +1762,10 @@
     // Menor privilégio por padrão. MASTER/GESTOR continuam disponíveis somente
     // mediante escolha explícita de administrador autorizado.
     $("#formId").value=user?.id||"";$("#formNome").value=user?.nome||"";$("#formUsuario").value=user?.usuario||"";$("#formEmail").value=user?.email||"";$("#formPerfil").value=user?.perfil||"ALMOXARIFE";$("#formEmpresa").value=user?.empresa_id||"";$("#formAtivo").value=String(user?.ativo!==false);$("#formSenha").value="";
+    if(user?.empresa_id && !STATE.companies.some(e=>String(e.id)===String(user.empresa_id))){
+      $("#formEmpresa").value="";
+      toast("Este funcionário possui uma empresa antiga. Selecione a empresa correta antes de salvar.","aviso");
+    }
     // Qualquer administrador autorizado edita perfis até seu nível; o backend confirma.
     $("#formPerfil").disabled=!!user && !canManageSelectedAccess();
     atualizarResumoPerfilCadastro();
@@ -2028,7 +2031,7 @@
       }
     }
     if(!payload.nome||!payload.usuario){toast("Informe nome e usuário.","erro");return}
-    if(!payload.empresa_id){toast("Selecione a empresa do funcionário.","erro");return}
+    if(!payload.empresa_id || !STATE.companies.some(e=>Number(e.id)===Number(payload.empresa_id))){toast("Selecione uma empresa válida: BDR CONSTRUART ou SATHTECH, conforme seu acesso.","erro");return}
     const obrasSelecionadas=[...STATE.formWorksDraft].map(id=>STATE.works.find(w=>String(w.id)===String(id)));
     // O OWNER pode autorizar obras de outras empresas sem mudar a empresa principal.
     if(obrasSelecionadas.some(w=>!w)){
@@ -2549,14 +2552,13 @@
   async function atualizarStatusAuthSelecionado(){
     if(atualizandoStatusAuth||!STATE.selected?.id||STATE.dirty||!db()) return;
     atualizandoStatusAuth=true;
+    const usuarioConsultado=STATE.selected;
     try{
       const {data,error}=await db().from("usuarios_sistema")
         .select("id,auth_status,auth_user_id,auth_ativado_em,auth_ativado_por")
-        .eq("id",Number(STATE.selected.id)).maybeSingle();
-      if(error||!data) return;
-      const idx=STATE.users.findIndex(u=>Number(u.id)===Number(data.id));
-      if(idx>=0) Object.assign(STATE.users[idx],data);
-      Object.assign(STATE.selected,data);
+        .eq("id",Number(usuarioConsultado.id)).maybeSingle();
+      if(error||!data||Number(data.id)!==Number(usuarioConsultado.id)||STATE.selected!==usuarioConsultado||!STATE.users.includes(usuarioConsultado)||STATE.dirty) return;
+      Object.assign(usuarioConsultado,data);
       if(STATE.draft) Object.assign(STATE.draft,data);
       renderUsers();
       renderAuthStatus();
