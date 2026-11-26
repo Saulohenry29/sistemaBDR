@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>BDR Gestao</title>
   <link rel="icon" type="image/png" href="./icons/favicon branco.png">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
   <link rel="stylesheet" href="./CSS/layout-bdr.css">
   <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css">
   <link rel="stylesheet" href="./CSS/atlas-topbar.css">
@@ -38,14 +40,19 @@
   <script src="./JS/componentes/atlasTopo.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js" defer></script>
   <script src="./JS/supabaseClient.js" defer></script>
-  <script src="./JS/auth.js" defer></script>
+  <script src="./JS/auth.js?v=20261126-sessao-central" defer></script>
   <script src="./JS/bdrCore.js" defer></script>
-  <script src="./JS/atlasAudio/atlasAudio.js" defer></script>
+  <script src="./JS/atlasAudio/atlasAudio.js?v=20261117-web-audio01" defer></script>
   <script src="./JS/atlasDialog.js" defer></script>
-  <script src="./JS/bdrNotificacoes.js?v=20261110-escopo-obra01" defer></script>
+  <script src="./JS/pwa-update.js?v=20261126-pwa-login" defer></script>
+  <script src="./JS/atlasBadge.js?v=20261126-pwa-update" defer></script>
+  <script src="./JS/bdrNotificacoes.js?v=20261123-push01" defer></script>
   <script src="./JS/bdrMenuPermissoes.js" defer></script>
   <script src="./JS/atlasTopbar.js" defer></script>
-  </head>
+  <!-- NIIMBOT: instancia BLE na janela principal (Bluefy/iPhone e navegadores Web Bluetooth). -->
+  <script src="./JS/impressao/niimbot.js?v=20261115-shell-ble01" defer></script>
+  <link rel="stylesheet" href="./CSS/pwa-update.css?v=20261126-pwa-update">
+</head>
   <body class="atlas-shell-page">
   <div class="bdr-app">
     <atlas-menu></atlas-menu>
@@ -192,8 +199,8 @@
     const frameWrap = document.getElementById('atlasFrameWrap');
     const frames = new Map();
     let moduloAtivo = null;
-    const titulos={dashboard:['Dashboard','Visão geral do sistema'],entrada:['Entrada','Recebimentos e entradas'],triagem:['Triagem','Triagem de materiais'],estoque:['Estoque','Consulta e movimentação de estoque'],patrimonio:['Patrimônio','Gestão patrimonial'],manutencao:['Manutenção','Gestão de manutenções'],expedicao:['Expedição','Solicitações, separação e retirada'],movimentacoes:['Movimentações','Histórico de movimentações'],relatorios:['Relatórios','Relatórios do sistema'],empresa:['Empresas','Empresas e obras'],usuarios:['Usuários','Usuários e permissões'],'minha-conta':['Minha conta','Perfil, preferências e acessos']};
-    const paginas={dashboard:'dashboard.html',entrada:'entrada.html',triagem:'triagem.html',estoque:'estoque.html',patrimonio:'patrimonio.html',manutencao:'manutencao.html',expedicao:'expedicao.html',movimentacoes:'movimentacoes.html',relatorios:'relatorios.html',empresa:'empresa.html',usuarios:'usuarios.html','minha-conta':'MinhaConta/minha-conta.html'};
+    const titulos={dashboard:['Dashboard','Visão geral do sistema'],entrada:['Entrada','Recebimentos e entradas'],triagem:['Triagem','Triagem de materiais'],estoque:['Estoque','Consulta e movimentação de estoque'],patrimonio:['Patrimônio','Gestão patrimonial'],manutencao:['Manutenção','Gestão de manutenções'],expedicao:['Expedição','Solicitações, separação e retirada'],movimentacoes:['Movimentações','Histórico de movimentações'],relatorios:['Relatórios','Relatórios do sistema'],empresa:['Empresas','Empresas e obras'],usuarios:['Usuários','Usuários e permissões'],scanner:['Scanner Inteligente','Leitura e conferência patrimonial'],sentinela:['Saúde e Segurança','Central Sentinela'],'minha-conta':['Minha conta','Perfil, preferências e acessos']};
+    const paginas={dashboard:'dashboard.html',entrada:'entrada.html',triagem:'triagem.html',estoque:'estoque.html',patrimonio:'patrimonio.html',manutencao:'manutencao.html',expedicao:'expedicao.html',movimentacoes:'movimentacoes.html',relatorios:'relatorios.html',empresa:'empresa.html',usuarios:'usuarios.html',scanner:'scanner.html',sentinela:'sentinela.html','minha-conta':'MinhaConta/minha-conta.html'};
     function prepararPaginas(){
       const atual=contextoDaUrl().modulo;
       const prioridade=['dashboard','patrimonio','expedicao','estoque','manutencao','movimentacoes'];
@@ -219,6 +226,7 @@
     function integrarFrame(frame){
       try{
         const w=frame.contentWindow,d=frame.contentDocument;
+        window.AtlasSessao?.anexarDocumento(d);
         w.ir=function(dest){const m=moduloDePagina(dest); if(m){parent.Atlas.navigate(m);return;} w.location.href=dest;};
 
         // Mensagens comuns pertencem à shell: qualquer alert/aviso do módulo usa o mesmo topo.
@@ -243,6 +251,8 @@
         frame.className='atlas-module-frame';
         frame.dataset.modulo=modulo;
         frame.title=`Módulo Atlas - ${modulo}`;
+        if(modulo==='scanner') frame.setAttribute('allow','camera');
+        if(modulo==='patrimonio' || modulo==='minha-conta') frame.setAttribute('allow','bluetooth');
         frame.addEventListener('load',()=>integrarFrame(frame));
         frameWrap.appendChild(frame);
         frames.set(modulo,frame);
@@ -264,6 +274,7 @@
     }
 
     function abrir(modulo, push=true, parametros=''){
+      if(modulo==='sentinela' && Number(usuarioAtualShell()?.id)!==1) modulo='dashboard';
       if(!paginas[modulo]) modulo='dashboard';
       fecharOverlaysShell();
       atualizarTopo(modulo);
@@ -278,7 +289,43 @@
       if(push) history.pushState({modulo},'',`atlas.html#m=${encodeURIComponent(modulo)}`);
     }
 
+    async function prepararPatrimonioParaScanner(){
+      abrir('patrimonio');
+      const frame=frames.get('patrimonio');
+      const limite=Date.now()+20000;
+      // Reaproveita a instância Patrimônio e suas validações de permissões/obras.
+      while(Date.now()<limite){
+        try {
+          const w=frame?.contentWindow;
+          if(w?.AtlasPatrimonioRemessas?.abrirComPatrimonios &&
+             w?.AtlasPatrimonioAPI?.listar && Array.isArray(w.AtlasPatrimonioAPI.listar())) return w;
+        }catch(_){ }
+        await new Promise(r=>setTimeout(r,250));
+      }
+      throw new Error('O módulo Patrimônio não ficou pronto. Abra Patrimônio e tente novamente.');
+    }
+
     window.Atlas={
+      // O Scanner só prepara a seleção. A gravação continua exclusivamente nas RPCs já existentes.
+      abrirTransferenciaScanner:async function(ids){
+        if(!Array.isArray(ids)||!ids.length)throw new Error('Nenhum patrimônio selecionado.');
+        const w=await prepararPatrimonioParaScanner();
+        await w.AtlasPatrimonioAPI.recarregar();
+        const lista=w.AtlasPatrimonioAPI.listar();
+        if(ids.some(id=>!lista.some(p=>Number(p.id)===Number(id)))){
+          throw new Error('Um ou mais patrimônios não estão disponíveis na obra autorizada. Confira o filtro e as permissões.');
+        }
+        await w.AtlasPatrimonioRemessas.abrirComPatrimonios(ids);
+      },
+      abrirRecebimentoScanner:async function(remessaId){
+        if(!Number.isSafeInteger(Number(remessaId))||Number(remessaId)<1)throw new Error('Remessa inválida.');
+        const w=await prepararPatrimonioParaScanner();
+        await w.AtlasPatrimonioRemessas.carregar();
+        await w.AtlasPatrimonioRemessas.abrirDetalhe(Number(remessaId));
+        if(!w.document.getElementById('atlasRemessaDetalheModal')?.classList.contains('aberto')){
+          throw new Error('A remessa não pôde ser localizada na lista de recebimentos da obra.');
+        }
+      },
       navigate:function(dest){
         const bruto=String(dest||'');
         const m=moduloDePagina(bruto)||bruto.toLowerCase();
@@ -316,7 +363,11 @@
     }
     addEventListener('popstate',abrirDaUrl);
     addEventListener('hashchange',abrirDaUrl);
-    addEventListener('DOMContentLoaded',()=>{ prepararTopoShell(); setTimeout(abrirDaUrl,0); setTimeout(prepararPaginas,250); });
+    addEventListener('DOMContentLoaded',async()=>{
+      const estado=await window.AtlasSessao?.iniciar();
+      if(estado==='encerrada')return;
+      prepararTopoShell(); setTimeout(abrirDaUrl,0); setTimeout(prepararPaginas,250);
+    });
   })();
   </script>
   </body>

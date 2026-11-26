@@ -32,7 +32,7 @@ function renderizarCampo(placeholder="Número de série"){
   return `
     <div class="atlas-serie-lote" id="atlasSerieLote">
       <div class="atlas-serie-area" id="atlasSerieArea">
-        <input id="numero_serie" placeholder="${placeholder}">
+        <input id="numero_serie" name="atlas_identificador_individual" autocomplete="off" spellcheck="false" placeholder="${placeholder}">
       </div>
       <button type="button" class="atlas-lote-botao" id="btnAlternarCadastroLote"
         aria-expanded="false" aria-label="Iniciar cadastro em lote"
@@ -125,7 +125,7 @@ function fechar(opcoes={}){
   if(!host || !area || !botao) return;
 
   const placeholder = host.dataset.placeholder || "Número de série";
-  area.innerHTML = `<input id="numero_serie" placeholder="${placeholder}">`;
+  area.innerHTML = `<input id="numero_serie" name="atlas_identificador_individual" autocomplete="off" spellcheck="false" placeholder="${placeholder}">`;
   host.dataset.modo = "individual";
   botao.textContent = "+ Lote";
   botao.classList.remove("ativo");
@@ -281,6 +281,7 @@ function montarBase(contexto){
     codigo_antigo: null,
     ncm: valorCampo("ncm") || null,
     numero_nfe: valorCampo("numero_nfe") || null,
+    ...atlasFiscalDados(),
     estado_conservacao: valorCampo("estado_conservacao") || "BOM",
     observacao: [
       valorCampo("observacao"),

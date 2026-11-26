@@ -77,8 +77,8 @@ html.atlas-embedded .bdr-main{
 <link href="./CSS/layout-bdr.css" rel="stylesheet"/>
 <link href="./CSS/bdr-fix-menu-final.css?v=20260724-padrao-profissional-v1" rel="stylesheet"/>
 <link href="./CSS/atlas-topbar.css?v=20260724-padrao-profissional-v1" rel="stylesheet"/><link href="./CSS/patrimonio-lote.css?v=20260727-alinhamento-dinamico" rel="stylesheet"/>
-<link href="./CSS/patrimonio-etiquetas-lote.css?v=20260726-v1" rel="stylesheet"/>
-<link href="./CSS/patrimonio.css?v=20261117-select-nativo-limpo02" rel="stylesheet"/>
+<link href="./CSS/patrimonio-etiquetas-lote.css?v=20261114-b1auto02" rel="stylesheet"/>
+<link href="./CSS/patrimonio.css?v=20261126-autocomplete-top-layer01" rel="stylesheet"/>
 <link href="./CSS/patrimonio-remessas.css" rel="stylesheet"/>
 <script src="./JS/atlasDialog.js?v=20260724-padrao-profissional-v1"></script>
 
@@ -341,8 +341,8 @@ html.atlas-embedded .bdr-main{
 <h3>➕ Novo Patrimônio</h3>
 <div class="grid">
 <div class="atlas-autocomplete-wrap">
-<input autocomplete="off" id="nome_bem" onfocus="atlasAtualizarSugestoesPatrimonio()" oninput="atlasAtualizarSugestoesPatrimonio()" onkeydown="atlasTeclaSugestaoPatrimonio(event)" onblur="setTimeout(atlasFecharSugestoesPatrimonio,160)" placeholder="Nome do patrimônio. Ex.: Esmerilhadeira"/>
-<div class="atlas-sugestoes" id="atlasSugestoesPatrimonio"></div>
+<input autocomplete="off" id="nome_bem" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="atlasSugestoesPatrimonio" onclick="atlasAlternarSugestoesPatrimonio()" oninput="atlasAtualizarSugestoesPatrimonio()" onkeydown="atlasTeclaSugestaoPatrimonio(event)" onblur="atlasCompletarNcmPeloNomePatrimonio()" placeholder="Nome do patrimônio. Ex.: Esmerilhadeira"/>
+<div class="atlas-sugestoes" id="atlasSugestoesPatrimonio" role="listbox"></div>
 </div>
 <select id="tipo_item" onchange="mostrarCampos()">
 <option value="">Tipo do patrimônio</option>
@@ -394,8 +394,12 @@ html.atlas-embedded .bdr-main{
 <input id="codigo_antigo" onblur="validarDuplicidadeCampoPatrimonio('codigo_antigo')" placeholder="Código antigo / placa antiga / tag antiga"/>
 </div>
 <div aria-hidden="true" class="grid" id="camposFiscais">
-<input id="ncm" inputmode="numeric" maxlength="10" oninput="atlasMascaraNCM(this)" placeholder="NCM. Ex.: 84672999"/>
-<input id="numero_nfe" maxlength="30" placeholder="Número da NF-e. Ex.: 123456"/>
+<label class="atlas-fiscal-campo"><span>CNPJ do fornecedor</span><input id="fornecedor_cnpj" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" oninput="atlasFiscalCnpjDigitado('')" onblur="atlasFiscalCnpjDigitado('')" placeholder="00.000.000/0000-00"/></label>
+<label class="atlas-fiscal-campo"><span>Nome do fornecedor</span><input id="fornecedor" maxlength="200" autocomplete="off" placeholder="Razão social"/><small id="fornecedor_status" class="atlas-fiscal-status" aria-live="polite" hidden></small></label>
+<label class="atlas-fiscal-campo"><span>Número da nota fiscal</span><input id="numero_nfe" maxlength="30" placeholder="Número da NF-e"/></label>
+<label class="atlas-fiscal-campo"><span>Data de emissão</span><input id="data_emissao_nfe" type="date" title="Data de emissão da NF-e"/></label>
+<label class="atlas-fiscal-campo"><span>NCM</span><input id="ncm" inputmode="numeric" maxlength="10" oninput="atlasMascaraNCM(this)" placeholder="NCM. Ex.: 84672999"/></label>
+<label class="atlas-fiscal-campo"><span>Chave de acesso da NF-e</span><input id="chave_nfe" autocapitalize="characters" maxlength="64" autocomplete="off" spellcheck="false" oninput="atlasFiscalChaveDigitada('')" onblur="atlasFiscalChaveDigitada('',true)" placeholder="44 caracteres (opcional)"/><small id="chave_nfe_status" class="atlas-fiscal-status" aria-live="polite" hidden></small></label>
 </div>
 <br/>
 <textarea id="observacao" placeholder="Observações do patrimônio..."></textarea>
@@ -455,7 +459,7 @@ html.atlas-embedded .bdr-main{
 <div class="card">
 <h3>🔎 Localizar patrimônio</h3>
 <div class="grid">
-<input id="busca" name="atlas_busca_patrimonio" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" oninput="bdrResetPaginaPatrimonio(); renderizarPatrimonios()" placeholder="Pesquisar por PAT, nome, placa, série, obra, marca...">
+<input id="busca" name="atlas_busca_patrimonio" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" oninput="bdrResetPaginaPatrimonio(); renderizarPatrimonios()" placeholder="Pesquisar PAT, nome, placa, NF-e, CNPJ, fornecedor..." title="Pesquise também por chave de acesso da NF-e">
 <select id="filtroObra" onchange="bdrResetPaginaPatrimonio(); renderizarPatrimonios()">
 <option value="">Todas as obras/setores</option>
 </select>
@@ -467,7 +471,7 @@ html.atlas-embedded .bdr-main{
 <option value="EM_TRANSITO">Em trânsito</option>
 <option value="MANUTENCAO">Manutenção</option>
 <option value="BAIXADO">Baixado</option>
-<option id="filtroStatusInativo" value="INATIVO" hidden>Inativos</option>
+<option id="filtroStatusInativo" value="INATIVO" hidden>Excluídos (auditoria)</option>
 </select>
 <select id="filtroTipo" onchange="bdrResetPaginaPatrimonio(); renderizarPatrimonios()">
 <option value="">Todos os tipos</option>
@@ -655,8 +659,14 @@ html.atlas-embedded .bdr-main{
 <input id="edit_valor_bem" inputmode="decimal" onkeydown="atlasTeclaMoeda(event,this)" oninput="mascaraMoeda(this)" placeholder="Valor do bem Ex: 1.350,00"/>
 <input id="edit_codigo_antigo" placeholder="Código antigo"/>
 <div class="atlas-edicao-fiscal-titulo">Dados fiscais</div>
-<input id="edit_ncm" inputmode="numeric" maxlength="10" oninput="atlasMascaraNCM(this)" placeholder="NCM. Ex.: 84672999"/>
-<input id="edit_numero_nfe" maxlength="30" placeholder="Número da NF-e"/>
+<div class="atlas-fiscal-edicao">
+<label class="atlas-fiscal-campo"><span>CNPJ do fornecedor</span><input id="edit_fornecedor_cnpj" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" oninput="atlasFiscalCnpjDigitado('edit_')" onblur="atlasFiscalCnpjDigitado('edit_')" placeholder="00.000.000/0000-00"/></label>
+<label class="atlas-fiscal-campo"><span>Nome do fornecedor</span><input id="edit_fornecedor" maxlength="200" autocomplete="off" placeholder="Razão social"/><small id="edit_fornecedor_status" class="atlas-fiscal-status" aria-live="polite" hidden></small></label>
+<label class="atlas-fiscal-campo"><span>Número da nota fiscal</span><input id="edit_numero_nfe" maxlength="30" placeholder="Número da NF-e"/></label>
+<label class="atlas-fiscal-campo"><span>Data de emissão</span><input id="edit_data_emissao_nfe" type="date" title="Data de emissão da NF-e"/></label>
+<label class="atlas-fiscal-campo"><span>NCM</span><input id="edit_ncm" inputmode="numeric" maxlength="10" oninput="atlasMascaraNCM(this)" placeholder="NCM. Ex.: 84672999"/></label>
+<label class="atlas-fiscal-campo"><span>Chave de acesso da NF-e</span><input id="edit_chave_nfe" autocapitalize="characters" maxlength="64" autocomplete="off" spellcheck="false" oninput="atlasFiscalChaveDigitada('edit_')" onblur="atlasFiscalChaveDigitada('edit_',true)" placeholder="44 caracteres (opcional)"/><small id="edit_chave_nfe_status" class="atlas-fiscal-status" aria-live="polite" hidden></small></label>
+</div>
 </div>
 <div class="grid" id="editCamposExtras" style="margin-top:8px;"></div>
 <br/>
@@ -714,12 +724,12 @@ html.atlas-embedded .bdr-main{
 <div class="bdr-etiqueta-modal">
 <div class="bdr-etiqueta-modal-head">
 <h2>🏷 Etiqueta oficial<small class="bdr-etiqueta-help"> ESC fecha • ENTER imprime somente quando estiver pronta</small></h2>
-<button class="bdr-etiqueta-close" onclick="fecharModalEtiqueta()" title="Fechar" type="button">X</button>
+<button class="bdr-etiqueta-close" onclick="fecharModalEtiqueta()" aria-label="Fechar etiqueta" type="button">X</button>
 </div>
 <div class="bdr-etiqueta-preview-area">
 <iframe class="bdr-etiqueta-frame" id="bdrEtiquetaFrame" title="Prévia da etiqueta BDR"></iframe>
 </div>
-<div class="bdr-etiqueta-footer"><div class="bdr-etiqueta-status" id="statusEtiquetaOficial">Aguardando prévia...</div><button class="bdr-etiqueta-print-btn" disabled="" id="btnImprimirEtiquetaOficial" onclick="imprimirEtiquetaModalBDR()" type="button">⏳ Carregando etiqueta...</button></div>
+<div class="bdr-etiqueta-footer"><div class="bdr-etiqueta-status" id="statusEtiquetaOficial" aria-live="polite">Aguardando prévia...</div><button class="bdr-etiqueta-print-btn" disabled="" id="btnImprimirEtiquetaOficial" onclick="imprimirEtiquetaModalBDR()" type="button">⏳ Carregando etiqueta...</button></div>
 </div>
 </div>
 
@@ -745,9 +755,14 @@ html.atlas-embedded .bdr-main{
     </div>
 
     <div class="atlas-etiquetas-lote-footer">
-      <span id="atlasEtiquetasLoteStatus">Carregando...</span>
-      <button type="button" class="atlas-etiquetas-lote-cancelar"
-        onclick="AtlasEtiquetasLote.fechar()">Cancelar</button>
+      <div class="atlas-etiquetas-lote-estado">
+        <span id="atlasEtiquetasLoteStatus" role="status" aria-live="polite">Carregando...</span>
+        <progress id="atlasEtiquetasLoteB1Progresso" max="100" value="0" hidden></progress>
+      </div>
+      <div class="atlas-etiquetas-lote-acoes">
+        <button type="button" class="atlas-etiquetas-lote-cancelar"
+          onclick="AtlasEtiquetasLote.fechar()">Fechar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -765,13 +780,13 @@ html.atlas-embedded .bdr-main{
 <script src="./JS/offlineDB.js"></script>
 <script src="./JS/bdrSyncEngine.js"></script>
 <script src="./JS/bdrSyncCenter.js"></script>
-<script src="./JS/patrimonio/patrimonio-lote.js?v=20260727-alinhamento-dinamico"></script>
-<script src="./JS/patrimonio/patrimonio-etiquetas-lote.js?v=20260726-v1"></script>
+<script src="./JS/patrimonio/patrimonio-lote.js?v=20261126-serie-sem-historico01"></script>
+<script src="./JS/patrimonio/patrimonio-etiquetas-lote.js?v=20261116-b1-reuso-shell01"></script>
 <script src="./JS/atlasGestorNotificacoes.js?v=20261110-escopo-obra01"></script>
 <script src="./JS/atlasWorkflow.js"></script>
-<script src="./JS/patrimonio/patrimonio.js?v=20261117-selecao-multipla01"></script>
+<script src="./JS/patrimonio/patrimonio.js?v=20261126-filtros-alternancia01"></script>
 <script src="./JS/patrimonio/patrimonio-remessas.js?v=20261110-escopo-obra01"></script>
-<script src="./JS/patrimonio/patrimonio-etiqueta-individual.js?v=20260804-v1"></script>
+<script src="./JS/patrimonio/patrimonio-etiqueta-individual.js?v=20261116-b1-referencia-git07"></script>
 <script src="./JS/bdrUppercase.js"></script>
 <script src="./JS/patrimonio/patrimonio-permissoes.js?v=20260725-v1"></script>
 <script src="./JS/bdrMenuMobileAtivo.js?v=20260702-3"></script>
@@ -788,6 +803,6 @@ html.atlas-embedded .bdr-main{
 <script src="./JS/atlasOwnerMode.js"></script>
 <!-- ATLAS: controlador oficial da Topbar (último script da página) -->
 <script src="./JS/atlasTopbar.js?v=20260728-v1-3-scroll-interno"></script>
-<script src="./JS/impressao/niimbot.js"></script>
+<script src="./JS/impressao/niimbot.js?v=20261115-bluefy-fluxo01"></script>
 </body>
 </html>

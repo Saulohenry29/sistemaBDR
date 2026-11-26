@@ -209,13 +209,15 @@ if(!eOwnerRelatorio){
     idsPermitidos.has(String(m.obra_origem_id)) || idsPermitidos.has(String(m.obra_destino_id)));
   obrasVisiveis = obrasVisiveis.filter(o=>idsPermitidos.has(String(o.id)));
 }
-patrimonios = dadosPatrimonios;
-  atlasMovPatrimoniosPorId = new Map(patrimonios.map(p => [String(p.id), p]));
+// Regra patrimonial: excluir inativos da base comum, inclusive contagens e exportações.
+  // Manter mapa autorizado para reconhecer registros inativados, sem apagar histórico do banco.
+  atlasMovPatrimoniosPorId = new Map(dadosPatrimonios.map(p => [String(p.id), p]));
+  patrimonios = dadosPatrimonios.filter(window.AtlasPatrimonial.cadastrado);
 obras = obrasVisiveis;
   atlasConfigurarObraUnicaRelatorio();
 empresas = empresasResp.data || [];
 siengeCodigos = siengeResp.data || [];
-movimentacoes = dadosMovimentacoes;
+movimentacoes = dadosMovimentacoes.filter(atlasMovEventoOperacional);
   carregarSiengeInsumosPremium(false);
   carregarFiltroObras();
   carregarChecksObrasSienge();
@@ -429,13 +431,15 @@ function identificacaoInteligenteRelatorio(p){
   return p.codigo_qr || p.codigo_bem || p.etiqueta || p.codigo_antigo || `ID-${p.id || "-"}`;
 }
 
+function valorNumericoRelatorio(p){
+  return modoRelatorioHistorico ? window.AtlasPatrimonial.numero(p?.valor ?? p?.valor_aquisicao) : window.AtlasPatrimonial.valor(p);
+}
+function statusPatrimonioRelatorio(p){
+  return modoRelatorioHistorico ? String(p.status || "-") : window.AtlasPatrimonial.status(p);
+}
 function valorPatrimonioRelatorio(p){
-  const bruto = p?.valor_bem ?? p?.valor_aquisicao ?? p?.valor;
-  const numero = typeof bruto === "string"
-    ? Number(bruto.replace(/\./g, "").replace(",", "."))
-    : Number(bruto);
-  if(!Number.isFinite(numero)) return "-";
-  return numero.toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
+  const numero = valorNumericoRelatorio(p);
+  return numero === null ? "-" : numero.toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
 }
 
 function compararIdentificacaoRelatorio(a,b){
@@ -547,6 +551,9 @@ function atualizarCabecalhoDocumentoRelatorio(){
   setTexto("relatorioDocPeriodoEfetivo", periodoEfetivoLancamentos());
   setTexto("relatorioDocUsuario", usuario?.nome || usuario?.usuario || "Usuário não identificado");
   setTexto("relatorioDocTotal", String(filtradosAtuais.length));
+  const campoValor=document.getElementById("relatorioDocValorAtivoCampo");
+  if(campoValor) campoValor.hidden=modoRelatorioHistorico || !temPermissaoRelatoriosBDR("VALORES_VER");
+  if(!modoRelatorioHistorico && temPermissaoRelatoriosBDR("VALORES_VER")) setTexto("relatorioDocValorAtivo", atlasMovMoeda(window.AtlasPatrimonial.total(filtradosAtuais)));
 }
 
 
@@ -653,7 +660,7 @@ function renderizarTabelaPaginaRelatorio(){
         <td>${identificacaoInteligenteRelatorio(p)}</td>
         <td>${p.nome_bem || "-"}</td>
         <td>${tipoExibicao}</td>
-        <td><span class="status ${p.status || ""}">${String(p.status || "-").replaceAll("_", " ")}</span></td>
+        <td><span class="status ${statusPatrimonioRelatorio(p)}">${statusPatrimonioRelatorio(p).replaceAll("_", " ")}</span></td>
         <td class="coluna-obra-relatorio">${obraObj ? `${obraObj.codigo_obra || obraObj.codigo_sienge || "-"} - ${obraObj.nome || "-"}` : (p.localizacao || "-")}</td>
         <td>${p.marca || "-"}</td>
         <td>${p.modelo || "-"}</td>
@@ -847,7 +854,7 @@ document.addEventListener("click",e=>{
 });
 
 function atlasStatusSelecionados(){return [...document.querySelectorAll('#atlasStatusOpcoes input:checked')].map(x=>x.value);}
-function atlasStatusAtualizarRotulo(){const sel=atlasStatusSelecionados(),nomes={ESTOQUE:'Estoque',EM_USO:'Em uso',MANUTENCAO:'Manutenção',BAIXADO:'Baixado'};const b=document.getElementById('atlasStatusBotao');if(b)b.textContent=sel.length?sel.map(x=>nomes[x]||x).join(', ')+' ▾':'Todos os status ▾';}
+function atlasStatusAtualizarRotulo(){const sel=atlasStatusSelecionados(),nomes={ESTOQUE:'Estoque',EM_USO:'Em uso',MANUTENCAO:'Manutenção',EM_TRANSITO:'Em trânsito',BAIXADO:'Baixado'};const b=document.getElementById('atlasStatusBotao');if(b)b.textContent=sel.length?sel.map(x=>nomes[x]||x).join(', ')+' ▾':'Ativos não baixados ▾';}
 function atlasStatusAlterado(){document.getElementById('filtroStatus').value='';atlasStatusAtualizarRotulo();resetarPaginaRelatorio();renderizarRelatorio();}
 function atlasLimparStatus(atualizar=true){document.querySelectorAll('#atlasStatusOpcoes input').forEach(x=>x.checked=false);document.getElementById('filtroStatus').value='';atlasStatusAtualizarRotulo();if(atualizar){resetarPaginaRelatorio();renderizarRelatorio();}}
 function atlasDefinirStatus(valor){document.querySelectorAll('#atlasStatusOpcoes input').forEach(x=>x.checked=x.value===valor);atlasStatusAlterado();}
@@ -889,7 +896,11 @@ function renderizarRelatorio(){
     const passaBusca = atlasNormalizarBuscaProduto(texto).includes(busca);
     const passaProdutos = atlasProdutosSelecionadosRelatorio.size===0 || atlasProdutosSelecionadosRelatorio.has(atlasNormalizarBuscaProduto(p.nome_bem));
     const estados=atlasStatusSelecionados();
-    const passaStatus = estados.length ? estados.includes(String(p.status||"").toUpperCase()) : (!status || p.status === status);
+    const statusEfetivo = window.AtlasPatrimonial.status(p);
+    const selecionados = estados.length ? estados : (status ? [status] : []);
+    const passaStatus = window.AtlasPatrimonial.cadastrado(p) && (selecionados.length
+      ? selecionados.includes(statusEfetivo)
+      : window.AtlasPatrimonial.ativo(p));
     const passaTipo = !tipo || p.tipo_item === tipo;
 
     /*
@@ -921,7 +932,7 @@ function renderizarRelatorio(){
   filtradosAtuais.sort(compararIdentificacaoRelatorio);
 
   document.getElementById("resumo").innerText =
-    `Total encontrado: ${filtradosAtuais.length} patrimônio(s)`;
+    `Total encontrado: ${filtradosAtuais.length} patrimônio(s)` + (temPermissaoRelatoriosBDR("VALORES_VER") ? ` · Valor patrimonial ativo: ${atlasMovMoeda(window.AtlasPatrimonial.total(filtradosAtuais))}` : "");
 
   atualizarCabecalhoDocumentoRelatorio();
   atualizarKPIsRelatorio();
@@ -1483,10 +1494,19 @@ function atlasMovIncluiHistorico(){
   return !t.size || t.has('HISTORICO') ||
     ['ENVIO','RECEBIMENTO','TRANSFERENCIA','BAIXA','OUTROS'].some(x=>t.has(x));
 }
+// Exclusões lógicas são assunto de auditoria administrativa, não do relatório patrimonial comum.
+function atlasMovEventoOperacional(m){
+  const p=atlasMovPatrimoniosPorId.get(String(m?.patrimonio_id??''));
+  if(p&&!window.AtlasPatrimonial.cadastrado(p))return false;
+  const tipo=String(m?.tipo_movimentacao||m?.tipo||'').trim().toUpperCase();
+  const estado=String(m?.status_novo||m?.status||'').trim().toUpperCase();
+  return estado!=='INATIVO'&&!['INATIVACAO','REATIVACAO'].includes(tipo)&&(tipo!=='EXCLUSAO_INATIVACAO'||estado==='BAIXADO');
+}
 function atlasMovFontesSelecionadas(){
   const t=atlasMovSelecoes.tipos;
   const cadastro=atlasMovIncluiCadastro()?atlasMovCadastroDados:[];
   const historico=atlasMovIncluiHistorico()?atlasMovDados.filter(m=>{
+    if(!atlasMovEventoOperacional(m))return false;
     // Baixa sintética é uma situação do cadastro, NÃO uma movimentação real.
     // Só integra o histórico quando se filtra explicitamente por BAIXA.
     if(m.origem_registro==='PATRIMONIO_BAIXADO')return t.has('BAIXA');
@@ -1503,7 +1523,7 @@ function atlasMovPovoarFiltros(){
       const n=String(nome||'').trim();if(n)pessoas.set(n.toLocaleLowerCase('pt-BR'),n);
     }
     const tipo=String(p.tipo_item||'').trim();if(tipo)categorias.set(tipo.toUpperCase(),tipo);
-    const stat=atlasMovStatusFiltro(p);estados.set(stat,atlasMovStatusLabel(stat));
+    const stat=window.AtlasPatrimonial.status(p)||'SEM_STATUS';estados.set(stat,atlasMovStatusLabel(stat));
   }
   for(const m of atlasMovDados){
     for(const nome of [...atlasMovParticipantes(m),atlasMovQuemEnviou(m)]){
@@ -1545,6 +1565,10 @@ function atlasMovVisiveis(){
     if(obrasSel.size&&!(sentido!=='destino'&&obrasSel.has(origem))&&!(sentido!=='origem'&&obrasSel.has(destino)))return false;
     if(funcSel.size&&![...atlasMovParticipantes(m),atlasMovQuemEnviou(m)].some(v=>[...funcSel].some(f=>atlasMovMesmoFuncionario(v,f))))return false;
     if(tipoSel.size&&!tipoSel.has(atlasMovTipoRegistro(m))&&!(tipoSel.has('HISTORICO')&&m.origem_registro!=='CADASTRO_PATRIMONIAL'&&m.origem_registro!=='PATRIMONIO_BAIXADO'))return false;
+    if(m.origem_registro==='CADASTRO_PATRIMONIAL'){
+      const p=atlasMovPatrimoniosPorId.get(String(m.patrimonio_id))||m;
+      if(!window.AtlasPatrimonial.cadastrado(p))return false;
+    }
     if(statusSel.size&&!statusSel.has(atlasMovStatusFiltro(m)))return false;
     if(catSel.size){
       const p=atlasMovPatrimoniosPorId.get(String(m.patrimonio_id));
@@ -1886,7 +1910,7 @@ function atlasMovCadastroLinhas(lista){
       atlasMovTipoLabel(m),String(p.tipo_item||'—'),atlasMovObra(m.obra_origem_id),
       m.origem_registro==='CADASTRO_PATRIMONIAL'?atlasMovTexto(m.localizacao||m.departamento):atlasMovObra(m.obra_destino_id),
       atlasMovResponsavel(m),atlasMovStatusLabel(m.status),p.marca||'—',p.modelo||'—',p.numero_serie||p.placa||'—',
-      p.valor_bem??p.valor_aquisicao??'',m.codigo_remessa||m.pedido_id||''];
+      atlasMovValorPatrimonio(p)??'',m.codigo_remessa||m.pedido_id||''];
   });
 }
 async function atlasExportarCadastroExcel(){
@@ -1935,10 +1959,7 @@ function atlasImprimirCadastro(){
    assinada nem a exportação de importação para o Sienge.
    =============================================================== */
 function atlasMovValorPatrimonio(p){
-  const valor=p?.valor_bem??p?.valor_aquisicao;
-  if(valor===null||valor===undefined||String(valor).trim()==='')return null;
-  const n=Number(valor);
-  return Number.isFinite(n)?n:null;
+  return window.AtlasPatrimonial.valor(p);
 }
 function atlasMovMoeda(n){return n===null?'Não informado':new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(n);}
 function atlasMovModoRelatorio(){
@@ -1946,7 +1967,14 @@ function atlasMovModoRelatorio(){
 }
 function atlasMovDividirConsulta(){
   const lista=atlasMovVisiveis();
-  return {lista,cadastros:lista.filter(x=>x.origem_registro==='CADASTRO_PATRIMONIAL'),eventos:lista.filter(x=>x.origem_registro!=='CADASTRO_PATRIMONIAL')};
+  const cadastros=lista.filter(x=>x.origem_registro==='CADASTRO_PATRIMONIAL');
+  const obter=m=>atlasMovPatrimoniosPorId.get(String(m.patrimonio_id))||m;
+  return {lista,cadastros,ativos:cadastros.filter(m=>window.AtlasPatrimonial.ativo(obter(m))),
+    baixados:cadastros.filter(m=>window.AtlasPatrimonial.cadastrado(obter(m))&&window.AtlasPatrimonial.status(obter(m))==='BAIXADO'),
+    eventos:lista.filter(x=>x.origem_registro!=='CADASTRO_PATRIMONIAL')};
+}
+function atlasMovValorRegistros(lista){
+  return lista.reduce((s,m)=>s+window.AtlasPatrimonial.centavos(atlasMovPatrimoniosPorId.get(String(m.patrimonio_id))||m),0)/100;
 }
 function atlasMovIdentificacoesFiltro(){
   const selecionadas=atlasMovSelecoes.obras;
@@ -1966,10 +1994,10 @@ function atlasMovPeriodoEfetivo(lista){
   return datas.length?`${datas[0].split('-').reverse().join('/')} a ${datas[datas.length-1].split('-').reverse().join('/')}`:'Não disponível nos registros';
 }
 function atlasMovTotalValor(cadastros){
-  let total=0,qtd=0,sem=0;
-  for(const m of cadastros){const p=atlasMovPatrimoniosPorId.get(String(m.patrimonio_id))||m;const valor=atlasMovValorPatrimonio(p);
-    if(valor===null)sem++;else{total+=valor;qtd++;}}
-  return {total,qtd,sem};
+  let cents=0,qtd=0,sem=0;
+  for(const m of cadastros){const p=atlasMovPatrimoniosPorId.get(String(m.patrimonio_id))||m;if(!window.AtlasPatrimonial.ativo(p))continue;const valor=atlasMovValorPatrimonio(p);
+    if(valor===null)sem++;else{cents+=window.AtlasPatrimonial.centavos(p);qtd++;}}
+  return {total:cents/100,qtd,sem};
 }
 function atlasMovCabecalhoDocumento(lista,titulo){
   const obrasFiltro=atlasMovIdentificacoesFiltro(),periodo=atlasMovPeriodoFiltro(),efetivo=atlasMovPeriodoEfetivo(lista);
@@ -2036,16 +2064,100 @@ function atlasMovDetalhamentoEvento(m){
   }
   return `<article class="doc-event-card"><h3>${atlasMovEsc(atlasMovCodigo(m))} · ${atlasMovEsc(atlasMovDescricao(m))}</h3><div class="doc-event-grid">${celulas.map(([nome,v])=>`<div><b>${atlasMovEsc(nome)}:</b> ${atlasMovEsc(v)}</div>`).join('')}</div></article>`;
 }
+function atlasResumoGerencialDados(patrimonios,regra,nomeObra){
+  const estados=new Map(),porObra=new Map(),categorias=new Map(),vistos=new Set();
+  const previstos=['EM_USO','ESTOQUE','MANUTENCAO','EM_TRANSITO'];
+  const novo=()=>({qtd:0,centavos:0,semValor:0});
+  const total=novo(),baixas=novo();
+  const somar=(t,p)=>{t.qtd++;t.centavos+=regra.centavos(p);if(regra.valor(p)===null)t.semValor++;};
+  for(const e of previstos)estados.set(e,novo());
+  for(const p of patrimonios){
+    if(!regra.cadastrado(p))continue;
+    const id=String(p.id??p.codigo_qr??p.codigo_bem??'');
+    if(id&&vistos.has(id))continue;if(id)vistos.add(id);
+    const estado=regra.status(p),baixado=estado==='BAIXADO',obra=String(p.obra_id??''),cat=String(p.tipo_item||'SEM CATEGORIA');
+    if(!porObra.has(obra))porObra.set(obra,{nome:nomeObra(p),ativo:novo(),baixado:novo(),estados:new Map()});
+    if(!categorias.has(cat))categorias.set(cat,{nome:cat,ativo:novo(),baixado:novo()});
+    const o=porObra.get(obra),c=categorias.get(cat);
+    if(baixado){somar(baixas,p);somar(o.baixado,p);somar(c.baixado,p);continue;}
+    if(!regra.ativo(p))continue;
+    if(!estados.has(estado))estados.set(estado,novo());
+    if(!o.estados.has(estado))o.estados.set(estado,novo());
+    somar(estados.get(estado),p);somar(o.estados.get(estado),p);somar(total,p);somar(o.ativo,p);somar(c.ativo,p);
+  }
+  return {estados:[...estados],obras:[...porObra.values()].sort((a,b)=>b.ativo.centavos-a.ativo.centavos||a.nome.localeCompare(b.nome)),categorias:[...categorias.values()].sort((a,b)=>b.ativo.centavos-a.ativo.centavos||a.nome.localeCompare(b.nome)),total,baixas,previstos};
+}
+function atlasResumoNomeObra(p){
+  const o=obras.find(x=>String(x.id)===String(p.obra_id));
+  return o?[o.codigo_obra||o.codigo_sienge,o.nome].filter(Boolean).join(' - '):(p.localizacao||'Sem obra');
+}
+function atlasResumoDosCadastros(cadastros){
+  return atlasResumoGerencialDados(cadastros.map(m=>atlasMovPatrimoniosPorId.get(String(m.patrimonio_id))||m),window.AtlasPatrimonial,atlasResumoNomeObra);
+}
+function atlasResumoRotulo(e){return ({EM_USO:'Em uso',ESTOQUE:'Em estoque',MANUTENCAO:'Em manutenção',EM_TRANSITO:'Em trânsito',BAIXADO:'Baixados (fora do ativo)'})[e]||e.replaceAll('_',' ')||'Sem situação';}
+function atlasResumoNomeArquivo(tipo,obraIds=[]){
+  const data=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Cuiaba',day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date()).replaceAll('/','-');
+  const ids=[...new Set(obraIds.map(String).filter(Boolean))];
+  const obra=ids.length===1?obras.find(x=>String(x.id)===ids[0]):null;
+  const sufixo=obra?[obra.codigo_obra||obra.codigo_sienge,obra.nome].filter(Boolean).join('_').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,65):'';
+  return 'BDR_'+tipo+(sufixo?'_'+sufixo:'')+'_'+data;
+}
+function atlasResumoExcel(livro,dados,meta){
+  const aba=livro.addWorksheet('Resumo gerencial',{views:[{state:'frozen',ySplit:7}]});
+  const moeda='"R$" #,##0.00;[Red]("R$" #,##0.00)';
+  aba.columns=[{width:52},...Array.from({length:13},()=>({width:20}))];
+  const faixa=(texto,cor='FF263243')=>{const n=aba.rowCount+1;aba.mergeCells(n,1,n,14);const c=aba.getCell(n,1);c.value=texto;c.font={bold:true,color:{argb:'FFFFFFFF'},size:12};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:cor}};aba.getRow(n).height=24;};
+  const nota=texto=>{const n=aba.rowCount+1;aba.mergeCells(n,1,n,14);aba.getCell(n,1).value=texto;aba.getCell(n,1).alignment={wrapText:true,vertical:'middle'};aba.getRow(n).height=30;};
+  const cab=valores=>{const row=aba.addRow(valores);row.height=34;row.eachCell(c=>{c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFEFEFF1'}};c.font={bold:true,color:{argb:'FF961821'}};c.alignment={wrapText:true,vertical:'middle'};});};
+  const linha=(valores,monetarias,total=false)=>{const row=aba.addRow(valores);row.height=22;for(const n of monetarias)row.getCell(n).numFmt=moeda;row.eachCell(c=>{c.font={bold:total,color:{argb:total?'FF961821':'FF263243'}};if(total||row.number%2===0)c.fill={type:'pattern',pattern:'solid',fgColor:{argb:total?'FFF3E5E6':'FFFAFAFB'}};});};
+  faixa('BDR CONSTRUART · RESUMO GERAL PATRIMONIAL','FFAF1520');
+  nota('Emitido em: '+meta.emitido+' | Responsável: '+meta.responsavel);
+  nota('Obras/setores: '+meta.obras+' | Período: '+meta.periodo);
+  nota('Filtros: '+meta.filtros);
+  nota('Valores dos registros selecionados. Bens baixados não integram o ativo; cadastros inativados e excluídos não integram o relatório.');
+  faixa('Composição por situação');
+  cab(['Situação','Quantidade','Valor (R$)','Sem valor informado']);
+  for(const [e,t] of dados.estados)linha([atlasResumoRotulo(e),t.qtd,t.centavos/100,t.semValor],[3]);
+  linha(['VALOR PATRIMONIAL ATIVO',dados.total.qtd,dados.total.centavos/100,dados.total.semValor],[3],true);
+  linha(['Baixados (fora do ativo)',dados.baixas.qtd,dados.baixas.centavos/100,dados.baixas.semValor],[3]);
+  aba.addRow([]);
+  faixa('Resumo por obra/setor');
+  cab(['Obra/setor','Qtd. ativos','Em uso (R$)','Estoque (R$)','Manutenção (R$)','Trânsito (R$)','Outros ativos (R$)','Valor ativo (R$)','Qtd. baixados','Baixados (R$)','Ativos sem valor','Baixados sem valor']);
+  const valoresObra=o=>[...dados.previstos.map(e=>(o.estados.get(e)?.centavos||0)/100),[...o.estados].filter(([e])=>!dados.previstos.includes(e)).reduce((s,[e,t])=>s+t.centavos,0)/100];
+  for(const o of dados.obras)linha([o.nome,o.ativo.qtd,...valoresObra(o),o.ativo.centavos/100,o.baixado.qtd,o.baixado.centavos/100,o.ativo.semValor,o.baixado.semValor],[3,4,5,6,7,8,10]);
+  linha(['TOTAL GERAL',dados.total.qtd,...dados.previstos.map(e=>(dados.estados.find(x=>x[0]===e)?.[1].centavos||0)/100),dados.estados.filter(([e])=>!dados.previstos.includes(e)).reduce((s,[e,t])=>s+t.centavos,0)/100,dados.total.centavos/100,dados.baixas.qtd,dados.baixas.centavos/100,dados.total.semValor,dados.baixas.semValor],[3,4,5,6,7,8,10],true);
+  aba.addRow([]);
+  faixa('Resumo por categoria');
+  cab(['Categoria','Qtd. ativos','Valor ativo (R$)','Qtd. baixados','Baixados (R$)','Ativos sem valor','Baixados sem valor']);
+  for(const c of dados.categorias)linha([c.nome.replaceAll('_',' '),c.ativo.qtd,c.ativo.centavos/100,c.baixado.qtd,c.baixado.centavos/100,c.ativo.semValor,c.baixado.semValor],[3,5]);
+  linha(['TOTAL GERAL',dados.total.qtd,dados.total.centavos/100,dados.baixas.qtd,dados.baixas.centavos/100,dados.total.semValor,dados.baixas.semValor],[3,5],true);
+  aba.pageSetup={paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,printArea:'A1:L'+aba.rowCount};
+}
+function atlasResumoGerencialHtml(dados){
+  const moeda=c=>atlasMovMoeda(c/100);
+  const tabela=(cab,linhas)=>atlasMovTabelaDocumento(cab,linhas,'doc-resumo-gerencial');
+  const status=dados.estados.map(([e,t])=>[atlasResumoRotulo(e),t.qtd,moeda(t.centavos),t.semValor]);
+  status.push(['TOTAL PATRIMONIAL ATIVO',dados.total.qtd,moeda(dados.total.centavos),dados.total.semValor],['Baixados (fora do ativo)',dados.baixas.qtd,moeda(dados.baixas.centavos),dados.baixas.semValor]);
+  const obrasLinhas=dados.obras.map(o=>[o.nome,o.ativo.qtd,...dados.previstos.map(e=>moeda(o.estados.get(e)?.centavos||0)),moeda(o.ativo.centavos),o.baixado.qtd,moeda(o.baixado.centavos),o.ativo.semValor]);
+  const categorias=dados.categorias.map(c=>[c.nome,c.ativo.qtd,moeda(c.ativo.centavos),c.baixado.qtd,moeda(c.baixado.centavos),c.ativo.semValor]);
+  return '<section class="doc-section"><h2>Resumo geral patrimonial</h2><p class="doc-info">Valores conforme os filtros. Cadastros inativados ou excluídos não integram o relatório; baixados não integram o total ativo.</p>'+
+    tabela(['Situação','Quantidade','Valor (R$)','Sem valor'],status)+'<h2>Resumo por obra/setor</h2>'+
+    tabela(['Obra','Qtd. ativos','Em uso','Estoque','Manutenção','Trânsito','Valor ativo','Qtd. baixados','Valor baixados','Ativos sem valor'],obrasLinhas)+'<h2>Resumo por categoria</h2>'+
+    tabela(['Categoria','Qtd. ativos','Valor ativo','Qtd. baixados','Valor baixados','Ativos sem valor'],categorias)+'</section>';
+}
+
 function atlasMovDocumentoHtml(detalhado=false){
-  const {lista,cadastros,eventos}=atlasMovDividirConsulta();if(!lista.length)return null;
+  const {lista,cadastros,ativos,baixados,eventos}=atlasMovDividirConsulta();if(!lista.length)return null;
   const m=atlasMovModoRelatorio();
-  const titulo=m==='cadastro'?'RELATÓRIO DE ATIVIDADES PATRIMONIAIS':m==='eventos'?'RELATÓRIO DE MOVIMENTAÇÕES PATRIMONIAIS':'RELATÓRIO CONSOLIDADO · PATRIMÔNIOS E MOVIMENTAÇÕES';
+  const titulo=m==='cadastro'?'RELATÓRIO DE ATIVIDADES PATRIMONIAIS':m==='eventos'?'RELATÓRIO DE MOVIMENTAÇÕES PATRIMONIAIS':'RELATÓRIO PATRIMONIAL';
   const cabe=atlasMovCabecalhoDocumento(lista,titulo);
   const valor=atlasMovTotalValor(cadastros),resumo=atlasMovResumo(lista);
-  const inv=cadastros.length?`<section class="doc-section"><h2>Inventário patrimonial — situação atual</h2><p class="doc-info">Uma linha por bem, inclusive sem movimentação. A origem é a primeira origem de transferência registrada com sequência verificável, não necessariamente a obra inicial de cadastro.</p><div class="doc-resumo">Patrimônios: <b>${cadastros.length}</b> · Obras: <b>${atlasMovResumo(cadastros).obras}</b> · Valor dos bens com valor informado: <b>${valor.qtd?atlasMovEsc(atlasMovMoeda(valor.total)):'Não informado'}</b>${valor.sem?` · Sem valor informado: <b>${valor.sem}</b>`:''}</div>${atlasMovTabelaDocumento(atlasMovInventarioCabecalhos(),cadastros.map(atlasMovInventarioLinha),'doc-inventario')}</section>`:'';
+  const secao=(itens,titulo,nota)=>itens.length?`<section class="doc-section"><h2>${titulo}</h2><p class="doc-info">${nota}</p><div class="doc-resumo">Patrimônios: <b>${itens.length}</b> · Obras: <b>${atlasMovResumo(itens).obras}</b></div>${atlasMovTabelaDocumento(atlasMovInventarioCabecalhos(),itens.map(atlasMovInventarioLinha),'doc-inventario')}<p class="doc-resumo"><b>${titulo}: ${atlasMovEsc(atlasMovMoeda(atlasMovValorRegistros(itens)))}</b></p></section>`:'';
+  const inv=secao(ativos,'Patrimônios ativos','Bens operacionais. Uma linha por bem, inclusive sem movimentação.')+secao(baixados,'Patrimônios baixados','Histórico de baixas; não integra o valor patrimonial ativo.');
+  const conciliacao=cadastros.length?atlasResumoGerencialHtml(atlasResumoDosCadastros(cadastros)):'';
   const mov=eventos.length?`<section class="doc-section"><h2>Movimentações e situações selecionadas</h2><p class="doc-info">Uma linha por registro de evento; o mesmo patrimônio pode aparecer mais de uma vez.</p><div class="doc-resumo">Registros: <b>${eventos.length}</b> · Patrimônios únicos: <b>${atlasMovResumo(eventos).patrimonios}</b> · Obras envolvidas: <b>${atlasMovResumo(eventos).obras}</b></div>${atlasMovTabelaDocumento(atlasMovEventosCabecalhos(),eventos.map(atlasMovEventoLinha),'doc-eventos')}${detalhado?`<h2 class="doc-appendix">Detalhamento das operações</h2>${eventos.map(atlasMovDetalhamentoEvento).join('')}`:''}</section>`:'';
   const css=`@page{size:A4 landscape;margin:9mm;@bottom-right{content:"Página " counter(page) " de " counter(pages);font-size:8px;color:#64748b}}*{box-sizing:border-box}body{font:9px Arial,Helvetica,sans-serif;color:#1b2433;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}.doc-top{margin-bottom:12px;position:relative}.doc-brand{font-size:13px;font-weight:900;color:#b31119;letter-spacing:.2px}.doc-emissao{position:absolute;top:0;right:0;font-size:9px;color:#555}.doc-top h1{font-size:17px;margin:5px 0 8px}.doc-rule{height:3px;background:#ae1320;margin-bottom:10px}.doc-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;line-height:1.5}.doc-obras,.doc-filtros{margin-top:7px;padding:6px 9px;background:#f6f7f9;border-left:3px solid #b1111c;line-height:1.5;overflow-wrap:anywhere}.doc-section{margin-top:11px}.doc-section h2{font-size:12px;color:#a60f1a;margin:0 0 5px}.doc-info{font-size:8.5px;color:#596272;margin:0 0 7px}.doc-resumo{margin:0 0 9px;font-size:9px}table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{border:1px solid #cfd3d8;padding:5px 4px;text-align:left;vertical-align:top;overflow-wrap:anywhere;word-break:normal}th{font-size:8px;background:#eef1f4;color:#202734;font-weight:800}td{font-size:8px}tr{break-inside:avoid}thead{display:table-header-group}tbody tr:nth-child(even){background:#fafafa}.doc-inventario th:nth-child(1){width:3%}.doc-inventario th:nth-child(2){width:8%}.doc-inventario th:nth-child(3){width:5%}.doc-inventario th:nth-child(4){width:10%}.doc-inventario th:nth-child(5){width:5%}.doc-inventario th:nth-child(6){width:6%}.doc-inventario th:nth-child(7){width:7%}.doc-inventario th:nth-child(8){width:6%}.doc-inventario th:nth-child(9){width:6%}.doc-inventario th:nth-child(10){width:6%}.doc-inventario th:nth-child(11){width:7%}.doc-inventario th:nth-child(12){width:6%}.doc-inventario th:nth-child(13){width:6%}.doc-inventario th:nth-child(14){width:6%}.doc-inventario th:nth-child(15){width:8%}.doc-inventario th:nth-child(16){width:5%}.doc-eventos th:nth-child(1){width:3%}.doc-eventos th:nth-child(2){width:9%}.doc-eventos th:nth-child(3){width:10%}.doc-eventos th:nth-child(4){width:15%}.doc-eventos th:nth-child(5){width:9%}.doc-eventos th:nth-child(6){width:10%}.doc-eventos th:nth-child(7){width:10%}.doc-eventos th:nth-child(8){width:12%}.doc-eventos th:nth-child(9){width:11%}.doc-eventos th:nth-child(10){width:7%}.doc-eventos th:nth-child(11){width:4%}.doc-event-card{break-inside:avoid;border:1px solid #d4d4d4;border-left:3px solid #ad1420;padding:8px 10px;margin:8px 0}.doc-event-card h3{font-size:10px;margin:0 0 6px}.doc-event-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px 12px;font-size:8.5px;line-height:1.4}.doc-appendix{break-before:page;margin-top:0!important}.doc-foot{padding-top:10px;margin-top:10px;border-top:1px solid #ddd;font-size:8px;color:#5b6370}.doc-section+.doc-section{break-before:page}`;
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>BDR Construart - ${atlasMovEsc(titulo)}</title><style>${css}</style></head><body>${cabe}${inv}${mov}<footer class="doc-foot">BDR CONSTRUART · Atlas Gestão Patrimonial · Informações conforme cadastro e registros disponíveis na data de emissão. Ausência de datas não comprova que o evento ocorreu.</footer></body></html>`;
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>BDR Construart - ${atlasMovEsc(titulo)}</title><style>${css}</style></head><body>${cabe}${inv}${mov}${conciliacao}<footer class="doc-foot">BDR CONSTRUART · Gestão Patrimonial · Informações conforme cadastro e registros disponíveis na data de emissão. Ausência de datas não comprova que o evento ocorreu.</footer></body></html>`;
 }
 function atlasMovImprimirInteligente(detalhado=false){
   if(!exigirPermissaoRelatoriosBDR('RELATORIOS_EXPORTAR','Você não tem permissão para imprimir relatórios.'))return;
@@ -2090,23 +2202,41 @@ function atlasMovExcelCriarAba(livro,nome,titulo,cabecalhos,linhas,larguras,list
 }
 async function atlasMovExportarExcelInteligente(){
   if(!exigirPermissaoRelatoriosBDR('RELATORIOS_EXPORTAR','Você não tem permissão para exportar relatórios.'))return;
-  const {lista,cadastros,eventos}=atlasMovDividirConsulta();if(!lista.length){alert('Nenhum registro encontrado para exportação.');return;}
+  const {lista,cadastros,ativos,baixados,eventos}=atlasMovDividirConsulta();if(!lista.length){alert('Nenhum registro encontrado para exportação.');return;}
   if(!window.ExcelJS){alert('Biblioteca ExcelJS indisponível. Verifique a conexão.');return;}
   const livro=new ExcelJS.Workbook();livro.creator='BDR Construart';livro.created=new Date();
-  if(cadastros.length){
+  const criarAbaPatrimonial=(itens,nome,titulo,rotulo)=>{
+    if(!itens.length)return;
     const campos=atlasMovInventarioCabecalhos();
-    const aba=atlasMovExcelCriarAba(livro,'Patrimônios','RELATÓRIO DE ATIVIDADES PATRIMONIAIS',campos,
-      cadastros.map((m,i)=>{const l=atlasMovInventarioLinha(m,i);const p=atlasMovPatrimoniosPorId.get(String(m.patrimonio_id))||m;l[8]=atlasMovValorPatrimonio(p);return l;}),
-      [6,22,20,46,18,19,27,20,19,26,26,26,21,27,34,27],cadastros);
-    aba.getColumn(9).numFmt='"R$" #,##0.00;[Red]("R$" #,##0.00)';
-  }
+    const aba=atlasMovExcelCriarAba(livro,nome,titulo,campos,
+      itens.map((m,i)=>{const l=atlasMovInventarioLinha(m,i);const p=atlasMovPatrimoniosPorId.get(String(m.patrimonio_id))||m;l[8]=atlasMovValorPatrimonio(p);return l;}),
+      [6,22,20,46,18,19,27,20,19,26,26,26,21,27,34,27],itens);
+    const moeda='"R$" #,##0.00;[Red]("R$" #,##0.00)';
+    aba.getColumn(9).numFmt=moeda;
+    aba.autoFilter={from:{row:9,column:1},to:{row:9+itens.length,column:campos.length}};
+    const ultima=aba.rowCount+1;
+    aba.mergeCells(ultima,1,ultima,8);
+    aba.getCell(ultima,1).value=rotulo;
+    aba.getCell(ultima,9).value={formula:'ROUND(SUM(I10:I'+(ultima-1)+'),2)',result:atlasMovValorRegistros(itens)};
+    aba.getCell(ultima,9).numFmt=moeda;
+    aba.getRow(ultima).font={bold:true,color:{argb:'FF961821'}};
+    aba.getRow(ultima).height=24;
+    aba.getCell(7,1).value += ' | '+rotulo+': '+atlasMovMoeda(atlasMovValorRegistros(itens));
+    const nota=aba.rowCount+1;aba.mergeCells(nota,1,nota,campos.length);
+    aba.getCell(nota,1).value='Cadastros inativados ou excluídos não integram este relatório. Bens baixados não integram o valor patrimonial ativo.';
+    aba.getRow(nota).height=25;
+  };
+  criarAbaPatrimonial(ativos,'Patrimônios ativos','RELATÓRIO DE PATRIMÔNIOS ATIVOS','VALOR PATRIMONIAL ATIVO');
+  criarAbaPatrimonial(baixados,'Baixados','RELATÓRIO DE PATRIMÔNIOS BAIXADOS','VALOR DOS BENS BAIXADOS (FORA DO ATIVO)');
   if(eventos.length){
     const campos=['Data/hora','Patrimônio','Patrimônio antigo','Descrição','Evento','Origem','Destino','Responsável','Status','Pedido / Remessa','Solicitado por','Aprovado por','Separado por','Enviado por (início)','Despachado por','Recebido por','Solicitação','Aprovação','Separação','Envio','Recebimento','Motorista','Placa','Conferência','Observação','Observação do recebimento'];
     atlasMovExcelCriarAba(livro,'Movimentações','RELATÓRIO DE MOVIMENTAÇÕES PATRIMONIAIS',campos,eventos.map(atlasMovExcelEventoLinha),
       [24,22,21,46,22,32,32,28,21,22,28,26,26,26,26,26,24,24,24,24,24,24,18,24,55,55],eventos);
   }
+  if(cadastros.length)atlasResumoExcel(livro,atlasResumoDosCadastros(cadastros),{emitido:new Date().toLocaleString('pt-BR',{timeZone:'America/Cuiaba'}),responsavel:atlasMovEmitente(),obras:atlasMovIdentificacoesFiltro().texto,periodo:atlasMovPeriodoFiltro(),filtros:atlasMovFiltroDescricao()});
   const buffer=await livro.xlsx.writeBuffer(),url=URL.createObjectURL(new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
-  const a=document.createElement('a');a.href=url;a.download=`BDR_Relatorio_${atlasMovModoRelatorio()==='cadastro'?'Patrimonial':atlasMovModoRelatorio()==='eventos'?'Movimentacoes':'Consolidado'}.xlsx`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+  const tipoArquivo=atlasMovModoRelatorio()==='eventos'?'Relatorio_Movimentacoes':baixados.length&&!ativos.length&&!eventos.length?'Patrimonios_Baixados':'Relatorio_Patrimonial';
+  const a=document.createElement('a');a.href=url;a.download=atlasResumoNomeArquivo(tipoArquivo,[...atlasMovSelecoes.obras])+'.xlsx';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 
 async function atlasCarregarMovimentacoes(){
@@ -2124,7 +2254,7 @@ async function atlasCarregarMovimentacoes(){
     obra_origem_id:p.obra_id,obra_destino_id:p.obra_id,
     responsavel:p.responsavel||null,usuario_cadastro:p.usuario_cadastro||null,
     data_cadastro:p.data_cadastro||p.created_at||null,
-    status:p.status||'SEM_STATUS'
+    status:window.AtlasPatrimonial.status(p)||'SEM_STATUS'
   }));
   atlasMovPovoarFiltros();atlasMovPagina=1;atlasRenderMov();
   if(aviso)aviso.textContent=`${atlasMovCadastroDados.length} patrimônios disponíveis. Carregando também o histórico de movimentações...`;
@@ -2190,6 +2320,7 @@ async function atlasCarregarMovimentacoes(){
       observacao:atlasMovAuditoriaBaixa(p)?.observacao||'Situação atual: BAIXADO. Sem movimentação separada de baixa registrada.'
     }));
     atlasMovDados=[...registros,...remessas,...baixados].filter(m=>{
+      if(!atlasMovEventoOperacional(m))return false;
       const o=String(m.obra_origem_id),d=String(m.obra_destino_id);
       if(!(ids.has(o)||ids.has(d)))return false;
       return true;
@@ -2254,13 +2385,13 @@ function snapshotPatrimoniosConferencia(){
       codigo:codigoPatrimonioConferencia(p),
       nome:p.nome_bem || null,
       tipo:p.tipo_item || null,
-      status:p.status || null,
+      status:statusPatrimonioRelatorio(p),
       obra_id:p.obra_id || null,
       obra:obra ? `${obra.codigo_obra || obra.codigo_sienge || "-"} - ${obra.nome || "-"}` : (p.localizacao || null),
       marca:p.marca || null,
       modelo:p.modelo || null,
       numero_serie:p.numero_serie || p.placa || null,
-      valor:p.valor_aquisicao ?? p.valor ?? null,
+      valor:window.AtlasPatrimonial.valor(p),
       data_cadastro:p.data_cadastro || p.created_at || null,
       cadastrado_por:p.usuario_cadastro || p.cadastrado_por || null
     };
@@ -2270,9 +2401,11 @@ function snapshotPatrimoniosConferencia(){
 function assinaturaCorrespondeAoRelatorio(c){
   const itens = Array.isArray(c?.patrimonios_json) ? c.patrimonios_json : [];
   if(itens.length !== filtradosAtuais.length) return false;
-  const atuais = filtradosAtuais.map(codigoPatrimonioConferencia).sort();
-  const assinados = itens.map(i => String(i?.codigo || i?.id || "")).sort();
-  return atuais.every((codigo, indice) => codigo === assinados[indice]);
+  // Uma assinatura antiga não pode validar uma relação cujo valor ou status mudou.
+  const chave=(codigo,status,obra,valor)=>JSON.stringify([String(codigo),String(status||"").trim().toUpperCase(),String(obra??""),window.AtlasPatrimonial.numero(valor)]);
+  const atuais = filtradosAtuais.map(p=>chave(codigoPatrimonioConferencia(p),statusPatrimonioRelatorio(p),p.obra_id,valorNumericoRelatorio(p))).sort();
+  const assinados = itens.map(i=>chave(i?.codigo || i?.id || "",i?.status,i?.obra_id,i?.valor)).sort();
+  return atuais.every((item, indice) => item === assinados[indice]);
 }
 
 function redimensionarCanvasAssinatura(){
@@ -2525,6 +2658,8 @@ async function abrirRelatorioAssinado(indice,imprimir=false){
   renderizarTodosItensParaImpressao();
   document.getElementById("resumo").textContent=`Fotografia oficial assinada: ${snapshot.length} patrimônio(s)`;
   document.getElementById("relatorioDocTotal").textContent=String(snapshot.length);
+  const campoValorHistorico=document.getElementById("relatorioDocValorAtivoCampo");
+  if(campoValorHistorico) campoValorHistorico.hidden=true;
   document.getElementById("relatorioDocPeriodo").textContent=(c.periodo_inicio||c.periodo_fim)
     ? `${c.periodo_inicio ? formatarData(c.periodo_inicio) : "Início"} até ${c.periodo_fim ? formatarData(c.periodo_fim) : "Hoje"}`
     : "Todos os registros no momento da conferência";
@@ -2690,7 +2825,7 @@ function renderizarTodosItensParaImpressao(){
       <td>${identificacaoInteligenteRelatorio(p)}</td>
       <td>${p.nome_bem || "-"}</td>
       <td>${tipo==="MAQUINA" ? "MÁQUINA PESADA" : tipo.replaceAll("_"," ")}</td>
-      <td><span class="status ${p.status || ""}">${String(p.status || "-").replaceAll("_"," ")}</span></td>
+      <td><span class="status ${statusPatrimonioRelatorio(p)}">${statusPatrimonioRelatorio(p).replaceAll("_"," ")}</span></td>
       <td class="coluna-obra-relatorio">${obraObj ? `${obraObj.codigo_obra || obraObj.codigo_sienge || "-"} - ${obraObj.nome || "-"}` : (p.localizacao || "-")}</td>
       <td>${p.marca || "-"}</td><td>${p.modelo || "-"}</td><td>${p.numero_serie || p.placa || "-"}</td>
       <td>${valorPatrimonioRelatorio(p)}</td><td>${formatarDataHoraCadastroPatrimonio(p)}</td><td>${p.usuario_cadastro || p.cadastrado_por || "-"}</td>
@@ -2771,13 +2906,8 @@ async function exportarCSV(){
   const usuario = JSON.parse(localStorage.getItem("usuario_logado") || localStorage.getItem("usuarioLogado") || "null");
   const responsavel = usuario?.nome || usuario?.usuario || "-";
   const emitidoEm = new Date().toLocaleString("pt-BR", {timeZone:"America/Cuiaba"});
-  const valorNumero = p => {
-    const bruto = p?.valor_bem ?? p?.valor_aquisicao ?? p?.valor;
-    if(bruto == null || String(bruto).trim() === "") return null;
-    const texto = String(bruto).trim().replace(/[^\d,.-]/g, "");
-    const numero = Number(texto.includes(",") ? texto.replace(/\./g, "").replace(",", ".") : texto);
-    return Number.isFinite(numero) ? numero : null;
-  };
+  const valorNumero = valorNumericoRelatorio;
+
   const nomeObra = p => {
     const obra = obras.find(o => String(o.id) === String(p.obra_id));
     return obra ? `${obra.codigo_obra || obra.codigo_sienge || "-"} - ${obra.nome || "-"}` : (p.localizacao || "-");
@@ -2823,6 +2953,7 @@ async function exportarCSV(){
   campo(5,1,"Período efetivo dos lançamentos:",periodoEfetivoLancamentos(),6);
   campo(5,7,"Relatório emitido por:",responsavel,12);
   campo(6,1,"Total de patrimônios:",filtradosAtuais.length,6);
+  if(!modoRelatorioHistorico) campo(6,7,"Valor patrimonial ativo:",atlasMovMoeda(window.AtlasPatrimonial.total(filtradosAtuais)),12);
   aba.getRow(4).height=27; aba.getRow(5).height=27; aba.getRow(6).height=23;
   aba.mergeCells("A7:L7");
   const descricao=aba.getCell("A7");
@@ -2845,7 +2976,7 @@ async function exportarCSV(){
   const porObra=new Map();
   filtradosAtuais.forEach((p,i)=>{
     const obra=nomeObra(p),valor=valorNumero(p);
-    const row=aba.addRow([i+1,codigoManualBDR(p)||"-",p.nome_bem||"-",p.tipo_item||"-",String(p.status||"-").replaceAll("_"," "),obra,p.marca||"-",p.modelo||"-",p.numero_serie||p.placa||"-",valor,formatarDataHoraCadastroPatrimonio(p),p.usuario_cadastro||p.cadastrado_por||"-"]);
+    const row=aba.addRow([i+1,codigoManualBDR(p)||"-",p.nome_bem||"-",p.tipo_item||"-",statusPatrimonioRelatorio(p).replaceAll("_"," "),obra,p.marca||"-",p.modelo||"-",p.numero_serie||p.placa||"-",valor,formatarDataHoraCadastroPatrimonio(p),p.usuario_cadastro||p.cadastrado_por||"-"]);
     row.height=Math.max(29, Math.ceil(String(p.nome_bem||"").length/36)*13+8,Math.ceil(obra.length/30)*13+8);
     row.eachCell({includeEmpty:true},c=>{
       c.font={name:"Arial",size:9,color:{argb:"FF"+corEscura}};
@@ -2862,7 +2993,7 @@ async function exportarCSV(){
   const ultima=9+filtradosAtuais.length;
   aba.autoFilter={from:"A9",to:`L${ultima}`};
   aba.mergeCells(ultima+1,1,ultima+1,9);
-  aba.getCell(ultima+1,1).value="VALOR TOTAL DOS PATRIMÔNIOS";
+  aba.getCell(ultima+1,1).value=(modoRelatorioHistorico || filtradosAtuais.some(p=>!window.AtlasPatrimonial.ativo(p))) ? "VALOR DOS REGISTROS SELECIONADOS (HISTÓRICO)" : "VALOR PATRIMONIAL ATIVO";
   aba.getCell(ultima+1,1).font={name:"Arial",size:10,bold:true,color:{argb:"FF"+corEscura}};
   aba.getCell(ultima+1,1).alignment={horizontal:"right",vertical:"middle"};
   aba.getCell(ultima+1,10).value={formula:`SUM(J10:J${ultima})`};
@@ -2884,7 +3015,7 @@ async function exportarCSV(){
   resumo.getRow(2).height=29;
   for(let c=1;c<=4;c++)resumo.getRow(3).getCell(c).border={bottom:{style:"medium",color:{argb:"FF"+corVermelha}}};
   resumo.getRow(4).values=["Obras conforme filtros do relatório"];
-  resumo.getRow(5).values=["Obra/Setor","Quantidade","Valor total (R$)","Itens sem valor"];
+  resumo.getRow(5).values=["Obra/Setor","Quantidade","Valor dos registros (R$)","Itens sem valor"];
   resumo.getRow(5).eachCell(c=>{c.font={name:"Arial",bold:true,color:{argb:"FF"+corEscura}};c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE5E7EB"}};c.border=borda;});
   [...porObra.entries()].sort((a,b)=>b[1].valor-a[1].valor).forEach(([obra,t],i)=>{
     const row=resumo.addRow([obra,t.quantidade,t.valor,t.semValor]);
@@ -2897,13 +3028,14 @@ async function exportarCSV(){
   totalRow.eachCell(c=>{c.font={name:"Arial",bold:true,color:{argb:"FF"+corVermelha}};c.border=borda;});
   resumo.autoFilter={from:"A5",to:`D${totalRow.number-1}`};
   resumo.pageSetup={paperSize:9,orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:1};
+  if(!modoRelatorioHistorico)atlasResumoExcel(livro,atlasResumoGerencialDados(filtradosAtuais,window.AtlasPatrimonial,atlasResumoNomeObra),{emitido:emitidoEm,responsavel,obras:nomesObrasRelatorioAtual(),periodo:periodoFiltroRelatorioTexto(),filtros:"Situações: "+(atlasStatusSelecionados().join(", ")||"Ativos não baixados")+" | Origem: "+(valor("filtroOrigem")||"Todas")+" | Tipo: "+(valor("filtroTipo")||"Todos")});
 
   try{
     const buffer=await livro.xlsx.writeBuffer();
     const blob=new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
     const url=URL.createObjectURL(blob);
     const link=document.createElement("a");
-    link.href=url;link.download="relatorio_patrimonios.xlsx";
+    link.href=url;link.download=modoRelatorioHistorico?"BDR_Relatorio_Historico.xlsx":atlasResumoNomeArquivo(filtradosAtuais.every(p=>window.AtlasPatrimonial.status(p)==="BAIXADO")?"Patrimonios_Baixados":"Relatorio_Patrimonial",filtradosAtuais.map(p=>p.obra_id))+".xlsx";
     document.body.appendChild(link);link.click();link.remove();
     setTimeout(()=>URL.revokeObjectURL(url),10000);
   }catch(erro){

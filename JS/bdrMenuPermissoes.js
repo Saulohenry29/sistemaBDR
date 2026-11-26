@@ -39,6 +39,7 @@
     "estoque.html": "ESTOQUE_VER",
     "patrimonio.html": "PATRIMONIO_VER",
     "expedicao.html": "EXPEDICAO_VER",
+    "scanner.html": "SCANNER_ACESSAR",
     "relatorios.html": "RELATORIOS_VER",
     "movimentacoes.html": "MOVIMENTACOES_VER",
     "empresa.html": "EMPRESAS_VER",
@@ -216,6 +217,9 @@
 
     const p = norm(perm);
     const ps = permissoes(u);
+
+    // O scanner usa permissões operacionais já existentes; não cria acesso global.
+    if(p === "SCANNER_ACESSAR") return ps.includes("PATRIMONIO_MOVIMENTAR") || ps.includes("EXPEDICAO_VER");
 
     if(ps.includes(p)) return true;
 

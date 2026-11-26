@@ -163,6 +163,20 @@ let config=A.carregar();
 let selected='qr';
 let zoom=1.75;
 let statusTimer;
+const B1_ANGULO_CHAVE="atlas:niimbot-b1:angulo";
+const B1_X_CHAVE="atlas:niimbot-b1:deslocamento-x-mm";
+function deslocamentoXB1(){
+ try{const salvo=localStorage.getItem(B1_X_CHAVE);if(salvo===null)return 2;const n=Number(salvo);return Number.isFinite(n)?Math.max(0,Math.min(3,n)):2}catch{return 2}
+}
+function anguloB1(){
+ try{
+  const migracao="atlas:niimbot-b1:rotacao-consolidada";
+  if(localStorage.getItem(migracao)!=="1"){
+   if(localStorage.getItem(B1_ANGULO_CHAVE)==="-0.6")localStorage.setItem(B1_ANGULO_CHAVE,"0");
+   localStorage.setItem(migracao,"1");
+  }
+  const n=Number(localStorage.getItem(B1_ANGULO_CHAVE)||0);return Number.isFinite(n)?Math.max(-2,Math.min(2,n)):0}catch{return 0}
+}
 const $=s=>document.querySelector(s);
 const elementsBox=$('#elements'),properties=$('#properties'),preview=$('#preview'),shell=$('#previewShell');
 const defs={
@@ -194,7 +208,21 @@ if(d.calibration){properties.innerHTML=`
 <div class="section"><h3>Valores exatos</h3><div class="grid2">${input('calibracaoXmm','Horizontal X (mm)',{min:-10,max:10})}${input('calibracaoYmm','Vertical Y (mm)',{min:-10,max:10})}</div></div>
 <div class="section"><h3>Escala geral</h3><div style="display:grid;grid-template-columns:42px 1fr 42px;gap:7px;align-items:center"><button class="arrow" data-scale="down" title="Diminuir 0,01">−</button>${input('escalaImpressao','Escala de 0,90 a 1,10',{min:.90,max:1.10,step:.01})}<button class="arrow" data-scale="up" title="Aumentar 0,01">+</button></div></div>
 <div class="section"><button class="btn secondary" data-reset-cal style="width:100%;margin-bottom:8px">Zerar posição e escala</button><button class="btn secondary" data-print-ruler style="width:100%">Imprimir régua de calibração</button></div>
-<div class="note"><b>Para corrigir corte na direita, clique na seta ←.</b><br>Cada clique move toda a etiqueta exatamente 0,1 mm. A escala não será mais reduzida automaticamente.</div>`;bindProperties();return}
+<div class="note"><b>Para corrigir corte na direita, clique na seta ←.</b><br>Cada clique move toda a etiqueta exatamente 0,1 mm. A escala não será mais reduzida automaticamente.</div>
+<div class="section" style="border-top:1px solid #dbe3ee;padding-top:14px;margin-top:16px">
+<h3>NIIMBOT B1 — ajuste fino de inclinação</h3>
+<div class="field"><label for="b1Angulo">Giro da imagem (graus, −2 a +2)</label>
+<input id="b1Angulo" type="number" min="-2" max="2" step="0.1" value="${anguloB1().toFixed(1)}"></div>
+<div class="grid2"><button class="btn" type="button" data-b1-salvar>Aplicar somente na B1</button><button class="btn" type="button" data-b1-zerar>Zerar (0°)</button></div>
+<div class="note" style="margin-top:9px">0° mantém a impressão sem giro. Este ajuste é salvo somente neste navegador e só modifica o PNG da NIIMBOT B1, individual e lote. Não altera a Elgin nem o padrão do banco. A prévia do editor não exibe este giro.</div>
+  </div>
+  <div class="section" style="border-top:1px solid #dbe3ee;padding-top:14px;margin-top:16px">
+  <h3>NIIMBOT B1 — deslocamento horizontal</h3>
+  <div class="field"><label for="b1DeslocamentoX">Mover imagem para a direita (mm, 0 a 3)</label>
+  <input id="b1DeslocamentoX" type="number" min="0" max="3" step="0.1" value="${deslocamentoXB1().toFixed(1)}"></div>
+  <div class="grid2"><button class="btn" type="button" data-b1-x-salvar>Aplicar na B1</button><button class="btn secondary" type="button" data-b1-x-zerar>Voltar à posição anterior (0 mm)</button></div>
+  <div class="note" style="margin-top:9px">Padrão: +2,0 mm à direita. Para evitar cortar a borda direita, o gerador pode reduzir proporcionalmente o desenho em até aproximadamente 6%. Afeta somente o PNG da B1, individual e lote. A prévia do editor não mostra este deslocamento.</div>
+</div>`;bindProperties();return}
 let html=`<div class="section"><h3>Visibilidade</h3>${toggle(d.show,'Mostrar elemento')}</div><div class="section"><h3>Tamanho</h3>${input(d.size,d.sizeLabel+' (mm)',{min:d.min,max:d.max,step:.05})}</div>${dpad(d)}`;
 if(d.font){html+=`<div class="section"><h3>Tipografia</h3>${selectField(d.font,'Fonte',fonts)}<div class="grid2">${selectField(d.weight,'Peso',weights)}${selectField(d.align,'Alinhamento',[['left','Esquerda'],['center','Centro'],['right','Direita']])}</div>${input(d.spacing,'Espaço entre letras (mm)',{min:-1,max:2,step:.05})}<div class="grid2">${toggle(d.italic,'Itálico')}${toggle(d.upper,'Maiúsculo')}</div></div>`}
 properties.innerHTML=html;bindProperties();}
@@ -205,6 +233,24 @@ function bindProperties(){
  properties.querySelectorAll('[data-scale]').forEach(btn=>{btn.onclick=()=>{config.escalaImpressao+=(btn.dataset.scale==='up'?.01:-.01);config=A.normalizar(config);sendPreview();renderProperties()}});
  const reset=properties.querySelector('[data-reset-cal]');if(reset)reset.onclick=()=>{config.calibracaoXmm=0;config.calibracaoYmm=0;config.escalaImpressao=1;config=A.normalizar(config);sendPreview();renderProperties();notify('Posição e escala restauradas.')};
  const ruler=properties.querySelector('[data-print-ruler]');if(ruler)ruler.onclick=()=>{A.salvarTeste(config);window.open('etiqueta-impressao.html?calibracao=1&teste=1&auto=1','_blank')};
+ const salvarB1=properties.querySelector('[data-b1-salvar]');if(salvarB1)salvarB1.onclick=()=>{
+  const campo=properties.querySelector('#b1Angulo');const numero=Number(campo?.value);
+  if(!campo || !campo.value.trim() || !Number.isFinite(numero) || numero < -2 || numero > 2){notify('Use um ângulo entre −2° e +2°.',true);return}
+  const valor=Math.round(numero*10)/10;
+  try{localStorage.setItem(B1_ANGULO_CHAVE,String(valor));campo.value=valor.toFixed(1);notify('Inclinação B1 ajustada para '+valor.toFixed(1)+'°. Teste uma etiqueta.')}catch{notify('Não foi possível salvar a calibração B1.',true)}
+ };
+ const zerarB1=properties.querySelector('[data-b1-zerar]');if(zerarB1)zerarB1.onclick=()=>{
+  try{localStorage.removeItem(B1_ANGULO_CHAVE);const campo=properties.querySelector('#b1Angulo');if(campo)campo.value='0.0';notify('Inclinação B1 restaurada para 0°.')}catch{notify('Não foi possível restaurar a calibração B1.',true)}
+ };
+ const salvarXB1=properties.querySelector('[data-b1-x-salvar]');if(salvarXB1)salvarXB1.onclick=()=>{
+  const campo=properties.querySelector('#b1DeslocamentoX');const numero=Number(campo?.value);
+  if(!campo||!campo.value.trim()||!Number.isFinite(numero)||numero<0||numero>3){notify('Use um deslocamento entre 0 e 3 mm.',true);return}
+  const valor=Math.round(numero*10)/10;
+  try{localStorage.setItem(B1_X_CHAVE,String(valor));campo.value=valor.toFixed(1);notify('Deslocamento B1 ajustado para +'+valor.toFixed(1)+' mm. Teste uma etiqueta.')}catch{notify('Não foi possível salvar o deslocamento B1.',true)}
+ };
+ const zerarXB1=properties.querySelector('[data-b1-x-zerar]');if(zerarXB1)zerarXB1.onclick=()=>{
+  try{localStorage.setItem(B1_X_CHAVE,'0');const campo=properties.querySelector('#b1DeslocamentoX');if(campo)campo.value='0.0';notify('Deslocamento B1 restaurado à posição anterior (0 mm).')}catch{notify('Não foi possível restaurar o deslocamento B1.',true)}
+ };
 }
 function select(key){selected=key;renderElements();renderProperties();highlightPreview()}
 function bindPreview(){try{const doc=preview.contentDocument;if(!doc)return;doc.querySelectorAll('[data-el]').forEach(el=>{el.style.cursor='pointer';el.onclick=e=>{e.preventDefault();e.stopPropagation();const key=Object.keys(defs).find(k=>defs[k].dataEl===el.dataset.el);if(key)select(key)}});const label=doc.querySelector('.label');if(label){label.style.cursor='pointer';label.onclick=e=>{if(e.target===label)select('estrutura')}}highlightPreview()}catch(e){console.warn('Preview ainda não disponível',e)}}

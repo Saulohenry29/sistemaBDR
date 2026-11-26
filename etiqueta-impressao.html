@@ -3,15 +3,35 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<script>
+/* Somente o raster móvel: desliga ampliação automática de fontes.
+   Não altera o layout aprovado no notebook. */
+if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent || ""))
+  document.documentElement.classList.add("atlas-b1-mobile");
+</script>
 <title>Etiqueta Patrimônio Atlas</title>
 <!-- ATLAS ETIQUETA INDIVIDUAL RÁPIDA V1 -->
 <script src="./JS/atlasEtiquetaConfig.js?v=8.1.2"></script>
 <script src="./JS/atlasPrintCenter.js?v=4.0.0"></script>
 <script src="./JS/atlasQRCode/qrcode.min.js?v=1.0.0"></script>
-<script src="./JS/atlasQRCode.js?v=1.0.0"></script>
-<script src="./JS/impressao/atlasEtiquetaImagemB1.js"></script>
+<script src="./JS/atlasQRCode.js?v=20261115-b1-unificado01"></script>
+<script src="./JS/impressao/atlasEtiquetaImagemB1.js?v=20261116-b1-referencia-git07"></script>
 <style>
 *{box-sizing:border-box}
+/* Impede ajuste automático de fontes no WebView/PWA móvel.
+   O layout oficial continua com medidas em mm e não muda no notebook. */
+@media screen and (max-width:768px){
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+}
+/* Android e iOS: não deixar o navegador aumentar letras automaticamente
+   dentro do iframe da etiqueta. O tamanho físico continua definido em mm. */
+html.atlas-b1-mobile,
+html.atlas-b1-mobile body,
+html.atlas-b1-mobile .label,
+html.atlas-b1-mobile .label *{
+  -webkit-text-size-adjust:none!important;
+  text-size-adjust:none!important;
+}
 :root{
 --papel-w:55mm;--papel-h:35mm;--arte-w:53mm;--arte-h:33mm;--padding:1.7mm;--borda:.45mm;--raio:1.8mm;
 --topo-h:13.5mm;--gear-size:8mm;--bdr-size:10.2mm;--sub-size:2.5mm;--qr-size:12.5mm;
@@ -81,12 +101,28 @@ html,body{margin:0;padding:0;width:var(--papel-w);height:var(--papel-h);overflow
  body.embed{padding:12px}
  body.embed .paper{outline:0;box-shadow:none}
 }
+/* Na NIIMBOT B1, a prévia não é mais um segundo desenho em HTML:
+   é exatamente o PNG 384 × 240 que será transmitido ao Bluetooth. */
+.atlas-b1-preview-png{
+  display:none;
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  background:#fff;
+  pointer-events:none;
+  z-index:20;
+}
+.paper.atlas-b1-preview-ativa .label{visibility:hidden}
+.paper.atlas-b1-preview-ativa .atlas-b1-preview-png{display:block}
 @media print{html,body{width:var(--papel-w);height:var(--papel-h)}.loading{display:none!important}}
 </style>
 </head>
 <body>
 <div class="paper" id="paper">
   <div class="loading">Preparando etiqueta...</div>
+  <img class="atlas-b1-preview-png" id="atlasB1Preview" alt="Imagem final da etiqueta NIIMBOT B1">
   <div class="label" id="label">
     <div class="label-top">
       <div class="brand">
@@ -197,6 +233,10 @@ async function atualizarEtiqueta(dados={}){
 
   codigoAtual = codigo;
   document.body.classList.remove("ready");
+  document.getElementById("paper").classList.remove("atlas-b1-preview-ativa");
+  const imagemPreview = document.getElementById("atlasB1Preview");
+  imagemPreview.removeAttribute("src");
+  window.AtlasEtiquetaImagemB1?.invalidarImagem();
   document.querySelector(".loading").textContent = "Preparando etiqueta...";
 
   document.getElementById("codigo").textContent = codigo;
@@ -234,8 +274,31 @@ async function atualizarEtiqueta(dados={}){
     document.body.classList.add("preview-centralizado");
   }
 
+  // A configuração e o QR já estão prontos. O Canvas exige a classe
+  // ready; o modal externo continuará oculto até o PNG estar pronto.
   document.body.classList.add("ready");
 
+  if(isEmbed && dados.impressora_b1 === true){
+    const gerador = window.AtlasEtiquetaImagemB1;
+    if(!gerador?.gerar || !gerador?.fixarImagem)
+      throw new Error("Rasterizador da NIIMBOT B1 indisponível.");
+
+    const png = await gerador.gerar(cfg);
+    if(token !== atualizacaoToken) return;
+
+    imagemPreview.src = png;
+    if(typeof imagemPreview.decode === "function"){
+      try{await imagemPreview.decode();}catch(error){
+        if(!imagemPreview.complete || !imagemPreview.naturalWidth)throw error;
+      }
+    }
+    if(token !== atualizacaoToken) return;
+
+    gerador.fixarImagem(png);
+    document.getElementById("paper").classList.add("atlas-b1-preview-ativa");
+  }
+
+  if(token !== atualizacaoToken) return;
   avisar("ATLAS_ETIQUETA_PRONTA", {
     codigo,
     token:dados.token || null
@@ -312,12 +375,16 @@ window.addEventListener("message", event => {
           error
         );
 
+        document.body.classList.remove("ready");
+        window.AtlasEtiquetaImagemB1?.invalidarImagem();
+        document.getElementById("paper").classList.remove("atlas-b1-preview-ativa");
         document.querySelector(".loading").textContent =
           "Não foi possível preparar a etiqueta.";
 
         avisar("ATLAS_ETIQUETA_ERRO", {
           codigo:mensagem?.dados?.codigo || null,
-          token:mensagem?.dados?.token || null
+          token:mensagem?.dados?.token || null,
+          erro:String(error?.message||error||"erro desconhecido")
         });
       });
   }
@@ -353,6 +420,7 @@ async function iniciar(){
 
 iniciar().catch(error => {
   console.error("Atlas Etiqueta: falha ao preparar etiqueta.", error);
+  document.body.classList.remove("ready");
   document.querySelector(".loading").textContent =
     "Não foi possível preparar a etiqueta.";
 });

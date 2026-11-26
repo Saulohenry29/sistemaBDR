@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <link rel="stylesheet" href="./CSS/bdr-fix-menu-final.css">
 <link rel="stylesheet" href="./CSS/atlasMensagens.css">
+<link rel="stylesheet" href="./CSS/componentes/atlasPaginacao.css?v=20261109-fix02">
 
 <style>
 /* =========================================================
@@ -27,6 +28,24 @@
   gap:8px;
 }
 
+ .obra-endereco-operacional{margin-top:18px;border-top:1px solid #dbe3ee;padding-top:12px}
+.obra-endereco-operacional h4{margin:0 0 10px;color:#26374c}
+.obra-endereco-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:14px}
+.obra-endereco-campos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-content:start}
+.obra-endereco-operacional input{min-width:0;width:100%;box-sizing:border-box}
+.obra-logradouro{grid-column:1/-1}
+.obra-cep-linha{display:flex;gap:6px;align-items:center}
+.obra-cep-linha button{flex-shrink:0}
+.obra-localizacao{border:1px solid #dce6f1;border-radius:10px;padding:12px;background:#f5f8fc;display:flex;flex-direction:column;gap:8px;min-width:0}
+.obra-localizacao h4{margin:0}
+.obra-localizacao-botao{background:#234d80;font-size:12px;padding:10px;white-space:normal}
+.obra-coordenadas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.obra-endereco-operacional small{display:block;color:#52657b;font-size:12px;margin-top:5px}
+@media(max-width:850px){.obra-endereco-layout{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:480px){.obra-endereco-campos{grid-template-columns:minmax(0,1fr)}}
+.empresa-selecao-existente{display:flex;flex-direction:column;gap:5px;margin:2px 0 14px}
+.empresa-selecao-existente>select{max-width:650px}
+.empresa-selecao-existente small{font-size:12px;color:#556a82}
 .empresa-filtro-grid{
   display:grid;
   grid-template-columns:2fr 1fr 1fr;
@@ -35,7 +54,7 @@
 
 .empresa-header{
   display:grid;
-  grid-template-columns:minmax(180px,1.5fr) 90px minmax(240px,1.6fr) minmax(190px,1.15fr) 80px 350px;
+  grid-template-columns:minmax(180px,1.5fr) 90px minmax(240px,1.6fr) minmax(190px,1.15fr) 80px 420px;
   gap:10px;
   padding:10px 14px;
   margin-bottom:8px;
@@ -55,7 +74,7 @@
 
 .empresa-linha{
   display:grid;
-  grid-template-columns:minmax(180px,1.5fr) 90px minmax(240px,1.6fr) minmax(190px,1.15fr) 80px 350px;
+  grid-template-columns:minmax(180px,1.5fr) 90px minmax(240px,1.6fr) minmax(190px,1.15fr) 80px 420px;
   gap:10px;
   align-items:center;
   background:white;
@@ -187,6 +206,9 @@
     color:#fff;
 }
 
+.painel-oculto{display:none!important}
+.btn-mini.btn-excluir{background:#ae2020;color:#fff}
+.btn-mini.btn-excluir:hover{background:#8f1010}
 .edicao-card{
   display:none;
   border-left-color:#2563eb;
@@ -267,6 +289,100 @@
   padding:12px 0 0;
 }
 
+/* Empresas: layout próprio; não modifica os componentes globais do shell. */
+.empresa-conteudo [hidden]{display:none!important}
+.empresa-conteudo{--emp-red:#b31320;--emp-border:#dce3ec;--emp-ink:#172b45;--emp-muted:#62728a;color:var(--emp-ink);font-size:13px}
+.empresa-conteudo .emp-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:10px;align-items:stretch;margin-bottom:14px}
+.empresa-conteudo .emp-kpi{display:flex;align-items:center;gap:11px;min-width:0;padding:12px;border:1px solid var(--emp-border);border-radius:12px;background:#fff;box-shadow:0 2px 7px #18344c0c}
+.empresa-conteudo .emp-kpi-icon{width:43px;height:43px;flex:none;display:grid;place-items:center;border-radius:10px;font-size:20px}
+.empresa-conteudo .emp-azul{background:#e8f1fd;color:#24579d}.empresa-conteudo .emp-verde{background:#e7f8ee;color:#14854a}.empresa-conteudo .emp-ambar{background:#fff4dd;color:#a85d00}
+.empresa-conteudo .emp-kpi strong{font-size:25px;line-height:1.05;display:block;font-variant-numeric:tabular-nums}.empresa-conteudo .emp-kpi small{font-size:11px;font-weight:650;color:var(--emp-muted);display:block;margin-top:4px}
+.empresa-conteudo .emp-primary,.empresa-conteudo .emp-outline,.empresa-conteudo .emp-text-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;font:inherit;font-weight:750;cursor:pointer;border-radius:8px;padding:9px 14px;white-space:nowrap}
+.empresa-conteudo .emp-primary{background:var(--emp-red);color:white;border:1px solid var(--emp-red)}.empresa-conteudo .emp-primary:hover{background:#920f19}.empresa-conteudo .emp-nova{align-self:center;min-height:42px}
+.empresa-conteudo .emp-outline{background:white;color:#244b76;border:1px solid #c9d9eb}.empresa-conteudo .emp-text-button{background:transparent;color:var(--emp-red);border:none;padding:5px}
+.empresa-conteudo .emp-card{background:white;padding:0;border:1px solid var(--emp-border);border-left:4px solid var(--emp-red);border-radius:12px;margin-bottom:14px;box-shadow:0 3px 10px #142c4810;overflow:visible}
+.empresa-conteudo .emp-card-head{padding:14px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:1px solid #e8edf4}
+.empresa-conteudo .emp-card-head h3,.empresa-conteudo .emp-modal-head h3{margin:0;color:var(--emp-red);font-weight:850;font-size:17px;display:flex;align-items:center;gap:8px}
+.empresa-conteudo .emp-filtros{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;padding:15px 16px}
+.empresa-conteudo .emp-filtros label,.empresa-conteudo .emp-lista-controles label{font-weight:700;font-size:12px;color:var(--emp-ink);display:flex;flex-direction:column;gap:5px;min-width:0}
+.empresa-conteudo .emp-filtros input,.empresa-conteudo .emp-filtros select,.empresa-conteudo .emp-lista-controles select,.empresa-conteudo .emp-form input,.empresa-conteudo .emp-form select,.empresa-conteudo .emp-form textarea{font:inherit;border:1px solid #cdd8e5;border-radius:8px;background:white;color:var(--emp-ink);padding:9px 10px;min-height:37px;box-sizing:border-box;max-width:100%;width:100%;min-width:0}
+.empresa-conteudo .emp-pesquisa{grid-column:1/-1}.empresa-conteudo .emp-busca-linha{display:flex;gap:10px}.empresa-conteudo .emp-busca-linha input{flex:1}.empresa-conteudo .emp-busca-linha button{min-width:145px}
+.empresa-conteudo .emp-lista-controles{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.empresa-conteudo .emp-lista-controles strong{font-size:12px}.empresa-conteudo .emp-lista-controles label{flex-direction:row;align-items:center;white-space:nowrap}.empresa-conteudo .emp-lista-controles select{width:auto;min-height:32px;padding:5px 8px}
+.empresa-conteudo .empresa-header,.empresa-conteudo .empresa-linha{grid-template-columns:minmax(65px,.6fr) minmax(145px,1.65fr) minmax(95px,1fr) minmax(60px,.55fr) minmax(65px,.65fr) minmax(155px,1.5fr) 64px 111px;gap:9px;margin:0;padding:11px 13px;align-items:center;box-sizing:border-box}
+.empresa-conteudo .empresa-header{display:grid;margin:0 8px;background:#edf1f6;border-radius:8px;font-size:10px;color:#334862;font-weight:800;text-transform:none;letter-spacing:0}
+.empresa-conteudo .empresa-header>div:last-child{padding:0;justify-content:center}
+.empresa-conteudo .empresa-linha{border:0;border-bottom:1px solid #e6ecf2;border-left:3px solid transparent;border-radius:0;background:white;box-shadow:none;cursor:default;transform:none;font-size:12px}
+.empresa-conteudo .empresa-linha:hover{border-left-color:var(--emp-red);background:#fafbfd;transform:none;box-shadow:none}
+.empresa-conteudo .empresa-linha>div{min-width:0}.empresa-conteudo .emp-codigo{font-weight:800;color:#1a365b}.empresa-conteudo .empresa-nome{font-weight:800;color:var(--emp-ink);white-space:normal;overflow-wrap:anywhere}.empresa-conteudo .empresa-info{color:#364861;white-space:normal;overflow-wrap:anywhere}
+.empresa-conteudo .emp-tabela{display:inline-block;background:#e8f1fd;color:#244b76;border-radius:6px;padding:4px 7px;font-size:10px;font-weight:800;white-space:nowrap}
+.empresa-conteudo .emp-local{display:flex;gap:6px;align-items:flex-start;line-height:1.35}.empresa-conteudo .emp-local i{color:var(--emp-red);margin-top:3px}.empresa-conteudo .emp-local strong{font-size:11px;display:block}.empresa-conteudo .emp-local small{display:block;font-size:10px;color:var(--emp-muted);overflow-wrap:anywhere}.empresa-conteudo .emp-local.emp-pendente i,.empresa-conteudo .emp-local.emp-pendente strong{color:#996000}
+.empresa-conteudo .empresa-acoes{justify-content:center;gap:5px;flex-wrap:nowrap;margin:0}.empresa-conteudo .emp-icon-btn{display:inline-grid;place-items:center;flex:none;width:32px;height:31px;padding:0;background:#fff;border:1px solid #d7e0ec;border-radius:7px;color:#1b3658;cursor:pointer;font-size:13px}.empresa-conteudo .emp-icon-btn:hover{background:#edf3fc}.empresa-conteudo .emp-icon-btn.emp-edit{color:#2563eb}
+.empresa-conteudo .emp-acoes-extra{position:relative;display:inline-block}.empresa-conteudo .emp-acoes-extra summary{list-style:none}.empresa-conteudo .emp-acoes-extra summary::-webkit-details-marker{display:none}.empresa-conteudo .emp-menu-acoes{position:absolute;right:0;top:35px;z-index:12;min-width:185px;padding:5px;background:#fff;border:1px solid #d6dfeb;box-shadow:0 6px 20px #172b4530;border-radius:9px}.empresa-conteudo .emp-menu-acoes button{display:flex;gap:8px;align-items:center;background:transparent;border:0;color:var(--emp-ink);font:inherit;font-weight:650;padding:9px 10px;width:100%;text-align:left;white-space:normal;border-radius:5px;cursor:pointer}.empresa-conteudo .emp-menu-acoes button:hover{background:#f2f5f9}.empresa-conteudo .emp-menu-acoes .emp-danger{color:#b31320}
+.empresa-conteudo .emp-empty{padding:24px;text-align:center;color:var(--emp-muted)}.empresa-conteudo .emp-historico summary{padding:13px 16px;font-weight:800;color:var(--emp-red);cursor:pointer}.empresa-conteudo .emp-historico .mov-empresa-lista{padding:0 14px 14px}
+.empresa-conteudo .emp-modal{position:fixed;inset:0;z-index:1500;display:flex;align-items:center;justify-content:center;padding:16px;background:#11182799;box-sizing:border-box;overflow:auto}
+.empresa-conteudo .emp-modal-painel{width:min(1060px,100%);max-height:calc(100dvh - 32px);background:white;border-radius:14px;box-shadow:0 18px 65px #0f172a55;display:flex;flex-direction:column;overflow:hidden}
+.empresa-conteudo .emp-modal-head{padding:14px 18px;background:#fff2f3;display:flex;justify-content:space-between;align-items:center;gap:12px;flex:none}.empresa-conteudo .emp-modal-corpo{padding:15px 18px;overflow:auto;min-height:0;overscroll-behavior:contain}
+.empresa-conteudo .emp-form{padding:0!important;margin:0!important;box-shadow:none!important;border:0!important;display:block;background:white}.empresa-conteudo .emp-form label{display:block;font-size:12px;font-weight:650;color:var(--emp-ink);margin-bottom:4px}.empresa-conteudo .emp-form .empresa-form-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.empresa-conteudo .emp-form-subtitulo{grid-column:1/-1;border-top:1px solid #e0e6ed;padding-top:12px;margin-top:5px}.empresa-conteudo .emp-form-subtitulo small,.empresa-conteudo .emp-ajuda{color:var(--emp-muted);font-size:12px}.empresa-conteudo .emp-endereco-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px}.empresa-conteudo .emp-endereco-head h4{margin:0}.empresa-conteudo .emp-form .form-actions{justify-content:flex-end;border-top:1px solid #e3e9f1;padding-top:13px;margin-top:16px}.empresa-conteudo .emp-form .form-actions button{padding:9px 14px;font-weight:750;cursor:pointer;border:0;border-radius:8px;color:#fff}.empresa-conteudo .emp-detalhe-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.empresa-conteudo .emp-detalhe-grid>div{padding:14px;border:1px solid var(--emp-border);border-radius:9px;background:#f9fbfd}.empresa-conteudo .emp-detalhe-grid h4{margin:0 0 8px;color:#203b5a}.empresa-conteudo .emp-detalhe-grid p{margin:5px 0;overflow-wrap:anywhere}
+@media(max-width:1250px){.empresa-conteudo .emp-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.empresa-conteudo .emp-nova{grid-column:1/-1;justify-self:end}.empresa-conteudo .empresa-header,.empresa-conteudo .empresa-linha{grid-template-columns:60px minmax(105px,1.5fr) minmax(85px,1fr) 52px 58px minmax(120px,1.3fr) 57px 105px;gap:6px;padding:10px 8px}}
+@media(max-width:960px){.empresa-conteudo .empresa-header{display:none}.empresa-conteudo .empresa-linha{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 12px;padding:14px}.empresa-conteudo .empresa-linha>[data-label]::before{content:attr(data-label);display:block;font-size:10px;font-weight:650;color:var(--emp-muted);margin-bottom:3px}.empresa-conteudo .empresa-acoes{justify-content:flex-end}.empresa-conteudo .emp-filtros{grid-template-columns:repeat(2,minmax(0,1fr))}.empresa-conteudo .emp-form .empresa-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.empresa-conteudo .emp-lista-controles{gap:8px}}
+@media(max-width:580px){.empresa-conteudo .emp-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.empresa-conteudo .emp-kpi{padding:9px;gap:7px}.empresa-conteudo .emp-kpi strong{font-size:21px}.empresa-conteudo .emp-kpi-icon{width:32px;height:32px;font-size:16px}.empresa-conteudo .emp-nova{justify-self:stretch}.empresa-conteudo .emp-filtros{padding:12px;gap:10px}.empresa-conteudo .emp-busca-linha{flex-direction:column}.empresa-conteudo .emp-card-head{padding:12px}.empresa-conteudo .emp-card-head h3{font-size:15px}.empresa-conteudo .emp-modal{padding:8px}.empresa-conteudo .emp-modal-painel{max-height:calc(100dvh - 16px)}.empresa-conteudo .emp-modal-corpo{padding:12px}.empresa-conteudo .emp-form .empresa-form-grid,.empresa-conteudo .emp-detalhe-grid{grid-template-columns:1fr}.empresa-conteudo .emp-form .empresa-form-grid>*{grid-column:auto!important}.empresa-conteudo .emp-lista-controles label{white-space:normal}.empresa-conteudo .emp-form .obra-endereco-layout{grid-template-columns:minmax(0,1fr)}}
+
+/* Ajustes compactos exclusivos de Empresas. O topo e menu são do shell. */
+.empresa-conteudo{padding:6px 10px 0 0;max-width:100%;box-sizing:border-box}
+.empresa-conteudo #empresaConsultaPrincipal{min-width:0;max-width:100%}
+.empresa-conteudo .emp-kpis{gap:8px;margin-bottom:9px}
+.empresa-conteudo .emp-kpi{padding:9px;gap:8px;border-radius:10px}
+.empresa-conteudo .emp-kpi-icon{width:36px;height:36px;font-size:17px}
+.empresa-conteudo .emp-kpi strong{font-size:22px}
+.empresa-conteudo .emp-nova{min-height:34px;padding:7px 11px}
+.empresa-conteudo .emp-card{margin-bottom:9px}
+.empresa-conteudo .emp-card-head{padding:10px 13px;gap:8px}
+.empresa-conteudo .emp-card-head h3,.empresa-conteudo .emp-modal-head h3{font-size:16px}
+.empresa-conteudo .emp-filtros{gap:8px 11px;padding:10px 13px}
+.empresa-conteudo .emp-filtros label,.empresa-conteudo .emp-form label{gap:3px;margin-bottom:3px}
+.empresa-conteudo .emp-filtros input,.empresa-conteudo .emp-filtros select,.empresa-conteudo .emp-form input,.empresa-conteudo .emp-form select,.empresa-conteudo .emp-form textarea{min-height:33px;padding:6px 9px}
+.empresa-conteudo .emp-filtros .emp-primary{padding:6px 12px;min-width:112px}
+.empresa-conteudo .empresa-header,.empresa-conteudo .empresa-linha{padding:8px 10px;gap:7px}
+.empresa-conteudo .emp-modal{padding:12px;overflow:hidden}
+.empresa-conteudo .emp-modal-painel{width:min(960px,100%);max-height:min(650px,calc(100dvh - 116px));min-height:0;box-sizing:border-box;margin:0}
+.empresa-conteudo .emp-modal-head{padding:10px 14px}
+.empresa-conteudo .emp-modal-corpo{display:flex;flex:1 1 auto;min-height:0;overflow:hidden;padding:0}
+.empresa-conteudo .emp-form:not([hidden]){display:flex;flex-direction:column;width:100%;min-height:0;overflow:hidden}
+.empresa-conteudo .emp-form-scroll{overflow:auto;overscroll-behavior:contain;min-height:0;padding:12px 14px;flex:1 1 auto}
+.empresa-conteudo .emp-form .form-actions{flex:0 0 auto;padding:9px 14px;margin:0;background:#fff;border-top:1px solid #dce3ec;gap:7px}
+.empresa-conteudo .emp-form .form-actions button{padding:7px 12px}
+.empresa-conteudo .emp-form .empresa-form-grid{gap:7px}
+.empresa-conteudo .edicao-aviso{padding:8px;margin-bottom:8px}
+.empresa-conteudo .obra-endereco-operacional{margin-top:11px;padding-top:9px}
+.empresa-conteudo .emp-endereco-head{margin-bottom:7px}
+.empresa-conteudo .emp-endereco-head .emp-outline{padding:6px 9px;font-size:11px;white-space:normal}
+.empresa-conteudo .obra-endereco-layout{grid-template-columns:minmax(0,2fr) minmax(210px,1fr);gap:10px}
+.empresa-conteudo .obra-endereco-campos,.empresa-conteudo .obra-coordenadas{gap:6px}
+.empresa-conteudo .obra-localizacao{padding:9px;gap:6px}
+.empresa-conteudo .obra-localizacao small{margin-top:2px;font-size:11px;line-height:1.35}
+.empresa-conteudo .obra-localizacao .btn-mini{white-space:normal;min-height:28px;padding:6px 8px;font-size:11px}
+.empresa-conteudo .emp-aviso-local{margin:6px 0 0;font-size:12px;color:#9b261a;white-space:pre-line}
+@media(max-width:960px){.empresa-conteudo .empresa-linha{padding:10px;gap:7px}.empresa-conteudo .obra-endereco-layout{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:580px){.empresa-conteudo{padding:5px 4px 0 0}.empresa-conteudo .emp-modal{padding:6px}.empresa-conteudo .emp-modal-painel{max-height:calc(100dvh - 96px);width:100%}.empresa-conteudo .emp-form-scroll{padding:10px}.empresa-conteudo .emp-form .form-actions{padding:8px 10px}.empresa-conteudo .emp-form input,.empresa-conteudo .emp-form select,.empresa-conteudo .emp-form textarea{font-size:16px}}
+
+
+.empresa-conteudo .obra-mapa-acoes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.empresa-conteudo .obra-importar-local{border:1px solid #d3deed;border-radius:8px;background:#fff;padding:7px;min-width:0}
+.empresa-conteudo .obra-importar-local summary{cursor:pointer;font-weight:700;color:#234d80;font-size:12px;line-height:1.4}
+.empresa-conteudo .obra-importar-local[open] summary{margin-bottom:7px}
+.empresa-conteudo .obra-importar-local input{width:100%;min-width:0;margin:4px 0 6px}
+.empresa-conteudo .obra-importar-local .btn-mini{width:100%}
+
+/* Identificação da empresa vinculada, independente do código operacional. */
+.empresa-conteudo .emp-vinculo{display:grid;grid-template-columns:minmax(0,1fr) minmax(125px,.42fr);gap:10px;padding:9px 12px;margin:0 0 10px;border:1px solid #dce5f0;border-radius:9px;background:#f6f8fc;align-items:center}
+.empresa-conteudo .emp-vinculo-titulo{grid-column:1/-1;font-size:12px;font-weight:800;color:#23476e;display:flex;align-items:center;gap:7px}
+.empresa-conteudo .emp-vinculo .emp-vinculo-valor{font-weight:750;font-size:13px;overflow-wrap:anywhere;color:#172f4d;display:block}
+.empresa-conteudo .emp-vinculo .emp-vinculo-label{font-size:11px;color:#52657b;display:block;margin-bottom:3px}
+.empresa-conteudo .emp-vinculo-codigo{border-left:1px solid #d5dfed;padding-left:12px}
+.empresa-conteudo .emp-vinculo-codigo i{font-size:10px;color:#657890;margin-left:5px}
+.empresa-conteudo .emp-empresa-codigo{display:block;font-size:10px;color:var(--emp-muted);margin-top:3px;font-weight:600;line-height:1.25}
+.empresa-conteudo .emp-empresa-nome{font-weight:650;display:block;overflow-wrap:anywhere}
+@media(max-width:580px){.empresa-conteudo .emp-vinculo{grid-template-columns:minmax(0,1fr) minmax(90px,.55fr);gap:7px;padding:8px}.empresa-conteudo .emp-vinculo-codigo{padding-left:8px}}
 </style>
 
 <script src="./JS/bdrMenuPermissoes.js"></script>
@@ -276,19 +392,58 @@
 
 <script src="JS/auth.js"></script>
 <script src="./JS/bdrSessaoRealtime.js"></script>
-<script src="./JS/atlasMensagens.js"></script>
+<script src="./JS/atlasDialog.js"></script>
 <script>
   verificarLogin();
 </script>
 
-<main class="empresa-conteudo">
+<main class="empresa-conteudo" id="empresaModulo">
+  <div id="empresaConsultaPrincipal">
+    <div id="empAvisoLocal" class="emp-aviso-local" role="alert" hidden></div>
+    <div class="emp-kpis">
+      <div class="emp-kpi"><span class="emp-kpi-icon emp-azul"><i class="fa-solid fa-building"></i></span><div><strong id="empKpiEmpresas">—</strong><small>Empresas disponíveis</small></div></div>
+      <div class="emp-kpi"><span class="emp-kpi-icon emp-azul"><i class="fa-solid fa-layer-group"></i></span><div><strong id="empKpiObras">—</strong><small>Obras cadastradas</small></div></div>
+      <div class="emp-kpi"><span class="emp-kpi-icon emp-verde"><i class="fa-solid fa-location-dot"></i></span><div><strong id="empKpiEndereco">—</strong><small>Com endereço</small></div></div>
+      <div class="emp-kpi"><span class="emp-kpi-icon emp-ambar"><i class="fa-solid fa-triangle-exclamation"></i></span><div><strong id="empKpiPendente">—</strong><small>Endereço pendente</small></div></div>
+      <button type="button" class="emp-primary emp-nova" data-acao-permissao="EMPRESAS_CRIAR" onclick="abrirCadastroEmpresa()"><i class="fa-solid fa-plus"></i> Nova obra</button>
+    </div>
+    <section class="card emp-card">
+      <div class="emp-card-head"><h3><i class="fa-solid fa-filter"></i> Filtros da Consulta</h3><button type="button" class="emp-text-button" onclick="limparFiltrosEmpresa()"><i class="fa-solid fa-rotate"></i> Limpar filtros</button></div>
+      <div class="emp-filtros">
+        <label>Empresa<select id="filtroEmpresaVinculada" onchange="reiniciarPaginacaoEmpresas()"><option value="">Todas as empresas</option></select></label>
+        <label>Status<select id="filtroStatusEmpresa" onchange="reiniciarPaginacaoEmpresas()"><option value="">Todos os status</option><option value="ATIVA">Ativas</option><option value="INATIVA">Inativas</option></select></label>
+        <label>Estado (UF) da obra<select id="filtroEstadoEmpresa" onchange="reiniciarPaginacaoEmpresas()"><option value="">Todos os estados</option></select></label>
+        <label>Endereço<select id="filtroEnderecoEmpresa" onchange="reiniciarPaginacaoEmpresas()"><option value="">Todos (com e sem endereço)</option><option value="COM">Com endereço</option><option value="PENDENTE">Endereço pendente</option></select></label>
+        <div class="emp-pesquisa"><label for="buscaEmpresa">Pesquisa rápida</label><div class="emp-busca-linha"><input id="buscaEmpresa" placeholder="Código, obra, Sienge, empresa ou município..." oninput="agendarBuscaEmpresas()" onkeydown="if(event.key==='Enter'){event.preventDefault();reiniciarPaginacaoEmpresas();}"><button type="button" class="emp-primary" onclick="reiniciarPaginacaoEmpresas()"><i class="fa-solid fa-magnifying-glass"></i> Consultar</button></div></div>
+      </div>
+    </section>
+    <section class="card emp-card emp-lista-card">
+      <div class="emp-card-head emp-lista-head"><h3><i class="fa-solid fa-building"></i> Obras cadastradas</h3><div class="emp-lista-controles"><strong id="resumoPaginacaoEmpresas" aria-live="polite">Carregando...</strong><label>Ordenar <select id="ordemEmpresa" onchange="reiniciarPaginacaoEmpresas()"><option value="recentes">Mais recentes</option><option value="nome">Nome da obra</option><option value="codigo">Código da obra</option></select></label><label>Por página <select id="tamanhoPaginaEmpresas" onchange="alterarTamanhoPaginaEmpresas()"><option value="15">15</option><option value="25">25</option><option value="50">50</option></select></label></div></div>
+      <div id="paginacaoEmpresasTopo"></div>
+      <div class="empresa-header"><div>Código obra</div><div>Obra / setor</div><div>Empresa</div><div>Sienge</div><div>Tabela</div><div>Localização operacional</div><div>Status</div><div>Ações</div></div>
+      <div id="listaEmpresas" aria-live="polite"></div>
+      <div id="paginacaoEmpresasBaixo"></div>
+    </section>
+    <details class="card emp-card emp-historico"><summary><i class="fa-solid fa-clock-rotate-left"></i> Últimas movimentações de empresas</summary><div id="listaMovEmpresas" class="mov-empresa-lista"></div></details>
+  </div>
+  <div id="empresaModal" class="emp-modal" hidden role="dialog" aria-modal="true" aria-labelledby="empresaModalTitulo" onkeydown="empModalTeclado(event)">
+    <div class="emp-modal-painel">
+      <div class="emp-modal-head"><h3 id="empresaModalTitulo">Cadastro</h3><button type="button" class="emp-icon-btn" aria-label="Fechar" onclick="exibirFormularioEmpresa()"><i class="fa-solid fa-xmark"></i></button></div>
+      <div class="emp-modal-corpo">
 
-    <section class="card" data-acao-permissao="EMPRESAS_CRIAR">
-      <h3>➕ Cadastro de Empresa / Obra / Setor</h3>
+    <section class="card emp-form" id="cardCadastroEmpresa" hidden><div class="emp-form-scroll">
+      <p class="emp-ajuda">Vincule a obra a uma empresa existente ou cadastre uma nova empresa, quando autorizado.</p>
 
+      <div class="empresa-selecao-existente">
+        <label for="empresa_existente"><b>Empresa já cadastrada</b> — selecione para adicionar somente uma nova obra</label>
+        <select id="empresa_existente" onchange="selecionarEmpresaExistente()">
+          <option value="">Nova empresa (ou obra da BDR reconhecida pelo nome)</option>
+        </select>
+        <small id="avisoEmpresaExistente">Se selecionar uma empresa, seus dados cadastrais não serão alterados neste formulário.</small>
+      </div>
       <div class="empresa-form-grid">
         <div>
-          <label>Código da Empresa</label>
+          <label>Código da Empresa (não é o código da obra)</label>
           <input id="codigo_empresa" placeholder="Ex: 10013">
         </div>
 
@@ -300,6 +455,11 @@
         <div>
           <label>Setor / Obra</label>
           <input id="setor_obra" placeholder="Ex: CD CENTRO DE DISTRIBUIÇÃO">
+        </div>
+
+        <div>
+          <label>Código da obra</label>
+          <input id="codigo_obra" placeholder="Ex: 728 (não é o código da empresa)" maxlength="40">
         </div>
 
         <div>
@@ -315,6 +475,7 @@
           </select>
         </div>
 
+        <div class="emp-form-subtitulo"><strong>Dados jurídicos e endereço da empresa</strong><small> Não correspondem necessariamente ao endereço da obra.</small></div>
         <div>
           <label>CNPJ</label>
           <input id="cnpj" placeholder="00.000.000/0000-00">
@@ -339,23 +500,68 @@
           <label>CEP</label>
           <input id="cep" placeholder="00000-000">
         </div>
+        <div>
+          <label>Telefone (opcional)</label>
+          <input id="telefone" placeholder="(00) 00000-0000">
+        </div>
       </div>
 
+      <div class="obra-endereco-operacional" id="novo_obra_painel">
+  <div class="emp-endereco-head"><h4>Endereço operacional da obra</h4><button type="button" class="emp-outline" onclick="obraCopiarEnderecoEmpresa('novo_obra')"><i class="fa-solid fa-copy"></i> Usar endereço da empresa</button></div>
+  <div class="obra-endereco-layout">
+    <div class="obra-endereco-campos">
+      <div><label for="novo_obra_cep">CEP</label><div class="obra-cep-linha"><input id="novo_obra_cep" autocomplete="off" inputmode="numeric" maxlength="9" placeholder="00000-000" oninput="obraCepDigitado('novo_obra')"><button type="button" class="btn-mini" onclick="obraBuscarCep('novo_obra',true)">Buscar CEP</button></div></div>
+      <div><label for="novo_obra_municipio">Município</label><input id="novo_obra_municipio" autocomplete="off" maxlength="150" placeholder="Cidade da obra"></div>
+      <div><label for="novo_obra_uf">UF</label><input id="novo_obra_uf" autocomplete="off" maxlength="2" placeholder="MT"></div>
+      <div><label for="novo_obra_bairro">Bairro / região</label><input id="novo_obra_bairro" autocomplete="off" maxlength="150" placeholder="Bairro ou zona rural"></div>
+      <div class="obra-logradouro"><label for="novo_obra_logradouro">Logradouro</label><input id="novo_obra_logradouro" autocomplete="off" maxlength="250" placeholder="Rua, rodovia, estrada ou fazenda"></div>
+      <div><label for="novo_obra_numero">Número</label><input id="novo_obra_numero" autocomplete="off" maxlength="40" placeholder="Nº ou S/N"></div>
+      <div><label for="novo_obra_complemento">Complemento</label><input id="novo_obra_complemento" autocomplete="off" maxlength="200" placeholder="Opcional"></div>
+    </div>
+    <aside class="obra-localizacao">
+      <h4><i class="fa-solid fa-location-dot"></i> Localização da obra</h4>
+      <button type="button" class="btn-mini obra-localizacao-botao" onclick="obraCapturarLocalizacao('novo_obra')"><i class="fa-solid fa-location-crosshairs"></i> Usar localização atual</button>
+      <small>Use na obra. GPS serve para entrega; confirme o endereço para documentos fiscais.</small>
+      <div class="obra-coordenadas"><div><label for="novo_obra_latitude">Latitude</label><input id="novo_obra_latitude" autocomplete="off" inputmode="decimal" maxlength="24" placeholder="Opcional"></div><div><label for="novo_obra_longitude">Longitude</label><input id="novo_obra_longitude" autocomplete="off" inputmode="decimal" maxlength="24" placeholder="Opcional"></div></div>
+      <div class="obra-mapa-acoes">
+        <button type="button" class="btn-mini" onclick="obraAbrirMapa('novo_obra')"><i class="fa-solid fa-map-location-dot"></i> Ver no mapa</button>
+        <button type="button" class="btn-mini" onclick="obraPesquisarMapa('novo_obra')"><i class="fa-solid fa-magnifying-glass-location"></i> Procurar obra</button>
+      </div>
+      <details class="obra-importar-local" id="novo_obra_importar_painel">
+        <summary><i class="fa-solid fa-map-pin"></i> Importar ponto do Google Maps</summary>
+        <small>Abra o mapa, clique com o botão direito na portaria da obra e copie as coordenadas. Também aceita um link completo com coordenadas explícitas.</small>
+        <label for="novo_obra_mapa_texto">Coordenadas ou link completo</label>
+        <input id="novo_obra_mapa_texto" type="text" autocomplete="off" spellcheck="false" maxlength="4096" placeholder="Latitude, longitude ou link">
+        <button type="button" class="btn-mini" onclick="obraImportarPonto('novo_obra')"><i class="fa-solid fa-location-dot"></i> Aplicar localização</button>
+        <small>Links curtos: abra no Maps e copie as coordenadas do ponto. O endereço fiscal continua separado.</small>
+      </details>
+      <div><label for="novo_obra_referencia">Referência para entrega</label><input id="novo_obra_referencia" autocomplete="off" maxlength="250" placeholder="Portaria, km da rodovia, acesso..."></div>
+      <small id="novo_obra_geo_status" role="status" aria-live="polite"></small>
+    </aside>
+  </div>
+  <small id="novo_obra_cep_status" role="status" aria-live="polite">CEP opcional. Todos os campos podem ser preenchidos manualmente.</small>
+</div>
       <br>
 
       <label>Observação</label>
       <textarea id="observacao" placeholder="Observações da empresa, obra ou setor..."></textarea>
 
-      <div class="form-actions">
-        <button class="btn-salvar" data-acao-permissao="EMPRESAS_CRIAR" onclick="salvarEmpresa()">💾 Salvar Empresa</button>
+      </div><div class="form-actions">
+        <button class="btn-salvar" data-acao-permissao="EMPRESAS_CRIAR" onclick="salvarEmpresa()">💾 Salvar cadastro</button>
         <button class="btn-limpar" onclick="limparFormulario()">🧹 Limpar</button>
+        <button type="button" class="btn-limpar" onclick="exibirFormularioEmpresa()">Cancelar</button>
       </div>
     </section>
 
-    <section class="card edicao-card" id="cardEdicaoEmpresa" data-acao-permissao="EMPRESAS_EDITAR">
-      <h3>✏️ Editar obra</h3>
+    <section class="card emp-form" id="cardEdicaoEmpresa" hidden><div class="emp-form-scroll">
+
+      <div class="emp-vinculo" aria-label="Empresa vinculada — somente leitura">
+        <div class="emp-vinculo-titulo"><i class="fa-solid fa-building" aria-hidden="true"></i> Empresa vinculada</div>
+        <div><span class="emp-vinculo-label">Empresa</span><strong id="edit_vinculo_nome" class="emp-vinculo-valor">—</strong></div>
+        <div class="emp-vinculo-codigo"><span class="emp-vinculo-label">Código da empresa</span><strong class="emp-vinculo-valor"><span id="edit_vinculo_codigo">—</span><i class="fa-solid fa-lock" title="Somente leitura" aria-label="Somente leitura"></i></strong></div>
+      </div>
       <div class="edicao-aviso">Editando somente a obra: <b id="editandoEmpresaTitulo">-</b><br>
-        Os dados da empresa e das demais obras não serão alterados. O status é gerenciado pelo botão específico da listagem.
+        Os dados da empresa e das demais obras não serão alterados.
       </div>
       <input type="hidden" id="edit_id">
       <div class="empresa-form-grid">
@@ -364,60 +570,74 @@
         <div><label>Código Sienge</label><input id="edit_codigo_sienge_obra" maxlength="40"></div>
         <div><label>Tabela de insumo</label><select id="edit_tabela_insumo"><option value="2">Tabela 2</option><option value="3">Tabela 3</option></select></div>
       </div>
-      <div class="form-actions">
+      <div class="obra-endereco-operacional" id="edit_obra_painel">
+  <div class="emp-endereco-head"><h4>Endereço operacional da obra</h4><button type="button" class="emp-outline" onclick="obraCopiarEnderecoEmpresa('edit_obra')"><i class="fa-solid fa-copy"></i> Usar endereço da empresa</button></div>
+  <div class="obra-endereco-layout">
+    <div class="obra-endereco-campos">
+      <div><label for="edit_obra_cep">CEP</label><div class="obra-cep-linha"><input id="edit_obra_cep" autocomplete="off" inputmode="numeric" maxlength="9" placeholder="00000-000" oninput="obraCepDigitado('edit_obra')"><button type="button" class="btn-mini" onclick="obraBuscarCep('edit_obra',true)">Buscar CEP</button></div></div>
+      <div><label for="edit_obra_municipio">Município</label><input id="edit_obra_municipio" autocomplete="off" maxlength="150" placeholder="Cidade da obra"></div>
+      <div><label for="edit_obra_uf">UF</label><input id="edit_obra_uf" autocomplete="off" maxlength="2" placeholder="MT"></div>
+      <div><label for="edit_obra_bairro">Bairro / região</label><input id="edit_obra_bairro" autocomplete="off" maxlength="150" placeholder="Bairro ou zona rural"></div>
+      <div class="obra-logradouro"><label for="edit_obra_logradouro">Logradouro</label><input id="edit_obra_logradouro" autocomplete="off" maxlength="250" placeholder="Rua, rodovia, estrada ou fazenda"></div>
+      <div><label for="edit_obra_numero">Número</label><input id="edit_obra_numero" autocomplete="off" maxlength="40" placeholder="Nº ou S/N"></div>
+      <div><label for="edit_obra_complemento">Complemento</label><input id="edit_obra_complemento" autocomplete="off" maxlength="200" placeholder="Opcional"></div>
+    </div>
+    <aside class="obra-localizacao">
+      <h4><i class="fa-solid fa-location-dot"></i> Localização da obra</h4>
+      <button type="button" class="btn-mini obra-localizacao-botao" onclick="obraCapturarLocalizacao('edit_obra')"><i class="fa-solid fa-location-crosshairs"></i> Usar localização atual</button>
+      <small>Use na obra. GPS serve para entrega; confirme o endereço para documentos fiscais.</small>
+      <div class="obra-coordenadas"><div><label for="edit_obra_latitude">Latitude</label><input id="edit_obra_latitude" autocomplete="off" inputmode="decimal" maxlength="24" placeholder="Opcional"></div><div><label for="edit_obra_longitude">Longitude</label><input id="edit_obra_longitude" autocomplete="off" inputmode="decimal" maxlength="24" placeholder="Opcional"></div></div>
+      <div class="obra-mapa-acoes">
+        <button type="button" class="btn-mini" onclick="obraAbrirMapa('edit_obra')"><i class="fa-solid fa-map-location-dot"></i> Ver no mapa</button>
+        <button type="button" class="btn-mini" onclick="obraPesquisarMapa('edit_obra')"><i class="fa-solid fa-magnifying-glass-location"></i> Procurar obra</button>
+      </div>
+      <details class="obra-importar-local" id="edit_obra_importar_painel">
+        <summary><i class="fa-solid fa-map-pin"></i> Importar ponto do Google Maps</summary>
+        <small>Abra o mapa, clique com o botão direito na portaria da obra e copie as coordenadas. Também aceita um link completo com coordenadas explícitas.</small>
+        <label for="edit_obra_mapa_texto">Coordenadas ou link completo</label>
+        <input id="edit_obra_mapa_texto" type="text" autocomplete="off" spellcheck="false" maxlength="4096" placeholder="Latitude, longitude ou link">
+        <button type="button" class="btn-mini" onclick="obraImportarPonto('edit_obra')"><i class="fa-solid fa-location-dot"></i> Aplicar localização</button>
+        <small>Links curtos: abra no Maps e copie as coordenadas do ponto. O endereço fiscal continua separado.</small>
+      </details>
+      <div><label for="edit_obra_referencia">Referência para entrega</label><input id="edit_obra_referencia" autocomplete="off" maxlength="250" placeholder="Portaria, km da rodovia, acesso..."></div>
+      <small id="edit_obra_geo_status" role="status" aria-live="polite"></small>
+    </aside>
+  </div>
+  <small id="edit_obra_cep_status" role="status" aria-live="polite">CEP opcional. Todos os campos podem ser preenchidos manualmente.</small>
+</div>
+      </div><div class="form-actions">
         <button class="btn-salvar" type="button" data-acao-permissao="EMPRESAS_EDITAR" onclick="salvarEdicaoObra()">💾 Salvar obra</button>
         <button class="btn-limpar" type="button" onclick="cancelarEdicaoEmpresa()">Cancelar</button>
       </div>
     </section>
 
-    <section class="card">
-      <h3>🔎 Buscar empresas</h3>
+    <section class="card emp-form" id="cardEdicaoCadastroEmpresa" hidden><div class="emp-form-scroll">
 
-      <div class="empresa-filtro-grid">
-        <input id="buscaEmpresa" placeholder="Buscar por nome, código, setor, cidade..." oninput="agendarBuscaEmpresas()">
-
-        <select id="filtroStatusEmpresa" onchange="reiniciarPaginacaoEmpresas()">
-          <option value="">Todos os status</option>
-          <option value="ATIVA">Ativas</option>
-          <option value="INATIVA">Inativas</option>
-        </select>
-
-        <select id="filtroEstadoEmpresa" onchange="reiniciarPaginacaoEmpresas()">
-          <option value="">Todos os estados</option>
-        </select>
+      <div class="edicao-aviso">Alterar o cadastro da empresa modifica os dados exibidos em todas as obras vinculadas a ela.
+      As obras, patrimônios, valores e assinaturas não serão alterados.</div>
+      <input type="hidden" id="edit_empresa_id">
+      <div class="empresa-form-grid">
+        <div><label>Código da empresa</label><input id="edit_empresa_codigo"></div>
+        <div><label>Nome da empresa</label><input id="edit_empresa_nome"></div>
+        <div><label>CNPJ</label><input id="edit_empresa_cnpj"></div>
+        <div><label>Setor/descrição no cadastro da empresa</label><input id="edit_empresa_setor"></div>
+        <div><label>Endereço</label><input id="edit_empresa_endereco"></div>
+        <div><label>Cidade</label><input id="edit_empresa_cidade"></div>
+        <div><label>Estado / UF</label><input id="edit_empresa_estado"></div>
+        <div><label>CEP</label><input id="edit_empresa_cep"></div>
+        <div><label>Telefone</label><input id="edit_empresa_telefone"></div>
+        <div style="grid-column:span 3"><label>Observação</label><input id="edit_empresa_observacao"></div>
+      </div>
+      </div><div class="form-actions">
+        <button type="button" class="btn-salvar" onclick="salvarEdicaoCadastroEmpresa()">💾 Salvar cadastro da empresa</button>
+        <button type="button" class="btn-limpar" onclick="cancelarEdicaoCadastroEmpresa()">Cancelar</button>
       </div>
     </section>
 
-    <section class="card">
-      <h3>📋 Empresas cadastradas</h3>
-
-      <div class="empresa-header">
-        <div>Empresa</div>
-        <div>Código</div>
-        <div>Setor / Obra</div>
-        <div>Cidade / UF</div>
-        <div>Status</div>
-        <div>Ações</div>
+      <section class="card emp-form" id="cardDetalheObra" hidden><div class="emp-form-scroll"><div id="empresaDetalheConteudo"></div></div><div class="form-actions"><button type="button" class="btn-limpar" onclick="exibirFormularioEmpresa()">Fechar</button></div></section>
       </div>
-
-      <div id="listaEmpresas"></div>
-      <div id="paginacaoEmpresas" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:14px" aria-live="polite">
-        <span id="resumoPaginacaoEmpresas"></span>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <label for="tamanhoPaginaEmpresas">Por página</label>
-          <select id="tamanhoPaginaEmpresas" onchange="alterarTamanhoPaginaEmpresas()"><option value="15">15</option><option value="25">25</option><option value="50">50</option></select>
-          <button type="button" class="btn-mini" id="paginaEmpresasAnterior" onclick="mudarPaginaEmpresas(-1)">← Anterior</button>
-          <span id="indicadorPaginaEmpresas"></span>
-          <button type="button" class="btn-mini" id="paginaEmpresasProxima" onclick="mudarPaginaEmpresas(1)">Próxima →</button>
-        </div>
-      </div>
-    </section>
-
-    <section class="card">
-      <h3>🧾 Últimas movimentações de empresas</h3>
-      <div id="listaMovEmpresas" class="mov-empresa-lista"></div>
-    </section>
-
+    </div>
+  </div>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
@@ -430,7 +650,35 @@ window.client = supabase.createClient(supabaseUrl, supabaseKey);
 window.supabaseClient = window.client;
 </script>
 
+<script src="./JS/componentes/atlasPaginacao.js?v=20261109-fix02"></script>
 <script>
+
+// Reutiliza o AtlasDialog carregado pelo shell. Sem fallback para popups nativos.
+let empDialogOcupado=false;
+function empAviso(mensagem){
+  if(typeof window.bdrAvisoAtlas==='function')return window.bdrAvisoAtlas(String(mensagem));
+  const area=document.getElementById('empAvisoLocal');
+  if(area){area.hidden=false;area.textContent=String(mensagem);}
+}
+async function empConfirmar(mensagem){
+  if(empDialogOcupado)return false;
+  if(typeof window.bdrConfirmarAtlas!=='function'){empAviso('Componente de confirmação indisponível. Atualize a página antes de continuar.');return false;}
+  empDialogOcupado=true;const foco=document.activeElement;
+  try{return await window.bdrConfirmarAtlas(mensagem,'Confirmação','Confirmar')===true&&!!document.getElementById('empresaModulo');}
+  finally{empDialogOcupado=false;if(foco?.isConnected)foco.focus();}
+}
+async function empConfirmarTexto(mensagem,esperado){
+  if(empDialogOcupado||typeof window.bdrConfirmarAtlas!=='function')return false;
+  empDialogOcupado=true;const foco=document.activeElement;let input;
+  try{
+    const pendente=window.bdrConfirmarAtlas(mensagem,'Confirmação de exclusão','Excluir');
+    const area=document.getElementById('atlasDialogText');
+    if(area){input=document.createElement('input');input.type='text';input.autocomplete='off';input.setAttribute('aria-label','Digite a confirmação de exclusão');input.placeholder=esperado;input.style.cssText='display:block;width:100%;box-sizing:border-box;padding:9px;margin-top:10px;border:1px solid #cbd5e1;border-radius:8px';area.appendChild(input);}
+    const ok=await pendente;
+    return ok===true&&input?.value===esperado&&!!document.getElementById('empresaModulo');
+  }finally{input?.remove();empDialogOcupado=false;if(foco?.isConnected)foco.focus();}
+}
+
 let empresas = [];
 let obrasEmpresas = [];
 let movimentacoesEmpresas = [];
@@ -480,6 +728,7 @@ function preencherDadosBDR(prefixo=""){
 }
 
 function aplicarPadraoBDR(){
+  if(campo("empresa_existente"))return;
   const nome = document.getElementById("nome");
   if(!nome) return;
 
@@ -511,63 +760,54 @@ async function buscarEmpresaPadraoBDR(){
 // A empresa padrão BDR não é atualizada durante o cadastro de obras.
 // Isso evita gravações desnecessárias e respostas 406 do PostgREST.
 
-async function salvarOuAtualizarObraDaEmpresa(empresaId, dados){
-  const nomeObra = String(dados.setor_obra || "").trim().toUpperCase();
-  const codigoObra = String(dados.codigo_sienge_obra || dados.codigo_empresa || "").trim();
-
-  if(!empresaId){
-    throw new Error("Empresa não identificada para vincular a obra.");
+async function operacaoSeguraEmpresaObra(acao, dados){
+  const banco=db();
+  if(!banco) throw new Error("Conexão Supabase indisponível.");
+  const {data,error}=await banco.rpc("atlas_empresa_obra_operacao",{p_acao:acao,p_dados:dados});
+  if(error){
+    if(/function .* does not exist|could not find the function|PGRST202/i.test(error.message||"")){
+      throw new Error("A correção de cadastro ainda não foi instalada no Supabase. Instale o arquivo sql/atlas_empresas_obras_rpc.sql uma única vez.");
+    }
+    throw error;
   }
+  if(!data || !data.id) throw new Error("O Supabase não confirmou a gravação. Consulte o cadastro antes de tentar de novo.");
+  return data;
+}
 
-  if(!nomeObra){
-    throw new Error("Informe o nome da obra/setor.");
+function preencherFormularioEmpresa(e){
+  for(const [campoId,chave] of Object.entries({
+    nome:"nome",codigo_empresa:"codigo_empresa",cnpj:"cnpj",cidade:"cidade",estado:"estado",
+    endereco:"endereco",cep:"cep",telefone:"telefone",observacao:"observacao"
+  })){
+    const el=document.getElementById(campoId);
+    if(el) el.value=String(e?.[chave]??"");
   }
-
-  if(!codigoObra){
-    throw new Error("Informe o código Sienge da obra.");
+}
+function selecionarEmpresaExistente(){
+  const id=Number(campo("empresa_existente"));
+  const e=empresas.find(x=>Number(x.id)===id);
+  const campos=["nome","codigo_empresa","cnpj","cidade","estado","endereco","cep","telefone","observacao"];
+  if(e) preencherFormularioEmpresa(e);
+  campos.forEach(idCampo=>{
+    const el=document.getElementById(idCampo);
+    if(el) el.readOnly=!!e;
+  });
+  document.getElementById("avisoEmpresaExistente").textContent=e
+    ? `Vinculando nova obra a ${e.nome} (ID ${e.id}). Para corrigir CNPJ/endereço use "Editar cadastro da empresa" nos Detalhes.`
+    : "Nova empresa: preencha os dados cadastrais e a primeira obra. Se a empresa já existir, selecione-a acima.";
+  if(!e){
+    campos.forEach(idCampo=>{const el=document.getElementById(idCampo);if(el)el.value="";});
   }
-
-  // Cadastro deve ser previsível: nunca sobrescrever uma obra existente.
-  const { data: obrasEncontradas, error: erroBusca } = await db()
-    .from("obras")
-    .select("id,codigo_obra,nome,empresa_id")
-    .eq("empresa_id", Number(empresaId))
-    .eq("codigo_obra", codigoObra)
-    .limit(2);
-
-  if(erroBusca) throw erroBusca;
-
-  if(Array.isArray(obrasEncontradas) && obrasEncontradas.length > 0){
-    const existente = obrasEncontradas[0];
-    throw new Error(
-      `Já existe uma obra com o código ${codigoObra} nesta empresa: ${existente.nome || "-"}. Nada foi alterado.`
-    );
-  }
-
-  const payloadObra = {
-    empresa_id: Number(empresaId),
-    nome: nomeObra,
-    codigo_obra: codigoObra,
-    codigo_sienge: codigoObra,
-    tabela_insumo: Number(dados.tabela_insumo || EMPRESA_PADRAO_BDR.tabela_insumo || 2),
-    ativa: true,
-    ativo: true
-  };
-
-  const { data: obraNova, error } = await db()
-    .from("obras")
-    .insert([payloadObra])
-    .select("id,codigo_obra,nome,empresa_id")
-    .limit(1);
-
-  if(error) throw error;
-
-  const novaObra = Array.isArray(obraNova) ? obraNova[0] : null;
-  if(!novaObra?.id){
-    throw new Error("A obra não retornou confirmação após o cadastro. Confira o banco antes de tentar novamente.");
-  }
-
-  return novaObra;
+}
+function renderizarSeletorEmpresas(){
+  const seletor=document.getElementById("empresa_existente");
+  if(!seletor) return;
+  const anterior=seletor.value;
+  seletor.replaceChildren(new Option("Nova empresa / cadastrar a primeira obra",""));
+  empresas.slice().sort((a,b)=>String(a.nome).localeCompare(String(b.nome),'pt-BR')).forEach(e=>{
+    seletor.add(new Option(`${e.nome} · ID ${e.id} · ${e.codigo_empresa||"sem código"}`,String(e.id)));
+  });
+  if([...seletor.options].some(op=>op.value===anterior)) seletor.value=anterior;
 }
 
 function ir(pagina){
@@ -601,7 +841,7 @@ function usuarioTemPermissaoEmpresaBDR(permissao, usuario = usuarioAtual()){
 
 function exigirPermissaoEmpresaBDR(permissao, mensagem){
   if(usuarioTemPermissaoEmpresaBDR(permissao)) return true;
-  alert(mensagem || "Você não tem permissão para executar esta ação.");
+  empAviso(mensagem || "Você não tem permissão para executar esta ação.");
   return false;
 }
 
@@ -616,7 +856,7 @@ function aplicarAcoesEmpresaPorPermissao(){
 
 function bloquearTelaEmpresaSemPermissao(){
   if(usuarioTemPermissaoEmpresaBDR("EMPRESAS_VER")) return true;
-  alert("Você não tem permissão para acessar Empresas.");
+  empAviso("Você não tem permissão para acessar Empresas.");
   location.href = "dashboard.html";
   return false;
 }
@@ -625,6 +865,125 @@ function campo(id){
   const el = document.getElementById(id);
   return el ? String(el.value || "").trim() : "";
 }
+
+
+const obraEnderecoCampos=["cep","municipio","uf","bairro","logradouro","numero","complemento","referencia","latitude","longitude"];
+const obraEnderecoEstado=new Map();
+function obraEstado(p){if(!obraEnderecoEstado.has(p))obraEnderecoEstado.set(p,{versao:0,cepReq:0,geoReq:0,auto:{},timer:null});return obraEnderecoEstado.get(p);}
+function obraCampo(p,k){return document.getElementById(p+'_'+k);}
+function obraMensagem(p,k,msg){const el=obraCampo(p,k+'_status');if(el)el.textContent=msg;}
+function obraPreencherEndereco(p,dados={}){
+  const s=obraEstado(p);clearTimeout(s.timer);s.versao++;s.cepReq++;s.geoReq++;s.auto={};
+  for(const k of obraEnderecoCampos){const el=obraCampo(p,k);if(el)el.value=String(dados?.[k]??'');}
+  const cep=obraCampo(p,'cep');if(/^\d{8}$/.test(cep.value))cep.value=cep.value.replace(/^(\d{5})(\d{3})$/,'$1-$2');
+  obraMensagem(p,'cep','CEP opcional. Todos os campos podem ser preenchidos manualmente.');
+  obraMensagem(p,'geo','');
+  const link=obraCampo(p,'mapa_texto'),painel=obraCampo(p,'importar_painel');if(link)link.value='';if(painel)painel.open=false;
+}
+function obraLerEndereco(p){
+  const d={};
+  for(const k of obraEnderecoCampos){const v=campo(p+'_'+k);if(v)d[k]=v;}
+  if(d.cep){d.cep=d.cep.replace(/\D/g,'');if(!/^\d{8}$/.test(d.cep))throw Error('CEP da obra deve conter 8 números.');}
+  if(d.uf){d.uf=d.uf.toUpperCase();if(!['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].includes(d.uf))throw Error('UF da obra inválida.');}
+  if((d.latitude===undefined)!==(d.longitude===undefined))throw Error('Informe latitude e longitude juntas, ou deixe ambas vazias.');
+  if(d.latitude!==undefined){const lat=Number(d.latitude.replace(',','.')),lng=Number(d.longitude.replace(',','.'));if(!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180)throw Error('Coordenadas inválidas.');d.latitude=lat;d.longitude=lng;}
+  return d;
+}
+function obraCepDigitado(p){
+  const s=obraEstado(p),el=obraCampo(p,'cep'),v=el.value.replace(/\D/g,'').slice(0,8);
+  el.value=v.length>5?v.slice(0,5)+'-'+v.slice(5):v;clearTimeout(s.timer);s.cepReq++;
+  if(v.length===8)s.timer=setTimeout(()=>obraBuscarCep(p,false),350);
+  else obraMensagem(p,'cep','Informe 8 números para buscar ou preencha manualmente.');
+}
+async function obraBuscarCep(p,manual=false){
+  const s=obraEstado(p);clearTimeout(s.timer);const cep=campo(p+'_cep').replace(/\D/g,'');
+  if(!/^\d{8}$/.test(cep)){obraMensagem(p,'cep','Informe um CEP com 8 números.');return;}
+  const req=++s.cepReq,versao=s.versao;const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),8000);
+  obraMensagem(p,'cep','Consultando CEP...');
+  try{
+    const resp=await fetch('https://viacep.com.br/ws/'+cep+'/json/',{signal:ctrl.signal});
+    if(!resp.ok)throw Error('Consulta indisponível');
+    const d=await resp.json();
+    if(req!==s.cepReq||versao!==s.versao||campo(p+'_cep').replace(/\D/g,'')!==cep)return;
+    if(d.erro){obraMensagem(p,'cep','CEP não encontrado. Preencha o endereço manualmente.');return;}
+    const dados={municipio:d.localidade,uf:d.uf,bairro:d.bairro,logradouro:d.logradouro};
+    const conflitos=Object.entries(dados).filter(([k,v])=>v&&campo(p+'_'+k)&&campo(p+'_'+k)!==v&&campo(p+'_'+k)!==s.auto[k]);
+    const substituir=manual&&conflitos.length&&await empConfirmar('Substituir os campos de endereço já preenchidos pelos dados do CEP? Número, complemento e coordenadas serão mantidos.');
+    if(req!==s.cepReq||versao!==s.versao||campo(p+'_cep').replace(/\D/g,'')!==cep)return;
+    for(const [k,v] of Object.entries(dados)){if(!v)continue;const el=obraCampo(p,k);if(!el.value||el.value===s.auto[k]||substituir){el.value=v;s.auto[k]=v;}}
+    obraMensagem(p,'cep',conflitos.length&&!substituir?'CEP encontrado. Campos manuais preservados; confira se pertencem ao novo CEP.':(!d.logradouro?'CEP encontrado, sem logradouro específico. Informe rua, bairro e número reais da obra.':'CEP encontrado. Confira os dados e complete número e referência.'));
+  }catch(e){if(req===s.cepReq&&versao===s.versao)obraMensagem(p,'cep','Consulta indisponível. Preencha manualmente ou tente novamente.');}
+  finally{clearTimeout(timer);}
+}
+async function obraCapturarLocalizacao(p){
+  if(!navigator.geolocation){obraMensagem(p,'geo','Localização indisponível neste navegador. Informe coordenadas manualmente.');return;}
+  const s=obraEstado(p),versao=s.versao;
+  if(!await empConfirmar('Você está fisicamente na obra? A localização atual será inserida no formulário, sem salvar automaticamente.'))return;
+  if(versao!==s.versao)return;const req=++s.geoReq;
+  obraMensagem(p,'geo','Aguardando autorização de localização...');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    if(req!==s.geoReq||versao!==s.versao)return;
+    obraCampo(p,'latitude').value=String(pos.coords.latitude.toFixed(6));
+    obraCampo(p,'longitude').value=String(pos.coords.longitude.toFixed(6));
+    obraMensagem(p,'geo','Localização capturada. Precisão aproximada: '+Math.round(pos.coords.accuracy)+' m. Confira no mapa e confirme que corresponde ao endereço informado; o GPS não preenche dados fiscais.');
+  },()=>{if(req===s.geoReq&&versao===s.versao)obraMensagem(p,'geo','Não foi possível obter a localização. Confira a permissão ou informe manualmente.');},{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+}
+function obraAbrirMapa(p){
+  let d;try{d=obraLerEndereco(p);}catch(e){empAviso(e.message);return;}
+  const q=d.latitude!==undefined?[d.latitude,d.longitude].join(','):[d.logradouro,d.numero,d.bairro,d.municipio,d.uf,d.cep,'Brasil'].filter(Boolean).join(', ');
+  if(d.latitude===undefined&&!d.municipio&&!d.cep){empAviso('Informe coordenadas, município ou CEP para consultar o mapa.');return;}
+  window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q),'_blank','noopener,noreferrer');
+}
+
+// Importação exclusivamente local. Nenhum link é requisitado ou resolvido pelo Atlas.
+function obraInterpretarPonto(texto){
+  const t=String(texto||'').trim();
+  if(!t||t.length>4096)throw Error('Cole as coordenadas ou um link completo do Google Maps.');
+  function validar(lat,lng){
+    const a=Number(lat),b=Number(lng);
+    if(!Number.isFinite(a)||!Number.isFinite(b)||Math.abs(a)>90||Math.abs(b)>180)throw Error('Coordenadas fora dos limites válidos.');
+    return {lat:a,lng:b};
+  }
+  function par(s){const m=String(s||'').trim().match(/^([+-]?\d+(?:\.\d+)?)\s*[,;]\s*([+-]?\d+(?:\.\d+)?)$/);return m?validar(m[1],m[2]):null;}
+  const decimal=par(t);if(decimal)return decimal;
+  const dms=t.match(/^(\d{1,2})\s*°\s*(\d{1,2})\s*['′]\s*(\d+(?:\.\d+)?)\s*["″]\s*([NS])\s*[,;]?\s*(\d{1,3})\s*°\s*(\d{1,2})\s*['′]\s*(\d+(?:\.\d+)?)\s*["″]\s*([EWO])$/i);
+  if(dms){const conv=(d,m,s,dir)=>{if(+m>=60||+s>=60)throw Error('Minutos ou segundos inválidos.');return (+d+(+m)/60+(+s)/3600)*(/[SWO]/i.test(dir)?-1:1);};return validar(conv(...dms.slice(1,5)),conv(...dms.slice(5,9)));}
+  let u;try{u=new URL(t);}catch(_){throw Error('Formato não reconhecido. Copie as coordenadas do ponto no Google Maps.');}
+  const host=u.hostname.toLowerCase();
+  if(u.protocol!=='https:'||!['google.com','www.google.com','maps.google.com','google.com.br','www.google.com.br','maps.google.com.br','maps.app.goo.gl','goo.gl'].includes(host)||u.username||u.password)throw Error('Use coordenadas ou um link HTTPS do Google Maps.');
+  if(host==='maps.app.goo.gl'||host==='goo.gl')throw Error('Esse link é curto. Abra-o no navegador e copie as coordenadas do ponto selecionado.');
+  if(!u.pathname.startsWith('/maps')&&!host.startsWith('maps.'))throw Error('O link não parece ser do Google Maps.');
+  if(/\/dir(?:\/|$)/.test(u.pathname))throw Error('Links de rota podem ter vários pontos. Copie apenas as coordenadas da obra.');
+  const candidatos=[];
+  for(const k of ['query','q']){const p=par(u.searchParams.get(k));if(p)candidatos.push(p);}
+  let dec;try{dec=decodeURIComponent(u.pathname);}catch(_){dec=u.pathname;}
+  for(const m of dec.matchAll(/!3d([+-]?\d+(?:\.\d+)?)!4d([+-]?\d+(?:\.\d+)?)(?=[!\/]|$)/g))candidatos.push(validar(m[1],m[2]));
+  const pontos=[...new Map(candidatos.map(p=>[p.lat.toFixed(6)+','+p.lng.toFixed(6),p])).values()];
+  if(pontos.length===1)return pontos[0];
+  if(pontos.length>1)throw Error('O link contém mais de um ponto. Copie as coordenadas da portaria da obra.');
+  // @lat,lng e ll podem indicar apenas o centro da câmera, não o imóvel.
+  throw Error('O link não identifica um ponto único. No Maps, clique com o botão direito sobre a obra e copie as coordenadas exibidas.');
+}
+async function obraImportarPonto(p){
+  const s=obraEstado(p),versao=s.versao,entrada=obraCampo(p,'mapa_texto'),texto=String(entrada?.value||'');
+  let ponto;try{ponto=obraInterpretarPonto(texto);}catch(e){obraMensagem(p,'geo',e.message);return;}
+  if(!await empConfirmar('Aplicar o ponto selecionado ('+ponto.lat.toFixed(6)+', '+ponto.lng.toFixed(6)+')? Confira se é a localização real da obra. O endereço postal não será alterado.'))return;
+  if(versao!==s.versao||entrada.value!==texto)return;
+  s.geoReq++;obraCampo(p,'latitude').value=ponto.lat.toFixed(6);obraCampo(p,'longitude').value=ponto.lng.toFixed(6);
+  entrada.value='';obraCampo(p,'importar_painel').open=false;
+  obraMensagem(p,'geo','Ponto importado. Confira no mapa se corresponde à portaria e ao município cadastrado antes de salvar.');
+}
+function obraPesquisarMapa(p){
+  const nome=campo(p==='edit_obra'?'edit_nome_obra':'setor_obra');
+  const dados=['logradouro','numero','bairro','municipio','uf','cep'].map(k=>campo(p+'_'+k)).filter(Boolean);
+  const q=[...(dados.length?dados:[nome]),'Brasil'].filter(Boolean).join(', ');
+  if(!dados.length&&!nome){empAviso('Informe a obra ou o município para pesquisar.');return;}
+  window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q),'_blank','noopener,noreferrer');
+  const painel=obraCampo(p,'importar_painel');if(painel)painel.open=true;
+  obraMensagem(p,'geo','Escolha o ponto da obra no Maps e copie as coordenadas para importar. A busca do mapa não altera o cadastro.');
+}
+
+function obraEnderecoIgual(a,b){return obraEnderecoCampos.every(k=>String(a?.[k]??'')===String(b?.[k]??''));}
 
 function obraDaEmpresa(empresaId){
   return obrasEmpresas.find(o => String(o.empresa_id) === String(empresaId)) || null;
@@ -636,104 +995,38 @@ function usuarioAtual(){
 }
 
 async function salvarEmpresa(){
-
   if(!exigirPermissaoEmpresaBDR("EMPRESAS_CRIAR", "Você não tem permissão para cadastrar empresa/obra.")) return;
-
-  aplicarPadraoBDR();
-
-  const empresa = {
-    nome: campo("nome"),
-    codigo_empresa: campo("codigo_empresa"),
-    setor_obra: campo("setor_obra"),
-    codigo_sienge_obra: campo("codigo_sienge_obra"),
-    tabela_insumo: campo("tabela_insumo") || "2",
-    cnpj: campo("cnpj"),
-    cidade: campo("cidade"),
-    estado: campo("estado"),
-    endereco: campo("endereco"),
-    cep: campo("cep"),
-    observacao: campo("observacao"),
-    ativa: true
+  let empresaId=Number(campo("empresa_existente"))||null;
+  if(!empresaId && ehEmpresaBDR(campo("nome"))) empresaId=EMPRESA_PADRAO_BDR.id;
+  // O código da obra é independente do código da empresa e do código Sienge.
+  const codigoObra=campo("codigo_obra");
+  const codigoSienge=campo("codigo_sienge_obra") || codigoObra;
+  const nomeObra=campo("setor_obra");
+  const tabela=Number(campo("tabela_insumo"));
+  if(!nomeObra || !codigoObra || ![2,3].includes(tabela)){
+    empAviso("Informe nome da obra, código próprio da obra e tabela de insumo válida.");return;
+  }
+  if(!empresaId && (!campo("nome") || !campo("codigo_empresa"))){
+    empAviso("Para uma empresa nova informe o nome e o código da empresa.");return;
+  }
+  let enderecoOperacional;try{enderecoOperacional=obraLerEndereco("novo_obra");}catch(e){return empAviso(e.message);}
+  const payload={
+    endereco_operacional:enderecoOperacional,empresa_id:empresaId,codigo_obra:codigoObra,nome_obra:nomeObra,codigo_sienge:codigoSienge,
+    tabela_insumo:tabela,nome_empresa:campo("nome"),codigo_empresa:campo("codigo_empresa"),
+    cnpj:campo("cnpj"),cidade:campo("cidade"),estado:campo("estado"),
+    endereco:campo("endereco"),cep:campo("cep"),telefone:campo("telefone"),observacao:campo("observacao")
   };
-
-  if(!empresa.nome){
-    alert("Informe o nome da empresa.");
-    return;
-  }
-
-  if(!empresa.codigo_empresa){
-    alert("Informe o código da empresa.");
-    return;
-  }
-
-  if(!empresa.setor_obra){
-    alert("Informe o setor / obra.");
-    return;
-  }
-
+  const botao=document.querySelector('button[onclick="salvarEmpresa()"]');
+  if(botao)botao.disabled=true;
   try{
-    if(ehEmpresaBDR(empresa.nome)){
-      const existeBDR = await buscarEmpresaPadraoBDR();
-
-      if(!existeBDR){
-        alert("Empresa padrão BDR CONSTRUART ID 17 não encontrada. Verifique no banco.");
-        return;
-      }
-
-      // Ao cadastrar uma obra da BDR, não atualizar a empresa 17.
-      // A empresa já existe e seus dados não devem ser regravados a cada nova obra.
-      const obraCriada = await salvarOuAtualizarObraDaEmpresa(EMPRESA_PADRAO_BDR.id, empresa);
-
-      await registrarMovimentacaoEmpresa(
-        "CADASTRO_OBRA_SETOR",
-        existeBDR,
-        `Obra/setor vinculado à BDR oficial ID ${EMPRESA_PADRAO_BDR.id}: ${obraCriada.nome || "-"} | Código da obra: ${obraCriada.codigo_obra || "-"} | Tabela: ${empresa.tabela_insumo || "2"}`
-      );
-
-      alert(`Obra cadastrada com sucesso: ${obraCriada.codigo_obra} - ${obraCriada.nome}`);
-    }else{
-      const { data: empresaCriada, error } = await db()
-        .from("empresas")
-        .insert([{
-          nome: empresa.nome,
-          codigo_empresa: empresa.codigo_empresa,
-          setor_obra: empresa.setor_obra,
-          cnpj: empresa.cnpj,
-          cidade: empresa.cidade,
-          estado: empresa.estado,
-          endereco: empresa.endereco,
-          cep: empresa.cep,
-          observacao: empresa.observacao,
-          ativa: true
-        }])
-        .select("id,nome,codigo_empresa,setor_obra")
-        .limit(1);
-
-      if(error) throw error;
-
-      const novaEmpresa = Array.isArray(empresaCriada) ? empresaCriada[0] : null;
-      if(!novaEmpresa?.id){
-        throw new Error("A empresa não retornou confirmação após o cadastro. Confira o banco antes de tentar novamente.");
-      }
-
-      await salvarOuAtualizarObraDaEmpresa(novaEmpresa.id, empresa);
-
-      await registrarMovimentacaoEmpresa(
-        "CADASTRO_EMPRESA",
-        novaEmpresa,
-        `Empresa cadastrada: ${empresa.nome || "-"} | Código: ${empresa.codigo_empresa || "-"} | Setor/Obra: ${empresa.setor_obra || "-"}`
-      );
-
-      alert("Empresa e obra/setor cadastrados com sucesso!");
-    }
-
+    const retorno=await operacaoSeguraEmpresaObra("CRIAR",payload);
     limparFormulario();
+    if(botao)botao.disabled=false;
+    exibirFormularioEmpresa();
     await carregarEmpresas();
-
-  }catch(e){
-    console.error(e);
-    alert(e.message || "Erro ao salvar empresa/obra.");
-  }
+    empAviso(`Cadastro confirmado! Obra ${retorno.codigo_obra} - ${retorno.nome} (ID ${retorno.id}), empresa ID ${retorno.empresa_id}.`);
+  }catch(e){console.error("Erro ao cadastrar empresa/obra:",e);empAviso("Erro ao cadastrar empresa/obra: "+(e.message||String(e)));}
+  finally{if(botao)botao.disabled=false;}
 }
 // Consultas paginadas no servidor: não carrega toda a tabela de obras.
 let paginaEmpresas = 1;
@@ -742,95 +1035,82 @@ let totalObrasEmpresas = 0;
 let tokenConsultaEmpresas = 0;
 let timerBuscaEmpresas = null;
 
-function agendarBuscaEmpresas(){
-  clearTimeout(timerBuscaEmpresas);
-  timerBuscaEmpresas = setTimeout(reiniciarPaginacaoEmpresas, 300);
+let empPaginadores=[];
+const empUFs=['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+const empCamposEndereco=['municipio','uf','logradouro'];
+function empEnderecoCompleto(d){return empCamposEndereco.every(k=>String(d?.[k]??'').trim()!=='');}
+function empFiltrarEndereco(q,tipo){
+  if(tipo==='COM') for(const k of empCamposEndereco)q=q.not('endereco_operacional->>'+k,'is',null).neq('endereco_operacional->>'+k,'');
+  if(tipo==='PENDENTE')q=q.or(empCamposEndereco.flatMap(k=>['endereco_operacional->>'+k+'.is.null','endereco_operacional->>'+k+'.eq.']).join(','));
+  return q;
 }
-function reiniciarPaginacaoEmpresas(){
-  paginaEmpresas = 1;
-  consultarPaginaEmpresas();
-}
-function alterarTamanhoPaginaEmpresas(){
-  tamanhoPaginaEmpresas = Number(document.getElementById("tamanhoPaginaEmpresas").value) || 15;
-  reiniciarPaginacaoEmpresas();
-}
-function mudarPaginaEmpresas(direcao){
-  const limite = Math.max(1, Math.ceil(totalObrasEmpresas / tamanhoPaginaEmpresas));
-  const destino = Math.min(limite, Math.max(1, paginaEmpresas + direcao));
-  if(destino === paginaEmpresas) return;
-  paginaEmpresas = destino;
-  consultarPaginaEmpresas();
-}
+function agendarBuscaEmpresas(){clearTimeout(timerBuscaEmpresas);timerBuscaEmpresas=setTimeout(reiniciarPaginacaoEmpresas,300);}
+function reiniciarPaginacaoEmpresas(){clearTimeout(timerBuscaEmpresas);paginaEmpresas=1;consultarPaginaEmpresas();}
+function limparFiltrosEmpresa(){for(const id of ['buscaEmpresa','filtroEmpresaVinculada','filtroStatusEmpresa','filtroEstadoEmpresa','filtroEnderecoEmpresa'])document.getElementById(id).value='';reiniciarPaginacaoEmpresas();}
+function alterarTamanhoPaginaEmpresas(){tamanhoPaginaEmpresas=Number(campo('tamanhoPaginaEmpresas'))||15;reiniciarPaginacaoEmpresas();}
+function empIrPagina(n){const limite=Math.max(1,Math.ceil(totalObrasEmpresas/tamanhoPaginaEmpresas));if(!Number.isSafeInteger(n)||n<1||n>limite||n===paginaEmpresas)return;paginaEmpresas=n;consultarPaginaEmpresas();}
+function mudarPaginaEmpresas(direcao){empIrPagina(paginaEmpresas+direcao);}
 function atualizarPaginacaoEmpresas(){
-  const paginas = Math.max(1, Math.ceil(totalObrasEmpresas / tamanhoPaginaEmpresas));
-  document.getElementById("resumoPaginacaoEmpresas").textContent = `${totalObrasEmpresas} obra(s) encontrada(s)`;
-  document.getElementById("indicadorPaginaEmpresas").textContent = `Página ${paginaEmpresas} de ${paginas}`;
-  document.getElementById("paginaEmpresasAnterior").disabled = paginaEmpresas <= 1;
-  document.getElementById("paginaEmpresasProxima").disabled = paginaEmpresas >= paginas;
+  const opts={pagina:paginaEmpresas,total:totalObrasEmpresas,porPagina:tamanhoPaginaEmpresas};
+  document.getElementById('resumoPaginacaoEmpresas').textContent=totalObrasEmpresas.toLocaleString('pt-BR')+' registros encontrados';
+  if(!window.AtlasPaginacao){for(const id of ['paginacaoEmpresasTopo','paginacaoEmpresasBaixo']){const e=document.getElementById(id);e.replaceChildren();const prev=document.createElement('button'),next=document.createElement('button'),info=document.createElement('span');prev.type=next.type='button';prev.textContent='Anterior';next.textContent='Próxima';info.textContent=' '+paginaEmpresas+' de '+Math.max(1,Math.ceil(totalObrasEmpresas/tamanhoPaginaEmpresas))+' ';prev.disabled=paginaEmpresas===1;next.disabled=paginaEmpresas>=Math.ceil(totalObrasEmpresas/tamanhoPaginaEmpresas);prev.onclick=()=>mudarPaginaEmpresas(-1);next.onclick=()=>mudarPaginaEmpresas(1);e.append(prev,info,next);}return;}
+  if(!empPaginadores.length)for(const id of ['paginacaoEmpresasTopo','paginacaoEmpresasBaixo'])empPaginadores.push(window.AtlasPaginacao.criar({...opts,elemento:document.getElementById(id),rotulo:'Paginação de obras',aoMudar:empIrPagina}));
+  else empPaginadores.forEach(p=>p.atualizar(opts));
+}
+async function carregarIndicadoresEmpresa(){
+  const ids=['empKpiObras','empKpiEndereco','empKpiPendente'];
+  try{
+    const [a,b]=await Promise.all([db().from('obras').select('id',{count:'exact',head:true}),empFiltrarEndereco(db().from('obras').select('id',{count:'exact',head:true}),'COM')]);
+    if(a.error||b.error)throw a.error||b.error;
+    const total=a.count??0,com=b.count??0;
+    [total,com,total-com].forEach((v,i)=>document.getElementById(ids[i]).textContent=v.toLocaleString('pt-BR'));
+  }catch(e){console.warn('Indicadores de obras:',e);ids.forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='—';});}
 }
 async function carregarEmpresas(){
-  // Metadados das empresas são usados para exibir nome/cidade e filtrar por estado.
-  // As obras, que crescem mais rapidamente, são buscadas por páginas no Supabase.
-  const { data, error } = await db().from("empresas").select("*").order("nome");
-  if(error){ alert("Erro ao carregar empresas: " + error.message); return; }
-  empresas = data || [];
-  carregarFiltroEstados();
-  await Promise.all([consultarPaginaEmpresas(), carregarMovimentacoesEmpresas()]);
-  aplicarAcoesEmpresaPorPermissao();
-  renderizarMovimentacoesEmpresas();
+  const {data,error}=await db().from('empresas').select('*').order('nome');
+  if(error){empAviso('Erro ao carregar empresas: '+error.message);return;}
+  empresas=data||[];
+  document.getElementById('empKpiEmpresas').textContent=empresas.length.toLocaleString('pt-BR');
+  renderizarSeletorEmpresas();carregarFiltroEstados();
+  const f=document.getElementById('filtroEmpresaVinculada'),anterior=f.value;
+  f.replaceChildren(new Option('Todas as empresas',''));empresas.forEach(e=>f.add(new Option([e.nome,e.codigo_empresa].filter(Boolean).join(' · '),String(e.id))));
+  if([...f.options].some(o=>o.value===anterior))f.value=anterior;
+  await Promise.all([consultarPaginaEmpresas(),carregarIndicadoresEmpresa(),carregarMovimentacoesEmpresas()]);
+  aplicarAcoesEmpresaPorPermissao();renderizarMovimentacoesEmpresas();
 }
 async function consultarPaginaEmpresas(){
-  const token = ++tokenConsultaEmpresas;
-  const lista = document.getElementById("listaEmpresas");
-  lista.textContent = "Carregando obras...";
-  const termo = campo("buscaEmpresa").trim();
-  const estado = campo("filtroEstadoEmpresa");
-  const status = campo("filtroStatusEmpresa");
-  let consulta = db().from("obras").select("*", {count:"exact"});
-  if(status === "ATIVA") consulta = consulta.eq("ativa", true);
-  if(status === "INATIVA") consulta = consulta.eq("ativa", false);
-  const empresasEstado = estado ? empresas.filter(e => e.estado === estado) : empresas;
-  if(estado){
-    const ids = empresasEstado.map(e => e.id);
-    if(!ids.length){ obrasEmpresas=[]; totalObrasEmpresas=0; renderizarEmpresas(); atualizarPaginacaoEmpresas(); return; }
-    consulta = consulta.in("empresa_id", ids);
-  }
+  const token=++tokenConsultaEmpresas,lista=document.getElementById('listaEmpresas');
+  lista.textContent='Carregando obras...';
+  const termo=campo('buscaEmpresa'),estado=campo('filtroEstadoEmpresa'),status=campo('filtroStatusEmpresa'),empresa=campo('filtroEmpresaVinculada'),endereco=campo('filtroEnderecoEmpresa'),ordem=campo('ordemEmpresa');
+  let consulta=db().from('obras').select('*',{count:'exact'});
+  if(status==='ATIVA')consulta=consulta.or('ativa.is.true,ativa.is.null').or('ativo.is.true,ativo.is.null');
+  if(status==='INATIVA')consulta=consulta.or('ativa.is.false,ativo.is.false');
+  if(empresa)consulta=consulta.eq('empresa_id',Number(empresa));
+  if(estado)consulta=consulta.eq('endereco_operacional->>uf',estado);
+  consulta=empFiltrarEndereco(consulta,endereco);
   if(termo){
-    // Busca pelo código/nome da obra e pelos dados da empresa associada.
-    const termoNormalizado = normalizarTexto(termo);
-    const idsEmpresa = empresasEstado.filter(e => normalizarTexto([e.nome,e.codigo_empresa,e.setor_obra,e.cidade,e.estado,e.cnpj].join(" ")).includes(termoNormalizado)).map(e=>e.id);
-    const seguro = termo.replace(/[%_,().]/g, " ").trim();
-    const filtros = [`nome.ilike.%${seguro}%`, `codigo_obra.ilike.%${seguro}%`];
-    if(idsEmpresa.length) filtros.push(`empresa_id.in.(${idsEmpresa.join(",")})`);
-    consulta = consulta.or(filtros.join(","));
+    const normal=normalizarTexto(termo);
+    const ids=empresas.filter(e=>normalizarTexto([e.nome,e.codigo_empresa,e.cnpj].join(' ')).includes(normal)).map(e=>Number(e.id)).filter(Number.isSafeInteger);
+    const seguro=termo.replace(/[%_,()."\\]/g,' ').trim();
+    if(!seguro&&!ids.length){obrasEmpresas=[];totalObrasEmpresas=0;paginaEmpresas=1;renderizarEmpresas();atualizarPaginacaoEmpresas();return;}
+    const filtros=seguro?['nome','codigo_obra','codigo_sienge','endereco_operacional->>municipio','endereco_operacional->>logradouro'].map(k=>k+'.ilike.%'+seguro+'%'):[];
+    if(ids.length)filtros.push('empresa_id.in.('+ids.join(',')+')');
+    consulta=consulta.or(filtros.join(','));
   }
-  const inicio = (paginaEmpresas - 1) * tamanhoPaginaEmpresas;
-  const {data, error, count} = await consulta.order("nome",{ascending:true}).order("id",{ascending:true}).range(inicio, inicio+tamanhoPaginaEmpresas-1);
-  if(token !== tokenConsultaEmpresas) return;
-  if(error){ console.error("Erro na consulta paginada de obras:",error); lista.textContent = "Erro ao consultar obras: " + error.message; return; }
-  obrasEmpresas = data || [];
-  totalObrasEmpresas = count || 0;
-  if(paginaEmpresas > 1 && !obrasEmpresas.length && totalObrasEmpresas){ paginaEmpresas=Math.max(1,Math.ceil(totalObrasEmpresas/tamanhoPaginaEmpresas)); return consultarPaginaEmpresas(); }
-  renderizarEmpresas();
-  atualizarPaginacaoEmpresas();
+  if(ordem==='nome')consulta=consulta.order('nome',{ascending:true});
+  else if(ordem==='codigo')consulta=consulta.order('codigo_obra',{ascending:true});
+  else consulta=consulta.order('created_at',{ascending:false,nullsFirst:false});
+  const inicio=(paginaEmpresas-1)*tamanhoPaginaEmpresas;
+  try{
+    const {data,error,count}=await consulta.order('id',{ascending:false}).range(inicio,inicio+tamanhoPaginaEmpresas-1);
+    if(token!==tokenConsultaEmpresas)return;
+    if(error)throw error;
+    obrasEmpresas=data||[];totalObrasEmpresas=count||0;
+    const limite=Math.max(1,Math.ceil(totalObrasEmpresas/tamanhoPaginaEmpresas));if(paginaEmpresas>limite){paginaEmpresas=limite;return consultarPaginaEmpresas();}
+    renderizarEmpresas();atualizarPaginacaoEmpresas();
+  }catch(e){if(token!==tokenConsultaEmpresas)return;console.error('Erro na consulta de obras:',e);obrasEmpresas=[];totalObrasEmpresas=0;paginaEmpresas=1;atualizarPaginacaoEmpresas();lista.textContent='Erro ao consultar obras: '+(e.message||String(e));}
 }
-
-function carregarFiltroEstados(){
-  const select = document.getElementById("filtroEstadoEmpresa");
-  const atual = select.value;
-
-  const estados = [...new Set(
-    empresas.map(e => e.estado).filter(Boolean)
-  )].sort();
-
-  select.innerHTML = `<option value="">Todos os estados</option>`;
-
-  estados.forEach(uf => {
-    select.innerHTML += `<option value="${uf}">${uf}</option>`;
-  });
-
-  select.value = atual;
-}
+function carregarFiltroEstados(){const select=document.getElementById('filtroEstadoEmpresa'),atual=select.value;select.replaceChildren(new Option('Todos os estados',''));empUFs.forEach(uf=>select.add(new Option(uf,uf)));select.value=atual;}
 
 function escaparTextoEmpresa(valor){
   return String(valor ?? "").replace(/[&<>"']/g, c => ({
@@ -838,58 +1118,54 @@ function escaparTextoEmpresa(valor){
   })[c]);
 }
 
+function empEnderecoTexto(d){return [d?.logradouro,d?.numero,d?.bairro,d?.complemento].filter(Boolean).join(' · ');}
+function empLocalidade(d){return [d?.municipio,d?.uf].filter(Boolean).join(' / ');}
 function renderizarEmpresas(){
-  const lista = document.getElementById("listaEmpresas");
-  lista.replaceChildren();
-  const empresasPorId = new Map(empresas.map(e => [String(e.id),e]));
-  // Fonte única da listagem: obras. Evita linhas artificiais de empresas legadas.
-  const linhas = obrasEmpresas.map(obra => ({empresa:empresasPorId.get(String(obra.empresa_id)),obra}));
-  if(!linhas.length){
-    lista.innerHTML = '<div class="empresa-linha">Nenhuma obra encontrada.</div>';
-    return;
-  }
-  linhas.forEach(({empresa:e,obra:o}) => {
-    const esc = escaparTextoEmpresa;
-    const status = (o.ativa !== false && o.ativo !== false) ? "ATIVA" : "INATIVA";
-    const linha = document.createElement("div");
-    linha.className = "empresa-linha";
-    linha.innerHTML = `
-      <div class="empresa-nome" title="${esc(e?.nome || 'Empresa não localizada')}">${esc(e?.nome || 'Empresa não localizada')}</div>
-      <div class="empresa-info">${esc(o.codigo_obra || '-')}</div>
-      <div class="empresa-info" title="${esc(o.nome || '-')}">${esc(o.nome || '-')}</div>
-      <div class="empresa-info">${esc(e?.cidade || '-')} ${e?.estado ? ' / ' + esc(e.estado) : ''}</div>
-      <div><span class="empresa-status ${status}">${status}</span></div>
-      <div class="empresa-acoes">
-        <button class="btn-mini" type="button" data-detalhes>📂 Detalhes</button>
-        ${usuarioTemPermissaoEmpresaBDR("EMPRESAS_EDITAR") ? `<button class="btn-mini btn-editar" type="button" data-editar>✏️ Editar obra</button>` : ''}
-        ${usuarioTemPermissaoEmpresaBDR("EMPRESAS_INATIVAR") ? `<button class="btn-mini ${status === 'ATIVA' ? 'btn-status-warning' : 'btn-status-success'}" type="button" data-status>${status === 'ATIVA' ? '🚫 Inativar obra' : '✅ Reativar obra'}</button>` : ''}
-      </div>
-      <div class="empresa-detalhes">
-        <b>ID da obra:</b> ${esc(o.id)}<br>
-        <b>Código da obra:</b> ${esc(o.codigo_obra || '-')}<br>
-        <b>CNPJ da empresa:</b> ${esc(e?.cnpj || '-')}<br>
-        <b>Endereço da empresa:</b> ${esc(e?.endereco || '-')}<br>
-        <b>Código Sienge:</b> ${esc(o.codigo_sienge || '-')}<br>
-        <b>Tabela de insumo:</b> ${esc(o.tabela_insumo ?? '-')}
-      </div>`;
-    linha.querySelector('[data-detalhes]').addEventListener('click', () => linha.classList.toggle('aberta'));
-    linha.querySelector('[data-editar]')?.addEventListener('click', () => editarObra(o.id));
-    linha.querySelector('[data-status]')?.addEventListener('click', () => alterarStatusObra(o.id, status === "INATIVA"));
+  const lista=document.getElementById('listaEmpresas');lista.replaceChildren();
+  const empresasPorId=new Map(empresas.map(e=>[String(e.id),e]));
+  if(!obrasEmpresas.length){lista.innerHTML='<div class="emp-empty">Nenhuma obra encontrada.</div>';return;}
+  obrasEmpresas.forEach(o=>{
+    const e=empresasPorId.get(String(o.empresa_id)),esc=escaparTextoEmpresa,d=o.endereco_operacional||{};
+    const status=(o.ativa!==false&&o.ativo!==false)?'ATIVA':'INATIVA',com=empEnderecoCompleto(d),local=empLocalidade(d),end=empEnderecoTexto(d);
+    const linha=document.createElement('div');linha.className='empresa-linha';
+    const podeEditar=usuarioTemPermissaoEmpresaBDR('EMPRESAS_EDITAR'),podeStatus=usuarioTemPermissaoEmpresaBDR('EMPRESAS_INATIVAR'),owner=usuarioOwnerEmpresaBDR();
+    linha.innerHTML=`<div class="emp-codigo" data-label="Código da obra">${esc(o.codigo_obra||'—')}</div>
+    <div class="empresa-nome" data-label="Obra / setor" title="${esc(o.nome||'')}">${esc(o.nome||'—')}</div>
+    <div class="empresa-info" data-label="Empresa"><span class="emp-empresa-nome">${esc(e?.nome||'Empresa não localizada')}</span><small class="emp-empresa-codigo">Código empresa: ${esc(e?.codigo_empresa||'Não informado')}</small></div>
+    <div class="empresa-info" data-label="Sienge">${esc(o.codigo_sienge||'—')}</div>
+    <div data-label="Tabela"><span class="emp-tabela">Tabela ${esc(o.tabela_insumo??'—')}</span></div>
+    <div data-label="Localização operacional"><div class="emp-local ${com?'':'emp-pendente'}"><i class="fa-solid fa-location-dot" aria-hidden="true"></i><div><strong>${esc(com?local:local||'Endereço não cadastrado')}</strong><small>${esc(com?end:(end?end+' · ':'')+(local||end?'Endereço incompleto':'Cadastre o endereço da obra'))}</small></div></div></div>
+    <div data-label="Status"><span class="empresa-status ${status}">${status}</span></div>
+    <div class="empresa-acoes"><button type="button" class="emp-icon-btn" data-detalhes title="Ver detalhes" aria-label="Ver detalhes"><i class="fa-solid fa-eye"></i></button>
+    ${podeEditar?'<button type="button" class="emp-icon-btn emp-edit" data-editar title="Editar obra" aria-label="Editar obra"><i class="fa-solid fa-pen"></i></button>':''}
+    ${(podeStatus||owner)?`<details class="emp-acoes-extra"><summary class="emp-icon-btn" aria-label="Mais ações" title="Mais ações"><i class="fa-solid fa-ellipsis"></i></summary><div class="emp-menu-acoes">${podeStatus?`<button type="button" data-status><i class="fa-solid fa-power-off"></i> ${status==='ATIVA'?'Inativar obra':'Reativar obra'}</button>`:''}${owner?'<button type="button" data-editar-empresa><i class="fa-solid fa-building"></i> Editar empresa</button><button type="button" class="emp-danger" data-excluir-obra><i class="fa-solid fa-trash"></i> Excluir obra</button>':''}</div></details>`:''}</div>`;
+    const menu=linha.querySelector('.emp-acoes-extra');if(menu)menu.addEventListener('toggle',()=>{if(menu.open)lista.querySelectorAll('.emp-acoes-extra[open]').forEach(x=>{if(x!==menu)x.open=false;});});
+    linha.querySelector('[data-detalhes]').onclick=()=>abrirDetalheObra(o.id);
+    linha.querySelector('[data-editar]')?.addEventListener('click',()=>editarObra(o.id));
+    linha.querySelector('[data-editar-empresa]')?.addEventListener('click',()=>{menu.open=false;editarCadastroEmpresa(e?.id);});
+    linha.querySelector('[data-status]')?.addEventListener('click',()=>{menu.open=false;alterarStatusObra(o.id,status==='INATIVA');});
+    linha.querySelector('[data-excluir-obra]')?.addEventListener('click',()=>{menu.open=false;excluirObraOwner(o.id);});
     lista.appendChild(linha);
   });
 }
+function abrirDetalheObra(id){
+  const o=obrasEmpresas.find(x=>Number(x.id)===Number(id));if(!o)return;
+  const e=empresas.find(x=>Number(x.id)===Number(o.empresa_id)),d=o.endereco_operacional||{},esc=escaparTextoEmpresa;
+  const linha=(k,v)=>'<p><b>'+esc(k)+':</b> '+esc(v??'—')+'</p>';
+  document.getElementById('empresaDetalheConteudo').innerHTML=`<div class="emp-detalhe-grid"><div><h4>Obra / setor</h4>${linha('Obra',o.nome)}${linha('Código',o.codigo_obra)}${linha('Código Sienge',o.codigo_sienge)}${linha('Tabela de insumo',o.tabela_insumo)}${linha('ID',o.id)}</div><div><h4>Endereço operacional da obra</h4>${linha('Situação',empEnderecoCompleto(d)?'Cadastrado':'Pendente ou incompleto')}${linha('Localidade',empLocalidade(d)||'Não informada')}${linha('Endereço',empEnderecoTexto(d)||'Não informado')}${linha('CEP',d.cep)}${linha('Referência',d.referencia)}${linha('Coordenadas',d.latitude!=null&&d.longitude!=null?d.latitude+', '+d.longitude:'Não informadas')}</div><div><h4>Empresa vinculada · dados jurídicos</h4>${linha('Empresa',e?.nome)}${linha('Código da empresa',e?.codigo_empresa)}${linha('ID interno da empresa',o.empresa_id)}${linha('CNPJ',e?.cnpj)}${linha('Endereço da empresa',e?.endereco)}${linha('Cidade / UF',[e?.cidade,e?.estado].filter(Boolean).join(' / '))}${linha('CEP da empresa',e?.cep)}</div></div>`;
+  exibirFormularioEmpresa('detalhe');
+}
 
 async function alterarStatusObra(id, ativar){
-  if(!exigirPermissaoEmpresaBDR("EMPRESAS_INATIVAR", "Sem permissão para alterar status de obras.")) return;
-  const obra = obrasEmpresas.find(o => Number(o.id) === Number(id));
-  if(!obra) return alert("Obra não encontrada na página atual.");
-  const acao = ativar ? "REATIVAR" : "INATIVAR";
-  if(!confirm(`${acao} somente a obra ${obra.codigo_obra} - ${obra.nome} (ID ${obra.id})?\n\nA empresa e as demais obras não serão alteradas.`)) return;
-  const {data,error} = await db().from("obras").update({ativa:ativar,ativo:ativar}).eq("id",obra.id).eq("empresa_id",obra.empresa_id).select("id,ativa,ativo");
-  if(error || !data?.length){ alert("Não foi possível alterar a obra: " + (error?.message || "Nenhum registro alterado.")); return; }
-  try{ await registrarMovimentacaoEmpresa("ALTERACAO_STATUS_OBRA", null, `Obra ID ${obra.id} | ${obra.codigo_obra} - ${obra.nome} | ${acao}`); }
-  catch(e){ console.warn("Falha ao registrar movimentação da obra:",e); }
-  await consultarPaginaEmpresas();
+  if(!exigirPermissaoEmpresaBDR("EMPRESAS_INATIVAR","Sem permissão para alterar o status da obra.")) return;
+  const obra=obrasEmpresas.find(o=>Number(o.id)===Number(id));
+  if(!obra) return empAviso("Obra não encontrada nesta página.");
+  if(!await empConfirmar(`${ativar?'REATIVAR':'INATIVAR'} somente a obra ${obra.codigo_obra} - ${obra.nome} (ID ${obra.id})?`))return;
+  try{
+    await operacaoSeguraEmpresaObra("STATUS_OBRA",{obra_id:obra.id,ativo:ativar});
+    await consultarPaginaEmpresas();
+    empAviso("Situação da obra atualizada.");
+  }catch(e){console.error(e);empAviso("Não foi possível alterar a situação: "+(e.message||String(e)));}
 }
 
 function toggleDetalhes(id){
@@ -916,7 +1192,7 @@ async function carregarMovimentacoesEmpresas(){
   const { data, error } = await db()
     .from("movimentacoes")
     .select("*")
-    .in("tipo", ["CADASTRO_EMPRESA", "EDICAO_EMPRESA", "ALTERACAO_STATUS_EMPRESA", "EXCLUSAO_EMPRESA", "EDICAO_OBRA", "ALTERACAO_STATUS_OBRA"])
+    .in("tipo", ["CADASTRO_EMPRESA", "EDICAO_EMPRESA", "ALTERACAO_STATUS_EMPRESA", "EXCLUSAO_EMPRESA", "EDICAO_OBRA", "ALTERACAO_STATUS_OBRA", "CADASTRO_OBRA_SETOR", "EXCLUSAO_OBRA"])
     .order("id", { ascending:false })
     .limit(10);
 
@@ -941,9 +1217,9 @@ function renderizarMovimentacoesEmpresas(){
 
   lista.innerHTML = movimentacoesEmpresas.map(m => `
     <div class="mov-empresa-linha">
-      <strong>${m.tipo || "-"}</strong><br>
-      ${m.observacao || "-"}<br>
-      <small>Usuário: ${m.usuario || "-"} • ${formatarData(m.data_movimentacao)}</small>
+      <strong>${escaparTextoEmpresa(m.tipo || "-")}</strong><br>
+      ${escaparTextoEmpresa(m.observacao || "-")}<br>
+      <small>Usuário: ${escaparTextoEmpresa(m.usuario || "-")} • ${escaparTextoEmpresa(formatarData(m.data_movimentacao))}</small>
     </div>
   `).join("");
 }
@@ -955,134 +1231,180 @@ function formatarData(data){
   return d.toLocaleString("pt-BR");
 }
 
+// Sempre há no máximo UM formulário (cadastro OU edição) aberto.
+// Os formulários de obra e empresa preservam o mesmo padrão visual.
+let empModalTipo=null,empFocoAnterior=null;
+function empModalTeclado(event){
+  if(empDialogOcupado)return;
+  if(event.key==='Escape'){event.preventDefault();exibirFormularioEmpresa();return;}
+  if(event.key!=='Tab')return;
+  const modal=document.getElementById('empresaModal'),f=[...modal.querySelectorAll('button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]')].filter(x=>x.getClientRects().length);
+  if(!f.length)return;if(event.shiftKey&&document.activeElement===f[0]){event.preventDefault();f.at(-1).focus();}else if(!event.shiftKey&&document.activeElement===f.at(-1)){event.preventDefault();f[0].focus();}
+}
+function exibirFormularioEmpresa(tipo=null){
+  const modal=document.getElementById('empresaModal'),principal=document.getElementById('empresaConsultaPrincipal');
+  const mapas={cadastro:'cardCadastroEmpresa',obra:'cardEdicaoEmpresa',empresa:'cardEdicaoCadastroEmpresa',detalhe:'cardDetalheObra'};
+  if(tipo==='cadastro'&&!usuarioTemPermissaoEmpresaBDR('EMPRESAS_CRIAR'))return;
+  if(tipo==='obra'&&!usuarioTemPermissaoEmpresaBDR('EMPRESAS_EDITAR'))return;
+  if(tipo==='empresa'&&!usuarioOwnerEmpresaBDR())return;
+  if(!tipo&&modal.querySelector('.emp-form:not([hidden]) .btn-salvar:disabled'))return;
+  if(tipo&&!empModalTipo)empFocoAnterior=document.activeElement;
+  for(const [k,id] of Object.entries(mapas)){const el=document.getElementById(id);if(el)el.hidden=k!==tipo;}
+  if(tipo!=='obra'){document.getElementById('edit_id').value='';obraPreencherEndereco('edit_obra');}
+  if(tipo!=='empresa'){const id=document.getElementById('edit_empresa_id');if(id)id.value='';}
+  if(tipo!=='cadastro'){const st=obraEstado('novo_obra');clearTimeout(st.timer);st.versao++;st.cepReq++;st.geoReq++;}
+  empModalTipo=tipo;modal.hidden=!tipo;principal.inert=!!tipo;
+  if(tipo){document.getElementById('empresaModalTitulo').textContent={cadastro:'Nova obra / setor',obra:'Editar obra / setor',empresa:'Editar cadastro da empresa',detalhe:'Detalhes da obra'}[tipo];const rolagem=modal.querySelector('.emp-form:not([hidden]) .emp-form-scroll');if(rolagem)rolagem.scrollTop=0;modal.querySelector('.emp-modal-head button').focus();}
+  else if(empFocoAnterior?.isConnected){empFocoAnterior.focus();empFocoAnterior=null;}
+}
+function abrirCadastroEmpresa(){if(!exigirPermissaoEmpresaBDR('EMPRESAS_CRIAR','Sem permissão para cadastrar obras.'))return;limparFormulario();exibirFormularioEmpresa('cadastro');}
+async function obraCopiarEnderecoEmpresa(p){
+  let e;
+  if(p==='edit_obra'){const o=obrasEmpresas.find(x=>Number(x.id)===Number(campo('edit_id')));e=empresas.find(x=>Number(x.id)===Number(o?.empresa_id));}
+  else {const id=Number(campo('empresa_existente'));e=id?empresas.find(x=>Number(x.id)===id):{nome:campo('nome'),endereco:campo('endereco'),cidade:campo('cidade'),estado:campo('estado'),cep:campo('cep')};}
+  if(!e||![e.endereco,e.cidade,e.estado,e.cep].some(Boolean))return empAviso('A empresa não possui endereço informado para copiar.');
+  const versao=obraEstado(p).versao;
+  if(!await empConfirmar('A obra fica no MESMO local da empresa '+(e.nome||'')+'? O endereço operacional e as coordenadas atuais do formulário serão substituídos. Nada será gravado até salvar.'))return;
+  if(versao!==obraEstado(p).versao)return;
+  const cep=String(e.cep||'').replace(/\D/g,''),uf=String(e.estado||'').trim().toUpperCase(),rua=String(e.endereco||'').trim();
+  obraPreencherEndereco(p,{cep:/^\d{8}$/.test(cep)?cep:'',municipio:String(e.cidade||'').trim(),uf:empUFs.includes(uf)?uf:'',logradouro:rua});
+  obraMensagem(p,'cep','Endereço da empresa copiado para conferência. Separe número e bairro se necessário. Confira antes de salvar.');
+}
+
 // Edição individual: nenhuma gravação é feita na tabela empresas.
 function editarObra(id){
   if(!exigirPermissaoEmpresaBDR("EMPRESAS_EDITAR", "Sem permissão para editar obras.")) return;
   const obra = obrasEmpresas.find(o => Number(o.id) === Number(id));
-  if(!obra) return alert("Obra não encontrada na página atual.");
+  if(!obra) return empAviso("Obra não encontrada na página atual.");
   document.getElementById("edit_id").value = obra.id;
   document.getElementById("edit_codigo_obra").value = obra.codigo_obra || "";
   document.getElementById("edit_nome_obra").value = obra.nome || "";
   document.getElementById("edit_codigo_sienge_obra").value = obra.codigo_sienge || "";
   document.getElementById("edit_tabela_insumo").value = String(obra.tabela_insumo ?? 2);
+  obraPreencherEndereco("edit_obra",obra.endereco_operacional||{});
+  const empresaVinculada=empresas.find(e=>Number(e.id)===Number(obra.empresa_id));
+  document.getElementById("edit_vinculo_nome").textContent = empresaVinculada?.nome || "Empresa não localizada";
+  document.getElementById("edit_vinculo_codigo").textContent = empresaVinculada?.codigo_empresa || "Não informado";
   document.getElementById("editandoEmpresaTitulo").textContent = `${obra.codigo_obra || '-'} - ${obra.nome || '-'} (ID ${obra.id})`;
-  document.getElementById("cardEdicaoEmpresa").classList.add("ativo");
-  document.getElementById("cardEdicaoEmpresa").scrollIntoView({behavior:"smooth",block:"start"});
+  exibirFormularioEmpresa("obra");
+
 }
 function cancelarEdicaoEmpresa(){
-  document.getElementById("cardEdicaoEmpresa").classList.remove("ativo");
-  document.getElementById("edit_id").value = "";
+  exibirFormularioEmpresa();
 }
 async function salvarEdicaoObra(){
-  if(!exigirPermissaoEmpresaBDR("EMPRESAS_EDITAR", "Sem permissão para editar obras.")) return;
-  const id = Number(campo("edit_id"));
-  const obra = obrasEmpresas.find(o => Number(o.id) === id);
-  if(!obra) return alert("Obra não localizada. Atualize a lista antes de editar.");
-  const codigo_obra = campo("edit_codigo_obra");
-  const nome = campo("edit_nome_obra");
-  const codigo_sienge = campo("edit_codigo_sienge_obra");
-  const tabela_insumo = Number(campo("edit_tabela_insumo"));
-  if(!codigo_obra || !nome) return alert("Informe o código e o nome da obra.");
-  if(![2,3].includes(tabela_insumo)) return alert("Tabela de insumo inválida.");
-  const alteracoes = [];
+  if(!exigirPermissaoEmpresaBDR("EMPRESAS_EDITAR","Sem permissão para editar obras.")) return;
+  const id=Number(campo("edit_id"));
+  const obra=obrasEmpresas.find(o=>Number(o.id)===id);
+  if(!obra)return empAviso("Obra não localizada. Atualize a lista antes de editar.");
+  const codigo_obra=campo("edit_codigo_obra"), nome_obra=campo("edit_nome_obra"),
+    codigo_sienge=campo("edit_codigo_sienge_obra"), tabela_insumo=Number(campo("edit_tabela_insumo"));
+  if(!codigo_obra||!nome_obra||![2,3].includes(tabela_insumo))return empAviso("Informe código, nome e tabela de insumo válida.");
+  let enderecoOperacional;try{enderecoOperacional=obraLerEndereco("edit_obra");}catch(e){return empAviso(e.message);}
+  const modificacoes=[];
+  if(!obraEnderecoIgual(obra.endereco_operacional||{},enderecoOperacional))modificacoes.push("Endereço operacional atualizado");
   for(const [rotulo,antigo,novo] of [
-    ["Código",obra.codigo_obra,codigo_obra],
-    ["Nome",obra.nome,nome],
-    ["Código Sienge",obra.codigo_sienge,codigo_sienge],
-    ["Tabela de insumo",obra.tabela_insumo,tabela_insumo]
-  ]) if(String(antigo ?? "") !== String(novo ?? "")) alteracoes.push(`${rotulo}: ${antigo ?? '-'} → ${novo || '-'}`);
-  if(!alteracoes.length) return alert("Nenhuma alteração realizada.");
-  // Impede duplicação de código dentro da mesma empresa, sem modificar outros cadastros.
-  if(String(obra.codigo_obra ?? "") !== codigo_obra){
-    const {data:iguais,error:erroBusca} = await db().from("obras").select("id")
-      .eq("empresa_id",obra.empresa_id).eq("codigo_obra",codigo_obra).neq("id",obra.id).limit(1);
-    if(erroBusca) return alert("Não foi possível verificar o código: " + erroBusca.message);
-    if(iguais?.length) return alert("Já existe outra obra com este código na mesma empresa.");
+    ["Código",obra.codigo_obra,codigo_obra],["Nome",obra.nome,nome_obra],
+    ["Código Sienge",obra.codigo_sienge,codigo_sienge],["Tabela de insumo",obra.tabela_insumo,tabela_insumo]
+  ]) if(String(antigo??"")!==String(novo??""))modificacoes.push(`${rotulo}: ${antigo??'-'} → ${novo||'-'}`);
+  // Também corrige silenciosamente a divergência legada entre tabela_insumo e tabela_insumo_sienge.
+  if(!modificacoes.length && String(obra.tabela_insumo_sienge??'')===String(tabela_insumo)){
+    return empAviso("Nenhuma alteração realizada.");
   }
-  if(!confirm(`Salvar alterações SOMENTE na obra ID ${obra.id}?\n\n${alteracoes.join("\n")}\n\nA empresa e as demais obras permanecerão inalteradas.`)) return;
-  const botao = document.querySelector('#cardEdicaoEmpresa .btn-salvar');
-  botao.disabled = true;
+  if(!await empConfirmar(`Salvar alterações SOMENTE na obra ${obra.codigo_obra} (ID ${obra.id})?\n\n${modificacoes.join('\n')||'Sincronizar tabela Sienge'}\n\nA empresa e as demais obras não serão alteradas.`))return;
+  const botao=document.querySelector('#cardEdicaoEmpresa .btn-salvar');
+  if(botao)botao.disabled=true;
   try{
-    const {data,error} = await db().from("obras")
-      .update({codigo_obra,nome,codigo_sienge,tabela_insumo})
-      .eq("id",obra.id).eq("empresa_id",obra.empresa_id)
-      .select("id,codigo_obra,nome,codigo_sienge,tabela_insumo");
-    if(error || data?.length !== 1) throw new Error(error?.message || "Nenhuma obra foi atualizada.");
-    try{
-      await registrarMovimentacaoEmpresa("EDICAO_OBRA", null, `Obra ID ${obra.id} | ${alteracoes.join(" | ")}`);
-    }catch(erroLog){console.warn("Obra atualizada, mas falhou registro da movimentação:",erroLog);}
+    await operacaoSeguraEmpresaObra("EDITAR_OBRA",{obra_id:id,codigo_obra,nome_obra,codigo_sienge,tabela_insumo,endereco_operacional:enderecoOperacional});
+    if(botao)botao.disabled=false;
     cancelarEdicaoEmpresa();
-    await consultarPaginaEmpresas();
-    alert("Obra atualizada com sucesso. Nenhuma outra obra foi alterada.");
-  }catch(e){console.error(e);alert("Erro ao editar obra: " + e.message);}
-  finally{botao.disabled = false;}
+    await Promise.all([consultarPaginaEmpresas(),carregarIndicadoresEmpresa()]);
+    await carregarMovimentacoesEmpresas();
+    renderizarMovimentacoesEmpresas();
+    empAviso("Obra atualizada com sucesso, incluindo a tabela de insumo Sienge.");
+  }catch(e){console.error(e);empAviso("Erro ao editar obra: "+(e.message||String(e)));}
+  finally{if(botao)botao.disabled=false;}
 }
 
-async function excluirEmpresa(id){
+function editarCadastroEmpresa(id){
+  if(!usuarioOwnerEmpresaBDR())return empAviso("Somente o proprietário pode editar os dados da empresa.");
+  const empresa=empresas.find(e=>Number(e.id)===Number(id));
+  if(!empresa)return empAviso("Empresa não localizada no cadastro atual.");
+  const mapa={
+    edit_empresa_codigo:"codigo_empresa",edit_empresa_nome:"nome",edit_empresa_cnpj:"cnpj",
+    edit_empresa_setor:"setor_obra",edit_empresa_endereco:"endereco",edit_empresa_cidade:"cidade",
+    edit_empresa_estado:"estado",edit_empresa_cep:"cep",edit_empresa_telefone:"telefone",
+    edit_empresa_observacao:"observacao"
+  };
+  document.getElementById("edit_empresa_id").value=empresa.id;
+  for(const [elId,campo] of Object.entries(mapa))document.getElementById(elId).value=String(empresa[campo]??"");
+  exibirFormularioEmpresa("empresa");
 
-  if(!exigirPermissaoEmpresaBDR("EMPRESAS_EXCLUIR", "Você não tem permissão para excluir empresas.")) return;
+}
+function cancelarEdicaoCadastroEmpresa(){
+  exibirFormularioEmpresa();
+}
+async function salvarEdicaoCadastroEmpresa(){
+  if(!usuarioOwnerEmpresaBDR())return empAviso("Somente o proprietário pode alterar os dados da empresa.");
+  const empresa_id=Number(campo("edit_empresa_id"));
+  const empresa=empresas.find(e=>Number(e.id)===empresa_id);
+  if(!empresa)return empAviso("Cadastro da empresa não encontrado. Atualize a página.");
+  const dados={empresa_id,
+    codigo_empresa:campo("edit_empresa_codigo"),nome_empresa:campo("edit_empresa_nome"),
+    cnpj:campo("edit_empresa_cnpj"),setor_obra:campo("edit_empresa_setor"),
+    endereco:campo("edit_empresa_endereco"),cidade:campo("edit_empresa_cidade"),
+    estado:campo("edit_empresa_estado"),cep:campo("edit_empresa_cep"),
+    telefone:campo("edit_empresa_telefone"),observacao:campo("edit_empresa_observacao")};
+  if(!dados.codigo_empresa||!dados.nome_empresa)return empAviso("Nome e código da empresa são obrigatórios.");
+  if(!await empConfirmar(`Atualizar os dados da empresa ${empresa.nome} (ID ${empresa.id})?\n\nOs dados serão refletidos em TODAS as obras vinculadas a essa empresa.`))return;
+  const botao=document.querySelector('#cardEdicaoCadastroEmpresa .btn-salvar');
+  if(botao)botao.disabled=true;
+  try{
+    await operacaoSeguraEmpresaObra("EDITAR_EMPRESA",dados);
+    if(botao)botao.disabled=false;
+    cancelarEdicaoCadastroEmpresa();
+    await carregarEmpresas();
+    empAviso("Dados da empresa atualizados com sucesso.");
+  }catch(e){console.error(e);empAviso("Erro ao editar empresa: "+(e.message||String(e)));}
+  finally{if(botao)botao.disabled=false;}
+}
 
-  const empresa = empresas.find(e => String(e.id) === String(id));
+// A exclusão direta de empresa por REST foi desativada: não é autorizada por RPC.
+// Excluir empresas exige análise própria de dependências e nunca usa senha do localStorage.
+function excluirEmpresa(){
+  empAviso("Exclusão definitiva de empresa indisponível. Gerencie cada obra individualmente.");
+}
 
-  if(!empresa){
-    alert("Empresa não encontrada.");
-    return;
+// Apenas o proprietário absoluto consegue excluir; o RPC confirma o OWNER via auth.uid().
+async function excluirObraOwner(id){
+  if(!usuarioOwnerEmpresaBDR()) return empAviso("Somente o proprietário do Atlas pode excluir uma obra.");
+  const obra=obrasEmpresas.find(o=>Number(o.id)===Number(id));
+  if(!obra) return empAviso("Obra não localizada. Atualize a listagem.");
+  try{
+    const analise=await operacaoSeguraEmpresaObra('VERIFICAR_EXCLUSAO_OBRA',{obra_id:obra.id});
+    if(!analise.pode_excluir){
+      const ref=(analise.vinculos||[]).slice(0,8).map(x=>`• ${x}`).join('\n');
+      empAviso(`Exclusão BLOQUEADA para obra ${obra.codigo_obra} (ID ${obra.id}).\n\nEla possui vínculos que precisam ser preservados:\n${ref||'Consulte os vínculos cadastrados.'}\n\nNão exclua dados de patrimônio, remessa ou histórico para forçar a exclusão. Use Inativar quando apropriado.`);
+      return;
+    }
+    if(!await empConfirmar(`EXCLUSÃO DEFINITIVA da obra ${obra.codigo_obra} - ${obra.nome} (ID ${obra.id})?\n\nÉ uma operação irreversível sem backup. Somente a obra será removida, nunca a empresa.`)) return;
+    const confirmacao=await empConfirmarTexto(`Para excluir somente a obra ID ${obra.id}, digite exatamente: EXCLUIR ${obra.id}`,`EXCLUIR ${obra.id}`);
+    if(!confirmacao) return empAviso("Exclusão cancelada. Nenhum registro alterado.");
+    const resp=await operacaoSeguraEmpresaObra('EXCLUIR_OBRA',{obra_id:obra.id});
+    if(Number(resp.id)!==Number(obra.id)||resp.excluida!==true) throw new Error('O banco não confirmou a exclusão.');
+    exibirFormularioEmpresa();
+    await Promise.all([consultarPaginaEmpresas(),carregarIndicadoresEmpresa()]);
+    await carregarMovimentacoesEmpresas();
+    renderizarMovimentacoesEmpresas();
+    empAviso(`A obra ${obra.codigo_obra} (ID ${obra.id}) foi excluída. Empresa e demais obras preservadas.`);
+  }catch(e){
+    console.error('Excluir obra:',e);
+    empAviso('Não foi possível excluir a obra: '+(e.message||String(e)));
   }
-
-  const confirma = confirm(
-    `APAGAR DEFINITIVAMENTE a empresa "${empresa.nome || "-"}"?\n\n` +
-    "Use esta opção somente para cadastro fake/teste. Empresa real é melhor INATIVAR."
-  );
-
-  if(!confirma) return;
-
-  const senha = prompt("Digite sua senha para confirmar a exclusão:");
-  if(!senha){
-    alert("Exclusão cancelada.");
-    return;
-  }
-
-  const usuario = usuarioAtual();
-  const senhaLocal = String(usuario?.senha || usuario?.senha_master || "");
-
-  if(senhaLocal && senha !== senhaLocal){
-    alert("Senha incorreta. Nada foi apagado.");
-    return;
-  }
-
-  const resp = await db()
-    .from("empresas")
-    .delete()
-    .eq("id", id)
-    .select("id,nome");
-
-  if(resp.error){
-    alert(
-      "Erro ao excluir: " + resp.error.message +
-      "\n\nProvável vínculo com obras, localizações, patrimônios ou movimentações. Nesse caso use INATIVAR."
-    );
-    return;
-  }
-
-  if(!resp.data || resp.data.length === 0){
-    alert(
-      "O Supabase não apagou nenhuma linha.\n\n" +
-      "Pode ser bloqueio de RLS/policy ou vínculo no banco. Nada foi apagado."
-    );
-    return;
-  }
-
-  await registrarMovimentacaoEmpresa(
-    "EXCLUSAO_EMPRESA",
-    empresa,
-    `Empresa excluída definitivamente: ${empresa.nome || "-"} | ID: ${empresa.id}`
-  );
-
-  alert("Empresa excluída definitivamente.");
-  await carregarEmpresas();
 }
 
 function limparFormulario(){
+  obraPreencherEndereco("novo_obra");
   document.getElementById("nome").value = "";
   document.getElementById("codigo_empresa").value = "";
   document.getElementById("setor_obra").value = "";
@@ -1092,14 +1414,21 @@ function limparFormulario(){
   document.getElementById("endereco").value = "";
   document.getElementById("cep").value = "";
   document.getElementById("codigo_sienge_obra").value = "";
+  document.getElementById("codigo_obra").value = "";
   document.getElementById("tabela_insumo").value = "2";
   document.getElementById("observacao").value = "";
+  document.getElementById("telefone").value = "";
+  document.getElementById("empresa_existente").value = "";
+  selecionarEmpresaExistente();
 }
 
 
 window.addEventListener("load", () => {
   if(!bloquearTelaEmpresaSemPermissao()) return;
   aplicarAcoesEmpresaPorPermissao();
+  if(!usuarioOwnerEmpresaBDR()){
+    document.getElementById("cardEdicaoCadastroEmpresa").remove();
+  }
   carregarEmpresas();
 });
 </script>

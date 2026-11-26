@@ -22,7 +22,7 @@
   let dadosPendentes = null;
 
   const FRAME_URL =
-    "etiqueta-impressao.html?embed=1&preview=1&fast=1";
+    "etiqueta-impressao.html?embed=1&preview=1&fast=1&b1=20261116-b1-referencia-git07";
 
   function patrimonioAtual(){
     try{
@@ -43,6 +43,16 @@
       p.codigo_bem ||
       ""
     ).trim();
+  }
+
+  function informarImpressao(texto, erro=false){
+    const status=document.getElementById("statusEtiquetaOficial");
+    if(status){
+      status.textContent=texto;
+      status.classList.toggle("pronto",!erro);
+      status.setAttribute("role","status");
+      status.setAttribute("aria-live","polite");
+    }
   }
 
   function definirEstado(pronta, texto){
@@ -105,7 +115,10 @@
         p.obra_nome ||
         "SEM OBRA",
       obra_id:p.obra_id || null,
-      perfil_id:p.perfil_impressao_id || null
+      perfil_id:p.perfil_impressao_id || null,
+      // Apenas a NIIMBOT B1 usa a prévia em PNG. Outras impressoras
+      // continuam com a visualização e impressão HTML tradicionais.
+      impressora_b1:preferenciaB1()
     };
   }
 
@@ -221,33 +234,86 @@
       return !!usuario?.id && localStorage.getItem(`atlas:impressora:${usuario.id}`) === "niimbot-b1";
     } catch (_) { return false; }
   }
+  function obterDriverB1(){
+    // Bluefy funcionou em documento principal, não na integração dentro de iframes.
+    // O shell Atlas é same-origin e carrega uma instância própria do MESMO driver.
+    // Assim o requestDevice(), GATT e toda a impressão pertencem à janela principal,
+    // mantendo o clique, o modal e a imagem gerada pelo Patrimônio intactos.
+    try {
+      const principal = global.top;
+      if(principal && principal !== global &&
+         principal.location.origin === global.location.origin &&
+         principal.document?.getElementById("atlasFrameWrap")) {
+        return principal.Niimbot || null;
+      }
+    } catch(error) {
+      console.warn("ATLAS B1: janela principal inacessível", error);
+    }
+    // Acesso direto a patrimonio.html continua funcionando no notebook/Android.
+    return global.Niimbot || null;
+  }
+
   async function imprimirB1(frame){
     if(imprimindoB1) return;
-    const api = global.Niimbot;
-    if(!api?.isSupported()) {
-      global.atlasAvisoEtiqueta?.("Bluetooth indisponível neste navegador. No iPhone, use o Bluefy.");
+    const api = obterDriverB1();
+    if(!api?.isSupported?.()){
+      const mensagem = global.top !== global
+        ? "Bluetooth da janela principal não disponível. Feche e abra o Atlas atualizado no Bluefy."
+        : "Bluetooth indisponível. No iPhone, abra o Atlas pelo Bluefy.";
+      informarImpressao(mensagem, true);
+      global.atlasAvisoEtiqueta?.(mensagem);
       return;
     }
+
+    // Mesmo fluxo direto da demonstração validada fisicamente no Bluefy:
+    // um clique chama printImage(), sem connect() separado e sem esperas extras.
+    // Quando embutido no shell, a chamada usa o BLE do documento principal.
     imprimindoB1 = true;
     const botao = document.getElementById("btnImprimirEtiquetaOficial");
     if(botao) botao.disabled = true;
-    try {
-      // A solicitação de pareamento começa diretamente no clique do usuário.
-      const model = { name_prefixes:["B1", "NIIMBOT"], task:"b1", density:3, label_type:1, speed:3 };
+    try{
+      const imagem = frame.contentWindow.AtlasEtiquetaImagemB1.obterImagem();
+      if(typeof imagem !== "string" || !imagem.startsWith("data:image/png")){
+        throw new Error("A imagem PNG da prévia ainda não está pronta.");
+      }
+
+      // Mesma seleção e parâmetros da B1 no registry.json do projeto de
+      // referência (exceto offset_y_px, já incorporado na arte do Atlas).
+      const model = {
+        name_prefixes:["B1"], task:"b1", density:3,
+        label_type:1, speed:1
+      };
       const size = { w_px:384, h_px:240, dpi:203 };
-      await api.connect(model);
-      const imagem = await frame.contentWindow.AtlasEtiquetaImagemB1.gerar();
-      await api.printImage(imagem, {model,size,copies:1});
+      informarImpressao("Selecione a NIIMBOT B1 na janela Bluetooth...");
+      await api.printImage(imagem, {
+        model, size, density:3, copies:1,
+        onProgress:(etapa)=>{
+          const s = String(etapa||"");
+          const traducao = {
+            "connecting…":"Selecione a NIIMBOT B1 na janela Bluetooth...",
+            "configuring…":"B1 conectada. Configurando impressão...",
+            "sending image…":"Enviando a imagem para a B1...",
+            "printing…":"Aguardando a confirmação da impressão...",
+            "ok":"Impressão confirmada pela B1."
+          };
+          informarImpressao(traducao[s] || (s.startsWith("printing… ")
+            ? "Imprimindo: "+s.slice("printing… ".length)
+            : s));
+        }
+      });
       global.atlasAvisoEtiqueta?.("Etiqueta enviada à NIIMBOT B1. Confira a impressão.");
       fechar();
-    } catch (error) {
-      console.error("ATLAS B1: impressão não confirmada",error);
-      global.atlasAvisoEtiqueta?.(`Impressão B1 não confirmada: ${error.message || error}. Não reenvie sem conferir a impressora.`);
-    } finally {
+    }catch(error){
+      console.error("ATLAS B1: impressão não confirmada", error);
+      const motivo = String(error?.message||error||"Falha desconhecida");
+      informarImpressao("B1 não confirmou: "+motivo+" Confira a impressora antes de repetir.", true);
+      global.atlasAvisoEtiqueta?.("NIIMBOT: "+motivo);
+    }finally{
       imprimindoB1 = false;
-      if(botao) botao.disabled = false;
+      if(botao) botao.disabled = !etiquetaPronta;
     }
   }
+
   function imprimir(){
     if(!etiquetaPronta){
       if(typeof global.atlasAvisoEtiqueta === "function"){
@@ -299,6 +365,9 @@
     }
 
     if(mensagem.tipo === "ATLAS_ETIQUETA_PRONTA"){
+      // Uma notificação tardia da prévia não pode ocultar o andamento da
+      // conexão Bluetooth ou reabilitar o botão enquanto a B1 imprime.
+      if(imprimindoB1) return;
       const tokenRecebido = Number(mensagem.token || 0);
 
       if(
@@ -319,7 +388,7 @@
     if(mensagem.tipo === "ATLAS_ETIQUETA_ERRO"){
       definirEstado(
         false,
-        "Não foi possível preparar a etiqueta."
+        "Erro na prévia: " + String(mensagem.erro||"Não foi possível preparar a etiqueta.")
       );
     }
   });

@@ -1,0 +1,19 @@
+/* Aviso único de atualização PWA — não altera o sininho. */
+#bdrUpdateBar[hidden]{display:none!important}
+#bdrPwaUpdate{position:fixed;z-index:999999;left:50%;bottom:20px;transform:translateX(-50%);box-sizing:border-box;display:flex;align-items:center;gap:12px;width:max-content;max-width:calc(100% - 28px);padding:14px 16px;border:1px solid #344052;border-radius:14px;background:#151d2a;color:#fff;box-shadow:0 8px 30px #0004;font:400 14px/1.4 Arial,sans-serif;text-align:left}
+#bdrPwaUpdate .bdr-pwa-copy{display:flex;flex-direction:column;min-width:0;gap:3px}
+#bdrPwaUpdate strong{font-size:14px;font-weight:600;color:#fff}
+#bdrPwaUpdate .bdr-pwa-copy span{font-size:12px;color:#cbd5e1;overflow-wrap:anywhere}
+#bdrPwaUpdate button{flex:none;border:0;border-radius:8px;background:#a4161a;color:#fff;font:500 13px Arial,sans-serif;padding:11px 14px;cursor:pointer;width:auto;margin:0}
+#bdrPwaUpdate button[hidden]{display:none!important}
+#bdrPwaUpdate .bdr-pwa-symbol{flex:none;width:24px;height:24px;border:2px solid #b7c5d6;border-radius:50%;box-sizing:border-box;display:grid;place-items:center;font-size:17px}
+#bdrPwaUpdate .bdr-pwa-symbol::before{content:'↻'}
+#bdrPwaUpdate[data-state=working] .bdr-pwa-symbol{border-color:#536174;border-top-color:#f0444d;animation:bdrPwaSpin .8s linear infinite}
+#bdrPwaUpdate[data-state=working] .bdr-pwa-symbol::before{content:none}
+#bdrPwaUpdate[data-state=success] .bdr-pwa-symbol{color:#49d18a;border-color:#49d18a}
+#bdrPwaUpdate[data-state=success] .bdr-pwa-symbol::before{content:'✓'}
+#bdrPwaUpdate[data-state=error] .bdr-pwa-symbol{color:#f5be69;border-color:#f5be69}
+#bdrPwaUpdate[data-state=error] .bdr-pwa-symbol::before{content:'!'}
+@keyframes bdrPwaSpin{to{transform:rotate(360deg)}}
+@media(max-width:600px){#bdrPwaUpdate{width:calc(100% - 28px);flex-wrap:wrap;bottom:calc(16px + env(safe-area-inset-bottom));gap:10px}#bdrPwaUpdate .bdr-pwa-copy{flex:1}#bdrPwaUpdate button{width:100%}.atlas-shell-page #bdrPwaUpdate{bottom:calc(90px + env(safe-area-inset-bottom))}}
+@media(prefers-reduced-motion:reduce){#bdrPwaUpdate .bdr-pwa-symbol{animation:none!important}}

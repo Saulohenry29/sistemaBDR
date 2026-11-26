@@ -49,7 +49,7 @@
 (function (root) {
   "use strict";
 
-  const VERSION = "2.6.0";   // shown in the demo/console; bump on each release (or dev change)
+  const VERSION = "2.6.1";   // shown in the demo/console; bump on each release (or dev change)
   const SVC_UUID = "e7810a71-73ae-499d-8c15-faa9aef0c3f2";
   const CHAR_UUID = "bef8d6c9-9c21-4c9e-b632-bd58c1009f9f";
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -75,11 +75,11 @@
   }
   function logRx(cmd, data) { if (DEBUG) { flushImg(); console.log(`[niimbot] ←  ${h2(cmd)} (${data.length}b) ${hex(data)}`); } }
   function logMsg(m) { if (DEBUG) { flushImg(); console.log(`[niimbot] ·  ${m}`); } }
-  // NOT gated behind DEBUG: which write path a print actually took must be readable
-  // without turning on the packet dump that buries it (a phone has no console — the
-  // demo's log panel mirrors console.log, and DEBUG off is its default). Reserved for
-  // the few lines that answer "how did this print go out?".
-  function logAlways(m) { flushImg(); console.log(`[niimbot] ·  ${m}`); }
+  // Operação normal silenciosa. Informações de diagnóstico são exibidas
+  // somente quando Niimbot.DEBUG=true; erros continuam sendo lançados para a UI.
+  function logAlways(m) { if (DEBUG) { flushImg(); console.log(`[niimbot] ·  ${m}`); } }
+  // Um override realmente perigoso deve permanecer visível mesmo sem debug.
+  function warnUnsafeMode(m) { console.warn(`[niimbot] ${m}`); }
 
   // Timing trace for batch diagnostics (concise: a few lines per batch), gated behind
   // DEBUG. Reveals whether an inter-label gap is us sending the next page late or the
@@ -248,7 +248,7 @@
   function warnOverrideVsModel() {
     const meta = (printerInfo && printerInfo.modelId != null) ? MODEL_IDS[printerInfo.modelId] : null;
     if (writeOverride === "fast" && meta && meta.paced) {
-      logAlways(`⚠ WRITE_MODE="fast" overrides ${meta.label}, which NEEDS pacing (${meta.dpi} dpi: it drops rows on an unpaced burst). Obeying — expect blank or short labels. This is a diagnostic, not a setting.`);
+      warnUnsafeMode(`⚠ WRITE_MODE="fast" overrides ${meta.label}, which NEEDS pacing (${meta.dpi} dpi: it drops rows on an unpaced burst). Obeying — expect blank or short labels. This is a diagnostic, not a setting.`);
     }
   }
   async function writeRaw(bytes) {
@@ -552,11 +552,8 @@
     await characteristic.startNotifications();
     characteristic.addEventListener("characteristicvaluechanged", onNotify);
     // SAY IT. The printer drops the link on its own — it powers down when idle, and BLE
-    // links die for their own reasons — and this listener is the only moment anything
-    // knows. Clearing `characteristic` silently meant the next call failed with a bare
-    // "Not connected", several screens away from the cause, with nothing in between:
-    // on a phone, where this log panel is the only trace, that is unreadable. NOT gated
-    // behind DEBUG, for the same reason the connect summary line is not.
+    // links die for their own reasons. O driver limpa a conexão e a interface
+    // recebe falhas de impressão; a telemetria detalhada requer DEBUG=true.
     device.addEventListener("gattserverdisconnected", () => {
       const wasConnected = characteristic != null;
       characteristic = null;
@@ -580,9 +577,8 @@
     writeMode = needsPacing ? (props.writeWithoutResponse ? "paced" : "acked") : "fast";
     _bundleAllowed = !!(meta && meta.bundle);   // only bundle frames where validated (B1, M2-H)
     if (IS_MAC && writeMode === "fast") writeMode = "paced";   // macOS (and iOS — see IS_MAC) drops unacked bursts → pace the "fast" models too
-    // NOT DEBUG-gated: `effective=` is the answer to "which write path did this print
-    // take?", and the previous wrong conclusion about iOS was reached precisely because
-    // nobody could see it. One line per connect.
+    // Diagnóstico de conexão apenas quando Niimbot.DEBUG=true.
+    // O modo detectado e o pacing não mudam com o controle de logs.
     logAlways(`writeMode=${writeMode} override=${writeOverride || "auto"} effective=${effectiveWriteMode()} forcePacing=${writeOverride === "paced"} bundle=${effectiveBundle()} (detected=${_bundleAllowed}) mac=${IS_MAC} [${MAC_SOURCE}] pace=${PACE_MS} (task=${task || "?"}, model=${(meta && meta.label) || "?"}, write=${!!props.write}, writeNoResp=${!!props.writeWithoutResponse})`);
     warnOverrideVsModel();   // now that the model is identified, an override that fights it is worth saying
     if (task === "b1") await b1Handshake();
@@ -1239,11 +1235,8 @@
     const { buf, stride } = await imageToPacked(url, size.w_px, size.h_px, offsetY);
     _t0 = Date.now(); _lastPage = -1;                                        // timing trace (DEBUG)
 
-    // pagesPerJob: 1 — this printer acks a multi-page/multi-copy job but only actually
-    // prints the first page (see MODEL_IDS `2304` comment). Fall back to N separate
-    // complete jobs instead. NOT gated behind DEBUG: the caller asked for one upload and
-    // is about to wait N× as long for it, with the image crossing BLE N times instead of
-    // once — silence here would just look like a slow print.
+    // pagesPerJob: 1 — impressora confirma o lote, mas imprime só a primeira
+    // página. Preserva o fallback seguro em trabalhos separados; detalhe em DEBUG.
     const meta = connectedMeta();
     if (meta && meta.pagesPerJob === 1 && copies > 1) {
       logAlways(`⚠ ${meta.label} only prints page 1 of a multi-page job (measured 2026-08-14) — printing ${copies} copies as ${copies} separate jobs; the image crosses BLE ${copies} times.`);
