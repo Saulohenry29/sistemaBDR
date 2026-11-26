@@ -1490,6 +1490,91 @@ function atlasCatalogoNomesPatrimonio(){
   return [...mapa.values()].sort((a,b)=>a.nome_bem.localeCompare(b.nome_bem,'pt-BR'));
 }
 
+/* Autocomplete do cadastro: uma lista ativa, na top layer do próprio módulo.
+   O fechamento depende da intenção do usuário, nunca de um timer de blur. */
+const atlasMenuSugestoes = (() => {
+  let ativo = null;
+  let quadro = 0;
+  function aberto(lista){ return ativo?.lista === lista; }
+  function fechar(lista){
+    if(!ativo || (lista && ativo.lista !== lista)) return;
+    const estado = ativo;
+    ativo = null;
+    estado.campo.setAttribute('aria-expanded','false');
+    estado.lista.classList.remove('ativo');
+    if(estado.nativo && estado.lista.matches(':popover-open')) estado.lista.hidePopover();
+    if(!estado.nativo){
+      if(estado.ancora.isConnected) estado.ancora.replaceWith(estado.lista);
+      else estado.lista.remove();
+    }
+    estado.lista.removeAttribute('style');
+  }
+  function posicionar(){
+    quadro = 0;
+    if(!ativo) return;
+    const {campo,lista,ancora} = ativo;
+    if(!campo.isConnected || !lista.isConnected || (ancora && !ancora.isConnected)) { fechar(); return; }
+    const r = campo.getBoundingClientRect();
+    const vv = window.visualViewport;
+    const topo = vv?.offsetTop || 0;
+    const esquerda = vv?.offsetLeft || 0;
+    const largura = Math.min(document.documentElement.clientWidth, vv?.width || window.innerWidth);
+    const altura = Math.min(document.documentElement.clientHeight, vv?.height || window.innerHeight);
+    const limite = topo + altura;
+    if(!r.width || !r.height || r.bottom <= topo || r.top >= limite){ fechar(); return; }
+    const margem = 5;
+    const ideal = campo.id === 'nome_bem' ? 221 : 198;
+    const abaixo = limite - r.bottom - margem * 2;
+    const acima = r.top - topo - margem * 2;
+    const paraCima = abaixo < ideal && acima > abaixo;
+    const disponivel = Math.max(0, paraCima ? acima : abaixo);
+    if(disponivel < 24){ fechar(); return; }
+    const w = Math.min(r.width, largura - margem * 2);
+    const x = Math.max(esquerda + margem, Math.min(r.left, esquerda + largura - w - margem));
+    Object.assign(lista.style, {left:`${x}px`, width:`${w}px`, maxHeight:`${Math.min(ideal,disponivel)}px`,
+      top:paraCima?'auto':`${r.bottom+margem}px`, bottom:paraCima?`${document.documentElement.clientHeight-r.top+margem}px`:'auto'});
+  }
+  function agendar(){ if(ativo && !quadro) quadro = requestAnimationFrame(posicionar); }
+  function abrir(campo,lista){
+    if(!campo || !lista) return;
+    if(!aberto(lista)){
+      fechar();
+      const nativo = typeof lista.showPopover === 'function';
+      let ancora = null;
+      if(nativo){ lista.setAttribute('popover','manual'); }
+      else {
+        ancora = document.createComment('atlas-menu-sugestoes');
+        lista.replaceWith(ancora);
+        document.body.append(lista);
+      }
+      ativo = {campo,lista,nativo,ancora};
+      lista.classList.add('ativo');
+      campo.setAttribute('aria-expanded','true');
+      if(nativo) lista.showPopover();
+    }
+    posicionar();
+  }
+  function dentro(alvo){ return ativo && (alvo === ativo.campo || ativo.lista.contains(alvo)); }
+  document.addEventListener('pointerdown', e => { if(ativo && !dentro(e.target)) fechar(); }, true);
+  document.addEventListener('focusin', e => {
+    // O scrollbar pode retirar o foco do input; o body não é uma nova escolha.
+    if(ativo && e.target !== document.body && !dentro(e.target)) fechar();
+  }, true);
+  document.addEventListener('keydown', e => { if(ativo && e.key === 'Escape') fechar(); }, false);
+  document.addEventListener('scroll', e => { if(ativo && !ativo.lista.contains(e.target)) agendar(); }, true);
+  window.addEventListener('resize', agendar);
+  window.visualViewport?.addEventListener('resize', agendar);
+  window.visualViewport?.addEventListener('scroll', agendar);
+  window.addEventListener('pagehide', () => fechar());
+  return {abrir,fechar,aberto};
+})();
+
+function atlasAlternarSugestoesPatrimonio(){
+  const lista = document.getElementById('atlasSugestoesPatrimonio');
+  if(atlasMenuSugestoes.aberto(lista)) atlasFecharSugestoesPatrimonio();
+  else atlasAtualizarSugestoesPatrimonio();
+}
+
 function atlasAtualizarSugestoesPatrimonio(){
   const input=document.getElementById('nome_bem');
   const lista=document.getElementById('atlasSugestoesPatrimonio');
@@ -1526,13 +1611,13 @@ function atlasAtualizarSugestoesPatrimonio(){
       ? 'Valor ref. R$ '+valorRef.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})
       : '';
     const detalhe=[item.marca,item.modelo,item.ncm ? 'NCM '+item.ncm : '',resumoValor].filter(Boolean).join(' • ');
-    return `<button type="button" class="atlas-sugestao" data-indice="${indice}"
-      onmousedown="event.preventDefault(); atlasEscolherSugestaoPatrimonioIndice(${indice})">
+    return `<button type="button" class="atlas-sugestao" role="option" data-indice="${indice}"
+      onmousedown="event.preventDefault()" onclick="atlasEscolherSugestaoPatrimonioIndice(${indice})">
       ${atlasEscaparHTML(item.nome_bem)}
       <small>${atlasEscaparHTML(detalhe||'Nome padronizado do catálogo')}</small>
     </button>`;
   }).join('');
-  lista.classList.add('ativo');
+  atlasMenuSugestoes.abrir(input,lista);
 }
 
 function atlasDefinirCampoSeExiste(id,valorCampo){
@@ -1623,6 +1708,8 @@ async function atlasAplicarPatrimonioComoModelo(registro){
     if(el) el.value='';
   });
 
+  atlasFiscalCarregar();
+
   // Recupera somente a referencia tecnica quando ela ja existe no registro.
   // O catalogo global nao compartilha identificadores, locais nem dados financeiros.
   // Os registros armazenam especificacoes no texto de observacao:
@@ -1643,7 +1730,7 @@ async function atlasAplicarPatrimonioComoModelo(registro){
     atlasDefinirCampoSeExiste('valor_bem',valorReferencia);
   }
   if(!registro.catalogo && registro.id != null){
-    ['cor','ano_fabricacao','ano_modelo','descricao','fornecedor'].forEach(id=>{
+    ['cor','ano_fabricacao','ano_modelo','descricao'].forEach(id=>{
       atlasDefinirCampoSeExiste(id,registro[id]);
     });
   }
@@ -1744,7 +1831,7 @@ function atlasEscolherSugestaoPatrimonio(nome){
 function atlasFecharSugestoesPatrimonio(){
   const lista = document.getElementById("atlasSugestoesPatrimonio");
   if(lista){
-    lista.classList.remove("ativo");
+    atlasMenuSugestoes.fechar(lista);
     lista.innerHTML = "";
   }
   atlasIndiceSugestaoPatrimonio = -1;
@@ -1752,7 +1839,11 @@ function atlasFecharSugestoesPatrimonio(){
 
 function atlasTeclaSugestaoPatrimonio(event){
   const lista = document.getElementById("atlasSugestoesPatrimonio");
-  if(!lista?.classList.contains("ativo")) return;
+  if(!lista?.classList.contains("ativo")){
+    if(event.key !== "ArrowDown") return;
+    atlasAtualizarSugestoesPatrimonio();
+    if(!lista?.classList.contains("ativo")) return;
+  }
 
   const botoes = Array.from(lista.querySelectorAll(".atlas-sugestao"));
   if(!botoes.length) return;
@@ -1867,10 +1958,7 @@ function mostrarCamposLegado(){
 
   if(icone) icone.textContent = ativo ? "✓" : "○";
 
-  if(!ativo){
-    const input = document.getElementById("codigo_antigo");
-    if(input) input.value = "";
-  }
+  // Recolher apenas oculta o campo; a limpeza ocorre ao concluir o cadastro.
 }
 
 /* =========================================================
@@ -1922,8 +2010,8 @@ function atlasEscaparHTML(texto){
 }
 
 function atlasFecharAutocomplete(tipo){
-  document.getElementById(`atlasAutocomplete${tipo === "marca" ? "Marca" : "Modelo"}`)
-    ?.classList.remove("ativo");
+  const lista = document.getElementById(`atlasAutocomplete${tipo === "marca" ? "Marca" : "Modelo"}`);
+  if(lista) atlasMenuSugestoes.fechar(lista);
   atlasAutocompleteEstado[tipo].indice = -1;
 }
 
@@ -1943,6 +2031,12 @@ function atlasSelecionarAutocomplete(tipo, valorSelecionado){
   }
 }
 
+function atlasAlternarAutocomplete(tipo){
+  const lista = document.getElementById(`atlasAutocomplete${tipo === "marca" ? "Marca" : "Modelo"}`);
+  if(atlasMenuSugestoes.aberto(lista)) atlasFecharAutocomplete(tipo);
+  else atlasAtualizarAutocomplete(tipo);
+}
+
 function atlasAtualizarAutocomplete(tipo){
   const campo = document.getElementById(tipo);
   const lista = document.getElementById(`atlasAutocomplete${tipo === "marca" ? "Marca" : "Modelo"}`);
@@ -1960,12 +2054,13 @@ function atlasAtualizarAutocomplete(tipo){
     lista.innerHTML = termo
       ? `<div class="atlas-autocomplete-vazio">Use “${atlasEscaparHTML(termo)}” como novo valor.</div>`
       : "";
-    lista.classList.toggle("ativo", Boolean(termo));
+    if(termo) atlasMenuSugestoes.abrir(campo,lista);
+    else atlasFecharAutocomplete(tipo);
     return;
   }
 
   lista.innerHTML = opcoes.map((opcao,indice) => `
-    <button type="button" class="atlas-autocomplete-opcao" data-indice="${indice}"
+    <button type="button" class="atlas-autocomplete-opcao" role="option" data-indice="${indice}"
       data-valor="${atlasEscaparHTML(opcao)}">${atlasEscaparHTML(opcao)}</button>
   `).join("");
 
@@ -1974,13 +2069,18 @@ function atlasAtualizarAutocomplete(tipo){
     botao.addEventListener("click", () => atlasSelecionarAutocomplete(tipo, botao.dataset.valor));
   });
 
-  lista.classList.add("ativo");
+  atlasMenuSugestoes.abrir(campo,lista);
 }
 
 function atlasTeclaAutocomplete(evento,tipo){
+  const lista = document.getElementById(`atlasAutocomplete${tipo === "marca" ? "Marca" : "Modelo"}`);
+  if(!atlasMenuSugestoes.aberto(lista)){
+    if(evento.key !== "ArrowDown") return;
+    atlasAtualizarAutocomplete(tipo);
+    if(!atlasMenuSugestoes.aberto(lista)) return;
+  }
   const estado = atlasAutocompleteEstado[tipo];
   const itens = estado.itens || [];
-  const lista = document.getElementById(`atlasAutocomplete${tipo === "marca" ? "Marca" : "Modelo"}`);
 
   if(evento.key === "ArrowDown" && itens.length){
     evento.preventDefault();
@@ -2015,10 +2115,10 @@ function atlasCampoAutocomplete(tipo,placeholder){
   return `
     <div class="atlas-autocomplete-campo">
       <input id="${tipo}" autocomplete="off" placeholder="${placeholder}"
-        onfocus="atlasAtualizarAutocomplete('${tipo}')"
+        role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="atlasAutocomplete${nome}"
+        onclick="atlasAlternarAutocomplete('${tipo}')"
         oninput="atlasAtualizarAutocomplete('${tipo}')"
-        onkeydown="atlasTeclaAutocomplete(event,'${tipo}')"
-        onblur="setTimeout(() => atlasFecharAutocomplete('${tipo}'),150)">
+        onkeydown="atlasTeclaAutocomplete(event,'${tipo}')">
       <div class="atlas-autocomplete-lista" id="atlasAutocomplete${nome}" role="listbox"></div>
     </div>
   `;
@@ -2026,7 +2126,7 @@ function atlasCampoAutocomplete(tipo,placeholder){
 
 function atlasCampoSerieComLote(placeholder="Número de série"){
   return window.AtlasPatrimonioLote?.renderizarCampo(placeholder) ||
-    `<input id="numero_serie" placeholder="${placeholder}">`;
+    `<input id="numero_serie" name="atlas_identificador_individual" autocomplete="off" spellcheck="false" placeholder="${placeholder}">`;
 }
 
 function mostrarCampos(){
@@ -2036,6 +2136,8 @@ function mostrarCampos(){
   if(!div || !campoOutro) return;
 
   window.AtlasPatrimonioLote?.fechar({limparSerie:false});
+  atlasFecharAutocomplete("marca");
+  atlasFecharAutocomplete("modelo");
   div.innerHTML = "";
   campoOutro.style.display = tipo === "OUTRO" ? "grid" : "none";
 
@@ -2325,6 +2427,171 @@ async function validarDuplicidadeCampoPatrimonio(campo){
 
 
 
+
+// Dados fiscais: catálogo de fornecedores compartilhado, sem copiar a NF-e.
+// O fornecedor é registrado no banco somente após a gravação do patrimônio.
+const atlasFiscalConsultas = new WeakMap();
+function atlasFiscalNormalizarCnpj(v){
+  return String(v || '').toUpperCase().replace(/[.\/\-\s]/g,'');
+}
+function atlasFiscalCnpjValido(v){
+  const c=atlasFiscalNormalizarCnpj(v);
+  if(!/^[A-Z0-9]{12}[0-9]{2}$/.test(c) || /^(\d)\1{13}$/.test(c)) return false;
+  const dv=(s,pesos)=>{
+    const soma=pesos.reduce((acc,p,i)=>acc+(s.charCodeAt(i)-48)*p,0);
+    const r=soma%11; return r<2?0:11-r;
+  };
+  const d1=dv(c.slice(0,12),[5,4,3,2,9,8,7,6,5,4,3,2]);
+  const d2=dv(c.slice(0,12)+d1,[6,5,4,3,2,9,8,7,6,5,4,3,2]);
+  return c.slice(-2)===String(d1)+String(d2);
+}
+function atlasFiscalFormatarCnpj(v){
+  const c=atlasFiscalNormalizarCnpj(v);
+  return /^[A-Z0-9]{12}[0-9]{2}$/.test(c) ? c.replace(/^(.{2})(.{3})(.{3})(.{4})(.{2})$/,'$1.$2.$3/$4-$5') : c;
+}
+function atlasFiscalEstado(prefixo=''){
+  const campo=document.getElementById(prefixo+'fornecedor_cnpj');
+  const nome=document.getElementById(prefixo+'fornecedor');
+  const aviso=document.getElementById(prefixo+'fornecedor_status');
+  if(!campo || !nome) return null;
+  let estado=atlasFiscalConsultas.get(campo);
+  if(!estado){
+    estado={cnpj:"",versao:0,pendente:null};atlasFiscalConsultas.set(campo,estado);
+    const atualizarAviso=()=>atlasFiscalAtualizarAvisoNome({nome,aviso});
+    nome.addEventListener('input',atualizarAviso);
+    nome.addEventListener('change',atualizarAviso);
+    for(const id of ['fornecedor_cnpj','numero_nfe','data_emissao_nfe']){
+      document.getElementById(prefixo+id)?.addEventListener('change',()=>{
+        if(document.getElementById(prefixo+'chave_nfe')?.value.trim()) atlasFiscalChaveDigitada(prefixo,true);
+      });
+    }
+  }
+  return {campo,nome,aviso,estado};
+}
+function atlasFiscalAtualizarAvisoNome(ctx){
+  if(ctx?.aviso?.textContent==='Fornecedor novo: informe o nome.'){
+    ctx.aviso.hidden=Boolean(ctx.nome.value.trim());
+  }
+}
+function atlasFiscalAviso(ctx,msg='',encontrado=false){
+  if(!ctx?.aviso) return;
+  ctx.aviso.textContent=msg;ctx.aviso.hidden=!msg;ctx.aviso.dataset.encontrado=String(encontrado);
+  atlasFiscalAtualizarAvisoNome(ctx);
+}
+function atlasFiscalCarregar(prefixo='',registro={}){
+  const ctx=atlasFiscalEstado(prefixo);if(!ctx)return;
+  ctx.estado.versao++;ctx.estado.pendente=null;
+  ctx.campo.value=atlasFiscalFormatarCnpj(registro.fornecedor_cnpj);
+  ctx.estado.cnpj=atlasFiscalNormalizarCnpj(ctx.campo.value);
+  ctx.nome.value=registro.fornecedor || '';ctx.nome.readOnly=false;
+  for(const id of ['data_emissao_nfe','chave_nfe']){
+    const campo=document.getElementById(prefixo+id);if(campo)campo.value=registro[id]||'';
+  }
+  atlasFiscalAviso(ctx);
+  atlasFiscalChaveAviso(prefixo);
+}
+function atlasFiscalCnpjDigitado(prefixo=''){
+  const ctx=atlasFiscalEstado(prefixo);if(!ctx)return Promise.resolve();
+  const {campo,nome,estado}=ctx;
+  const cnpj=atlasFiscalNormalizarCnpj(campo.value);
+  if(/^[A-Z0-9]{12}[0-9]{2}$/.test(cnpj))campo.value=atlasFiscalFormatarCnpj(cnpj);
+  if(cnpj===estado.cnpj)return estado.pendente || Promise.resolve();
+  estado.cnpj=cnpj;const versao=++estado.versao;
+  estado.pendente=null;nome.value='';nome.readOnly=false;atlasFiscalAviso(ctx);
+  if(!atlasFiscalCnpjValido(cnpj)){
+    if(cnpj.length>=14)atlasFiscalAviso(ctx,'Confira o CNPJ informado.');
+    return Promise.resolve();
+  }
+  atlasFiscalAviso(ctx,'Consultando fornecedor...');
+  const aindaAtual=()=>estado.versao===versao && atlasFiscalNormalizarCnpj(campo.value)===cnpj;
+  const tarefa=(async()=>{
+    let timer;
+    try{
+      if(navigator.onLine===false || !db())throw new Error('offline');
+      const controlador=new AbortController();
+      const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>{controlador.abort();reject(new Error('timeout'));},4500);});
+      const consulta=db().from('atlas_fornecedores').select('razao_social').eq('cnpj',cnpj).abortSignal(controlador.signal).maybeSingle();
+      const {data,error}=await Promise.race([consulta,timeout]);
+      if(!aindaAtual())return;
+      if(error)throw error;
+      if(data?.razao_social){nome.value=data.razao_social;nome.readOnly=true;atlasFiscalAviso(ctx,'Fornecedor localizado.',true);}
+      else atlasFiscalAviso(ctx,'Fornecedor novo: informe o nome.');
+    }catch(e){
+      if(!aindaAtual())return;
+      // Usa somente o conjunto de patrimônios já autorizado e carregado na tela.
+      const anterior=patrimonios.find(p=>atlasFiscalNormalizarCnpj(p.fornecedor_cnpj)===cnpj && p.fornecedor);
+      if(anterior && !nome.value)nome.value=anterior.fornecedor;
+      atlasFiscalAviso(ctx,'Consulta indisponível. Confira ou informe o nome.');
+    }finally{clearTimeout(timer);if(aindaAtual())estado.pendente=null;}
+  })();
+  estado.pendente=tarefa;
+  return tarefa;
+}
+// Chave NF-e: 43 posições de dados + DV módulo 11 (NT Conjunta 2025.001).
+function atlasFiscalLerChave(v){
+  const chave=String(v || '').replace(/\s/g,'').toUpperCase();
+  if(!/^[0-9]{6}[A-Z0-9]{12}[0-9]{26}$/.test(chave)) return {erro:'A chave de acesso da NF-e deve ter 44 caracteres válidos.'};
+  const uf=chave.slice(0,2), mes=Number(chave.slice(4,6)), modelo=chave.slice(20,22);
+  if(!/^(11|12|13|14|15|16|17|21|22|23|24|25|26|27|28|29|31|32|33|35|41|42|43|50|51|52|53)$/.test(uf) || mes<1 || mes>12) return {erro:'UF ou mês de emissão inválido na chave da NF-e.'};
+  if(modelo!=='55') return {erro:'A chave não corresponde ao modelo 55 (NF-e).'};
+  let soma=0, peso=2;
+  for(let i=42;i>=0;i--){soma+=(chave.charCodeAt(i)-48)*peso;peso=peso===9?2:peso+1;}
+  const resto=soma%11, dv=resto<2?0:11-resto;
+  if(Number(chave[43])!==dv) return {erro:'Dígito verificador da chave da NF-e inválido.'};
+  const cnpj=chave.slice(6,20);
+  if(!atlasFiscalCnpjValido(cnpj)) return {erro:'O CNPJ da chave da NF-e não é válido. Este cadastro aceita fornecedor com CNPJ.'};
+  const numero=chave.slice(25,34).replace(/^0+/,'');
+  if(!numero) return {erro:'Número da NF-e inválido na chave.'};
+  return {cnpj,numero,anoMes:chave.slice(2,6)};
+}
+function atlasFiscalChaveAviso(prefixo,msg='',valido=false){
+  const aviso=document.getElementById(prefixo+'chave_nfe_status');
+  if(aviso){aviso.textContent=msg;aviso.hidden=!msg;aviso.dataset.encontrado=String(valido);}
+}
+function atlasFiscalChaveDigitada(prefixo='',finalizar=false){
+  const campo=document.getElementById(prefixo+'chave_nfe');
+  const ctx=atlasFiscalEstado(prefixo);
+  if(!campo || !ctx) return true;
+  campo.value=campo.value.replace(/\s/g,'').toUpperCase();
+  atlasFiscalChaveAviso(prefixo);
+  if(!campo.value) return true;
+  if(campo.value.length<44 && !finalizar) return false;
+  const info=atlasFiscalLerChave(campo.value);
+  const nota=document.getElementById(prefixo+'numero_nfe');
+  const data=document.getElementById(prefixo+'data_emissao_nfe');
+  let erro=info.erro;
+  if(!erro && ctx.campo.value.trim() && atlasFiscalNormalizarCnpj(ctx.campo.value)!==info.cnpj) erro='O CNPJ informado diverge do CNPJ da chave.';
+  if(!erro && nota?.value.trim() && nota.value.trim().replace(/^0+/,'')!==info.numero) erro='O número da nota informado diverge da chave.';
+  if(!erro && data?.value && (data.value.slice(2,4)+data.value.slice(5,7))!==info.anoMes) erro='O mês ou ano da data de emissão diverge da chave.';
+  if(erro){atlasFiscalChaveAviso(prefixo,erro);return false;}
+  if(!ctx.campo.value.trim()){ctx.campo.value=atlasFiscalFormatarCnpj(info.cnpj);atlasFiscalCnpjDigitado(prefixo);}
+  if(nota && !nota.value.trim()) nota.value=info.numero;
+  atlasFiscalChaveAviso(prefixo,'Chave consistente. Sem consulta à SEFAZ.',true);
+  return true;
+}
+async function atlasValidarDadosFiscais(prefixo=''){
+  const ctx=atlasFiscalEstado(prefixo);if(!ctx)return true;
+  if(!atlasFiscalChaveDigitada(prefixo,true)){
+    const chave=document.getElementById(prefixo+'chave_nfe');
+    alert(document.getElementById(prefixo+'chave_nfe_status')?.textContent || 'Confira a chave de acesso da NF-e.');chave?.focus();return false;
+  }
+  const cnpj=atlasFiscalNormalizarCnpj(ctx.campo.value);
+  if(cnpj && !atlasFiscalCnpjValido(cnpj)){alert('Informe um CNPJ válido ou deixe o campo em branco.');ctx.campo.focus();return false;}
+  await atlasFiscalCnpjDigitado(prefixo);
+  if(cnpj!==atlasFiscalNormalizarCnpj(ctx.campo.value))return false;
+  if(cnpj && !ctx.nome.value.trim()){alert('Informe o nome do fornecedor.');ctx.nome.focus();return false;}
+  if(!atlasFiscalChaveDigitada(prefixo,true))return false;
+  return true;
+}
+function atlasFiscalDados(prefixo=''){
+  return {
+    fornecedor_cnpj:atlasFiscalNormalizarCnpj(valor(prefixo+'fornecedor_cnpj')) || null,
+    data_emissao_nfe:valor(prefixo+'data_emissao_nfe') || null,
+    chave_nfe:valor(prefixo+'chave_nfe').toUpperCase() || null
+  };
+}
+function atlasFiscalEscapar(v){return String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
 function atlasMascaraNCM(input){
   if(!input) return;
   input.value = String(input.value || "").replace(/\D/g, "").slice(0, 8);
@@ -2347,7 +2614,7 @@ function atlasAlternarDadosFiscais(forcarEstado){
   if(icone) icone.textContent = ativo ? "✓" : "○";
 
   if(ativo && typeof forcarEstado !== "boolean"){
-    setTimeout(() => document.getElementById("ncm")?.focus(), 120);
+    setTimeout(() => document.getElementById("fornecedor_cnpj")?.focus(), 120);
   }
 }
 
@@ -2414,6 +2681,9 @@ async function gerarPatrimonio(){
     if(campoValor){ campoValor.focus(); campoValor.select?.(); }
     return;
   }
+
+  if(!await atlasValidarDadosFiscais()) return;
+  if(window.__BDR_PATRIMONIO_SALVANDO__) return;
 
   // Cadastro em lote: usa os mesmos dados do formulário e altera apenas a série/código.
   if(window.AtlasPatrimonioLote?.ativo()){
@@ -2519,6 +2789,7 @@ ano_modelo: valor("ano_modelo")
     codigo_antigo: valor("codigo_antigo") || null,
     ncm: valor("ncm") || null,
     numero_nfe: valor("numero_nfe") || null,
+    ...atlasFiscalDados(),
     estado_conservacao: valor("estado_conservacao") || "BOM",
     observacao: [
       valor("observacao"),
@@ -2526,7 +2797,7 @@ ano_modelo: valor("ano_modelo")
     ].filter(Boolean).join(" | ") || null,
 
     origem_cadastro:
-      document.getElementById("checkLegado").checked
+      (document.getElementById("checkLegado").checked || !!valor("codigo_antigo"))
         ? "LEGADO"
         : "NOVO",
 usuario_cadastro:
@@ -2617,6 +2888,7 @@ function limparFormularioCadastro(){
   document.getElementById("codigo_antigo").value = "";
   document.getElementById("ncm").value = "";
   document.getElementById("numero_nfe").value = "";
+  atlasFiscalCarregar();
   atlasAlternarDadosFiscais(false);
 
   const campoEstado = document.getElementById("estado_conservacao");
@@ -2634,8 +2906,8 @@ function limparFormularioCadastro(){
 /* =========================================================
    ATLAS — VISUALIZAÇÃO DE EXCLUÍDOS/INATIVOS
    ---------------------------------------------------------
-   - Somente o usuário interno ID 1 enxerga a opção no filtro.
-   - Para os demais usuários, o item apenas desaparece da lista.
+   - Inativos não são uma situação operacional do filtro comum.
+   - O usuário interno ID 1 mantém acesso pelo link de auditoria.
 ========================================================= */
 function atlasPodeVerInativos(){
   const usuario = usuarioAtual();
@@ -2644,7 +2916,7 @@ function atlasPodeVerInativos(){
 
 function atlasAtualizarBotaoInativos(){
   const opcaoStatus = document.getElementById("filtroStatusInativo");
-  if(opcaoStatus) opcaoStatus.hidden = !atlasPodeVerInativos();
+  if(opcaoStatus) opcaoStatus.hidden = true;
 }
 
 async function atlasAoAlterarFiltroStatus(){
@@ -2974,6 +3246,9 @@ function textoBuscaPatrimonio(p){
     ${p.origem_cadastro || ""}
     ${p.valor_bem || ""}
     ${p.numero_nfe || ""}
+    ${p.fornecedor_cnpj || ""}
+    ${p.fornecedor || ""}
+    ${p.chave_nfe || ""}
     ${p.ncm || ""}
   `;
 }
@@ -2992,6 +3267,9 @@ function bdrCamposPesquisaPatrimonio(p){
     {rotulo:"Placa", peso:70, valor:p.placa},
     {rotulo:"Chassi", peso:70, valor:p.chassi || p.numero_chassi},
     {rotulo:"NF-e", peso:65, valor:p.numero_nfe},
+    {rotulo:"CNPJ do fornecedor", peso:85, valor:p.fornecedor_cnpj},
+    {rotulo:"Fornecedor", peso:70, valor:p.fornecedor},
+    {rotulo:"Chave NF-e", peso:90, valor:p.chave_nfe},
     {rotulo:"NCM", peso:60, valor:p.ncm},
     {rotulo:"Marca", peso:55, valor:p.marca},
     {rotulo:"Modelo", peso:55, valor:p.modelo},
@@ -3122,7 +3400,7 @@ function renderizarPatrimonios(){
   lista.innerHTML = "";
 
   const filtrados = patrimonios.filter(p => {
-    const estadoAtivoCorreto = atlasMostrarInativos ? p.ativo === false : p.ativo !== false;
+    const estadoAtivoCorreto = atlasMostrarInativos ? (atlasPodeVerInativos() && p.ativo === false) : (p.ativo !== false && String(p.status || "").trim().toUpperCase() !== "INATIVO");
     return estadoAtivoCorreto &&
       (!filtroObra || String(p.obra_id || "") === String(filtroObra)) &&
       (!filtroStatus || p.status === filtroStatus) &&
@@ -3662,9 +3940,12 @@ async function abrirModal(id){
     ${bdrLinhaInfo("Código", p.codigo_qr)}
     ${bdrLinhaInfo("Código antigo", p.codigo_antigo)}
     ${bdrLinhaInfo("NCM", p.ncm)}
-    ${bdrLinhaInfo("Número da NF-e", p.numero_nfe)}
+    ${bdrLinhaInfo("Número da NF-e", atlasFiscalEscapar(p.numero_nfe))}
+    ${bdrLinhaInfo("CNPJ do fornecedor", atlasFiscalEscapar(atlasFiscalFormatarCnpj(p.fornecedor_cnpj)))}
+    ${bdrLinhaInfo("Data de emissão da NF-e", p.data_emissao_nfe ? atlasFiscalEscapar(p.data_emissao_nfe.split("-").reverse().join("/")) : null)}
+    ${bdrLinhaInfo("Chave de acesso da NF-e", atlasFiscalEscapar(p.chave_nfe))}
     ${bdrLinhaInfo("Descrição", p.descricao)}
-    ${bdrLinhaInfo("Fornecedor", p.fornecedor)}
+    ${bdrLinhaInfo("Fornecedor", atlasFiscalEscapar(p.fornecedor))}
     ${bdrLinhaInfo("Data de aquisição", p.data_compra ? new Date(p.data_compra + "T00:00:00").toLocaleDateString("pt-BR") : null)}
     ${bdrLinhaInfo("Responsável", p.responsavel)}
     ${bdrLinhaInfo("Departamento / setor", p.departamento)}
@@ -4969,7 +5250,7 @@ function montarCamposEdicaoPorTipo(){
     box.innerHTML = `
       <input id="edit_marca" placeholder="Marca">
       <input id="edit_modelo" placeholder="Modelo">
-      <input id="edit_numero_serie" placeholder="Número de série">
+      <input id="edit_numero_serie" name="atlas_identificador_edicao" autocomplete="off" spellcheck="false" placeholder="Número de série">
     `;
   }
 
@@ -4992,7 +5273,7 @@ function montarCamposEdicaoPorTipo(){
     box.innerHTML = `
       <input id="edit_marca" placeholder="Marca">
       <input id="edit_modelo" placeholder="Modelo">
-      <input id="edit_numero_serie" placeholder="Número de série">
+      <input id="edit_numero_serie" name="atlas_identificador_edicao" autocomplete="off" spellcheck="false" placeholder="Número de série">
       <input id="edit_potencia" placeholder="Potência">
       <input id="edit_horimetro" placeholder="Horímetro">
       <input id="edit_combustivel" placeholder="Combustível">
@@ -5006,8 +5287,7 @@ function montarCamposEdicaoPorTipo(){
       <textarea id="edit_descricao" class="atlas-campo-largo" placeholder="Descrição detalhada do imobilizado"></textarea>
       <input id="edit_marca" placeholder="Marca / fabricante">
       <input id="edit_modelo" placeholder="Modelo">
-      <input id="edit_numero_serie" placeholder="Número de série, patrimônio do fabricante ou identificação">
-      <input id="edit_fornecedor" placeholder="Fornecedor">
+      <input id="edit_numero_serie" name="atlas_identificador_edicao" autocomplete="off" spellcheck="false" placeholder="Número de série, patrimônio do fabricante ou identificação">
       <input id="edit_data_compra" type="date" title="Data de aquisição">
       <input id="edit_responsavel" placeholder="Responsável pelo bem">
       <input id="edit_departamento" placeholder="Departamento / setor">
@@ -5019,7 +5299,7 @@ function montarCamposEdicaoPorTipo(){
     box.innerHTML = `
       <input id="edit_marca" placeholder="Marca/Fabricante">
       <input id="edit_modelo" placeholder="Modelo/Descrição">
-      <input id="edit_numero_serie" placeholder="Número de série">
+      <input id="edit_numero_serie" name="atlas_identificador_edicao" autocomplete="off" spellcheck="false" placeholder="Número de série">
     `;
   }
 
@@ -5028,7 +5308,7 @@ function montarCamposEdicaoPorTipo(){
       <input id="edit_tipo_outro" placeholder="Descreva o tipo do ativo">
       <input id="edit_marca" placeholder="Marca/Fabricante">
       <input id="edit_modelo" placeholder="Modelo/Descrição">
-      <input id="edit_numero_serie" placeholder="Número de série">
+      <input id="edit_numero_serie" name="atlas_identificador_edicao" autocomplete="off" spellcheck="false" placeholder="Número de série">
     `;
   }
 }
@@ -5084,7 +5364,7 @@ function abrirEdicao(){
   bdrSetValorCampo("edit_modelo", patrimonioSelecionado.modelo || "");
   bdrSetValorCampo("edit_numero_serie", patrimonioSelecionado.numero_serie || "");
   bdrSetValorCampo("edit_descricao", patrimonioSelecionado.descricao || "");
-  bdrSetValorCampo("edit_fornecedor", patrimonioSelecionado.fornecedor || "");
+  atlasFiscalCarregar("edit_", patrimonioSelecionado);
   bdrSetValorCampo("edit_data_compra", patrimonioSelecionado.data_compra || "");
   bdrSetValorCampo("edit_responsavel", patrimonioSelecionado.responsavel || "");
   bdrSetValorCampo("edit_departamento", patrimonioSelecionado.departamento || "");
@@ -5125,6 +5405,7 @@ async function salvarEdicaoPatrimonio(){
     return;
   }
 
+  if(!await atlasValidarDadosFiscais("edit_")) return;
   const tipoEditado = valor("edit_tipo_item") || patrimonioSelecionado.tipo_item;
 
   const dadosAtualizados = {
@@ -5155,6 +5436,7 @@ async function salvarEdicaoPatrimonio(){
     codigo_antigo: valor("edit_codigo_antigo") || null,
     ncm: valor("edit_ncm") || null,
     numero_nfe: valor("edit_numero_nfe") || null,
+    ...atlasFiscalDados("edit_"),
     observacao: valor("edit_observacao") || null
   };
 
@@ -5220,7 +5502,7 @@ async function salvarEdicaoPatrimonio(){
 
   patrimonios = patrimonios.map(p =>
     Number(p.id) === Number(patrimonioSelecionado.id)
-      ? {...p, ...dadosAtualizados, __offline_pendente:!!respEdicao.offlineFirst}
+      ? {...p, ...dadosAtualizados, ...(respEdicao.data?.[0] || {}), __offline_pendente:!!respEdicao.offlineFirst}
       : p
   );
 
@@ -5427,36 +5709,29 @@ window.AtlasPatrimonioAPI = Object.freeze({
     return [...(select?.options || [])].filter(op => !op.hidden && !op.disabled);
   }
 
+  function fecharCombo(combo){
+    combo.classList.remove("aberto");
+    combo.querySelector(".atlas-combo-input")?.setAttribute("aria-expanded", "false");
+    sincronizarCombo(document.getElementById(combo.dataset.select));
+  }
+
   function fecharTodos(exceto){
     document.querySelectorAll(".atlas-combo.aberto").forEach(c => {
-      if(c !== exceto) c.classList.remove("aberto");
+      if(c !== exceto) fecharCombo(c);
     });
+  }
+
+  function abrirCombo(combo, select, termo=""){
+    if(select.disabled) return;
+    fecharTodos(combo);
+    combo.classList.add("aberto");
+    combo.querySelector(".atlas-combo-input")?.setAttribute("aria-expanded", "true");
+    montarMenu(combo, select, termo);
   }
 
   function montarMenu(combo, select, termo=""){
     const menu = combo.querySelector(".atlas-combo-menu");
 
-    // A barra de rolagem faz parte do combo. Clicar/arrastar nela não pode fechar a lista.
-    if(menu && !menu.dataset.scrollProtegido){
-      menu.dataset.scrollProtegido = "1";
-
-      menu.addEventListener("pointerdown", (e) => {
-        combo.dataset.interagindoMenu = "1";
-        e.stopPropagation();
-      });
-
-      menu.addEventListener("mousedown", (e) => {
-        combo.dataset.interagindoMenu = "1";
-        e.stopPropagation();
-      });
-
-      const liberarInteracaoMenu = () => {
-        setTimeout(() => { delete combo.dataset.interagindoMenu; }, 80);
-      };
-      menu.addEventListener("pointerup", liberarInteracaoMenu);
-      menu.addEventListener("mouseup", liberarInteracaoMenu);
-      menu.addEventListener("pointercancel", liberarInteracaoMenu);
-    }
     if(!menu) return;
 
     const normaliza = s => String(s || "")
@@ -5482,15 +5757,12 @@ window.AtlasPatrimonioAPI = Object.freeze({
       btn.textContent = String(op.textContent || "").trim();
       btn.dataset.value = op.value;
 
-      btn.addEventListener("mousedown", e => {
-        e.preventDefault();
+      // Não tira o foco do campo ao selecionar com o mouse.
+      btn.addEventListener("mousedown", e => e.preventDefault());
+      btn.addEventListener("click", () => {
         select.value = op.value;
+        fecharCombo(combo);
         select.dispatchEvent(new Event("change", {bubbles:true}));
-
-        const input = combo.querySelector(".atlas-combo-input");
-        if(input) input.value = String(op.textContent || "").trim();
-
-        combo.classList.remove("aberto");
       });
 
       menu.appendChild(btn);
@@ -5523,6 +5795,7 @@ window.AtlasPatrimonioAPI = Object.freeze({
     input.autocomplete = "off";
     input.spellcheck = false;
     input.setAttribute("aria-label", select.options?.[0]?.textContent || select.id);
+    input.setAttribute("aria-expanded", "false");
 
     const menu = document.createElement("div");
     menu.className = "atlas-combo-menu";
@@ -5533,20 +5806,12 @@ window.AtlasPatrimonioAPI = Object.freeze({
 
     sincronizarCombo(select);
 
-    // Mesmo comportamento do seletor "Obra de lançamento":
-    // clicar/focar abre a lista completa sem transformar o texto atual em filtro.
-    input.addEventListener("focus", () => {
-      if(input.disabled) return;
-      fecharTodos(combo);
-      combo.classList.add("aberto");
-      montarMenu(combo, select, "");
-    });
-
+    // O clique é a única origem da alternância pelo mouse/toque.
+    // Foco e clique não podem abrir a mesma lista duas vezes.
     input.addEventListener("click", () => {
       if(input.disabled) return;
-      fecharTodos(combo);
-      combo.classList.add("aberto");
-      montarMenu(combo, select, "");
+      if(combo.classList.contains("aberto")) fecharCombo(combo);
+      else abrirCombo(combo, select);
     });
 
     // A opção genérica (valor vazio) é estado do filtro, não texto de pesquisa.
@@ -5563,35 +5828,26 @@ window.AtlasPatrimonioAPI = Object.freeze({
       }
     });
 
-    // Só filtra quando o usuário realmente digita.
+    // Digitação abre a lista e filtra normalmente.
     input.addEventListener("input", () => {
       if(input.disabled) return;
-      combo.classList.add("aberto");
-      montarMenu(combo, select, input.value);
+      abrirCombo(combo, select, input.value);
     });
 
-    input.addEventListener("blur", () => {
-      setTimeout(() => {
-        if(combo.dataset.interagindoMenu === "1") return;
-        if(!combo.contains(document.activeElement)){
-          combo.classList.remove("aberto");
-          sincronizarCombo(select);
-        }
-      }, 140);
-    });
-
+    // Sem fechamento por blur: a barra de rolagem pode retirar o foco
+    // do input sem que o usuário tenha saído do componente.
     input.addEventListener("keydown", e => {
       if(e.key === "Escape"){
-        combo.classList.remove("aberto");
-        input.value = textoOpcaoSelecionada(select);
-        input.blur();
+        fecharCombo(combo);
+      }
+      if(e.key === "ArrowDown" && !combo.classList.contains("aberto")){
+        e.preventDefault();
+        abrirCombo(combo, select);
       }
       if(e.key === "Enter"){
-        const primeira = menu.querySelector(".atlas-combo-opcao");
-        if(primeira){
-          e.preventDefault();
-          primeira.dispatchEvent(new MouseEvent("mousedown", {bubbles:true}));
-        }
+        e.preventDefault();
+        if(!combo.classList.contains("aberto")) abrirCombo(combo, select);
+        else menu.querySelector(".atlas-combo-opcao")?.click();
       }
     });
 
@@ -5610,15 +5866,13 @@ window.AtlasPatrimonioAPI = Object.freeze({
   function iniciar(){
     IDS.forEach(id => criarCombo(document.getElementById(id)));
 
-    document.addEventListener("mousedown", e => {
-      if(!e.target.closest(".atlas-combo")){
-        document.querySelectorAll(".atlas-combo").forEach(combo => {
-          const id = combo.dataset.select;
-          const select = id ? document.getElementById(id) : null;
-          if(select) sincronizarCombo(select);
-        });
-        fecharTodos();
-      }
+    // Só fecha ao iniciar interação fora da lista ou mudar o foco
+    // para outro componente (Tab). Arrastar a rolagem não fecha.
+    const fecharFora = e => fecharTodos(e.target.closest?.(".atlas-combo"));
+    document.addEventListener("pointerdown", fecharFora, true);
+    document.addEventListener("focusin", fecharFora, true);
+    document.addEventListener("keydown", e => {
+      if(e.key === "Escape") fecharTodos();
     });
   }
 

@@ -63,6 +63,37 @@
     }
     return data||null;
   }
+  // O endereço físico pertence à obra. Nunca usar a sede da empresa como fallback.
+  async function enderecoOperacionalObra(id,parte){
+    const doDocumento=parte?.endereco_operacional;
+    if(doDocumento && typeof doDocumento==='object' && !Array.isArray(doDocumento)) return doDocumento;
+    if(!Number.isSafeInteger(Number(id)) || Number(id)<=0) return null;
+    try{
+      const {data,error}=await db().from('obras').select('endereco_operacional').eq('id',Number(id)).maybeSingle();
+      if(error){console.warn('Endereço operacional da obra indisponível:',error.message);return null;}
+      const endereco=data?.endereco_operacional;
+      return endereco && typeof endereco==='object' && !Array.isArray(endereco)?endereco:null;
+    }catch(e){console.warn('Endereço operacional da obra indisponível:',e?.message||e);return null;}
+  }
+  async function enderecosDocumento(origemId,destinoId,partes){
+    const [origem,destino]=await Promise.all([
+      enderecoOperacionalObra(origemId,partes?.origem),
+      enderecoOperacionalObra(destinoId,partes?.destino)
+    ]);
+    return {origem,destino};
+  }
+  function logradouroObra(e){
+    return [[texto(e?.logradouro),texto(e?.numero)].filter(Boolean).join(', '),texto(e?.bairro),texto(e?.complemento),texto(e?.referencia)?'Ref.: '+texto(e.referencia):''].filter(Boolean).join(' · ');
+  }
+  function cepObra(e){return texto(e?.cep).replace(/^(\d{5})(\d{3})$/,'$1-$2');}
+  function mesmoMunicipioOperacional(a,b){
+    if(!texto(a?.municipio)||!texto(b?.municipio)||!texto(a?.uf)||!texto(b?.uf)) return null;
+    return mesmoMunicipio({cidade:a.municipio,estado:a.uf},{cidade:b.municipio,estado:b.uf});
+  }
+  function enderecoObraCompleto(e){
+    if(e===null || e===undefined)return 'Endereço da obra indisponível';
+    return [logradouroObra(e),[texto(e.municipio),texto(e.uf)].filter(Boolean).join(' / '),cepObra(e)?'CEP '+cepObra(e):''].filter(Boolean).join(' · ')||'Endereço da obra não cadastrado';
+  }
   function cnpjFormatado(v){
     const t=texto(v), dig=t.replace(/\D/g,'');
     return dig.length===14?dig.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5'):t;
@@ -125,6 +156,7 @@
     const p=await pedido(pedidoId);
     const [lista,orig,dest]=await Promise.all([itens(pedidoId),obra(p.obra_origem_id),obra(p.obra_destino_id||p.obra_id)]);
     const [empOrig,empDest]=await Promise.all([empresa(orig?.empresa_id),empresa(dest?.empresa_id)]);
+    const enderecos=await enderecosDocumento(p.obra_origem_id,p.obra_destino_id||p.obra_id,await consultarPartesRomaneio('PED',pedidoId));
     const estIds=[...new Set(lista.map(i=>Number(i.produto_id)).filter(Boolean))];
     const patIds=[...new Set(lista.map(i=>Number(i.patrimonio_id)).filter(Boolean))];
     const [ests,pats]=await Promise.all([estoque(estIds),patrimonios(patIds)]);
@@ -173,11 +205,11 @@
     const composicao=[...agrupadas.values()].map(l=>({...l,total:l.qtd*l.valor_romaneio}));
     const percentual=Number(p.percentual_valor_romaneio||70)===100?100:70;
     composicao.forEach(l=>{ l.total=l.qtd*(percentual===100?l.valor_bdr:l.valor_romaneio); });
-    return {pedido:p,origem:orig,destino:dest,empresaOrigem:empOrig,empresaDestino:empDest,linhas:composicao,itensSnapshot:linhas,percentual,total:composicao.reduce((s,l)=>s+l.total,0)};
+    return {pedido:p,origem:orig,destino:dest,empresaOrigem:empOrig,empresaDestino:empDest,enderecoOrigem:enderecos.origem,enderecoDestino:enderecos.destino,linhas:composicao,itensSnapshot:linhas,percentual,total:composicao.reduce((s,l)=>s+l.total,0)};
   }
 
   function tipoMovimentacao(r){
-    const igual=mesmoMunicipio(r?.empresaOrigem,r?.empresaDestino);
+    const igual=mesmoMunicipioOperacional(r?.enderecoOrigem,r?.enderecoDestino);
     return igual===true?"MESMO_MUNICIPIO":igual===false?"INTERMUNICIPAL":"A_CONFERIR";
   }
 
@@ -208,9 +240,9 @@
       obra_origem_id:Number(p.obra_origem_id)||null,
       obra_destino_id:Number(p.obra_destino_id||p.obra_id)||null,
       origem_empresa:texto(r.empresaOrigem?.nome)||null, origem_obra:fmtObra(r.origem), origem_cnpj:texto(r.empresaOrigem?.cnpj)||null,
-      origem_endereco:enderecoEmpresa(r.empresaOrigem), origem_cidade:texto(r.empresaOrigem?.cidade)||null, origem_estado:texto(r.empresaOrigem?.estado)||null,
+      origem_endereco:logradouroObra(r.enderecoOrigem)||"—", origem_cidade:texto(r.enderecoOrigem?.municipio)||null, origem_estado:texto(r.enderecoOrigem?.uf)||null,
       destino_empresa:texto(r.empresaDestino?.nome)||null, destino_obra:fmtObra(r.destino), destino_cnpj:texto(r.empresaDestino?.cnpj)||null,
-      destino_endereco:enderecoEmpresa(r.empresaDestino), destino_cidade:texto(r.empresaDestino?.cidade)||null, destino_estado:texto(r.empresaDestino?.estado)||null,
+      destino_endereco:logradouroObra(r.enderecoDestino)||"—", destino_cidade:texto(r.enderecoDestino?.municipio)||null, destino_estado:texto(r.enderecoDestino?.uf)||null,
       transportadora:texto(p.transportadora)||null, placa:texto(p.veiculo_placa)||null, motorista:texto(p.motorista_nome)||null,
       solicitante_id:idSolicitante(p), solicitante_nome:texto(p.solicitante||p.usuario_criacao)||null,
       tipo_movimentacao:tipoMovimentacao(r), exige_nfe:p.exige_nfe===true, numero_nfe:texto(p.numero_nfe)||null, serie_nfe:texto(p.serie_nfe)||null, chave_nfe:texto(p.chave_nfe)||null,
@@ -219,6 +251,10 @@
       valor_total:Math.round((r.linhas.reduce((s,l)=>s+l.qtd*((Number(p.percentual_valor_romaneio||existente?.percentual_valor||70)===100)?l.valor_bdr:l.valor_romaneio),0)+Number.EPSILON)*100)/100,
       status:statusSnapshot(p), updated_at:new Date().toISOString()
     };
+    // Consulta sem acesso não deve apagar o endereço já gravado no snapshot.
+    for(const [lado,endereco] of [['origem',r.enderecoOrigem],['destino',r.enderecoDestino]]){
+      if(endereco==null){delete payload[lado+'_endereco'];delete payload[lado+'_cidade'];delete payload[lado+'_estado'];}
+    }
     // Depois de fechado, o documento histórico não é reescrito.
     if(existente?.fechado_em) return existente;
     const {data,error}=await db().from("romaneios").update(payload).eq("id",existente.id).select("*").single();
@@ -235,8 +271,8 @@
     const cabecalho={
       numero_romaneio:Number(p.id), pedido_id:Number(p.id), empresa_id:Number(p.empresa_id||r.origem?.empresa_id)||null,
       obra_origem_id:Number(p.obra_origem_id)||null, obra_destino_id:Number(p.obra_destino_id||p.obra_id)||null,
-      origem_empresa:texto(r.empresaOrigem?.nome)||null, origem_obra:fmtObra(r.origem), origem_cnpj:texto(r.empresaOrigem?.cnpj)||null, origem_endereco:enderecoEmpresa(r.empresaOrigem), origem_cidade:texto(r.empresaOrigem?.cidade)||null, origem_estado:texto(r.empresaOrigem?.estado)||null,
-      destino_empresa:texto(r.empresaDestino?.nome)||null, destino_obra:fmtObra(r.destino), destino_cnpj:texto(r.empresaDestino?.cnpj)||null, destino_endereco:enderecoEmpresa(r.empresaDestino), destino_cidade:texto(r.empresaDestino?.cidade)||null, destino_estado:texto(r.empresaDestino?.estado)||null,
+      origem_empresa:texto(r.empresaOrigem?.nome)||null, origem_obra:fmtObra(r.origem), origem_cnpj:texto(r.empresaOrigem?.cnpj)||null, origem_endereco:logradouroObra(r.enderecoOrigem)||"—", origem_cidade:texto(r.enderecoOrigem?.municipio)||null, origem_estado:texto(r.enderecoOrigem?.uf)||null,
+      destino_empresa:texto(r.empresaDestino?.nome)||null, destino_obra:fmtObra(r.destino), destino_cnpj:texto(r.empresaDestino?.cnpj)||null, destino_endereco:logradouroObra(r.enderecoDestino)||"—", destino_cidade:texto(r.enderecoDestino?.municipio)||null, destino_estado:texto(r.enderecoDestino?.uf)||null,
       transportadora:texto(p.transportadora)||null, placa:texto(p.veiculo_placa)||null, motorista:texto(p.motorista_nome)||null,
       solicitante_id:idSolicitante(p), solicitante_nome:texto(p.solicitante||p.usuario_criacao)||null, tipo_movimentacao:tipoMovimentacao(r), exige_nfe:p.exige_nfe===true,
       numero_nfe:texto(p.numero_nfe)||null, serie_nfe:texto(p.serie_nfe)||null, chave_nfe:texto(p.chave_nfe)||null,
@@ -430,6 +466,8 @@
         throw new Error('O romaneio pertence a obras fora do seu escopo de consulta.');
       }
       const r=await obterRomaneio(pedidoId);
+      const partesEndereco=await consultarPartesRomaneio('PED',pedidoId);
+      const enderecos=await enderecosDocumento(pAcesso.obra_origem_id,pAcesso.obra_destino_id||pAcesso.obra_id,partesEndereco);
       // A versão fiscal nova usa decisões por ITEM; a escolha global 70/100
       // fica disponível somente até a instalação da migração. Sem decisão,
       // nunca presumir desconto em novos documentos.
@@ -459,9 +497,9 @@
       if(r.linhas.some(l=>!l.nf_entrada)) pendencias.push("Há itens sem referência inequívoca de NF de entrada.");
       fundo.innerHTML=`<div class="bdr-rom">
         <div class="bdr-rom-top"><div class="bdr-rom-brand">BDR</div><div class="bdr-rom-title"><h2>ROMANEIO FISCAL DE SAÍDA</h2><small>COMPOSIÇÃO PARA EMISSÃO DE NF-e</small></div><div class="bdr-rom-status">${upper(p.status_fiscal)==="NFE_EMITIDA"?"✓ NF-e REGISTRADA":"● AGUARDANDO NF-e"}</div></div>
-        <div class="bdr-rom-grid"><div class="bdr-rom-kpi">ROMANEIO<b>${esc(p.id)}</b></div><div class="bdr-rom-kpi">PEDIDO / TRANSFERÊNCIA<b>${esc(p.codigo||("PED-"+p.id))}</b></div><div class="bdr-rom-kpi">DATA<b>${dataHoraBR(p.data_finalizacao_separacao||p.data_criacao||p.criado_em)}</b></div><div class="bdr-rom-kpi">PLACA<b>${esc(p.veiculo_placa)||"—"}</b></div><div class="bdr-rom-kpi">MOTORISTA<b>${esc(p.motorista_nome)||"—"}</b></div></div>
-        <div class="bdr-rom-partes"><div class="bdr-rom-card"><h3>↗ ORIGEM (SAÍDA)</h3><p><b>Empresa:</b> ${esc(r.empresaOrigem?.nome)||"—"}</p><p><b>Obra / Local:</b> ${esc(fmtObra(r.origem))}</p><p><b>CNPJ:</b> ${esc(r.empresaOrigem?.cnpj)||"—"}</p><p><b>Endereço:</b> ${esc(enderecoEmpresa(r.empresaOrigem))}</p></div><div class="bdr-rom-card"><h3>📍 DESTINO</h3><p><b>Empresa:</b> ${esc(r.empresaDestino?.nome)||"—"}</p><p><b>Obra / Local:</b> ${esc(fmtObra(r.destino))}</p><p><b>CNPJ:</b> ${esc(r.empresaDestino?.cnpj)||"—"}</p><p><b>Endereço:</b> ${esc(enderecoEmpresa(r.empresaDestino))}</p></div></div>
-        <div class="bdr-rom-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="bdr-rom-kpi">TRANSPORTADORA<b>${esc(p.transportadora)||"PENDENTE"}</b></div><div class="bdr-rom-kpi">NF-e SAÍDA<b>${esc(p.numero_nfe)||"PENDENTE"}</b></div><div class="bdr-rom-kpi">MOVIMENTAÇÃO<b>${mesmoMunicipio(r.empresaOrigem,r.empresaDestino)===true?"MESMO MUNICÍPIO":mesmoMunicipio(r.empresaOrigem,r.empresaDestino)===false?"INTERMUNICIPAL":"A CONFERIR"}</b></div><div class="bdr-rom-kpi">SOLICITANTE DO PEDIDO<b>${esc(p.solicitante||p.usuario_criacao)||"—"}</b></div></div>
+        <div class="bdr-rom-grid"><div class="bdr-rom-kpi">ROMANEIO<b>${esc("PED-"+p.id)}</b></div><div class="bdr-rom-kpi">DATA<b>${dataHoraBR(p.data_finalizacao_separacao||p.data_criacao||p.criado_em)}</b></div><div class="bdr-rom-kpi">PLACA<b>${esc(p.veiculo_placa)||"—"}</b></div><div class="bdr-rom-kpi">MOTORISTA<b>${esc(p.motorista_nome)||"—"}</b></div></div>
+        <div class="bdr-rom-partes"><div class="bdr-rom-card"><h3>↗ ORIGEM (SAÍDA)</h3><p><b>Empresa:</b> ${esc(r.empresaOrigem?.nome)||"—"}</p><p><b>Obra / Local:</b> ${esc(fmtObra(r.origem))}</p><p><b>CNPJ:</b> ${esc(r.empresaOrigem?.cnpj)||"—"}</p><p><b>Endereço:</b> ${esc(enderecoObraCompleto(enderecos.origem))}</p></div><div class="bdr-rom-card"><h3>📍 DESTINO</h3><p><b>Empresa:</b> ${esc(r.empresaDestino?.nome)||"—"}</p><p><b>Obra / Local:</b> ${esc(fmtObra(r.destino))}</p><p><b>CNPJ:</b> ${esc(r.empresaDestino?.cnpj)||"—"}</p><p><b>Endereço:</b> ${esc(enderecoObraCompleto(enderecos.destino))}</p></div></div>
+        <div class="bdr-rom-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="bdr-rom-kpi">TRANSPORTADORA<b>${esc(p.transportadora)||"PENDENTE"}</b></div><div class="bdr-rom-kpi">NF-e SAÍDA<b>${esc(p.numero_nfe)||"PENDENTE"}</b></div><div class="bdr-rom-kpi">MOVIMENTAÇÃO<b>${mesmoMunicipioOperacional(enderecos.origem,enderecos.destino)===true?"MESMO MUNICÍPIO":mesmoMunicipioOperacional(enderecos.origem,enderecos.destino)===false?"INTERMUNICIPAL":"A CONFERIR"}</b></div><div class="bdr-rom-kpi">SOLICITANTE DO PEDIDO<b>${esc(p.solicitante||p.usuario_criacao)||"—"}</b></div></div>
         <div class="bdr-rom-table-wrap">${tabelaVertical(r)}</div>
         ${r.fiscalNovo?`<div class="bdr-rom-valor"><strong>Valorização fiscal por item:</strong><span>${r.fiscalConferido?`✓ Conferida por ${esc(r.fiscalAutor||'Fiscal')} · Total ${dinheiro(r.total)}`:'Aguardando seleção do Fiscal (sem desconto até conferência)'}</span><button class="bdr-rom-btn primary" onclick="AtlasRomaneio.abrirDocumentoPedido(${Number(p.id)})">Conferir itens / descontos</button></div>`:`<div class="bdr-rom-valor"><strong>Valor para emissão da NF-e (legado):</strong><label class="bdr-rom-opcao"><input type="radio" name="bdrValorFiscal" value="70" ${r.percentual===70?"checked":""} onchange="AtlasRomaneio.selecionarValor(70)"> Romaneio 70% (${dinheiro(r.linhas.reduce((s,l)=>s+l.qtd*l.valor_romaneio,0))})</label><label class="bdr-rom-opcao"><input type="radio" name="bdrValorFiscal" value="100" ${r.percentual===100?"checked":""} onchange="AtlasRomaneio.selecionarValor(100)"> BDR 100% (${dinheiro(r.linhas.reduce((s,l)=>s+l.qtd*l.valor_bdr,0))})</label></div>`}
         <div class="bdr-rom-total">TOTAL GERAL DO ROMANEIO: ${dinheiro(r.total)}</div>
@@ -538,6 +576,7 @@
     const {data:itens,error:erroItens}=await banco.from('atlas_patrimonio_remessa_itens').select('*').eq('remessa_id',id).order('id',{ascending:true});
     if(erroItens)throw erroItens;
     const partes=await consultarPartesRomaneio('RP',id);
+    const enderecos=await enderecosDocumento(rp.obra_origem_id,rp.obra_destino_id,partes);
     const [orig,dest]=await Promise.all([obra(rp.obra_origem_id),obra(rp.obra_destino_id)]);
     const [empOrigLeg,empDestLeg]=await Promise.all([
       partes?.origem?.empresa?Promise.resolve(null):empresa(orig?.empresa_id||rp.empresa_id),
@@ -555,6 +594,7 @@
       origem:partes?.origem?.nome_obra||rp.obra_origem_nome||fmtObra(orig),
       destino:partes?.destino?.nome_obra||rp.obra_destino_nome||fmtObra(dest),
       dadosOrigem:partes?.origem||null,dadosDestino:partes?.destino||null,
+      enderecoOrigem:enderecos.origem,enderecoDestino:enderecos.destino,
       empOrig,empDest,responsavel:rp.enviado_por_nome||'—',
       motorista:rp.motorista||rp.motorista_nome||'',transportadora:rp.transportadora||rp.veiculo||'',placa:rp.placa||rp.veiculo_placa||'',
       items:(itens||[]).map((i,index)=>{
@@ -571,6 +611,7 @@
       throw new Error('Este pedido não pertence ao seu escopo autorizado.');
     const r=await obterRomaneio(id);
     const partes=await consultarPartesRomaneio('PED',id);
+    const enderecos=await enderecosDocumento(p.obra_origem_id,p.obra_destino_id||p.obra_id,partes);
     const itensDocumento=[];
     for(const linha of r.linhas){
       // Cada patrimônio precisa ser identificável, sem ocultar um PAT dentro de um agrupamento.
@@ -586,6 +627,7 @@
       tipo:'PED',id,numero:p.codigo||'PED-'+id,data:p.data_saida_cd||p.data_envio||p.data_finalizacao_separacao||p.data_criacao,
       status:p.status,exigeNfe:p.exige_nfe===true,statusFiscal:upper(p.status_fiscal),numeroNfe:texto(p.numero_nfe),origem:partes?.origem?.nome_obra||fmtObra(r.origem),destino:partes?.destino?.nome_obra||fmtObra(r.destino),
       dadosOrigem:partes?.origem||null,dadosDestino:partes?.destino||null,
+      enderecoOrigem:enderecos.origem,enderecoDestino:enderecos.destino,
       empOrig:partes?.origem?.empresa||r.empresaOrigem,empDest:partes?.destino?.empresa||r.empresaDestino,
       responsavel:p.usuario_saida_cd||p.usuario_finalizacao_separacao||p.solicitante||p.usuario_criacao||'—',
       motorista:p.motorista_nome||'',transportadora:p.transportadora||'',placa:p.veiculo_placa||'',items:itensDocumento
@@ -798,7 +840,7 @@
       <tfoot><tr><td colspan="8"><div class="atlas-doc-totais-fiscais"><span>Original: <b>${dinheiro(valores.original)}</b></span><span>Desconto: <b>${dinheiro(valores.desconto)}</b></span><span class="atlas-doc-total-destaque">Total do Romaneio: <b>${dinheiro(valores.final)}</b></span></div><small class="atlas-doc-fiscal-situacao">${situacao}</small>${auditoria}</td></tr></tfoot>
       </table></div></div>`;
   }
-  function htmlDadosParte(empresa,dadosObra,nomeObra){
+  function htmlDadosParte(empresa,dadosObra,nomeObra,enderecoObra){
     const codigo=texto(dadosObra?.codigo_obra),codigoSienge=texto(dadosObra?.codigo_sienge);
     const tabela=dadosObra?.tabela_insumo;
     const codigos=[empresa?.codigo_empresa?'Empresa '+empresa.codigo_empresa:'',codigo?'Obra '+codigo:'',
@@ -807,18 +849,24 @@
       <p><b>CNPJ:</b> ${esc(cnpjFormatado(empresa?.cnpj))||'—'}</p>
       <p><b>Obra:</b> ${esc(nomeObra)||'—'}</p>
       <p><b>Códigos:</b> ${esc(codigos)||'—'}</p>
-      <p><b>Endereço:</b> ${esc(empresa?.endereco)||'—'}</p>
-      <p><b>Cidade / UF:</b> ${esc([empresa?.cidade,empresa?.estado].filter(Boolean).join(' / '))||'—'}</p>
-      <p><b>CEP:</b> ${esc(empresa?.cep)||'—'}</p>
+      <p><b>Endereço da obra:</b> ${esc(logradouroObra(enderecoObra))||(enderecoObra==null?'Indisponível':'Não cadastrado')}</p>
+      <p><b>Cidade / UF:</b> ${esc([texto(enderecoObra?.municipio),texto(enderecoObra?.uf)].filter(Boolean).join(' / '))||'—'}</p>
+      <p><b>CEP:</b> ${esc(cepObra(enderecoObra))||'—'}</p>
       ${empresa?.telefone?`<p><b>Telefone:</b> ${esc(empresa.telefone)}</p>`:''}`;
+  }
+  // Referência de apresentação: o código original continua no documento e no banco.
+  function referenciaRomaneio(doc){
+    const id=Number(doc?.id);
+    return ["RP","PED"].includes(doc?.tipo) && Number.isSafeInteger(id) && id>0
+      ? `${doc.tipo}-${id}` : "";
   }
   function cabecalhoDocumento(doc){
     return `<header class="atlas-doc-brandbar"><div class="atlas-doc-mark"><strong>BDR</strong><span>CONSTRUART<small>Gestão Patrimonial</small></span></div>
        <div class="atlas-doc-name"><b>ROMANEIO PATRIMONIAL</b><small>Documento de transferência</small></div></header>
-       <div class="atlas-doc-stats"><div><small>Remessa</small><b>${esc(doc.numero)}</b></div><div><small>Data / Hora</small><b>${dataHoraBR(doc.data)}</b></div>
+       <div class="atlas-doc-stats"><div><small>Remessa</small><b>${esc(referenciaRomaneio(doc))}</b></div><div><small>Data / Hora</small><b>${dataHoraBR(doc.data)}</b></div>
        <div><small>Situação</small><b>${esc(formatoStatus(doc.status))}</b></div></div>
-       <div class="atlas-doc-partes"><section><h3>↗ Origem</h3>${htmlDadosParte(doc.empOrig,doc.dadosOrigem,doc.origem)}</section>
-       <section><h3>⌖ Destino</h3>${htmlDadosParte(doc.empDest,doc.dadosDestino,doc.destino)}</section></div>
+       <div class="atlas-doc-partes"><section><h3>↗ Origem</h3>${htmlDadosParte(doc.empOrig,doc.dadosOrigem,doc.origem,doc.enderecoOrigem)}</section>
+       <section><h3>⌖ Destino</h3>${htmlDadosParte(doc.empDest,doc.dadosDestino,doc.destino,doc.enderecoDestino)}</section></div>
        <div class="atlas-doc-transport"><div><small>Responsável pela saída</small><b>${esc(doc.responsavel)}</b></div>
        <div><small>Transporte</small><b>${esc(doc.motorista)||'Motorista não informado'}</b><small>${esc([doc.transportadora,doc.placa&&'Placa: '+doc.placa].filter(Boolean).join(' · '))||'—'}</small></div>
        <div><small>Tipo de transferência</small><b>Patrimonial</b></div></div>`;
@@ -829,7 +877,7 @@
       <div class="atlas-doc-total"><b>Total de patrimônios: ${numeroItens(doc).toLocaleString('pt-BR')}</b></div>
       <div class="atlas-doc-print-signatures"><h3>Assinaturas da transferência</h3><div class="atlas-doc-print-sign-grid">${assinaturaImpressao('SAIDA','Responsável pela saída')}${assinaturaImpressao('MOTORISTA','Motorista / transportador')}</div></div>
       <footer class="atlas-doc-print-footer"><div class="atlas-doc-qr-place"><img id="atlasDocQr" alt="QR Code para consultar o documento" style="display:none"><div><b>Consulta do documento</b><small>Escaneie para consultar a remessa. É necessário ter acesso à obra.</small></div></div>
-      <div><b>${esc(doc.numero)}</b><small>BDR CONSTRUART · Gestão Patrimonial</small><small>Documento operacional. Não substitui documento fiscal quando exigido.</small></div></footer>
+      <div><b>${esc(referenciaRomaneio(doc))}</b><small>BDR CONSTRUART · Gestão Patrimonial</small><small>Documento operacional. Não substitui documento fiscal quando exigido.</small></div></footer>
     </div>`;
   }
   function docAssinaturas(doc){
@@ -965,7 +1013,7 @@
     estilos();
     document.getElementById('bdrRomaneioFiscal')?.remove();
     const fundo=document.createElement('div');fundo.id='bdrRomaneioFiscal';fundo.className='bdr-rom-bg atlas-doc-backdrop';
-    fundo.innerHTML=`<div class="atlas-doc-shell"><header class="atlas-doc-toolbar"><div><h1>Romaneio Patrimonial</h1><small>Documento de transferência · ${esc(doc.numero)}</small></div>
+    fundo.innerHTML=`<div class="atlas-doc-shell"><header class="atlas-doc-toolbar"><div><h1>Romaneio Patrimonial</h1><small>Documento de transferência · ${esc(referenciaRomaneio(doc))}</small></div>
        <div class="atlas-doc-toolbar-actions"><button class="atlas-doc-button" type="button" onclick="AtlasRomaneio.copiarItensNfe()" title="Copiar os dados conferidos em colunas para colar no Excel ou em um emissor compatível">▤ Copiar itens para NF-e</button><button class="atlas-doc-button" onclick="AtlasRomaneio.imprimir()">▣ Imprimir / salvar PDF</button>
        <button class="atlas-doc-button" onclick="AtlasRomaneio.copiarDocumento()">↗ Copiar link</button><button class="atlas-doc-button atlas-doc-close" onclick="AtlasRomaneio.fechar()" aria-label="Fechar">×</button></div></header>
        <main class="atlas-doc-content"><div id="atlasDocAcoesAssinatura">${assinaturaResumo()}</div>
@@ -1170,6 +1218,10 @@
     const origem=document.querySelector("#bdrRomaneioFiscal .atlas-doc-printable") || document.querySelector("#bdrRomaneioFiscal .bdr-rom");
     if(!origem) return;
 
+    const referencia=origem.classList.contains("atlas-doc-printable")
+      ? referenciaRomaneio(documentoAtual)
+      : referenciaRomaneio({tipo:"PED",id:global.__bdrRomaneioAtual?.pedido?.id});
+    const tituloImpressao=referencia ? `Romaneio ${referencia}` : "Romaneio BDR";
     const copia=origem.cloneNode(true);
     copia.querySelectorAll(".bdr-rom-actions").forEach(el=>el.remove());
     copia.querySelectorAll(".atlas-doc-screen-sign,.atlas-doc-only-screen").forEach(el=>el.remove());
@@ -1190,7 +1242,7 @@
 
     const doc=iframe.contentDocument;
     doc.open();
-    doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>BDR - Romaneio</title>
+    doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(tituloImpressao)}</title>
       <style>
         @page{size:A4 portrait;margin:11mm}
         *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#102a4c;background:#fff}
@@ -1223,15 +1275,36 @@
         .atlas-doc-print-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1.5px solid #14549a;padding-top:10px;margin-top:13px;break-inside:avoid}.atlas-doc-print-footer>div{flex:1}.atlas-doc-qr-place{display:flex;align-items:center;gap:10px}.atlas-doc-qr-place img{width:60px;height:60px}.atlas-doc-print-footer small{display:block;color:#64788f;margin-top:4px;font-size:8px}
         @page{size:A4 portrait;margin:10mm}
       </style></head><body>${copia.outerHTML}</body></html>`);
-    doc.close();
-
+    // O Chrome pode usar o título da aba principal como nome do PDF,
+    // mesmo quando a impressão parte de um iframe. Alterar apenas durante a impressão.
+    let iniciou=false;
     iframe.onload=()=>{
+      if(iniciou || doc.title!==tituloImpressao)return;
+      iniciou=true;
       setTimeout(()=>{
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-        setTimeout(()=>iframe.remove(),1000);
+        const titulos=new Map();
+        let janela=global;
+        while(janela){
+          try{
+            const d=janela.document;
+            titulos.set(d,d.title);
+            d.title=tituloImpressao;
+            if(janela.parent===janela)break;
+            janela=janela.parent;
+          }catch(_){break;}
+        }
+        try{
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        }finally{
+          for(const [d,anterior] of titulos){
+            if(d.title===tituloImpressao)d.title=anterior;
+          }
+          setTimeout(()=>iframe.remove(),1000);
+        }
       },80);
     };
+    doc.close();
   }
   async function selecionarValor(percentual){
     const r=global.__bdrRomaneioAtual; if(!r) return;
@@ -1251,8 +1324,8 @@
 
   function toggleExportar(ev){ ev?.stopPropagation?.(); const m=document.getElementById("bdrExportMenu"); if(m) m.classList.toggle("ativo"); }
   function baixar(conteudo,nome,tipo){ const blob=new Blob(["\ufeff",conteudo],{type:tipo}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=nome; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
-  function exportarExcel(){ const r=global.__bdrRomaneioAtual; if(!r)return; const tabela=tabelaHTML(r).replace(/<div[^>]*>.*?<\/div>/gs,""); baixar(`<html><head><meta charset="utf-8"></head><body><h2>BDR - Romaneio Fiscal de Saída ${esc(r.pedido.id)}</h2>${tabela}<p><b>Total: ${dinheiro(r.total)}</b></p></body></html>`,`Romaneio-${r.pedido.id}.xls`,`application/vnd.ms-excel`); }
-  function exportarWord(){ const r=global.__bdrRomaneioAtual; if(!r)return; baixar(`<html><head><meta charset="utf-8"><style>table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:6px}th{background:#eee}</style></head><body><h1>BDR</h1><h2>Romaneio Fiscal de Saída ${esc(r.pedido.id)}</h2><p><b>Pedido:</b> ${esc(r.pedido.codigo||r.pedido.id)}<br><b>Origem:</b> ${esc(fmtObra(r.origem))}<br><b>Destino:</b> ${esc(fmtObra(r.destino))}<br><b>Placa:</b> ${esc(r.pedido.veiculo_placa)||"—"}<br><b>Motorista:</b> ${esc(r.pedido.motorista_nome)||"—"}</p>${tabelaHTML(r)}<h3>Total: ${dinheiro(r.total)}</h3></body></html>`,`Romaneio-${r.pedido.id}.doc`,`application/msword`); }
+  function exportarExcel(){ const r=global.__bdrRomaneioAtual; if(!r)return; const tabela=tabelaHTML(r).replace(/<div[^>]*>.*?<\/div>/gs,""); baixar(`<html><head><meta charset="utf-8"></head><body><h2>BDR - Romaneio Fiscal de Saída ${esc(r.pedido.id)}</h2>${tabela}<p><b>Total: ${dinheiro(r.total)}</b></p></body></html>`,`Romaneio PED-${r.pedido.id}.xls`,`application/vnd.ms-excel`); }
+  function exportarWord(){ const r=global.__bdrRomaneioAtual; if(!r)return; baixar(`<html><head><meta charset="utf-8"><style>table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:6px}th{background:#eee}</style></head><body><h1>BDR</h1><h2>Romaneio Fiscal de Saída ${esc(r.pedido.id)}</h2><p><b>Pedido:</b> ${esc("PED-"+r.pedido.id)}<br><b>Origem:</b> ${esc(fmtObra(r.origem))}<br><b>Destino:</b> ${esc(fmtObra(r.destino))}<br><b>Placa:</b> ${esc(r.pedido.veiculo_placa)||"—"}<br><b>Motorista:</b> ${esc(r.pedido.motorista_nome)||"—"}</p>${tabelaHTML(r)}<h3>Total: ${dinheiro(r.total)}</h3></body></html>`,`Romaneio PED-${r.pedido.id}.doc`,`application/msword`); }
 
 
   function abrirTransporte(){
@@ -1297,10 +1370,10 @@
     document.getElementById("bdrRomNfe")?.remove();
     const box=document.createElement("div"); box.id="bdrRomNfe";
     box.style.cssText="position:fixed;inset:0;z-index:2147483647;background:#0f172a88;display:grid;place-items:center;padding:20px";
-    const codigo=esc(r?.pedido?.codigo||("PED-"+pedidoId));
+    const codigo=esc("PED-"+pedidoId);
     box.innerHTML=`<div style="width:min(620px,100%);background:#fff;border-radius:16px;padding:24px;color:#102a4c;box-shadow:0 24px 60px #0004">
       <h2 style="margin:0 0 6px">🧾 Registrar NF-e</h2>
-      <p style="margin:0 0 18px;color:#64748b">ROM ${Number(pedidoId)} • ${codigo} • Total ${dinheiro(r?.total||0)}</p>
+      <p style="margin:0 0 18px;color:#64748b">${codigo} • Total ${dinheiro(r?.total||0)}</p>
       <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
         <div><label style="font-weight:800">Número da NF-e</label><input id="bdrNfeNumero" autocomplete="off" inputmode="numeric" style="width:100%;padding:11px;margin-top:5px;border:1px solid #cbd5e1;border-radius:8px"></div>
         <div><label style="font-weight:800">Série</label><input id="bdrNfeSerie" value="1" autocomplete="off" inputmode="numeric" style="width:100%;padding:11px;margin-top:5px;border:1px solid #cbd5e1;border-radius:8px"></div>

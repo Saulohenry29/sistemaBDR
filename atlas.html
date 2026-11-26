@@ -40,17 +40,19 @@
   <script src="./JS/componentes/atlasTopo.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js" defer></script>
   <script src="./JS/supabaseClient.js" defer></script>
-  <script src="./JS/auth.js" defer></script>
+  <script src="./JS/auth.js?v=20261126-sessao-central" defer></script>
   <script src="./JS/bdrCore.js" defer></script>
   <script src="./JS/atlasAudio/atlasAudio.js?v=20261117-web-audio01" defer></script>
   <script src="./JS/atlasDialog.js" defer></script>
-  <script src="./JS/atlasBadge.js?v=20261123-push01" defer></script>
+  <script src="./JS/pwa-update.js?v=20261126-pwa-login" defer></script>
+  <script src="./JS/atlasBadge.js?v=20261126-pwa-update" defer></script>
   <script src="./JS/bdrNotificacoes.js?v=20261123-push01" defer></script>
   <script src="./JS/bdrMenuPermissoes.js" defer></script>
   <script src="./JS/atlasTopbar.js" defer></script>
   <!-- NIIMBOT: instancia BLE na janela principal (Bluefy/iPhone e navegadores Web Bluetooth). -->
   <script src="./JS/impressao/niimbot.js?v=20261115-shell-ble01" defer></script>
-  </head>
+  <link rel="stylesheet" href="./CSS/pwa-update.css?v=20261126-pwa-update">
+</head>
   <body class="atlas-shell-page">
   <div class="bdr-app">
     <atlas-menu></atlas-menu>
@@ -224,6 +226,7 @@
     function integrarFrame(frame){
       try{
         const w=frame.contentWindow,d=frame.contentDocument;
+        window.AtlasSessao?.anexarDocumento(d);
         w.ir=function(dest){const m=moduloDePagina(dest); if(m){parent.Atlas.navigate(m);return;} w.location.href=dest;};
 
         // Mensagens comuns pertencem à shell: qualquer alert/aviso do módulo usa o mesmo topo.
@@ -360,7 +363,11 @@
     }
     addEventListener('popstate',abrirDaUrl);
     addEventListener('hashchange',abrirDaUrl);
-    addEventListener('DOMContentLoaded',()=>{ prepararTopoShell(); setTimeout(abrirDaUrl,0); setTimeout(prepararPaginas,250); });
+    addEventListener('DOMContentLoaded',async()=>{
+      const estado=await window.AtlasSessao?.iniciar();
+      if(estado==='encerrada')return;
+      prepararTopoShell(); setTimeout(abrirDaUrl,0); setTimeout(prepararPaginas,250);
+    });
   })();
   </script>
   </body>

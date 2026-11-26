@@ -211,7 +211,8 @@ function carregarTopo(){ const u=usuarioAtual(); document.getElementById("usuari
 function abrirAba(nome, btn){ document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active")); document.getElementById("tab-"+nome)?.classList.add("active"); document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active")); btn?.classList.add("active"); renderizarPedidos(); }
 function filtrarStatus(st, btn){ filtroAtual = st; document.querySelectorAll(".chip-exp").forEach(b=>b.classList.remove("active")); btn?.classList.add("active"); renderizarCatalogo(); }
 
-async function carregarTudo(){
+async function carregarTudo(tentativaAuth=false){
+  if(window.AtlasSessao && !window.AtlasSessao.conferirTempo())return;
   if(!db()){ alert("Supabase não carregado."); return; }
 
   carregarTopo();
@@ -239,6 +240,10 @@ async function carregarTudo(){
   }
 
   try{
+    const sessao=await window.AtlasSessao?.validar({exigirAuth:true,renovar:tentativaAuth});
+    if(sessao==="encerrada")return;
+    if(sessao==="legado")throw new Error("Esta conta precisa concluir a ativação do acesso seguro para consultar a Expedição.");
+    if(sessao!=="valida")throw new Error("Não foi possível confirmar a sessão segura da Expedição. Tente novamente.");
     await carregarContextoOperacionalExpedicao();
     // Os nomes das obras da Expedição seguem o escopo autorizado no servidor.
     // Não altera o escopo de atuação do Patrimônio nem a consulta dos itens.
@@ -251,7 +256,11 @@ async function carregarTudo(){
     window.pedidos = pedidos;
     window.obras = obras;
     renderizarTudo();
+    document.getElementById("atlasExpedicaoErroCarga")?.remove();
   }catch(e){
+    if(!tentativaAuth && (e?.code==="42501" || e?.code==="PGRST301" || /permission denied for function atlas_obras_destino_expedicao|jwt expired/i.test(e?.message||""))){
+      return carregarTudo(true);
+    }
     if(bdrExpErroInternet(e)){
       const cache = carregarCacheExpedicao();
       if(cache){
@@ -262,10 +271,26 @@ async function carregarTudo(){
         return;
       }
     }
+    atlasExpedicaoExibirErroCarga(e);
     throw e;
   }
 }
 
+function atlasExpedicaoExibirErroCarga(e){
+  let aviso=document.getElementById("atlasExpedicaoErroCarga");
+  const kpi=document.getElementById("kpiTotal");
+  if(!aviso && kpi){
+    aviso=document.createElement("div");
+    aviso.id="atlasExpedicaoErroCarga";
+    aviso.setAttribute("role","status");
+    aviso.style.cssText="padding:10px 14px;margin:10px 0;color:#991b1b;background:#fef2f2;border-radius:8px;font-size:13px";
+    kpi.closest(".kpi")?.parentElement?.before(aviso);
+  }
+  if(aviso)aviso.textContent="Não foi possível atualizar a Expedição. "+(e?.message||"Tente novamente.");
+  for(const id of ["kpiTotal","kpiEstoque","kpiUso","kpiManutencao","kpiReservado","kpiPedidos"]){
+    const el=document.getElementById(id);if(el)el.textContent="—";
+  }
+}
 
 /* Remessas diretas do Patrimônio: consulta independente dos pedidos comuns.
    O recebimento de RP em trânsito é tratado separadamente dos pedidos PED,
@@ -1869,7 +1894,7 @@ if(document.readyState === "loading"){
 
 window.addEventListener("online", async () => {
   try{ window.bdrResetOnlineReal?.(); }catch(e){}
-  await carregarTudo();
+  try{await carregarTudo();}catch(e){console.warn("BDR Expedição: falha ao reconectar:",e?.message||e);}
 });
 
 
@@ -2060,7 +2085,7 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
     const itens = itensDoPedidoLocal(p);
     if(!itens.length){ alert("Pedido sem itens carregados."); return; }
 
-    document.getElementById("modalTitulo").innerText = "Autorizar parcial - " + (p.codigo || ("PED-" + p.id));
+    document.getElementById("modalTitulo").innerText = "Autorizar parcial - PED-" + p.id;
     document.getElementById("modalConteudo").innerHTML = `
       <div class="info-box" style="margin-top:0">Escolha item por item. O Atlas vai definir o status geral automaticamente: APROVADO, RECUSADO ou APROVADO_PARCIAL.</div>
       <div style="display:grid;gap:10px;margin-top:12px">
@@ -2406,7 +2431,6 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
       <div class="atlas-pedido-row">
         <div>
           <div class="atlas-pedido-numero">${esc(pedidoCurtoAtlas(p))}</div>
-          <span class="atlas-pedido-codigo">${esc(p.codigo || "")}</span>
         </div>
         <div class="atlas-pedido-main">
           <div class="atlas-pedido-destino">${esc(destino)}</div>
@@ -2464,7 +2488,6 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
       <div class="atlas-modal-pedido-head">
         <div>
           <div class="atlas-modal-pedido-num">${esc(pedidoCurtoAtlas(p))}</div>
-          <div class="atlas-modal-pedido-codigo">Código completo: ${esc(p.codigo || "-")}</div>
         </div>
         <span class="badge-status ${statusClass(st)}">${esc(st)}</span>
       </div>
@@ -2707,9 +2730,9 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
       .atlas-rec-pedido{display:flex;align-items:center;gap:8px;min-width:0}.atlas-rec-pedido-num{font-size:24px;line-height:1;font-weight:950;color:#0f172a;white-space:nowrap}.atlas-rec-codigo{font-size:10px;line-height:1.15;color:#64748b;font-weight:800;margin-top:5px;white-space:nowrap;letter-spacing:-.15px}
       .atlas-rec-etapas{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;position:relative;min-width:0;padding:0 4px}.atlas-rec-etapas:before{content:"";position:absolute;top:13px;left:10%;right:10%;height:2px;background:#dbe4ef;z-index:0}.atlas-rec-etapa{position:relative;z-index:1;text-align:center;font-size:9px;line-height:1.15;min-width:0;white-space:normal;color:#64748b;font-weight:800}.atlas-rec-etapa i{width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 5px;background:#e2e8f0;color:#64748b;font-style:normal}.atlas-rec-etapa.ok i{background:#16a34a;color:#fff}.atlas-rec-etapa.atual i{background:#2563eb;color:#fff}.atlas-rec-etapa.atual{color:#0f172a}
       .atlas-rec-resumo{display:grid;grid-template-columns:1.05fr 1.15fr 1.15fr 1.15fr;gap:8px;margin:12px 0}.atlas-rec-card{border:1px solid #e2e8f0;background:#f8fafc;border-radius:12px;padding:9px 11px;min-width:0}.atlas-rec-card small{display:block;font-size:9px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:3px}.atlas-rec-card b{display:block;font-size:12px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.atlas-rec-card span{display:block;font-size:10px;color:#64748b;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      .atlas-rec-transporte{display:grid;grid-template-columns:auto 1fr 1fr 1fr auto;gap:12px;align-items:center;background:#eff6ff;border:1px solid #dbeafe;border-radius:12px;padding:10px 12px;margin-bottom:12px}.atlas-rec-transporte strong{font-size:12px;color:#0f172a}.atlas-rec-transporte small{display:block;color:#64748b;font-size:9px;font-weight:900;text-transform:uppercase}.atlas-rec-transporte b{font-size:11px;color:#0f172a}.atlas-rec-link{border:1px solid #bfdbfe;background:#fff;color:#1d4ed8;border-radius:9px;padding:7px 10px;font-size:10px;font-weight:900;cursor:pointer}
+      .atlas-rec-transporte{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:12px;align-items:center;background:#eff6ff;border:1px solid #dbeafe;border-radius:12px;padding:10px 12px;margin-bottom:12px}.atlas-rec-transporte strong{font-size:12px;color:#0f172a}.atlas-rec-transporte small{display:block;color:#64748b;font-size:9px;font-weight:900;text-transform:uppercase}.atlas-rec-transporte b{font-size:11px;color:#0f172a}.atlas-rec-link{border:1px solid #bfdbfe;background:#fff;color:#1d4ed8;border-radius:9px;padding:7px 10px;font-size:10px;font-weight:900;cursor:pointer}
       .atlas-rec-secao{border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:10px}.atlas-rec-secao-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;background:#fff;font-size:12px;font-weight:950;color:#0f172a}.atlas-rec-busca{width:min(250px,42vw);border:1px solid #dbe2ea;border-radius:9px;padding:7px 10px;font-size:10px}.atlas-rec-itens{max-height:180px;overflow-y:auto;overflow-x:hidden}.atlas-rec-item{display:grid;grid-template-columns:30px minmax(145px,1.35fr) minmax(110px,1.15fr) 68px 42px;gap:8px;align-items:center;padding:9px 12px;border-top:1px solid #eef2f7;font-size:11px}.atlas-rec-item-num{width:26px;height:26px;border-radius:9px;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;font-weight:950}.atlas-rec-item-cod{font-weight:950;color:#0f172a}.atlas-rec-item-desc{color:#334155}.atlas-rec-qtd{font-weight:900;text-align:center}
-      .atlas-rec-obs{padding:9px 12px;border-radius:12px;background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;font-size:11px;margin-bottom:10px}.atlas-rec-compactos{display:grid;grid-template-columns:1fr 1fr;gap:8px}.atlas-rec-dobra{border:1px solid #e2e8f0;border-radius:11px;background:#fff}.atlas-rec-dobra summary{list-style:none;cursor:pointer;padding:9px 12px;font-size:11px;font-weight:900;color:#0f172a;display:flex;justify-content:space-between}.atlas-rec-dobra summary::-webkit-details-marker{display:none}.atlas-rec-dobra-conteudo{padding:0 12px 10px;font-size:10px;color:#475569;line-height:1.55}.atlas-rec-doc-btn{border:0;background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:7px 9px;font-size:10px;font-weight:900;cursor:pointer;margin:2px 5px 2px 0}.atlas-rec-doc-btn.print{background:#f1f5f9;color:#0f172a}
+      .atlas-rec-obs{padding:9px 12px;border-radius:12px;background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;font-size:11px;margin-bottom:10px}.atlas-rec-compactos{display:grid;grid-template-columns:1fr 1fr;gap:8px}.atlas-rec-dobra{border:1px solid #e2e8f0;border-radius:11px;background:#fff}.atlas-rec-dobra-titulo{padding:9px 12px;font-size:11px;font-weight:900;color:#0f172a}.atlas-rec-dobra-conteudo{padding:0 12px 10px;font-size:10px;color:#475569;line-height:1.55}.atlas-rec-doc-btn{border:0;background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:7px 9px;font-size:10px;font-weight:900;cursor:pointer;margin:2px 5px 2px 0}.atlas-rec-doc-btn.print{background:#f1f5f9;color:#0f172a}
       .atlas-rec-footer{flex:0 0 auto;display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:11px 18px;border-top:1px solid #e5e7eb;background:#fff;box-shadow:0 -5px 18px rgba(15,23,42,.05)}.atlas-rec-footer button{border:0;border-radius:10px;padding:10px 15px;font-size:12px;font-weight:950;cursor:pointer}.atlas-rec-confirmar{background:#15803d;color:#fff;margin-left:auto}.atlas-rec-historico-ok{background:#eff6ff;color:#1d4ed8}
       @media(max-width:800px){#modalDetalhe.atlas-recebimento .modal{width:100%;max-height:calc(100dvh - 12px)}.atlas-rec-top{grid-template-columns:1fr}.atlas-rec-resumo{grid-template-columns:1fr 1fr}.atlas-rec-transporte{grid-template-columns:1fr 1fr}.atlas-rec-transporte strong,.atlas-rec-transporte .atlas-rec-link{grid-column:1/-1}.atlas-rec-item{grid-template-columns:30px 1fr 70px}.atlas-rec-item-desc{grid-column:2}.atlas-rec-item-un{display:none}.atlas-rec-compactos{grid-template-columns:1fr}}
     `;
@@ -2802,12 +2825,12 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
       ? `<b>✓ Remessa recebida</b><br>Saída: ${escLog(dataSaida)}<br>Recebimento: ${escLog(dataRecebimento)}${p.usuario_recebimento_obra||p.usuario_recebimento?` • Por: ${escLog(p.usuario_recebimento_obra||p.usuario_recebimento)}`:""}<br>Motorista: ${escLog(p.motorista_nome||"-")} • Placa: ${escLog(p.veiculo_placa||"-")} • Transportadora: ${escLog(p.transportadora||"-")}<br>${escLog(origem)} → ${escLog(destino)}`
       : `<b>${contextoRecebimento?"Aguardando conferência no destino":"Em trânsito"}</b><br>Saída: ${escLog(dataSaida)}<br>Motorista: ${escLog(p.motorista_nome||"-")} • Placa: ${escLog(p.veiculo_placa||"-")} • Transportadora: ${escLog(p.transportadora||"-")}<br>${escLog(origem)} → ${escLog(destino)}`;
 
-    const docs = `<button class="atlas-rec-doc-btn" type="button" onclick="abrirRomaneioRecebimentoAtlas(${Number(p.id)})">📄 Ver Romaneio ${Number(p.id)}</button><button class="atlas-rec-doc-btn print" type="button" onclick="imprimirRomaneioRecebimentoAtlas(${Number(p.id)})">🖨 Imprimir novamente</button>${p.numero_nfe?`<div style="margin-top:6px"><b>NF-e:</b> ${escLog(p.numero_nfe)}${p.serie_nfe?` • Série ${escLog(p.serie_nfe)}`:""}${p.chave_nfe?`<br><b>Chave:</b> ${escLog(p.chave_nfe)}`:""}</div>`:""}`;
+    const docs = `<button class="atlas-rec-doc-btn" type="button" onclick="abrirRomaneioRecebimentoAtlas(${Number(p.id)})">📄 Ver Romaneio PED-${Number(p.id)}</button><button class="atlas-rec-doc-btn print" type="button" onclick="imprimirRomaneioRecebimentoAtlas(${Number(p.id)})">🖨 Imprimir novamente</button>${p.numero_nfe?`<div style="margin-top:6px"><b>NF-e:</b> ${escLog(p.numero_nfe)}${p.serie_nfe?` • Série ${escLog(p.serie_nfe)}`:""}${p.chave_nfe?`<br><b>Chave:</b> ${escLog(p.chave_nfe)}`:""}</div>`:""}`;
 
     box.innerHTML=`
       <div class="atlas-rec-scroll">
         <div class="atlas-rec-top">
-          <div class="atlas-rec-pedido"><div><div class="atlas-rec-pedido-num">${escLog(pedidoCurtoLog(p))}</div><div class="atlas-rec-codigo">${escLog(p.codigo||"-")}</div></div><span class="badge-status ${statusClass(st)}">${statusVisual}</span></div>
+          <div class="atlas-rec-pedido"><div><div class="atlas-rec-pedido-num">${escLog(pedidoCurtoLog(p))}</div></div><span class="badge-status ${statusClass(st)}">${statusVisual}</span></div>
           <div class="atlas-rec-etapas" aria-label="Etapas da remessa">${etapasRemessaAtlas(st,contextoRecebimento)}</div>
         </div>
         <div class="atlas-rec-resumo">
@@ -2816,14 +2839,14 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
           <div class="atlas-rec-card"><small>Destino</small><b>${escLog(destino)}</b></div>
           <div class="atlas-rec-card"><small>${finalizado?"Recebido em":"Data de saída"}</small><b>${escLog(finalizado?dataRecebimento:dataSaida)}</b>${finalizado&&p.usuario_recebimento_obra?`<span>${escLog(p.usuario_recebimento_obra)}</span>`:""}</div>
         </div>
-        <div class="atlas-rec-transporte"><strong>🚚 Transporte</strong><div><small>Motorista</small><b>${escLog(p.motorista_nome||"-")}</b></div><div><small>Placa</small><b>${escLog(p.veiculo_placa||"-")}</b></div><div><small>Transportadora</small><b>${escLog(p.transportadora||"-")}</b></div><button class="atlas-rec-link" type="button" onclick="document.getElementById('atlasRecHistorico')?.setAttribute('open','open')">Ver detalhes</button></div>
+        <div class="atlas-rec-transporte"><strong>🚚 Transporte</strong><div><small>Motorista</small><b>${escLog(p.motorista_nome||"-")}</b></div><div><small>Placa</small><b>${escLog(p.veiculo_placa||"-")}</b></div><div><small>Transportadora</small><b>${escLog(p.transportadora||"-")}</b></div></div>
         <div class="atlas-rec-secao"><div class="atlas-rec-secao-head"><span>📦 ${finalizado?"Itens da remessa":"Itens para conferência"} (${itens.length})</span>${itens.length>4?'<input class="atlas-rec-busca" placeholder="Buscar na lista..." oninput="filtrarItensRecebimentoAtlas(this.value)">':''}</div><div class="atlas-rec-itens" id="atlasRecItens">
           ${itens.length?itens.map((i,idx)=>{const cod=codigoItemRecebimentoAtlas(i),nome=nomeItemRecebimentoAtlas(i),qtd=Number(i.quantidade_separada||i.quantidade||1);return `<div class="atlas-rec-item" data-busca="${escLog((cod+' '+nome).toLowerCase())}"><div class="atlas-rec-item-num">${idx+1}</div><div class="atlas-rec-item-cod">${escLog(cod)}</div><div class="atlas-rec-item-desc">${escLog(nome)}</div><div class="atlas-rec-qtd">Qtd. ${escLog(qtd)}</div><div class="atlas-rec-item-un">${escLog(i.unidade||"UN")}</div></div>`}).join(""):'<div class="cart-empty">Nenhum item carregado.</div>'}
         </div></div>
         ${p.observacao?`<div class="atlas-rec-obs"><b>📝 Observação do solicitante</b><br>${escLog(p.observacao)}</div>`:""}
         <div class="atlas-rec-compactos">
-          <details class="atlas-rec-dobra" id="atlasRecHistorico"><summary><span>📄 Histórico da remessa</span><span>⌄</span></summary><div class="atlas-rec-dobra-conteudo">${historicoTexto}</div></details>
-          <details class="atlas-rec-dobra"><summary><span>🧾 Documentos relacionados</span><span>⌄</span></summary><div class="atlas-rec-dobra-conteudo">${docs}</div></details>
+          <section class="atlas-rec-dobra" id="atlasRecHistorico"><div class="atlas-rec-dobra-titulo">📄 Histórico da remessa</div><div class="atlas-rec-dobra-conteudo">${historicoTexto}</div></section>
+          <section class="atlas-rec-dobra"><div class="atlas-rec-dobra-titulo">🧾 Documentos relacionados</div><div class="atlas-rec-dobra-conteudo">${docs}</div></section>
         </div>
       </div>
       ${contextoRecebimento?`<div class="atlas-rec-footer"><button class="atlas-rec-confirmar" type="button" onclick="confirmarRecebimentoAtlas(${Number(p.id)})">✓ Confirmar recebimento</button></div>`:finalizado?`<div class="atlas-rec-footer"><button class="atlas-rec-historico-ok" type="button" onclick="imprimirRomaneioRecebimentoAtlas(${Number(p.id)})">🖨 Imprimir Romaneio</button></div>`:""}`;
@@ -3058,7 +3081,7 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
     if(!p) return;
 
     document.getElementById("modalTitulo").innerText =
-      "Registrar NF-e - " + (p.codigo || ("PED-" + p.id));
+      "Registrar NF-e - PED-" + p.id;
 
     document.getElementById("modalConteudo").innerHTML = `
       <div class="info-box" style="margin-top:0">
@@ -3402,14 +3425,12 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
   function atlasCardRemessaPatrimonial(r){
     const origem = r.obra_origem_nome || nomeObra(r.obra_origem_id);
     const destino = r.obra_destino_nome || nomeObra(r.obra_destino_id);
-    const codigo = String(r.codigo || ("RP-" + r.id));
     const status = String(r.status || "").toUpperCase().replaceAll("_", " ");
     const quantidade = Number(r.total_itens || 0);
     return `<div class="pedido-card atlas-pedido-compacto" data-atlas-ordem-historico="${Date.parse(r.recebido_em||r.enviado_em||'')||0}" data-remessa-patrimonial="${Number(r.id)}">
       <div class="atlas-pedido-row">
         <div>
           <div class="atlas-pedido-numero">RP-${Number(r.id)}</div>
-          <span class="atlas-pedido-codigo">${esc(codigo)}</span>
         </div>
         <div class="atlas-pedido-main">
           <div class="atlas-pedido-destino">${esc(destino)}</div>
@@ -3592,7 +3613,7 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
           .atlas-rec-card{border:1px solid #e2e8f0;background:#f8fafc;border-radius:12px;padding:9px 11px;min-width:0}
           .atlas-rec-card small{display:block;font-size:9px;color:#64748b;font-weight:900;text-transform:uppercase;margin-bottom:3px}
           .atlas-rec-card b{display:block;font-size:12px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-          .atlas-rec-transporte{display:grid;grid-template-columns:auto 1fr 1fr 1fr auto;gap:12px;align-items:center;background:#eff6ff;border:1px solid #dbeafe;border-radius:12px;padding:10px 12px;margin-bottom:12px}
+          .atlas-rec-transporte{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:12px;align-items:center;background:#eff6ff;border:1px solid #dbeafe;border-radius:12px;padding:10px 12px;margin-bottom:12px}
           .atlas-rec-transporte strong{font-size:12px}.atlas-rec-transporte small{display:block;font-size:9px;font-weight:900;color:#64748b;text-transform:uppercase}
           .atlas-rec-transporte b{font-size:11px}.atlas-rec-link{border:1px solid #bfdbfe;background:white;color:#1d4ed8;border-radius:9px;padding:7px 10px;font-size:10px;font-weight:900;cursor:pointer}
           .atlas-rec-secao{border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:10px}
@@ -3603,7 +3624,7 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
           .atlas-rec-item-cod,.atlas-rec-qtd{font-weight:950}.atlas-rec-item-desc{color:#334155}
           .atlas-rec-compactos{display:grid;grid-template-columns:1fr 1fr;gap:8px}
           .atlas-rec-dobra{border:1px solid #e2e8f0;border-radius:11px}
-          .atlas-rec-dobra summary{cursor:pointer;padding:9px 12px;font-size:11px;font-weight:900}
+          .atlas-rec-dobra-titulo{padding:9px 12px;font-size:11px;font-weight:900}
           .atlas-rec-dobra-conteudo{padding:0 12px 10px;font-size:10px;line-height:1.55}
           .atlas-rp-footer{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:12px 18px;border-top:1px solid #dbe4ef;background:#f8fafc}
           .atlas-rp-local{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0;color:#475569;font-size:11px;font-weight:800}
@@ -3636,21 +3657,21 @@ window.quantidadeItemAtlas = window.quantidadeItemAtlas || quantidadeItemAtlasGl
       titulo.textContent="🚚 Detalhes da remessa";
       box.innerHTML=`
         <div class="atlas-rec-scroll">
-          <div class="atlas-rec-top"><div class="atlas-rec-pedido"><div><div class="atlas-rec-pedido-num">RP-${Number(remessa.id)}</div><div class="atlas-rec-codigo">${e(remessa.codigo)}</div></div><span class="badge-status ${statusClass(remessa.status)}">${e(String(remessa.status).replaceAll("_"," "))}</span></div><div class="atlas-rec-etapas">${etapas}</div></div>
+          <div class="atlas-rec-top"><div class="atlas-rec-pedido"><div><div class="atlas-rec-pedido-num">RP-${Number(remessa.id)}</div></div><span class="badge-status ${statusClass(remessa.status)}">${e(String(remessa.status).replaceAll("_"," "))}</span></div><div class="atlas-rec-etapas">${etapas}</div></div>
           <div class="atlas-rec-resumo">
             <div class="atlas-rec-card"><small>Responsável</small><b>${e(remessa.enviado_por_nome)}</b></div>
             <div class="atlas-rec-card"><small>Origem</small><b title="${e(origem)}">${e(origem)}</b></div>
             <div class="atlas-rec-card"><small>Destino</small><b title="${e(destino)}">${e(destino)}</b></div>
             <div class="atlas-rec-card"><small>Data de saída</small><b>${e(dataBR(remessa.enviado_em))}</b></div>
           </div>
-          <div class="atlas-rec-transporte"><strong>🚚 Transporte</strong><div><small>Motorista</small><b>${e(remessa.motorista_nome)}</b></div><div><small>Placa</small><b>${e(remessa.veiculo_placa)}</b></div><div><small>Transportadora</small><b>${e(remessa.transportadora)}</b></div><button class="atlas-rec-link" type="button" onclick="document.getElementById('atlasRecHistorico')?.setAttribute('open','open')">Ver detalhes</button></div>
+          <div class="atlas-rec-transporte"><strong>🚚 Transporte</strong><div><small>Motorista</small><b>${e(remessa.motorista_nome)}</b></div><div><small>Placa</small><b>${e(remessa.veiculo_placa)}</b></div><div><small>Transportadora</small><b>${e(remessa.transportadora)}</b></div></div>
           <div class="atlas-rec-secao"><div class="atlas-rec-secao-head">📦 Patrimônios da transferência (${itens.length})</div><div class="atlas-rec-itens">${itens.map((i,idx)=>`<div class="atlas-rec-item"><div class="atlas-rec-item-num">${idx+1}</div><div class="atlas-rec-item-cod">${e(i.codigo_qr)}</div><div class="atlas-rec-item-desc">${e(i.nome_bem)}</div><div class="atlas-rec-qtd">Qtd. 1</div><div class="atlas-rec-item-un">UN</div></div>`).join("") || '<div class="cart-empty">Nenhum patrimônio encontrado.</div>'}</div></div>
           <div class="atlas-rec-compactos">
-            <details class="atlas-rec-dobra" id="atlasRecHistorico"><summary>📄 Histórico da remessa ⌄</summary><div class="atlas-rec-dobra-conteudo">Saída: ${e(dataBR(remessa.enviado_em))}<br>${e(origem)} → ${e(destino)}<br>Responsável: ${e(remessa.enviado_por_nome)}</div></details>
-            <details class="atlas-rec-dobra"><summary>🧾 Documentos relacionados ⌄</summary><div class="atlas-rec-dobra-conteudo">
+            <section class="atlas-rec-dobra" id="atlasRecHistorico"><div class="atlas-rec-dobra-titulo">📄 Histórico da remessa</div><div class="atlas-rec-dobra-conteudo">Saída: ${e(dataBR(remessa.enviado_em))}<br>${e(origem)} → ${e(destino)}<br>Responsável: ${e(remessa.enviado_por_nome)}</div></section>
+            <section class="atlas-rec-dobra"><div class="atlas-rec-dobra-titulo">🧾 Documentos relacionados</div><div class="atlas-rec-dobra-conteudo">
               <button type="button" class="atlas-rec-link" onclick="atlasAbrirRomaneioPatrimonial(${Number(remessa.id)})">📄 Abrir romaneio</button>
               <small>Documento de conferência da remessa. NF-e e dispensa fiscal dependem de análise do responsável autorizado.</small>
-            </div></details>
+            </div></section>
           </div>
         </div>
         ${podeReceber?`<div class="atlas-rp-footer"><label class="atlas-rp-local">Localização final no destino (opcional)<input id="atlasRPLocalRecebimento" maxlength="180" placeholder="Ex.: Almoxarifado / Alojamento / Sala 2"></label><button id="atlasRPBtnReceber" class="atlas-rp-confirmar" type="button" onclick="atlasConfirmarRecebimentoRemessaPatrimonial(${Number(remessa.id)})">✓ Confirmar recebimento</button></div>`:aReceber?`<div class="atlas-rp-aviso">⚠ ${e(avisoRecebimento)}</div>`:!finalizado?`<div class="atlas-rp-aviso">⚠ Remessa em ${e(String(remessa.status).replaceAll("_"," "))}. É necessário concluir a expedição na origem antes de permitir o recebimento no destino.</div>`:""}`;

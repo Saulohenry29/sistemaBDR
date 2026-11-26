@@ -22,7 +22,7 @@
       './JS/atlasWorkflow.js',
       './JS/AtlasLogistica.js',
       './JS/AtlasFiscal.js',
-      './JS/AtlasRomaneio.js?v=20261125-bdr'
+      './JS/AtlasRomaneio.js?v=20261125-referencia-curta'
     ],
     scanner:[
       'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
@@ -30,7 +30,7 @@
       './JS/atlasWorkflow.js',
       './JS/AtlasLogistica.js',
       './JS/AtlasFiscal.js',
-      './JS/AtlasRomaneio.js?v=20261125-bdr',
+      './JS/AtlasRomaneio.js?v=20261125-referencia-curta',
       './JS/AtlasSeparacaoQR.js'
     ],
     visual:[
@@ -210,10 +210,10 @@
 
   async function iniciar(){
     try{
-      if(typeof global.verificarLogin==='function') global.verificarLogin();
+      if(typeof global.verificarLogin==='function' && !global.verificarLogin())return;
 
       await carregarScript('./JS/expedicao/expedicaoImagens.js');
-      await carregarScript('./JS/expedicao/expedicaoCore.js?v=20261125-reservas-encerradas');
+      await carregarScript('./JS/expedicao/expedicaoCore.js?v=20261126-sessao-central');
 
       instalarAbaLazy();
       instalarAcoesLazy();

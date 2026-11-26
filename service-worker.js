@@ -1,10 +1,11 @@
 /* BDR ERP - Service Worker V4 SAFE OFFLINE */
-const BDR_CACHE_VERSION = "bdr-erp-v4.0.9-push-badge";
+const BDR_CACHE_VERSION = "bdr-erp-v4.0.12-pwa-login";
 
 const BDR_ASSETS = [
   "./",
   "./index.html",
   "./login.html",
+  "./atlas.html",
   "./dashboard.html",
   "./estoque.html",
   "./expedicao.html",
@@ -32,7 +33,10 @@ const BDR_ASSETS = [
 
   "./JS/pwa-install.js",
   "./JS/atlasBadge.js",
+  "./JS/atlasBadge.js?v=20261126-pwa-update",
   "./JS/pwa-update.js",
+  "./JS/pwa-update.js?v=20261126-pwa-login",
+  "./CSS/pwa-update.css?v=20261126-pwa-update",
   "./JS/supabaseClient.js",
   "./JS/auth.js",
   "./JS/bdrCore.js",
@@ -87,23 +91,37 @@ async function bdrSalvarRespostaCompletaNoCache(cacheName, request, response){
   }
 }
 
+const BDR_UPDATE_CRITICAL = new Set(["./index.html", "./login.html", "./atlas.html", "./JS/pwa-update.js?v=20261126-pwa-login", "./CSS/pwa-update.css?v=20261126-pwa-update", "./JS/atlasBadge.js?v=20261126-pwa-update"]);
+
 self.addEventListener("install", event => {
-  self.skipWaiting();
+  // Atualizações aguardam autorização; a primeira instalação ativa normalmente.
   event.waitUntil(
     caches.open(BDR_CACHE_VERSION).then(async cache => {
       for(const asset of BDR_ASSETS){
-        try{ await cache.add(asset); }
-        catch(e){ console.warn("Cache parcial:", asset, e.message || e); }
+        try{ await cache.add(new Request(asset, {cache:"reload"})); }
+        catch(e){
+          if(BDR_UPDATE_CRITICAL.has(asset)) throw e;
+          console.warn("Cache parcial:", asset, e.message || e);
+        }
       }
     })
   );
 });
 
+async function bdrLimparBadgeExterno(){
+  try{
+    if(typeof self.navigator?.clearAppBadge==="function"){
+      await self.navigator.clearAppBadge();
+    }
+  }catch(_){}
+}
+
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== BDR_CACHE_VERSION).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k.startsWith("bdr-erp-") && k !== BDR_CACHE_VERSION).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
+      .then(() => bdrLimparBadgeExterno())
   );
 });
 
@@ -193,13 +211,8 @@ self.addEventListener("push",event=>{
       renotify:false,
       data:{url:destino},
     });
-    // O sistema operacional pode apresentar apenas um ponto até
-    // a próxima sincronização da contagem real com o sininho.
-    try{
-      if(typeof self.navigator?.setAppBadge==="function"){
-        await self.navigator.setAppBadge();
-      }
-    }catch(_){}
+    // Não exibe contador nem ponto no ícone do PWA.
+    await bdrLimparBadgeExterno();
   })());
 });
 
@@ -222,5 +235,6 @@ self.addEventListener("notificationclick",event=>{
 });
 
 self.addEventListener("message", event => {
-  if(event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
+  if(event.data?.type === "SKIP_WAITING") event.waitUntil(self.skipWaiting());
+  if(event.data?.type === "BDR_GET_VERSION" && event.ports?.[0]) event.ports[0].postMessage({version:BDR_CACHE_VERSION});
 });

@@ -912,23 +912,30 @@ input, textarea{
   width:100%;
 }
 
-.atlas-sugestoes{
-  position:absolute;
-  top:calc(100% + 4.5px);
-  left:0;
-  right:0;
-  z-index:99999;
+/* Painéis de sugestões: top layer nativa; fallback em body para navegadores antigos.
+   Coordenadas são calculadas a partir do input, não da grade nem do card. */
+.atlas-sugestoes,
+.atlas-autocomplete-lista{
+  position:fixed;
+  inset:auto;
+  margin:0;
+  box-sizing:border-box;
+  z-index:10020;
   display:none;
-  max-height:220.5px;
-  overflow:auto;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  touch-action:pan-y;
   background:#fff;
-  border:1px solid #bfdbfe;
-  border-radius:11.7px;
-  box-shadow:0 14.4px 34.2px rgba(15,23,42,.16);
-  padding:4.5px;
+  color:#1e293b;
+  border:1px solid #dbe3ee;
+  border-radius:9.9px;
+  box-shadow:0 14.4px 30.6px rgba(15,23,42,.16);
 }
-
-.atlas-sugestoes.ativo{display:block}
+.atlas-sugestoes{padding:4.5px;border-color:#bfdbfe;border-radius:11.7px;}
+.atlas-autocomplete-lista{padding:0;}
+.atlas-sugestoes.ativo,
+.atlas-autocomplete-lista.ativo{display:block}
 
 .atlas-sugestao{
   width:100%;
@@ -1466,14 +1473,16 @@ input, textarea{
 #camposFiscais{
   display:none!important;
   margin-top:7.2px!important;
-  grid-template-columns:minmax(162px,234px) minmax(198px,306px)!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  width:100%;
+  max-width:760px;
   gap:7.2px!important;
 }
 #camposFiscais.ativo{
   display:grid!important;
   animation:atlasAbrirLegado .18s ease;
 }
-#camposFiscais input{
+#camposFiscais input, .atlas-fiscal-edicao input{
   width:100%!important;
   height:37.8px!important;
   min-height:32.4px!important;
@@ -1482,7 +1491,15 @@ input, textarea{
   color:#1e3a8a!important;
   font-weight:400!important;
 }
-#camposFiscais input::placeholder{color:#64748b!important}
+#camposFiscais input::placeholder,.atlas-fiscal-edicao input::placeholder{color:#64748b!important}
+.atlas-fiscal-edicao{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7.2px;min-width:0}
+.atlas-fiscal-campo{display:flex;flex-direction:column;gap:3px;min-width:0;margin:0!important;align-items:stretch!important}
+.atlas-fiscal-campo>span{font-size:11px;font-weight:650;color:#334155;line-height:1.25}
+.atlas-fiscal-campo input{box-sizing:border-box;min-width:0;max-width:100%;margin:0!important}
+.atlas-fiscal-campo input[readonly]{background:#edf5ef!important}
+.atlas-fiscal-status{font-size:10.5px;color:#64748b;line-height:1.25}
+.atlas-fiscal-status[data-encontrado="true"]{color:#166534}
+.atlas-fiscal-status[hidden]{display:none!important}
 .atlas-edicao-fiscal-titulo{
   grid-column:1/-1;
   margin:3.6px 0 -2px;
@@ -1491,7 +1508,8 @@ input, textarea{
   font-weight:900;
 }
 @media(max-width:620px){
-  #camposFiscais{grid-template-columns:1fr!important}
+  #camposFiscais,.atlas-fiscal-edicao{grid-template-columns:1fr!important}
+  .atlas-fiscal-campo input{font-size:16px!important}
 }
 
 
@@ -1613,38 +1631,6 @@ input, textarea{
     height:40px!important;
     min-height:34px!important;
   }
-}
-
-
-
-#cardObraLancamento,
-#cardObraLancamento .lock-row,
-.atlas-obra-combo{
-  overflow:visible!important;
-}
-
-#cardObraLancamento{
-  position:relative!important;
-  z-index:20!important;
-}
-
-.atlas-obra-combo{
-  position:relative!important;
-  z-index:21!important;
-}
-
-.atlas-obra-sugestoes{
-  z-index:22!important;
-  position:absolute!important;
-}
-
-#cardEntradaPatrimonio,
-.card{
-  position:relative;
-}
-
-#cardEntradaPatrimonio{
-  z-index:1!important;
 }
 
 
@@ -1817,23 +1803,6 @@ textarea,
   width:100%;
 }
 
-.atlas-autocomplete-lista{
-  position:absolute;
-  top:calc(100% + 4.5px);
-  left:0;
-  right:0;
-  z-index:10020;
-  display:none;
-  max-height:198px;
-  overflow:auto;
-  border:1px solid #dbe3ee;
-  border-radius:9.9px;
-  background:#fff;
-  box-shadow:0 14.4px 30.6px rgba(15,23,42,.16);
-}
-
-.atlas-autocomplete-lista.ativo{display:block}
-
 .atlas-autocomplete-opcao{
   width:100%;
   min-height:32.4px;
@@ -1878,41 +1847,6 @@ textarea,
 .atlas-inativos-toggle.ativo{background:#fff7ed;border-color:#fdba74;color:#9a3412}
 .status-INATIVO,.status-inativo{background:#e5e7eb!important;color:#374151!important}
 
-/* =========================================================
-   ATLAS PATRIMÔNIO — CAMADAS DO AUTOCOMPLETE
-========================================================= */
-#cardEntradaPatrimonio{
-  position:relative!important;
-  z-index:30!important;
-  overflow:visible!important;
-}
-
-#cardEntradaPatrimonio .grid,
-#cardEntradaPatrimonio #camposExtras,
-.atlas-autocomplete-campo{
-  overflow:visible!important;
-}
-
-.atlas-autocomplete-campo{
-  position:relative!important;
-  z-index:1!important;
-}
-
-/* O campo ativo deve ficar acima dos campos irmãos na mesma grade. */
-.atlas-autocomplete-campo:focus-within{
-  z-index:2!important;
-}
-
-.atlas-autocomplete-lista{
-  z-index:3!important;
-}
-
-.card:has(#busca),
-.card:has(#lista){
-  position:relative!important;
-  z-index:1!important;
-}
-
 .atlas-campo-duplicado{
   border-color:#dc2626!important;
   box-shadow:0 0 0 3px rgba(220,38,38,.12)!important;
@@ -1922,60 +1856,6 @@ textarea,
   border-color:#f59e0b!important;
   box-shadow:0 0 0 3px rgba(245,158,11,.12)!important;
 }
-
-/* =========================================================
-   ATLAS PATRIMÔNIO — CORREÇÃO FINAL DAS CAMADAS DA OBRA
-   ---------------------------------------------------------
-   A lista de obras precisa aparecer acima do card
-   "Novo Patrimônio".
-
-   Havia um conflito no próprio arquivo:
-   - Obra de lançamento: z-index 20
-   - Novo Patrimônio: z-index 30
-
-   Como esta regra fica no final do CSS, ela passa a ser
-   a fonte oficial das camadas desta área.
-========================================================= */
-
-#cardObraLancamento{
-  position:relative!important;
-  z-index:100!important;
-  overflow:visible!important;
-}
-
-#cardObraLancamento .lock-row{
-  position:relative!important;
-  z-index:101!important;
-  overflow:visible!important;
-}
-
-#atlasObraCombo,
-.atlas-obra-combo{
-  position:relative!important;
-  z-index:102!important;
-  overflow:visible!important;
-}
-
-#obraSugestoes,
-.atlas-obra-sugestoes{
-  position:absolute!important;
-  z-index:103!important;
-}
-
-/* O cadastro permanece atrás da lista de obras. */
-#cardEntradaPatrimonio{
-  position:relative!important;
-  z-index:10!important;
-}
-
-/* Não deixa cards seguintes criarem uma camada acima. */
-.card:has(#busca),
-.card:has(#lista){
-  position:relative!important;
-  z-index:1!important;
-}
-
-
 
 /* Filtro de etiqueta antiga: toggle compacto no mesmo padrão visual dos botões auxiliares. */
 .btn-filtro-antigo{
@@ -2164,13 +2044,60 @@ textarea,
 #busca{-webkit-appearance:none;appearance:none}
 #busca::-webkit-search-cancel-button,#busca::-webkit-search-decoration,#busca::-webkit-search-results-button,#busca::-webkit-search-results-decoration{-webkit-appearance:none;display:none}
 
-/* O Localizador e seus menus ficam acima da lista seguinte. */
-.card:has(#busca){position:relative!important;z-index:80!important;overflow:visible!important}
-.card:has(#busca):focus-within{z-index:120!important}
-.card:has(#busca) .grid{overflow:visible!important}
-.atlas-combo.aberto{z-index:130!important}
-.atlas-combo-menu{z-index:9999!important}
-#lista{position:relative;z-index:1}
+/* Camadas dos cards e respectivos menus: uma hierarquia única.
+   Obra > cadastro > localizador > resultados.
+   O localizador precisa subir inteiro enquanto um filtro estiver em foco,
+   porque os selects nativos do navegador não usam a mesma pilha dos
+   menus customizados do Atlas. */
+.card{position:relative!important}
+#cardObraLancamento,
+#cardEntradaPatrimonio,
+.card:has(#busca),
+.card:has(#lista){
+  position:relative!important;
+  overflow:visible!important;
+}
+#cardObraLancamento{z-index:300!important}
+#cardEntradaPatrimonio{z-index:200!important}
+.card:has(#busca){
+  z-index:120!important;
+  isolation:isolate!important;
+}
+.card:has(#busca):focus-within{
+  z-index:900!important;
+}
+.card:has(#lista),
+.card:has(#busca) ~ .card{
+  z-index:20!important;
+}
+.card:has(#busca):focus-within ~ .card{
+  z-index:1!important;
+}
+#cardObraLancamento .lock-row,
+#atlasObraCombo,
+.atlas-obra-combo,
+#cardEntradaPatrimonio .grid,
+#cardEntradaPatrimonio #camposExtras,
+.card:has(#busca) .grid{
+  overflow:visible!important;
+}
+#atlasObraCombo,
+.atlas-obra-combo,
+.card:has(#busca) .grid,
+.card:has(#busca) select,
+.card:has(#busca) button,
+.card:has(#busca) input{
+  position:relative!important;
+}
+#obraSugestoes,
+.atlas-obra-sugestoes{position:absolute!important;z-index:35!important}
+.atlas-autocomplete-campo,
+.atlas-autocomplete-wrap{position:relative!important;overflow:visible!important}
+.atlas-autocomplete-campo:focus-within,
+.atlas-autocomplete-wrap:focus-within{z-index:40!important}
+.atlas-combo.aberto{z-index:50!important}
+.atlas-combo-menu{z-index:60!important}
+#lista{position:relative!important;z-index:1!important}
 
 /* Em seleção de etiquetas, qualquer área livre da linha seleciona/desseleciona. */
 body.bdr-modo-selecao-etiquetas .linha-patrimonio{cursor:pointer!important}
@@ -2208,6 +2135,17 @@ html,body{max-width:100%;overflow-x:hidden!important}
   min-width:0!important;max-width:100%!important;box-sizing:border-box!important
 }
 
+
+/* =========================================================
+   ATLAS PATRIMÔNIO — PRIORIDADE DO LOCALIZADOR
+   ---------------------------------------------------------
+   Garante que o card de filtros permaneça acima do bloco
+   “Patrimônios cadastrados” enquanto qualquer filtro estiver
+   em foco/aberto, inclusive os selects nativos do navegador.
+========================================================= */
+.card:has(#busca):focus-within{z-index:900!important}
+.card:has(#busca):focus-within ~ .card{z-index:1!important}
+.card:has(#busca) select:focus{z-index:70!important}
 /* Combo estável: sem "espasmo" ao trocar/pesquisar opções. */
 .atlas-combo{position:relative!important;min-width:0!important}
 .atlas-combo-menu{
@@ -2437,5 +2375,87 @@ html,body{max-width:100%;overflow-x:hidden!important}
   #cardObraLancamento input:not([type="checkbox"]),
   #cardObraLancamento select {
     font-size:16px!important;
+  }
+}
+
+
+/* ATLAS | Dados fiscais: grade independente do cadastro principal. */
+#cardEntradaPatrimonio #camposFiscais {
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  grid-template-columns:minmax(135px,.72fr) minmax(220px,1.65fr) minmax(115px,.57fr) minmax(125px,.65fr) minmax(92px,.46fr) minmax(290px,1.8fr)!important;
+  gap:7.2px!important;
+  align-items:start!important;
+}
+#cardEntradaPatrimonio #camposFiscais > .atlas-fiscal-campo,
+#modalEdicaoBg .atlas-fiscal-edicao > .atlas-fiscal-campo {
+  align-self:start!important;
+  justify-content:flex-start!important;
+  min-width:0!important;
+  max-width:100%!important;
+  padding:0!important;
+  gap:3px!important;
+}
+#camposFiscais .atlas-fiscal-campo > span,
+#modalEdicaoBg .atlas-fiscal-campo > span {
+  display:block;
+  line-height:15px;
+  min-height:15px;
+  margin:0!important;
+}
+#cardEntradaPatrimonio #camposFiscais input,
+#modalEdicaoBg .atlas-fiscal-edicao input {
+  display:block;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  height:37.8px!important;
+  min-height:37.8px!important;
+  box-sizing:border-box!important;
+  margin:0!important;
+  padding:0 9px!important;
+}
+#cardEntradaPatrimonio #camposFiscais .atlas-fiscal-status,
+#modalEdicaoBg .atlas-fiscal-edicao .atlas-fiscal-status {
+  margin:0!important;
+  overflow-wrap:anywhere;
+}
+#modalEdicaoBg .atlas-fiscal-edicao {
+  grid-template-columns:minmax(0,1fr) minmax(0,1.45fr)!important;
+  align-items:start!important;
+}
+/* NCM estreito, com maior area para a chave no modal de correcao. */
+#modalEdicaoBg .atlas-fiscal-edicao > :nth-child(5) {max-width:150px!important;}
+/* Telas menores: preservar a leitura e evitar rolagem horizontal. */
+@media screen and (max-width:1199px) {
+  #cardEntradaPatrimonio #camposFiscais {
+    grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr)!important;
+  }
+  #cardEntradaPatrimonio #camposFiscais input,
+  #modalEdicaoBg .atlas-fiscal-edicao input {
+    height:44px!important;
+    min-height:44px!important;
+    font-size:16px!important;
+  }
+}
+@media screen and (max-width:900px) {
+  #cardEntradaPatrimonio #camposFiscais {
+    grid-template-columns:minmax(0,1fr) minmax(0,1.45fr)!important;
+  }
+}
+@media screen and (max-width:600px) {
+  #cardEntradaPatrimonio #camposFiscais,
+  #modalEdicaoBg .atlas-fiscal-edicao {
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+  #modalEdicaoBg .atlas-fiscal-edicao > :nth-child(5) {max-width:none!important;}
+}
+@media screen and (pointer:coarse) {
+  #cardEntradaPatrimonio #camposFiscais input,
+  #modalEdicaoBg .atlas-fiscal-edicao input {
+    font-size:16px!important;
+    height:44px!important;
+    min-height:44px!important;
   }
 }

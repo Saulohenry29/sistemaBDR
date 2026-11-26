@@ -59,17 +59,8 @@ input{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;font-size:
 .btn-login:hover{background:#7d1013}
 #mensagem{text-align:center;color:red;margin-top:15px;font-weight:800}
 .rodape{text-align:center;margin-top:20px;color:#777;font-size:12px}
-#bdrUpdateBar{
-  position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
-  z-index:999999;background:#111827;color:white;border-radius:14px;
-  padding:12px 14px;box-shadow:0 18px 40px rgba(0,0,0,.25);
-  display:none;align-items:center;gap:12px;font-size:13px;font-weight:800;
-}
-#bdrUpdateBar button{
-  border:none;border-radius:10px;background:#a4161a;color:white;
-  font-weight:900;padding:8px 11px;cursor:pointer;
-}
 </style>
+<link rel="stylesheet" href="./CSS/pwa-update.css?v=20261126-pwa-update">
 </head>
 
 <body>
@@ -109,16 +100,11 @@ input{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;font-size:
   <div class="rodape">Sistema BDR ERP • v1.0</div>
 </div>
 
-<div id="bdrUpdateBar">
-  <span>🚀 Nova versão disponível</span>
-  <button onclick="bdrAtualizarAgora()">Atualizar agora</button>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="JS/supabaseClient.js"></script>
 <script src="JS/auth.js?v=20261114-sessao"></script>
 <script src="./JS/bdrSessaoRealtime.js"></script>
-<script src="./JS/pwa-update.js"></script>
+<script src="./JS/pwa-update.js?v=20261126-pwa-login"></script>
 
 <script>
 function mostrarSenha(){
